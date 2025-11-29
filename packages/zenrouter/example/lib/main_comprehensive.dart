@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:zenrouter/zenrouter.dart';
+import 'package:zenrouter_devtools/zenrouter_devtools.dart';
 
 /// =============================================================================
 /// COMPREHENSIVE ZENROUTER EXAMPLE
@@ -33,7 +34,8 @@ void main() {
 // COORDINATOR - Manages all navigation state
 // =============================================================================
 
-class AppCoordinator extends Coordinator<AppRoute> {
+class AppCoordinator extends Coordinator<AppRoute>
+    with CoordinatorDebug<AppRoute> {
   // Primary navigation path (for main screens)
   // root is inherited from Coordinator
 
@@ -49,6 +51,31 @@ class AppCoordinator extends Coordinator<AppRoute> {
     homeTabs,
     modals,
   ]);
+
+  @override
+  String debugLabel(NavigationPath path) {
+    if (path == root) return 'Root';
+    if (path == homeTabs) return 'Home Tabs';
+    if (path == modals) return 'Modals';
+    return super.debugLabel(path);
+  }
+
+  @override
+  List<AppRoute> get debugRoutes => [
+    DashboardTab(),
+    ProfileTab(),
+    SettingsTab(),
+    CreateProductRoute(),
+    LoginRoute(),
+    RegisterRoute(),
+    AdminRoute(),
+    ProtectedSettingsRoute(),
+    AdminEditRoute(),
+    SheetDemoRoute(),
+    DialogDemoRoute(),
+    CupertinoDemoRoute(),
+    RedirectChainStartRoute(),
+  ];
 
   // Auth state (simulated)
   bool _isAuthenticated = false;

@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:zenrouter/zenrouter.dart';
+import 'package:zenrouter_devtools/zenrouter_devtools.dart';
 
 void main() {
   runApp(const MainApp());
 }
 
-class AppCoordinator extends Coordinator<AppRoute> {
+class AppCoordinator extends Coordinator<AppRoute>
+    with CoordinatorDebug<AppRoute> {
   /// HOME Shell
   final NavigationPath<HomeTabShell> home = NavigationPath();
 
@@ -27,6 +29,22 @@ class AppCoordinator extends Coordinator<AppRoute> {
     [] => NoteTab(),
     _ => NoteTab(),
   };
+
+  @override
+  List<AppRoute> get debugRoutes => [
+    NoteTab(),
+    IdeaTab(),
+    SettingsRoute(),
+    IdeaDetail(id: '123'),
+    IdeaDetailSettings(id: '123', q: 'test'),
+  ];
+
+  @override
+  String debugLabel(NavigationPath path) {
+    if (path == home) return 'Home';
+    if (path == root) return 'Root';
+    return super.debugLabel(path);
+  }
 }
 
 final coordinator = AppCoordinator();

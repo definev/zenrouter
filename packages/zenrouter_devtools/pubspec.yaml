@@ -1,5 +1,5 @@
-name: zenrouter
-description: "A new Flutter package project."
+name: zenrouter_devtools
+description: "Devtools for ZenRouter"
 version: 0.0.1
 homepage:
 
@@ -10,6 +10,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  zenrouter:
+    path: ../zenrouter
 
 dev_dependencies:
   flutter_test:

@@ -1,5 +1,5 @@
 name: zenrouter
-description: "A new Flutter package project."
+description: "The Flutter router that unifies Navigator 1.0 and 2.0 into one elegant system"
 version: 0.0.1
 homepage:
 

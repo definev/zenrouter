@@ -4,13 +4,17 @@ publish_to: 'none'
 version: 0.1.0+1
 
 environment:
-  sdk: ^3.11.0-113.0.dev
+  sdk: ^3.8.0
 
 dependencies:
   flutter:
     sdk: flutter
   zenrouter:
     path: ../
+  zenrouter_devtools:
+    path: ../../zenrouter_devtools
+  
+  cupertino_icons: ^1.0.8
 
 dev_dependencies:
   flutter_test:
