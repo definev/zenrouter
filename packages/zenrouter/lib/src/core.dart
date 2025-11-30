@@ -281,7 +281,7 @@ class NavigationPath<T extends RouteTarget> extends ChangeNotifier {
   /// ```dart
   /// path.pop({'saved': true});
   /// ```
-  void pop([Object? result]) async {
+  Future<void> pop([Object? result]) async {
     if (_stack.isEmpty) return;
     final last = _stack.last;
     if (last is RouteGuard) {

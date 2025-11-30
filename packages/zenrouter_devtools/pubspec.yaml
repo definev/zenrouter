@@ -13,6 +13,7 @@ dependencies:
   flutter:
     sdk: flutter
   zenrouter:
+  zentoast: ^0.1.3
 
 dev_dependencies:
   flutter_test:

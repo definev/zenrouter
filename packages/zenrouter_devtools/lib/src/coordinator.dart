@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:zenrouter/zenrouter.dart';
+import 'package:zentoast/zentoast.dart';
 
 /// Mixin to add debug capabilities to a [Coordinator].
 ///
@@ -11,6 +12,15 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   /// Override this to provide a list of routes that can be quickly pushed
   /// from the debug overlay.
   List<T> get debugRoutes => [];
+
+  int get problems => debugRoutes.where((r) {
+    try {
+      r.toUri();
+      return false;
+    } catch (_) {
+      return true;
+    }
+  }).length;
 
   /// Override this to provide a custom label for a navigation path.
   String debugLabel(NavigationPath path) {
@@ -27,17 +37,24 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
 
   @override
   Widget rootBuilder(BuildContext context) {
-    return Overlay(
-      initialEntries: [
-        OverlayEntry(
-          builder: (context) => Stack(
-            children: [
-              super.rootBuilder(context),
-              _DebugOverlay(coordinator: this),
-            ],
+    return ToastProvider.create(
+      child: Stack(
+        children: [
+          super.rootBuilder(context),
+          ToastThemeProvider(
+            data: ToastTheme(
+              viewerPadding: EdgeInsets.only(top: 16, right: 16),
+              gap: 8,
+            ),
+            child: ToastViewer(
+              delay: Duration(seconds: 3),
+              width: 420,
+              alignment: Alignment.topRight,
+            ),
           ),
-        ),
-      ],
+          _DebugOverlay(coordinator: this),
+        ],
+      ),
     );
   }
 }
@@ -68,14 +85,18 @@ class _DebugOverlayState<T extends RouteUnique>
       return Positioned(
         bottom: 16,
         right: 16,
-        child: FloatingActionButton(
-          mini: true,
-          backgroundColor: Colors.black,
-          foregroundColor: Colors.white,
-          elevation: 4,
-          shape: const CircleBorder(side: BorderSide(color: Colors.white24)),
-          onPressed: widget.coordinator.toggleDebugOverlay,
-          child: const Icon(Icons.bug_report, size: 20),
+        child: Badge(
+          isLabelVisible: widget.coordinator.problems > 0,
+          label: Text('${widget.coordinator.problems}'),
+          child: FloatingActionButton(
+            mini: true,
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+            elevation: 4,
+            shape: const CircleBorder(side: BorderSide(color: Colors.white24)),
+            onPressed: widget.coordinator.toggleDebugOverlay,
+            child: const Icon(Icons.bug_report, size: 20),
+          ),
         ),
       );
     }
@@ -191,6 +212,7 @@ class _DebugOverlayState<T extends RouteUnique>
           Expanded(
             child: _TabButton(
               label: 'Routes',
+              count: widget.coordinator.problems,
               isSelected: _selectedTabIndex == 1,
               onTap: () => setState(() => _selectedTabIndex = 1),
             ),
@@ -280,7 +302,30 @@ class _DebugOverlayState<T extends RouteUnique>
                             icon: Icons.arrow_back,
                             tooltip: 'Pop Route',
                             onTap: path.stack.length > 1
-                                ? () => path.pop()
+                                ? () async {
+                                    final route = path.stack.last;
+                                    await path.pop();
+                                    final routeName = () {
+                                      try {
+                                        if (route is RouteShellHost) {
+                                          final shellPath = route.getPath(
+                                            widget.coordinator,
+                                          );
+                                          final debugLabel = widget.coordinator
+                                              .debugLabel(shellPath);
+                                          shellPath.clear();
+                                          return 'all $debugLabel';
+                                        }
+                                        return route.toUri() ?? '';
+                                      } catch (_) {
+                                        return route.toString();
+                                      }
+                                    }();
+                                    _showToast(
+                                      'Popped $routeName',
+                                      type: ToastType.pop,
+                                    );
+                                  }
                                 : null,
                             color: path.stack.length > 1
                                 ? const Color(0xFFEDEDED)
@@ -342,7 +387,13 @@ class _DebugOverlayState<T extends RouteUnique>
                               icon: Icons.close,
                               tooltip: 'Remove Route',
                               onTap: path.stack.length > 1
-                                  ? () => path.remove(route)
+                                  ? () {
+                                      path.remove(route);
+                                      _showToast(
+                                        'Removed $route',
+                                        type: ToastType.remove,
+                                      );
+                                    }
                                   : null,
                               color: Colors.red[200],
                             ),
@@ -375,6 +426,14 @@ class _DebugOverlayState<T extends RouteUnique>
       itemCount: widget.coordinator.debugRoutes.length,
       itemBuilder: (context, index) {
         final route = widget.coordinator.debugRoutes[index];
+        final status = () {
+          try {
+            return route.toUri().toString();
+          } catch (_) {
+            return 'needs implementation [toUri]';
+          }
+        }();
+
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: const BoxDecoration(
@@ -382,12 +441,6 @@ class _DebugOverlayState<T extends RouteUnique>
           ),
           child: Row(
             children: [
-              const Icon(
-                Icons.subdirectory_arrow_right,
-                color: Color(0xFF444444),
-                size: 14,
-              ),
-              const SizedBox(width: 12),
               Expanded(
                 child: Text.rich(
                   TextSpan(
@@ -399,16 +452,14 @@ class _DebugOverlayState<T extends RouteUnique>
                     ),
                     children: [
                       TextSpan(
-                        text:
-                            ''' ${() {
-                              try {
-                                return route.toUri().toString();
-                              } catch (e) {
-                                return 'null';
-                              }
-                            }()}''',
-                        style: const TextStyle(
-                          color: Color(0xFF999999),
+                        text: ' $status',
+                        style: TextStyle(
+                          color: switch (status) {
+                            'needs implementation [toUri]' => const Color(
+                              0xFFE85600,
+                            ),
+                            _ => const Color(0xFF999999),
+                          },
                           fontSize: 12,
                           fontFamily: 'monospace',
                         ),
@@ -423,7 +474,7 @@ class _DebugOverlayState<T extends RouteUnique>
                 tooltip: 'Push',
                 onTap: () {
                   widget.coordinator.push(route);
-                  _showToast('Pushed $route');
+                  _showToast('Pushed $route', type: ToastType.push);
                 },
               ),
               const SizedBox(width: 8),
@@ -432,7 +483,7 @@ class _DebugOverlayState<T extends RouteUnique>
                 tooltip: 'Replace',
                 onTap: () {
                   widget.coordinator.replace(route);
-                  _showToast('Replaced with $route');
+                  _showToast('Replaced with $route', type: ToastType.replace);
                 },
               ),
             ],
@@ -459,23 +510,30 @@ class _DebugOverlayState<T extends RouteUnique>
             child: Row(
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: _uriController,
-                    style: const TextStyle(
-                      color: Color(0xFFEDEDED),
-                      fontSize: 13,
+                  child: TextSelectionTheme(
+                    data: const TextSelectionThemeData(
+                      selectionColor: Color(0xFF444444),
+                      selectionHandleColor: Color(0xFFEDEDED),
                     ),
-                    decoration: const InputDecoration(
-                      hintText: '/path...',
-                      hintStyle: TextStyle(color: Color(0xFF444444)),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
+                    child: TextField(
+                      controller: _uriController,
+                      style: const TextStyle(
+                        color: Color(0xFFEDEDED),
+                        fontSize: 13,
                       ),
-                      isDense: true,
+                      cursorColor: const Color(0xFFEDEDED),
+                      decoration: const InputDecoration(
+                        hintText: '/path...',
+                        hintStyle: TextStyle(color: Color(0xFF444444)),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        isDense: true,
+                      ),
+                      onSubmitted: _pushUri,
                     ),
-                    onSubmitted: _pushUri,
                   ),
                 ),
               ],
@@ -512,10 +570,11 @@ class _DebugOverlayState<T extends RouteUnique>
     if (uriString.isEmpty) return;
     try {
       final uri = Uri.parse(uriString);
-      widget.coordinator.recoverRouteFromUri(uri);
-      _showToast('Navigated to $uriString');
+      final route = widget.coordinator.parseRouteFromUri(uri);
+      widget.coordinator.push(route);
+      _showToast('Navigated to $uriString', type: ToastType.push);
     } catch (e) {
-      _showToast('Error: $e', isError: true);
+      _showToast('Error: $e', type: ToastType.error);
     }
   }
 
@@ -525,30 +584,96 @@ class _DebugOverlayState<T extends RouteUnique>
       final uri = Uri.parse(uriString);
       final route = widget.coordinator.parseRouteFromUri(uri);
       widget.coordinator.replace(route);
-      _showToast('Replaced with $uriString');
+      _showToast('Replaced with $uriString', type: ToastType.replace);
     } catch (e) {
-      _showToast('Error: $e', isError: true);
+      _showToast('Error: $e', type: ToastType.error);
     }
   }
 
-  void _showToast(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: TextStyle(
-            color: isError ? Colors.red[200] : const Color(0xFFEDEDED),
+  void _showToast(String message, {ToastType type = ToastType.info}) {
+    final (icon, color, title) = switch (type) {
+      ToastType.push => (Icons.arrow_forward, Colors.blue, 'Push Route'),
+      ToastType.replace => (Icons.swap_horiz, Colors.orange, 'Replace Route'),
+      ToastType.pop => (Icons.arrow_back, Colors.purple, 'Pop Route'),
+      ToastType.remove => (Icons.delete_outline, Colors.red, 'Remove Route'),
+      ToastType.error => (Icons.error_outline, Colors.red, 'Error'),
+      ToastType.info => (Icons.info_outline, Colors.grey, 'Info'),
+    };
+
+    Toast(
+      height: 52,
+      builder: (toast) => _ToastWidget(
+        icon: icon,
+        color: color,
+        title: title,
+        message: message,
+      ),
+    ).show(context);
+  }
+}
+
+enum ToastType { push, replace, pop, remove, error, info }
+
+class _ToastWidget extends StatelessWidget {
+  const _ToastWidget({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.message,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 52,
+      width: double.maxFinite,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFF2A2A2A), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(60),
+            blurRadius: 12,
+            offset: const Offset(0, 8),
+            spreadRadius: -2,
           ),
-        ),
-        backgroundColor: const Color(0xFF111111),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: const BorderSide(color: Color(0xFF333333)),
-        ),
-        margin: const EdgeInsets.all(16),
-        duration: const Duration(milliseconds: 1500),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Simple icon
+          Icon(icon, size: 20, color: color),
+          const SizedBox(width: 12),
+          // Text content
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  message,
+                  style: const TextStyle(
+                    color: Color(0xFFEDEDED),
+                    fontSize: 14,
+                    decoration: TextDecoration.none,
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'Inter',
+                    height: 1.4,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -559,11 +684,13 @@ class _TabButton extends StatelessWidget {
     required this.label,
     required this.isSelected,
     required this.onTap,
+    this.count = 0,
   });
 
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
+  final int count;
 
   @override
   Widget build(BuildContext context) {
@@ -577,15 +704,38 @@ class _TabButton extends StatelessWidget {
               ? const Border(bottom: BorderSide(color: Colors.white, width: 2))
               : null,
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected
-                ? const Color(0xFFEDEDED)
-                : const Color(0xFF666666),
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected
+                    ? const Color(0xFFEDEDED)
+                    : const Color(0xFF666666),
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              ),
+            ),
+            if (count > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: BoxDecoration(
+                  color: Colors.red[900]!.withAlpha(150),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  count.toString(),
+                  style: const TextStyle(
+                    color: Color(0xFFFFCDD2),
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -607,27 +757,24 @@ class _SmallIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(4),
-        child: Container(
-          width: 20,
-          height: 20,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            border: Border.all(color: const Color(0xFF333333)),
-            borderRadius: BorderRadius.circular(4),
-            color: const Color(0xFF111111),
-          ),
-          child: Icon(
-            icon,
-            size: 12,
-            color: onTap != null
-                ? (color ?? const Color(0xFFEDEDED))
-                : const Color(0xFF444444),
-          ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(4),
+      child: Container(
+        width: 20,
+        height: 20,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          border: Border.all(color: const Color(0xFF333333)),
+          borderRadius: BorderRadius.circular(4),
+          color: const Color(0xFF111111),
+        ),
+        child: Icon(
+          icon,
+          size: 12,
+          color: onTap != null
+              ? (color ?? const Color(0xFFEDEDED))
+              : const Color(0xFF444444),
         ),
       ),
     );
