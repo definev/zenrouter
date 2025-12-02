@@ -42,7 +42,6 @@ void main() {
       final route = AlwaysAllowGuard();
 
       unawaited(path.push(route));
-      await Future.delayed(Duration.zero);
       expect(path.stack.length, 1);
 
       path.pop();
@@ -213,7 +212,6 @@ void main() {
       final route = AlwaysDenyGuard();
 
       unawaited(path.push(route));
-      await Future.delayed(Duration.zero);
       expect(path.stack.length, 1);
 
       // Remove should not consult guards

@@ -248,11 +248,6 @@ void main() {
       expect(route1, isNot(equals(route2)));
     });
 
-    test('toUri returns throw error by default', () {
-      final route = TestRoute();
-      expect(() => route.toUri(), throwsAssertionError);
-    });
-
     test('default deeplink strategy is replace', () {
       final route = TestRoute();
       expect(route.deeplinkStrategy, DeeplinkStrategy.replace);

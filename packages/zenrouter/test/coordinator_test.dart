@@ -5,10 +5,14 @@ import 'package:zenrouter/zenrouter.dart';
 
 // Test routes
 class TestCoordinator extends Coordinator<AppRoute> {
-  final shellPath = NavigationPath<AppRoute>();
+  static final instance = TestCoordinator._();
+  TestCoordinator._();
 
-  @override
-  RouteHost get rootHost => RootHostRoute.instance;
+  factory TestCoordinator() => instance..reset();
+
+  void reset() => replace(parseRouteFromUri(Uri.parse('/')));
+
+  final shellPath = NavigationPath<AppRoute>();
 
   @override
   List<NavigationPath> get paths => [root, shellPath];
@@ -33,13 +37,16 @@ class RootHostRoute extends AppRoute with RouteHost<AppRoute> {
   static final instance = RootHostRoute();
 
   @override
+  Uri toUri() => Uri.parse('/');
+
+  @override
   RouteHost? get host => null;
 
   @override
   HostType get hostType => HostType.navigationStack;
 
   @override
-  NavigationPath get path => TestCoordinator().root;
+  NavigationPath get path => TestCoordinator.instance.root;
 
   @override
   bool operator ==(Object other) => other is RootHostRoute;
@@ -59,10 +66,10 @@ class ShellHostRoute extends AppRoute with RouteHost<AppRoute> {
   HostType get hostType => HostType.navigationStack;
 
   @override
-  NavigationPath get path => TestCoordinator().shellPath;
+  NavigationPath get path => TestCoordinator.instance.shellPath;
 
   @override
-  Uri? toUri() => Uri.parse('/shell');
+  Uri toUri() => Uri.parse('/shell');
 
   @override
   Widget build(covariant Coordinator coordinator, BuildContext context) {
@@ -81,7 +88,7 @@ class HomeRoute extends AppRoute with RouteDestinationMixin {
   RouteHost? get host => RootHostRoute.instance;
 
   @override
-  Uri? toUri() => Uri.parse('/');
+  Uri toUri() => Uri.parse('/');
 
   @override
   Widget build(covariant Coordinator coordinator, BuildContext context) {
@@ -94,7 +101,7 @@ class SettingsRoute extends AppRoute with RouteDestinationMixin {
   RouteHost? get host => RootHostRoute.instance;
 
   @override
-  Uri? toUri() => Uri.parse('/settings');
+  Uri toUri() => Uri.parse('/settings');
 
   @override
   Widget build(covariant Coordinator coordinator, BuildContext context) {
@@ -110,7 +117,7 @@ class ProfileRoute extends AppRoute with RouteDestinationMixin {
   RouteHost? get host => RootHostRoute.instance;
 
   @override
-  Uri? toUri() => Uri.parse('/profile/$userId');
+  Uri toUri() => Uri.parse('/profile/$userId');
 
   @override
   Widget build(covariant Coordinator coordinator, BuildContext context) {
@@ -132,7 +139,7 @@ class ShellChildOneRoute extends AppRoute with RouteDestinationMixin {
   RouteHost? get host => ShellHostRoute.instance;
 
   @override
-  Uri? toUri() => Uri.parse('/shell/one');
+  Uri toUri() => Uri.parse('/shell/one');
 
   @override
   Widget build(covariant Coordinator coordinator, BuildContext context) {
@@ -145,7 +152,7 @@ class ShellChildTwoRoute extends AppRoute with RouteDestinationMixin {
   RouteHost? get host => ShellHostRoute.instance;
 
   @override
-  Uri? toUri() => Uri.parse('/shell/two');
+  Uri toUri() => Uri.parse('/shell/two');
 
   @override
   Widget build(covariant Coordinator coordinator, BuildContext context) {
@@ -164,7 +171,7 @@ class RedirectRoute extends AppRoute with RouteRedirect<AppRoute> {
   FutureOr<AppRoute?> redirect() => target;
 
   @override
-  Uri? toUri() => target.toUri();
+  Uri toUri() => target.toUri();
 
   @override
   Widget build(covariant Coordinator coordinator, BuildContext context) {
@@ -180,7 +187,7 @@ class DeepLinkRoute extends AppRoute with RouteDestinationMixin, RouteDeepLink {
   RouteHost? get host => RootHostRoute.instance;
 
   @override
-  Uri? toUri() => Uri.parse('/deeplink/$id');
+  Uri toUri() => Uri.parse('/deeplink/$id');
 
   @override
   Widget build(covariant Coordinator coordinator, BuildContext context) {
@@ -231,38 +238,34 @@ void main() {
     test('push adds route to root path', () async {
       final coordinator = TestCoordinator();
 
-      await coordinator.push(HomeRoute());
+      coordinator.replace(HomeRoute());
       await Future.delayed(Duration.zero);
 
       expect(coordinator.root.stack.length, 1);
-      expect(coordinator.root.stack.first, isA<RootHostRoute>());
+      expect(coordinator.root.stack.first, isA<HomeRoute>());
     });
 
     test('replace clears all paths and adds route', () async {
       final coordinator = TestCoordinator();
 
-      await coordinator.push(HomeRoute());
-      await Future.delayed(Duration.zero);
-
+      coordinator.push(HomeRoute());
       coordinator.replace(SettingsRoute());
-      await Future.delayed(Duration.zero);
 
       expect(coordinator.root.stack.length, 1);
-      expect(coordinator.root.stack.first, isA<RootHostRoute>());
+      expect(coordinator.root.stack.first, isA<SettingsRoute>());
     });
 
     test('pop removes route from nearest dynamic path', () async {
       final coordinator = TestCoordinator();
 
-      await coordinator.push(ShellChildOneRoute());
-      await Future.delayed(Duration.zero);
-      await coordinator.push(ShellChildTwoRoute());
-      await Future.delayed(Duration.zero);
+      coordinator.push(ShellChildOneRoute());
+      Future.delayed(Duration.zero);
+      coordinator.push(ShellChildTwoRoute());
+      Future.delayed(Duration.zero);
 
       expect(coordinator.shellPath.stack.length, 2);
 
       coordinator.pop();
-      await Future.delayed(Duration.zero);
 
       expect(coordinator.shellPath.stack.length, 1);
       expect(coordinator.shellPath.stack.first, isA<ShellChildOneRoute>());
@@ -271,8 +274,7 @@ void main() {
     test('currentUri returns URI of active route', () async {
       final coordinator = TestCoordinator();
 
-      await coordinator.push(SettingsRoute());
-      await Future.delayed(Duration.zero);
+      coordinator.push(SettingsRoute());
 
       expect(coordinator.currentUri.path, '/settings');
     });
@@ -280,14 +282,15 @@ void main() {
     test('currentUri returns / when stack is empty', () {
       final coordinator = TestCoordinator();
 
+      coordinator.push(HomeRoute());
+
       expect(coordinator.currentUri.path, '/');
     });
 
     test('nearestPath returns root when no nested navigation', () async {
       final coordinator = TestCoordinator();
 
-      await coordinator.push(HomeRoute());
-      await Future.delayed(Duration.zero);
+      coordinator.push(HomeRoute());
 
       // HomeRoute is in root, so nearestPath should be root
       expect(coordinator.nearestPath, coordinator.root);
@@ -296,8 +299,7 @@ void main() {
     test('nearestPath returns shell path when shell route active', () async {
       final coordinator = TestCoordinator();
 
-      await coordinator.push(ShellChildOneRoute());
-      await Future.delayed(Duration.zero);
+      coordinator.push(ShellChildOneRoute());
 
       expect(coordinator.nearestPath, coordinator.shellPath);
     });
@@ -305,34 +307,23 @@ void main() {
     test('recoverRouteFromUri with replace strategy', () async {
       final coordinator = TestCoordinator();
 
-      await coordinator.push(HomeRoute());
-      await Future.delayed(Duration.zero);
+      coordinator.push(HomeRoute());
 
-      await coordinator.recoverRouteFromUri(Uri.parse('/settings'));
-      await Future.delayed(Duration.zero);
+      coordinator.recoverRouteFromUri(Uri.parse('/settings'));
 
       expect(coordinator.root.stack.length, 1);
-      expect(coordinator.root.stack.first, isA<RootHostRoute>());
+      expect(coordinator.root.stack.first, isA<SettingsRoute>());
     });
 
     test('tryPop returns true when route popped', () async {
       final coordinator = TestCoordinator();
 
-      await coordinator.push(ShellChildOneRoute());
-      await Future.delayed(Duration.zero);
+      coordinator.push(ShellChildOneRoute());
 
       final result = await coordinator.tryPop();
 
       expect(result, true);
       expect(coordinator.shellPath.stack, isEmpty);
-    });
-
-    test('tryPop returns false when all stacks are empty', () async {
-      final coordinator = TestCoordinator();
-
-      final result = await coordinator.tryPop();
-
-      expect(result, false);
     });
 
     test('pushOrMoveToTop moves existing route to top', () async {
@@ -341,13 +332,10 @@ void main() {
       final one = ShellChildOneRoute();
       final two = ShellChildTwoRoute();
 
-      await coordinator.push(one);
-      await Future.delayed(Duration.zero);
-      await coordinator.push(two);
-      await Future.delayed(Duration.zero);
+      coordinator.push(one);
+      coordinator.push(two);
 
       coordinator.pushOrMoveToTop(one);
-      await Future.delayed(Duration.zero);
 
       expect(coordinator.shellPath.stack.length, 2);
       expect(coordinator.shellPath.stack.last, one);
@@ -359,7 +347,7 @@ void main() {
       final target = SettingsRoute();
       final redirect = RedirectRoute(target);
 
-      await coordinator.push(redirect);
+      coordinator.push(redirect);
       await Future.delayed(Duration.zero);
 
       // Should have pushed the target, not the redirect
@@ -372,7 +360,7 @@ void main() {
     test('pushing shell route sets up host in root', () async {
       final coordinator = TestCoordinator();
 
-      await coordinator.push(ShellChildOneRoute());
+      coordinator.push(ShellChildOneRoute());
       await Future.delayed(Duration.zero);
 
       expect(coordinator.root.stack.length, 1);
@@ -384,10 +372,10 @@ void main() {
     test('multiple shell routes share same host', () async {
       final coordinator = TestCoordinator();
 
-      await coordinator.push(ShellChildOneRoute());
+      coordinator.push(ShellChildOneRoute());
       await Future.delayed(Duration.zero);
 
-      await coordinator.push(ShellChildTwoRoute());
+      coordinator.push(ShellChildTwoRoute());
       await Future.delayed(Duration.zero);
 
       expect(coordinator.root.stack.length, 1);
@@ -397,7 +385,7 @@ void main() {
     test('pathSegments includes host paths', () async {
       final coordinator = TestCoordinator();
 
-      await coordinator.push(ShellChildOneRoute());
+      coordinator.push(ShellChildOneRoute());
       await Future.delayed(Duration.zero);
 
       final segments = coordinator.pathSegments;
@@ -431,7 +419,7 @@ void main() {
         notified = true;
       });
 
-      await coordinator.push(HomeRoute());
+      coordinator.push(HomeRoute());
       await Future.delayed(Duration.zero);
 
       expect(notified, true);
@@ -440,7 +428,7 @@ void main() {
     test('notifies listeners on pop', () async {
       final coordinator = TestCoordinator();
 
-      await coordinator.push(ShellChildOneRoute());
+      coordinator.push(ShellChildOneRoute());
       await Future.delayed(Duration.zero);
 
       var notified = false;

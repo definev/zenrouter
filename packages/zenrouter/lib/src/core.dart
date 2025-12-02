@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:zenrouter/src/diff.dart';
 import 'package:zenrouter/src/transition.dart';
-import 'package:zenrouter/zenrouter.dart';
 
 /// A mixin that adds guard logic to prevent unwanted navigation away from a route.
 ///
@@ -158,38 +158,6 @@ abstract mixin class RouteTarget extends Object {
 
   @override
   String toString() => '$runtimeType';
-
-  /// Converts this route to a [Uri] for deep linking and web navigation.
-  ///
-  /// Override this method to support deep linking to this route.
-  /// Return `null` if this route should not be accessible via deep links.
-  ///
-  /// If this route has [RouteRedirect], the redirect will be followed first.
-  /// [RouteHost] routes should return `null`.
-  ///
-  /// Example:
-  /// ```dart
-  /// @override
-  /// Uri? toUri() => Uri.parse('/product/$productId');
-  /// ```
-  Uri? toUri() {
-    if (this case RouteRedirect route) {
-      final result = route.redirect();
-      if (result is RouteTarget) {
-        return result.toUri();
-      } else {
-        // Fail silent
-      }
-    }
-
-    if (this is RouteHost) return null;
-
-    assert(
-      false,
-      '[$runtimeType]: If you want to use deeplink for $runtimeType please implement `toUri()` method and put it in [Coordinator]',
-    );
-    return null;
-  }
 }
 
 /// A stack-based container for managing navigation history.
@@ -470,6 +438,20 @@ class NavigationStack<T extends RouteTarget> extends StatefulWidget {
     this.navigatorKey,
   });
 
+  static Widget declarative<T extends RouteTarget>({
+    required List<T> routes,
+    required RouteDestinationResolver<T> resolver,
+    GlobalKey<NavigatorState>? navigatorKey,
+    String? debugLabel,
+  }) {
+    return DeclarativeNavigationStack(
+      routes: routes,
+      navigatorKey: navigatorKey,
+      debugLabel: debugLabel,
+      resolver: resolver,
+    );
+  }
+
   /// Optional key for accessing the navigator state.
   final GlobalKey<NavigatorState>? navigatorKey;
 
@@ -538,6 +520,65 @@ class _NavigationStackState<T extends RouteTarget>
           onDidRemovePage: (page) {},
         );
       },
+    );
+  }
+}
+
+class DeclarativeNavigationStack<T extends RouteTarget> extends StatefulWidget {
+  const DeclarativeNavigationStack({
+    super.key,
+    required this.routes,
+    this.navigatorKey,
+    this.debugLabel,
+    required this.resolver,
+  });
+
+  final List<T> routes;
+  final GlobalKey<NavigatorState>? navigatorKey;
+  final String? debugLabel;
+  final RouteDestinationResolver<T> resolver;
+
+  @override
+  State<DeclarativeNavigationStack<T>> createState() =>
+      _DeclarativeNavigationStackState<T>();
+}
+
+class _DeclarativeNavigationStackState<T extends RouteTarget>
+    extends State<DeclarativeNavigationStack<T>> {
+  late final path = NavigationPath<T>(widget.debugLabel);
+  List<T> _previousRoutes = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _updateStack();
+  }
+
+  @override
+  void didUpdateWidget(DeclarativeNavigationStack<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.routes != oldWidget.routes) {
+      _updateStack();
+    }
+  }
+
+  void _updateStack() {
+    // Calculate diff between previous and current routes
+    final diffOps = myersDiff(_previousRoutes, widget.routes);
+
+    // Apply the diff operations to the navigation path
+    applyDiff(path, diffOps);
+
+    // Update previous routes for next comparison
+    _previousRoutes = List.from(widget.routes);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return NavigationStack(
+      path: path,
+      resolver: widget.resolver,
+      navigatorKey: widget.navigatorKey,
     );
   }
 }

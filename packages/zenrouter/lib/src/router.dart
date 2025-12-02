@@ -71,8 +71,11 @@ class FixedNavigationPath<T extends RouteUnique> extends NavigationPath<T> {
 }
 
 mixin RouteUnique on RouteTarget {
+  /// URI representation of the [RouteUnique]
+  Uri toUri();
+
   /// The host of this route. If null this route belongs to the root path.
-  RouteHost? get host;
+  RouteHost? get host => null;
 
   /// The build method
   Widget build(covariant Coordinator coordinator, BuildContext context);
@@ -214,11 +217,6 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
   /// All coordinators have at least this one path.
   final NavigationPath<T> root = NavigationPath('root');
 
-  /// The host of [root] navigation path
-  ///
-  /// This for building layout for child of route
-  RouteHost get rootHost;
-
   /// All navigation paths managed by this coordinator.
   ///
   /// Must include at least [root]. Add additional paths for shells.
@@ -229,9 +227,13 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
     final activePath = nearestPath;
 
     if (activePath case FixedNavigationPath activePath) {
-      return activePath.activeRoute.toUri() ?? Uri.parse('/');
+      return activePath.activeRoute.toUri();
     }
-    return activePath.stack.lastOrNull?.toUri() ?? Uri.parse('/');
+    if (activePath.stack.lastOrNull case RouteUnique route) {
+      return route.toUri();
+    }
+
+    return Uri.parse('/');
   }
 
   List<NavigationPath> get pathSegments {
@@ -242,11 +244,6 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
 
     while (true) {
       if (current is RouteHost) {
-        // Prevent infinite loop: if current is the rootHost, stop here
-        if (current == rootHost) {
-          break;
-        }
-
         final host = current as RouteHost;
         path = host.path;
         pathSegment.add(path);
@@ -271,19 +268,11 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
       final path = segments[index];
       if (path is! FixedNavigationPath) return path;
     }
-    throw Exception('Can\'t find a dynamic navigator path');
+
+    return root;
   }
 
-  FixedNavigationPath get nearestFixedPath {
-    final segments = pathSegments;
-    for (var index = segments.length - 1; index >= 0; --index) {
-      final path = segments[index];
-      if (path is FixedNavigationPath) return path;
-    }
-    throw Exception('Can\'t find a fixed navigation path');
-  }
-
-  NavigationPath get nearestPath => pathSegments.last;
+  NavigationPath get nearestPath => pathSegments.lastOrNull ?? root;
 
   /// Parses a [Uri] into a route object.
   ///
@@ -341,23 +330,21 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
 
     RouteHost? host = target.host;
     List<RouteHost> hostSegments = [];
+    List<NavigationPath> hostPaths = [];
     while (host != null) {
       hostSegments.add(host);
+      hostPaths.add(host.path);
       host = (host as RouteUnique).host;
     }
+    hostPaths.add(root);
 
-    // Only add rootHost if it's not already in the list (prevents duplicates)
-    if (hostSegments.isEmpty || hostSegments.last != rootHost) {
-      hostSegments.add(rootHost);
-    }
-
-    for (var i = hostSegments.length - 1; i >= 1; i--) {
-      final hostOfHost = hostSegments[i];
+    for (var i = hostPaths.length - 1; i >= 1; i--) {
+      final hostOfHostPath = hostPaths[i];
       final host = hostSegments[i - 1];
-      CoordinatorUtils(hostOfHost.path).setRoute(host);
+      CoordinatorUtils(hostOfHostPath).setRoute(host);
     }
 
-    CoordinatorUtils(hostSegments.first.path).setRoute(target);
+    CoordinatorUtils(hostSegments.firstOrNull?.path ?? root).setRoute(target);
   }
 
   /// Pushes a new route onto its navigation path.
@@ -376,23 +363,21 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
 
     RouteHost? host = target.host;
     List<RouteHost> hostSegments = [];
+    List<NavigationPath> hostPaths = [];
     while (host != null) {
       hostSegments.add(host);
+      hostPaths.add(host.path);
       host = (host as RouteUnique).host;
     }
+    hostPaths.add(root);
 
-    // Only add rootHost if it's not already in the list (prevents duplicates)
-    if (hostSegments.isEmpty || hostSegments.last != rootHost) {
-      hostSegments.add(rootHost);
-    }
-
-    for (var i = hostSegments.length - 1; i >= 1; i--) {
-      final hostOfHost = hostSegments[i];
+    for (var i = hostPaths.length - 1; i >= 1; i--) {
+      final hostOfHostPath = hostPaths[i];
       final host = hostSegments[i - 1];
-      hostOfHost.path.pushOrMoveToTop(host);
+      hostOfHostPath.pushOrMoveToTop(host);
     }
 
-    return hostSegments.first.path.push(target);
+    return (hostSegments.firstOrNull?.path ?? root).push(target);
   }
 
   /// Pushes a route or moves it to the top if already present.
@@ -416,18 +401,13 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
       host = (host as RouteUnique).host;
     }
 
-    // Only add rootHost if it's not already in the list (prevents duplicates)
-    if (hostSegments.isEmpty || hostSegments.last != rootHost) {
-      hostSegments.add(rootHost);
-    }
-
     for (var i = hostSegments.length - 1; i >= 1; i--) {
       final hostOfHost = hostSegments[i];
       final host = hostSegments[i - 1];
       hostOfHost.path.pushOrMoveToTop(host);
     }
 
-    hostSegments.first.path.pushOrMoveToTop(target);
+    (hostSegments.firstOrNull?.path ?? root).pushOrMoveToTop(target);
   }
 
   /// Pops the current route from the nearest `navigationStack` path type.
@@ -439,7 +419,8 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
   /// Builds the root widget (the primary navigator).
   ///
   /// Override to customize the root navigation structure.
-  Widget rootBuilder(BuildContext context) => rootHost.build(this, context);
+  Widget rootBuilder(BuildContext context) =>
+      HostType.buildNavigationStack(this, root, routerDelegate.navigatorKey);
 
   /// Attempts to pop the current route, handling guards.
   ///

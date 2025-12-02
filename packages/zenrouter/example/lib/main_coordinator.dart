@@ -38,30 +38,10 @@ class MyApp extends StatelessWidget {
 /// Base route class for all app routes
 abstract class AppRoute extends RouteTarget with RouteUnique {}
 
-/// Root host route - uses NavigatorStack for full-page navigation
-class RootHost extends AppRoute with RouteDestinationMixin, RouteHost {
-  static final instance = RootHost();
-
-  @override
-  RouteHost? get host => null;
-
-  @override
-  NavigationPath get path => appCoordinator.root;
-
-  @override
-  HostType get hostType => HostType.navigationStack;
-
-  @override
-  Uri? toUri() => Uri.parse('/');
-}
-
 /// Home host - uses NavigatorStack for nested navigation within home
 class HomeHost extends AppRoute
     with RouteDestinationMixin, RouteHost<AppRoute> {
   static final instance = HomeHost();
-
-  @override
-  RouteHost? get host => RootHost.instance;
 
   @override
   NavigationPath get path => appCoordinator.homeStack;
@@ -70,7 +50,7 @@ class HomeHost extends AppRoute
   HostType get hostType => HostType.navigationStack;
 
   @override
-  Uri? toUri() => Uri.parse('/home');
+  Uri toUri() => Uri.parse('/home');
 
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
@@ -96,7 +76,7 @@ class TabBarHost extends AppRoute
   HostType get hostType => HostType.manualStack;
 
   @override
-  Uri? toUri() => Uri.parse('/home/tabs');
+  Uri toUri() => Uri.parse('/home/tabs');
 
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
@@ -140,16 +120,13 @@ class TabBarHost extends AppRoute
 class SettingsHost extends AppRoute
     with RouteDestinationMixin, RouteHost<AppRoute> {
   @override
-  RouteHost? get host => RootHost.instance;
-
-  @override
   NavigationPath get path => appCoordinator.settingsStack;
 
   @override
   HostType get hostType => HostType.navigationStack;
 
   @override
-  Uri? toUri() => Uri.parse('/settings');
+  Uri toUri() => Uri.parse('/settings');
 
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
@@ -180,6 +157,9 @@ class FeedTabHost extends AppRoute with RouteHost<AppRoute> {
   static final instance = FeedTabHost();
 
   @override
+  Uri toUri() => Uri.parse('/home/tabs/feed');
+
+  @override
   NavigationPath get path => appCoordinator.feedTabStack;
 
   @override
@@ -194,7 +174,7 @@ class FeedTab extends AppRoute with RouteDestinationMixin {
   RouteHost? get host => FeedTabHost.instance;
 
   @override
-  Uri? toUri() => Uri.parse('/home/tabs/feed');
+  Uri toUri() => Uri.parse('/home/tabs/feed');
 
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
@@ -232,7 +212,7 @@ class ProfileTab extends AppRoute with RouteDestinationMixin {
   RouteHost? get host => TabBarHost.instance;
 
   @override
-  Uri? toUri() => Uri.parse('/home/tabs/profile');
+  Uri toUri() => Uri.parse('/home/tabs/profile');
 
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
@@ -258,7 +238,7 @@ class SettingsTab extends AppRoute with RouteDestinationMixin {
   RouteHost? get host => TabBarHost.instance;
 
   @override
-  Uri? toUri() => Uri.parse('/home/tabs/settings');
+  Uri toUri() => Uri.parse('/home/tabs/settings');
 
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
@@ -287,7 +267,8 @@ class SettingsTab extends AppRoute with RouteDestinationMixin {
 // Detail Routes (belong to HomeHost - navigatorStack host)
 // ============================================================================
 
-class FeedDetail extends AppRoute with RouteGuard, RouteRedirect {
+class FeedDetail extends AppRoute
+    with RouteGuard, RouteRedirect, RouteDeepLink {
   FeedDetail({required this.id});
 
   final String id;
@@ -296,7 +277,7 @@ class FeedDetail extends AppRoute with RouteGuard, RouteRedirect {
   RouteHost? get host => FeedTabHost.instance;
 
   @override
-  Uri? toUri() => Uri.parse('/home/feed/$id');
+  Uri toUri() => Uri.parse('/home/feed/$id');
 
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
@@ -361,6 +342,12 @@ class FeedDetail extends AppRoute with RouteGuard, RouteRedirect {
     if (id == 'profile') return ProfileDetail();
     return this;
   }
+
+  @override
+  FutureOr<void> deeplinkHandler(AppCoordinator coordinator, Uri uri) {
+    coordinator.replace(FeedTab());
+    coordinator.push(this);
+  }
 }
 
 class ProfileDetail extends AppRoute with RouteDestinationMixin {
@@ -368,7 +355,7 @@ class ProfileDetail extends AppRoute with RouteDestinationMixin {
   RouteHost? get host => HomeHost.instance;
 
   @override
-  Uri? toUri() => Uri.parse('/home/profile/detail');
+  Uri toUri() => Uri.parse('/home/profile/detail');
 
   @override
   Widget build(
@@ -405,7 +392,7 @@ class GeneralSettings extends AppRoute with RouteDestinationMixin {
   RouteHost? get host => _settingsHost;
 
   @override
-  Uri? toUri() => Uri.parse('/settings/general');
+  Uri toUri() => Uri.parse('/settings/general');
 
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
@@ -437,7 +424,7 @@ class AccountSettings extends AppRoute with RouteDestinationMixin {
   RouteHost? get host => _settingsHost;
 
   @override
-  Uri? toUri() => Uri.parse('/settings/account');
+  Uri toUri() => Uri.parse('/settings/account');
 
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
@@ -464,7 +451,7 @@ class PrivacySettings extends AppRoute with RouteDestinationMixin {
   RouteHost? get host => _settingsHost;
 
   @override
-  Uri? toUri() => Uri.parse('/settings/privacy');
+  Uri toUri() => Uri.parse('/settings/privacy');
 
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
@@ -494,10 +481,7 @@ class NotFound extends AppRoute with RouteDestinationMixin {
   final Uri uri;
 
   @override
-  RouteHost? get host => RootHost.instance;
-
-  @override
-  Uri? toUri() => Uri.parse('/not-found');
+  Uri toUri() => Uri.parse('/not-found');
 
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
@@ -537,9 +521,6 @@ class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug {
   ], debugLabel: 'home-tabs');
 
   NavigationPath<AppRoute> feedTabStack = NavigationPath('feed-nested');
-
-  @override
-  RouteHost get rootHost => RootHost.instance;
 
   @override
   List<NavigationPath> get paths => [
@@ -590,10 +571,7 @@ class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug {
 
 class Login extends AppRoute {
   @override
-  RouteHost<RouteUnique>? get host => RootHost.instance;
-
-  @override
-  Uri? toUri() => Uri.parse('/login');
+  Uri toUri() => Uri.parse('/login');
 
   @override
   Widget build(

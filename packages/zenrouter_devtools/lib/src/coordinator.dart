@@ -421,7 +421,7 @@ class _DebugOverlayState<T extends RouteUnique>
                                           // Don't clear here - onDidPop will handle it
                                           return 'all $debugLabel';
                                         }
-                                        return route.toUri() ?? '';
+                                        return (route as RouteHost).toUri();
                                       } catch (_) {
                                         return route.toString();
                                       }

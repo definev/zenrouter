@@ -5,8 +5,10 @@ import 'package:zenrouter/zenrouter.dart';
 
 // Test coordinator and routes
 class TestCoordinator extends Coordinator<TestAppRoute> {
-  @override
-  RouteHost get rootHost => RootHostRoute.instance;
+  static final instance = TestCoordinator._();
+  TestCoordinator._();
+
+  factory TestCoordinator() => instance;
 
   @override
   TestAppRoute parseRouteFromUri(Uri uri) {
@@ -38,6 +40,9 @@ class RootHostRoute extends TestAppRoute with RouteHost<TestAppRoute> {
 
   @override
   int get hashCode => runtimeType.hashCode;
+
+  @override
+  Uri toUri() => Uri.parse('/');
 }
 
 class HomeTestRoute extends TestAppRoute with RouteDestinationMixin {
@@ -45,7 +50,7 @@ class HomeTestRoute extends TestAppRoute with RouteDestinationMixin {
   RouteHost? get host => RootHostRoute.instance;
 
   @override
-  Uri? toUri() => Uri.parse('/');
+  Uri toUri() => Uri.parse('/');
 
   @override
   Widget build(covariant Coordinator coordinator, BuildContext context) {
@@ -58,7 +63,7 @@ class PageTestRoute extends TestAppRoute with RouteDestinationMixin {
   RouteHost? get host => RootHostRoute.instance;
 
   @override
-  Uri? toUri() => Uri.parse('/page');
+  Uri toUri() => Uri.parse('/page');
 
   @override
   Widget build(covariant Coordinator coordinator, BuildContext context) {
@@ -71,7 +76,7 @@ class RedirectTestRoute extends TestAppRoute with RouteRedirect<TestAppRoute> {
   RouteHost? get host => RootHostRoute.instance;
 
   @override
-  Uri? toUri() => Uri.parse('/redirect');
+  Uri toUri() => Uri.parse('/redirect');
 
   @override
   FutureOr<TestAppRoute?> redirect() => HomeTestRoute();
@@ -87,7 +92,7 @@ class AsyncRedirectRoute extends TestAppRoute with RouteRedirect<TestAppRoute> {
   RouteHost? get host => RootHostRoute.instance;
 
   @override
-  Uri? toUri() => Uri.parse('/async-redirect');
+  Uri toUri() => Uri.parse('/async-redirect');
 
   @override
   Future<TestAppRoute?> redirect() async {
@@ -107,7 +112,7 @@ class DeepLinkTestRoute extends TestAppRoute
   RouteHost? get host => RootHostRoute.instance;
 
   @override
-  Uri? toUri() => Uri.parse('/deeplink');
+  Uri toUri() => Uri.parse('/deeplink');
 
   @override
   FutureOr<void> deeplinkHandler(
@@ -148,6 +153,12 @@ void main() {
   });
 
   group('CoordinatorRouterDelegate', () {
+    tearDown(() {
+      // Clean up singleton coordinator state after each test
+      final coordinator = TestCoordinator();
+      coordinator.replace(HomeTestRoute());
+    });
+
     testWidgets('build returns root host widget', (tester) async {
       final coordinator = TestCoordinator();
       unawaited(coordinator.push(HomeTestRoute()));
@@ -207,16 +218,24 @@ void main() {
       unawaited(coordinator.push(PageTestRoute()));
       await tester.pumpAndSettle();
 
-      expect(coordinator.root.stack.length, 1);
+      expect(coordinator.root.stack.length, 2);
+      expect(coordinator.root.stack.last, isA<PageTestRoute>());
 
       await coordinator.routerDelegate.popRoute();
       await tester.pumpAndSettle();
 
       expect(coordinator.root.stack.length, 1);
+      expect(coordinator.root.stack.last, isA<HomeTestRoute>());
     });
   });
 
   group('Coordinator - Advanced Features', () {
+    tearDown(() {
+      // Clean up singleton coordinator state after each test
+      final coordinator = TestCoordinator();
+      coordinator.replace(HomeTestRoute());
+    });
+
     testWidgets('rootBuilder provides navigator widget', (tester) async {
       final coordinator = TestCoordinator();
 
@@ -241,7 +260,7 @@ void main() {
       await Future.delayed(const Duration(milliseconds: 10));
 
       // Should have redirected to HomeTestRoute
-      expect(coordinator.root.stack.last, isA<RootHostRoute>());
+      expect(coordinator.root.stack.last, isA<HomeTestRoute>());
     });
 
     test('async redirect handling', () async {
@@ -252,7 +271,7 @@ void main() {
       await Future.delayed(const Duration(milliseconds: 20));
 
       // Should have redirected to PageTestRoute
-      expect(coordinator.root.stack.last, isA<RootHostRoute>());
+      expect(coordinator.root.stack.last, isA<PageTestRoute>());
     });
 
     test('deep link handler is called', () async {
@@ -264,7 +283,7 @@ void main() {
       await Future.delayed(Duration.zero);
 
       expect(coordinator.root.stack.length, 1);
-      expect(coordinator.root.stack.first, isA<RootHostRoute>());
+      expect(coordinator.root.stack.first, isA<HomeTestRoute>());
     });
 
     test('currentUri reflects active route', () async {
@@ -283,6 +302,12 @@ void main() {
   });
 
   group('CoordinatorUtils', () {
+    tearDown(() {
+      // Clean up singleton coordinator state after each test
+      final coordinator = TestCoordinator();
+      coordinator.replace(HomeTestRoute());
+    });
+
     test('setRoute method clears and sets route', () {
       final coordinator = TestCoordinator();
       final utils = CoordinatorUtils(coordinator.root);
@@ -295,6 +320,12 @@ void main() {
   });
 
   group('RouteUnique', () {
+    tearDown(() {
+      // Clean up singleton coordinator state after each test
+      final coordinator = TestCoordinator();
+      coordinator.replace(HomeTestRoute());
+    });
+
     test('host property returns correct host', () {
       final route = HomeTestRoute();
 
@@ -303,6 +334,12 @@ void main() {
   });
 
   group('RouteDestinationMixin', () {
+    tearDown(() {
+      // Clean up singleton coordinator state after each test
+      final coordinator = TestCoordinator();
+      coordinator.replace(HomeTestRoute());
+    });
+
     test('destination returns RouteDestination', () {
       final coordinator = TestCoordinator();
       final route = HomeTestRoute();
