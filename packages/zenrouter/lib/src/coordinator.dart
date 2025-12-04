@@ -89,19 +89,26 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
     return layouts;
   }
 
-  /// Returns the list of active host paths in the navigation hierarchy.
+  /// Returns the list of active layout paths in the navigation hierarchy.
   ///
   /// This starts from the [root] path and traverses down through active layouts,
   /// collecting the [StackPath] for each level.
-  List<StackPath> get activeHostPaths {
+  @Deprecated('Use `activeLayoutPaths` insteads')
+  List<StackPath> get activeHostPaths => activeLayoutPaths;
+
+  /// Returns the list of active layout paths in the navigation hierarchy.
+  ///
+  /// This starts from the [root] path and traverses down through active layouts,
+  /// collecting the [StackPath] for each level.
+  List<StackPath> get activeLayoutPaths {
     List<StackPath> pathSegment = [root];
     StackPath path = root;
     T? current = root.stack.lastOrNull;
     if (current == null) return pathSegment;
 
     while (current is RouteLayout) {
-      final host = current as RouteLayout;
-      path = host.resolvePath(this);
+      final layout = current as RouteLayout;
+      path = layout.resolvePath(this);
       pathSegment.add(path);
       current = path.activeRoute as T?;
     }
@@ -113,7 +120,7 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
   ///
   /// This is the path that contains the currently active route.
   StackPath<T> get activePath =>
-      (activeHostPaths.lastOrNull ?? root) as StackPath<T>;
+      (activeLayoutPaths.lastOrNull ?? root) as StackPath<T>;
 
   /// Parses a [Uri] into a route object.
   ///
@@ -169,12 +176,12 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
     layoutPaths.add(root);
 
     for (var i = layoutPaths.length - 1; i >= 1; i--) {
-      final hostOfHostPath = layoutPaths[i];
-      final host = layouts[i - 1];
-      if (hostOfHostPath is StackMutatable && preferPush) {
-        hostOfHostPath.pushOrMoveToTop(host);
+      final layoutOfLayoutPath = layoutPaths[i];
+      final layout = layouts[i - 1];
+      if (layoutOfLayoutPath is StackMutatable && preferPush) {
+        layoutOfLayoutPath.pushOrMoveToTop(layout);
       } else {
-        hostOfHostPath.activateRoute(host);
+        layoutOfLayoutPath.activateRoute(layout);
       }
     }
   }
@@ -194,7 +201,7 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
 
   /// Pushes a new route onto its navigation path.
   ///
-  /// For shell routes, ensures the shell host exists in the parent path first.
+  /// For shell routes, ensures the shell layout exists in the parent path first.
   Future<dynamic> push(T route) async {
     T target = await RouteRedirect.resolve(route);
     final layout = target.resolveLayout(this);
@@ -229,8 +236,8 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
 
   /// Pops the last route from the nearest dynamic path.
   void pop() {
-    // Get all dynamic paths from the active host paths
-    final dynamicPaths = activeHostPaths.whereType<NavigationPath>().toList();
+    // Get all dynamic paths from the active layout paths
+    final dynamicPaths = activeLayoutPaths.whereType<NavigationPath>().toList();
 
     // Try to pop from the farthest element if stack length >= 2
     for (var i = dynamicPaths.length - 1; i >= 0; i--) {
@@ -260,8 +267,8 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
   /// - `false` if the route can't pop
   /// - `null` if the [RouteGuard] want manual control
   Future<bool?> tryPop() async {
-    // Get all dynamic paths from the active host paths
-    final dynamicPaths = activeHostPaths.whereType<NavigationPath>().toList();
+    // Get all dynamic paths from the active layout paths
+    final dynamicPaths = activeLayoutPaths.whereType<NavigationPath>().toList();
 
     // Try to pop from the farthest element if stack length >= 2
     for (var i = dynamicPaths.length - 1; i >= 0; i--) {

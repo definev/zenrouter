@@ -55,9 +55,9 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
   ///
   /// Use this to define how a specific layout type should be instantiated.
   static void defineLayout<T extends RouteLayout>(
-    Type homeHost,
+    Type layout,
     T Function() constructor,
-  ) => RouteLayout.layoutConstructorTable[homeHost] = constructor;
+  ) => RouteLayout.layoutConstructorTable[layout] = constructor;
 
   /// Table of registered layout constructors.
   static Map<Type, RouteLayoutConstructor> layoutConstructorTable = {};

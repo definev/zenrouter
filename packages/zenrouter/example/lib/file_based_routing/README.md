@@ -20,7 +20,7 @@ flutter run -t lib/file_based_routing/main.dart
 - **`routename.dart`** - Standalone route (e.g., `home.dart` → `/home`)
 - **`index.dart`** - Default route for a directory (e.g., `products/index.dart` → `/products`)
 - **`:parameter.dart`** - Route with path parameter (e.g., `:id.dart` → `/products/:id`)
-- **`+layout.dart`** - Layout host for routes in that directory
+- **`+layout.dart`** - Layout layout for routes in that directory
 - **`subfolder/route.dart`** - Nested route under a layout
 
 ### Directory Structure = URL Structure
@@ -30,13 +30,13 @@ routes/
 ├── home.dart                      → /home (standalone route)
 ├── products/
 │   ├── +layout.dart               → Layout for /products/* routes
-│   ├── index.dart                 → /products (default route, hosted by ProductsLayout)
-│   └── :id.dart                   → /products/:id (hosted by ProductsLayout)
+│   ├── index.dart                 → /products (default route, layouted by ProductsLayout)
+│   └── :id.dart                   → /products/:id (layouted by ProductsLayout)
 └── settings/
     ├── +layout.dart               → Layout for /settings/* routes
-    ├── index.dart                 → /settings (default route, hosted by SettingsLayout)
-    ├── account.dart               → /settings/account (hosted by SettingsLayout)
-    └── privacy.dart               → /settings/privacy (hosted by SettingsLayout)
+    ├── index.dart                 → /settings (default route, layouted by SettingsLayout)
+    ├── account.dart               → /settings/account (layouted by SettingsLayout)
+    └── privacy.dart               → /settings/privacy (layouted by SettingsLayout)
 ```
 
 ## URL Mapping

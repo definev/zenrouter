@@ -28,14 +28,15 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   /// Currently, this counts the number of [debugRoutes] that fail to convert
   /// to a URI (i.e., [toUri] throws an exception). This helps identify
   /// routes that might be missing proper URI generation logic.
-  int get problems => debugRoutes.where((r) {
-    try {
-      r.toUri();
-      return false;
-    } catch (_) {
-      return true;
-    }
-  }).length;
+  int get problems =>
+      debugRoutes.where((r) {
+        try {
+          r.toUri();
+          return false;
+        } catch (_) {
+          return true;
+        }
+      }).length;
 
   /// Override this to provide a custom label for a navigation path.
   ///
@@ -83,24 +84,25 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
           Overlay(
             initialEntries: [
               OverlayEntry(
-                builder: (context) => MediaQuery.fromView(
-                  view: View.of(context),
-                  child: Builder(
-                    builder: (context) {
-                      final viewInsets = MediaQuery.viewInsetsOf(context);
-                      final viewPadding = MediaQuery.viewPaddingOf(context);
-                      return Padding(
-                        padding: EdgeInsets.only(
-                          bottom: switch (viewInsets.bottom) {
-                            > 0 => viewInsets.bottom,
-                            _ => viewPadding.bottom,
-                          },
-                        ),
-                        child: _DebugOverlay(coordinator: this),
-                      );
-                    },
-                  ),
-                ),
+                builder:
+                    (context) => MediaQuery.fromView(
+                      view: View.of(context),
+                      child: Builder(
+                        builder: (context) {
+                          final viewInsets = MediaQuery.viewInsetsOf(context);
+                          final viewPadding = MediaQuery.viewPaddingOf(context);
+                          return Padding(
+                            padding: EdgeInsets.only(
+                              bottom: switch (viewInsets.bottom) {
+                                > 0 => viewInsets.bottom,
+                                _ => viewPadding.bottom,
+                              },
+                            ),
+                            child: _DebugOverlay(coordinator: this),
+                          );
+                        },
+                      ),
+                    ),
               ),
             ],
           ),
@@ -160,26 +162,27 @@ class _DebugOverlayState<T extends RouteUnique>
               children: [
                 ListenableBuilder(
                   listenable: _uriController,
-                  builder: (context, child) => Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black87,
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                    height: 40,
-                    margin: EdgeInsets.only(right: 4),
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    child: Center(
-                      child: Text(
-                        _uriController.text,
-                        style: TextStyle(
-                          color: Colors.white,
-                          decoration: TextDecoration.none,
-                          fontWeight: FontWeight.normal,
-                          fontSize: 12,
+                  builder:
+                      (context, child) => Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black87,
+                          borderRadius: BorderRadius.circular(100),
+                        ),
+                        height: 40,
+                        margin: EdgeInsets.only(right: 4),
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Center(
+                          child: Text(
+                            _uriController.text,
+                            style: TextStyle(
+                              color: Colors.white,
+                              decoration: TextDecoration.none,
+                              fontWeight: FontWeight.normal,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
                 ),
                 FloatingActionButton(
                   mini: true,
@@ -244,9 +247,10 @@ class _DebugOverlayState<T extends RouteUnique>
                     _buildTabBar(),
                     const Divider(height: 1, color: Color(0xFF333333)),
                     Expanded(
-                      child: _selectedTabIndex == 0
-                          ? _buildPathList()
-                          : _buildDebugRoutesList(),
+                      child:
+                          _selectedTabIndex == 0
+                              ? _buildPathList()
+                              : _buildDebugRoutesList(),
                     ),
                     const Divider(height: 1, color: Color(0xFF333333)),
                     _buildInputArea(),
@@ -337,7 +341,7 @@ class _DebugOverlayState<T extends RouteUnique>
           itemCount: widget.coordinator.paths.length,
           itemBuilder: (context, index) {
             final path = widget.coordinator.paths[index];
-            final isActive = path == widget.coordinator.activeHostPaths.last;
+            final isActive = path == widget.coordinator.activeLayoutPaths.last;
             final isReadOnly = path is IndexedStackPath;
 
             return Container(
@@ -354,16 +358,16 @@ class _DebugOverlayState<T extends RouteUnique>
                       top: 8,
                       bottom: 8,
                     ),
-                    color: isActive
-                        ? const Color(0xFF1A1A1A)
-                        : Colors.transparent,
+                    color:
+                        isActive ? const Color(0xFF1A1A1A) : Colors.transparent,
                     child: Row(
                       children: [
                         Icon(
                           isReadOnly ? Icons.lock : Icons.folder_open,
-                          color: isActive
-                              ? const Color(0xFFEDEDED)
-                              : const Color(0xFF666666),
+                          color:
+                              isActive
+                                  ? const Color(0xFFEDEDED)
+                                  : const Color(0xFF666666),
                           size: 14,
                         ),
                         const SizedBox(width: 8),
@@ -373,9 +377,10 @@ class _DebugOverlayState<T extends RouteUnique>
                               Text(
                                 widget.coordinator.debugLabel(path),
                                 style: TextStyle(
-                                  color: isActive
-                                      ? const Color(0xFFEDEDED)
-                                      : const Color(0xFF888888),
+                                  color:
+                                      isActive
+                                          ? const Color(0xFFEDEDED)
+                                          : const Color(0xFF888888),
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -430,35 +435,38 @@ class _DebugOverlayState<T extends RouteUnique>
                           _SmallIconButton(
                             icon: Icons.arrow_back,
                             tooltip: 'Pop Route',
-                            onTap: path.stack.length > 1
-                                ? () async {
-                                    final route = path.stack.last;
-                                    await path.pop();
-                                    final routeName = () {
-                                      try {
-                                        if (route is RouteLayout) {
-                                          final shellPath = route.resolvePath(
-                                            widget.coordinator,
-                                          );
-                                          final debugLabel = widget.coordinator
-                                              .debugLabel(shellPath);
-                                          // Don't clear here - onDidPop will handle it
-                                          return 'all $debugLabel';
+                            onTap:
+                                path.stack.length > 1
+                                    ? () async {
+                                      final route = path.stack.last;
+                                      await path.pop();
+                                      final routeName = () {
+                                        try {
+                                          if (route is RouteLayout) {
+                                            final shellPath = route.resolvePath(
+                                              widget.coordinator,
+                                            );
+                                            final debugLabel = widget
+                                                .coordinator
+                                                .debugLabel(shellPath);
+                                            // Don't clear here - onDidPop will handle it
+                                            return 'all $debugLabel';
+                                          }
+                                          return (route as RouteLayout).toUri();
+                                        } catch (_) {
+                                          return route.toString();
                                         }
-                                        return (route as RouteLayout).toUri();
-                                      } catch (_) {
-                                        return route.toString();
-                                      }
-                                    }();
-                                    _showToast(
-                                      'Popped $routeName',
-                                      type: ToastType.pop,
-                                    );
-                                  }
-                                : null,
-                            color: path.stack.length > 1
-                                ? const Color(0xFFEDEDED)
-                                : const Color(0xFF666666),
+                                      }();
+                                      _showToast(
+                                        'Popped $routeName',
+                                        type: ToastType.pop,
+                                      );
+                                    }
+                                    : null,
+                            color:
+                                path.stack.length > 1
+                                    ? const Color(0xFFEDEDED)
+                                    : const Color(0xFF666666),
                           ),
                       ],
                     ),
@@ -492,9 +500,8 @@ class _DebugOverlayState<T extends RouteUnique>
                               top: 6,
                               bottom: 6,
                             ),
-                            color: isRouteActive
-                                ? const Color(0xFF111111)
-                                : null,
+                            color:
+                                isRouteActive ? const Color(0xFF111111) : null,
                             child: Row(
                               children: [
                                 Expanded(
@@ -504,14 +511,16 @@ class _DebugOverlayState<T extends RouteUnique>
                                         child: Text(
                                           route.toString(),
                                           style: TextStyle(
-                                            color: isRouteActive
-                                                ? const Color(0xFFEDEDED)
-                                                : const Color(0xFF999999),
+                                            color:
+                                                isRouteActive
+                                                    ? const Color(0xFFEDEDED)
+                                                    : const Color(0xFF999999),
                                             fontSize: 11,
                                             fontFamily: 'monospace',
-                                            fontWeight: isRouteActive
-                                                ? FontWeight.w600
-                                                : FontWeight.normal,
+                                            fontWeight:
+                                                isRouteActive
+                                                    ? FontWeight.w600
+                                                    : FontWeight.normal,
                                           ),
                                           overflow: TextOverflow.ellipsis,
                                         ),
@@ -536,9 +545,10 @@ class _DebugOverlayState<T extends RouteUnique>
                                       ? Icons.radio_button_checked
                                       : Icons.radio_button_unchecked,
                                   size: 16,
-                                  color: isRouteActive
-                                      ? Colors.blue
-                                      : const Color(0xFF666666),
+                                  color:
+                                      isRouteActive
+                                          ? Colors.blue
+                                          : const Color(0xFF666666),
                                 ),
                               ],
                             ),
@@ -569,14 +579,16 @@ class _DebugOverlayState<T extends RouteUnique>
                                       child: Text(
                                         route.toString(),
                                         style: TextStyle(
-                                          color: isTop
-                                              ? const Color(0xFFEDEDED)
-                                              : const Color(0xFF999999),
+                                          color:
+                                              isTop
+                                                  ? const Color(0xFFEDEDED)
+                                                  : const Color(0xFF999999),
                                           fontSize: 11,
                                           fontFamily: 'monospace',
-                                          fontWeight: isTop
-                                              ? FontWeight.w600
-                                              : FontWeight.normal,
+                                          fontWeight:
+                                              isTop
+                                                  ? FontWeight.w600
+                                                  : FontWeight.normal,
                                         ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -599,15 +611,16 @@ class _DebugOverlayState<T extends RouteUnique>
                                 _SmallIconButton(
                                   icon: Icons.close,
                                   tooltip: 'Remove Route',
-                                  onTap: path.stack.length > 1
-                                      ? () {
-                                          path.remove(route);
-                                          _showToast(
-                                            'Removed $route',
-                                            type: ToastType.remove,
-                                          );
-                                        }
-                                      : null,
+                                  onTap:
+                                      path.stack.length > 1
+                                          ? () {
+                                            path.remove(route);
+                                            _showToast(
+                                              'Removed $route',
+                                              type: ToastType.remove,
+                                            );
+                                          }
+                                          : null,
                                   color: Colors.red[200],
                                 ),
                             ],
@@ -823,16 +836,18 @@ class _DebugOverlayState<T extends RouteUnique>
 
     Toast(
       height: 52,
-      builder: (toast) => _ToastWidget(
-        icon: icon,
-        color: color,
-        title: title,
-        message: message,
-      ),
+      builder:
+          (toast) => _ToastWidget(
+            icon: icon,
+            color: color,
+            title: title,
+            message: message,
+          ),
     ).show(context);
   }
 }
 
+/// Kind of toast
 enum ToastType { push, replace, pop, remove, error, info }
 
 class _ToastWidget extends StatelessWidget {
@@ -921,9 +936,12 @@ class _TabButton extends StatelessWidget {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF1A1A1A) : Colors.transparent,
-          border: isSelected
-              ? const Border(bottom: BorderSide(color: Colors.white, width: 2))
-              : null,
+          border:
+              isSelected
+                  ? const Border(
+                    bottom: BorderSide(color: Colors.white, width: 2),
+                  )
+                  : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -931,9 +949,10 @@ class _TabButton extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                color: isSelected
-                    ? const Color(0xFFEDEDED)
-                    : const Color(0xFF666666),
+                color:
+                    isSelected
+                        ? const Color(0xFFEDEDED)
+                        : const Color(0xFF666666),
                 fontSize: 12,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
               ),
@@ -993,9 +1012,10 @@ class _SmallIconButton extends StatelessWidget {
         child: Icon(
           icon,
           size: 12,
-          color: onTap != null
-              ? (color ?? const Color(0xFFEDEDED))
-              : const Color(0xFF444444),
+          color:
+              onTap != null
+                  ? (color ?? const Color(0xFFEDEDED))
+                  : const Color(0xFF444444),
         ),
       ),
     );

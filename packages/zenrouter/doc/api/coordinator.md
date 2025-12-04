@@ -25,7 +25,7 @@ abstract class Coordinator<T extends RouteUnique> {
   // Active state properties
   RouteLayout? get activeLayout;
   List<RouteLayout> get activeLayouts;
-  List<StackPath> get activeHostPaths;
+  List<StackPath> get activeLayoutPaths;
   StackPath<T> get activePath;
   Uri get currentUri;
   NavigatorState get navigator;
@@ -133,9 +133,9 @@ Returns `null` if the root is the active layout.
 
 Returns all active `RouteLayout` instances in the navigation hierarchy, from root to deepest.
 
-### `activeHostPaths` → `List<StackPath>`
+### `activeLayoutPaths` → `List<StackPath>`
 
-Returns the list of active host paths in the navigation hierarchy, starting from `root`.
+Returns the list of active layout paths in the navigation hierarchy, starting from `root`.
 
 ### `activePath` → `StackPath<T>`
 

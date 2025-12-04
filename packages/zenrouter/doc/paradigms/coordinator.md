@@ -559,7 +559,7 @@ mixin RouteUnique on RouteTarget {
   // Build the UI for this route
   Widget build(Coordinator coordinator, BuildContext context);
   
-  // Optional: Layout host for nested navigation
+  // Optional: Layout layout for nested navigation
   RouteLayout? get layout => null;
 }
 ```

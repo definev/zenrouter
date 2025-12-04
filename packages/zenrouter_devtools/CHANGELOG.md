@@ -1,3 +1,7 @@
+## 0.2.0
+
+- Bump `zenrouter` version
+
 ## 0.1.1
 
 - Fix broken homepage link

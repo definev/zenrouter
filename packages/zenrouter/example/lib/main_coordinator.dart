@@ -38,7 +38,7 @@ class MyApp extends StatelessWidget {
 /// Base route class for all app routes
 abstract class AppRoute extends RouteTarget with RouteUnique {}
 
-/// Home host - uses NavigatorStack for nested navigation within home
+/// Home layout - uses NavigatorStack for nested navigation within home
 class HomeLayout extends AppRoute with RouteLayout<AppRoute>, RouteTransition {
   @override
   NavigationPath<AppRoute> resolvePath(AppCoordinator coordinator) =>
@@ -86,7 +86,7 @@ class TabBarLayout extends AppRoute with RouteLayout<AppRoute> {
     return Scaffold(
       body: Column(
         children: [
-          // Tab content (IndexedStack is built by RouteHost)
+          // Tab content (IndexedStack is built by RouteLayout)
           Expanded(
             child:
                 RouteLayout.layoutBuilderTable[RouteLayout.indexedStackPath]!(
@@ -151,7 +151,7 @@ class SettingsLayout extends AppRoute with RouteLayout<AppRoute> {
 }
 
 // ============================================================================
-// Tab Routes (belong to TabBarHost - custom host)
+// Tab Routes (belong to TabBarLayout - custom layout)
 // ============================================================================
 
 class FeedTabLayout extends AppRoute with RouteLayout<AppRoute> {
@@ -262,7 +262,7 @@ class SettingsTab extends AppRoute {
 }
 
 // ============================================================================
-// Detail Routes (belong to HomeHost - navigatorStack host)
+// Detail Routes (belong to HomeLayout - navigatorStack layout)
 // ============================================================================
 
 class FeedDetail extends AppRoute
@@ -377,7 +377,7 @@ class ProfileDetail extends AppRoute {
 }
 
 // ============================================================================
-// Settings Routes (belong to SettingsHost - navigatorStack host)
+// Settings Routes (belong to SettingsLayout - navigatorStack layout)
 // ============================================================================
 
 class GeneralSettings extends AppRoute {
@@ -545,7 +545,7 @@ class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug {
   @override
   AppRoute parseRouteFromUri(Uri uri) {
     return switch (uri.pathSegments) {
-      // Root - default to feed tab (hosts will be set up automatically)
+      // Root - default to feed tab (layouts will be set up automatically)
       [] => Login(),
       // Home routes - default to feed tab
       ['home'] => FeedTab(),

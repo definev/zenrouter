@@ -1,3 +1,6 @@
+## 0.2.0
+- BREAKING: Rename `activeHostPaths` to `activeLayoutPaths` to reflect correct concept.
+
 ## 0.1.2
 - Update homepage link
 

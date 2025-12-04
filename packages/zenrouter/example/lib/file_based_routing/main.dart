@@ -6,7 +6,7 @@
 /// File naming convention:
 /// - `index.dart` - Route at the directory path
 /// - `:parameter.dart` - Route with path parameter
-/// - `+layout.dart` - Layout host for the directory
+/// - `+layout.dart` - Layout layout for the directory
 ///
 /// Directory structure = URL structure:
 /// ```

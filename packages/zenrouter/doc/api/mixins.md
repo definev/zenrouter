@@ -18,7 +18,7 @@ class MyRoute extends RouteTarget    // Base class (required)
 
 Each mixin adds specific capabilities:
 - **RouteUnique** - Makes route work with Coordinator
-- **RouteLayout** - Creates navigation host for nested routes
+- **RouteLayout** - Creates navigation layout for nested routes
 - **RouteTransition** - Custom page transitions
 - **RouteGuard** - Prevents unwanted navigation
 - **RouteRedirect** - Redirects to different routes
@@ -45,7 +45,7 @@ Which mixins do I need?
 │  ├─ Yes → Add RouteUnique ✓
 │  └─ No → Just extend RouteTarget
 │
-├─ Creating a navigation host (tabs, navigation-stack)?
+├─ Creating a navigation layout (tabs, navigation-stack)?
 │  ├─ Yes → Add RouteLayout ✓
 │  └─ No → Continue
 │
@@ -189,7 +189,7 @@ class UserRoute extends AppRoute {
 
 Creates a navigation layout that contains and manages other routes, essential for building nested navigation hierarchies like tab bars, drawers, and shell routes.
 
-`RouteLayout` acts as a host for `StackPath` instances. Each type of stack path requires its own corresponding layout widget. ZenRouter provides two built-in path types: `NavigationPath` (for stack-based push/pop navigation) uses `NavigationStack` as its layout, while `IndexedStackPath` (for tab bars and indexed navigation) uses `IndexedStack` as its layout.
+`RouteLayout` acts as a layout for `StackPath` instances. Each type of stack path requires its own corresponding layout widget. ZenRouter provides two built-in path types: `NavigationPath` (for stack-based push/pop navigation) uses `NavigationStack` as its layout, while `IndexedStackPath` (for tab bars and indexed navigation) uses `IndexedStack` as its layout.
 
 **Custom Layouts**: You can create your own layout types by implementing the `RouteLayout` mixin, registering the constructor in `layoutConstructorTable`, and providing the default widget builder in `layoutBuilderTable`. For more details, check out the advanced tutorial.
 
@@ -1023,11 +1023,11 @@ class MyRoute extends AppRoute
 
 ```dart
 // ❌ BAD: RouteLayout without coordinator
-class TabHost extends RouteTarget with RouteLayout {...}
+class TabLayout extends RouteTarget with RouteLayout {...}
 // Won't work with pure imperative/declarative navigation
 
 // ✅ GOOD: Use RouteUnique with RouteLayout
-class TabHost extends RouteTarget with RouteUnique, RouteLayout {...}
+class TabLayout extends RouteTarget with RouteUnique, RouteLayout {...}
 // Works with Coordinator
 ```
 

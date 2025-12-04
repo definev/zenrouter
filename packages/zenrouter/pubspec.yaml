@@ -1,6 +1,6 @@
 name: zenrouter
 description: "The Ultimate Flutter Router for Every Navigation Pattern"
-version: 0.1.2
+version: 0.2.0
 homepage: https://github.com/definev/zenrouter/tree/main/packages/zenrouter
 
 environment:
