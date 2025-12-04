@@ -1,3 +1,6 @@
+## 0.1.1
+- Fix broken document link
+
 ## 0.1.0
 
 - Initial release of ZenRouter.

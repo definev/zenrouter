@@ -143,6 +143,6 @@ Then add to coordinator:
 
 ## See Also
 
-- [Coordinator Pattern Guide](../../../docs/paradigms/coordinator.md)
-- [Coordinator API Reference](../../../docs/api/coordinator.md)
+- [Coordinator Pattern Guide](../../../doc/paradigms/coordinator.md)
+- [Coordinator API Reference](../../../doc/api/coordinator.md)
 - [File-Based Routing Practice Guide](../../../practices/file-based-routing/README.md)

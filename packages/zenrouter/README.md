@@ -96,7 +96,7 @@ class AppRouter extends StatelessWidget {
 }
 ```
 
-That's it! You've successfully set up imperative routing for your app. To navigate, simply call `push()` to open a new route (you can `await` the result when it's popped), and `pop()` to go back. The `NavigationPath` class offers many handy operations—see more in the [NavigationPath API documentation](docs/api/navigation-paths.md#navigationpath).
+That's it! You've successfully set up imperative routing for your app. To navigate, simply call `push()` to open a new route (you can `await` the result when it's popped), and `pop()` to go back. The `NavigationPath` class offers many handy operations—see more in the [NavigationPath API documentation](doc/api/navigation-paths.md#navigationpath).
 
 ```dart
 // Open Profile route
@@ -115,7 +115,7 @@ appPath.pop();
 - Migrating from Navigator 1.0
 - You want simple, direct control
 
-[→ Learn Imperative Routing](docs/paradigms/imperative.md)
+[→ Learn Imperative Routing](doc/paradigms/imperative.md)
 
 ---
 
@@ -177,7 +177,7 @@ That's it! The navigation stack stays perfectly in sync with your state—no man
 - State-driven UIs
 - React-like declarative patterns
 
-[→ Learn Declarative Routing](docs/paradigms/declarative.md)
+[→ Learn Declarative Routing](doc/paradigms/declarative.md)
 
 ---
 
@@ -286,7 +286,7 @@ The Coordinator handles all the complexity of URI parsing, route restoration, an
 - Complex nested navigation
 - URL synchronization needed
 
-[→ Learn Coordinator Pattern](docs/paradigms/coordinator.md)
+[→ Learn Coordinator Pattern](doc/paradigms/coordinator.md)
 
 ---
 
@@ -307,16 +307,16 @@ The Coordinator handles all the complexity of URI parsing, route restoration, an
 ## Documentation
 
 ### **📚 Guides**
-- [Getting Started](docs/guides/getting-started.md) - Choose your paradigm and get started
-- [Imperative Navigation](docs/paradigms/imperative.md) - Direct stack control
-- [Declarative Navigation](docs/paradigms/declarative.md) - State-driven routing
-- [Coordinator Pattern](docs/paradigms/coordinator.md) - Deep linking & web support
+- [Getting Started](doc/guides/getting-started.md) - Choose your paradigm and get started
+- [Imperative Navigation](doc/paradigms/imperative.md) - Direct stack control
+- [Declarative Navigation](doc/paradigms/declarative.md) - State-driven routing
+- [Coordinator Pattern](doc/paradigms/coordinator.md) - Deep linking & web support
 
 ### **🔧 API Reference**
-- [Route Mixins](docs/api/mixins.md) - Guards, redirects, transitions, and more
-- [Navigation Paths](docs/api/navigation-paths.md) - Stack containers and navigation
-- [Coordinator API](docs/api/coordinator.md) - Full coordinator reference
-- [Core Classes](docs/api/core-classes.md) - RouteTarget and fundamentals
+- [Route Mixins](doc/api/mixins.md) - Guards, redirects, transitions, and more
+- [Navigation Paths](doc/api/navigation-paths.md) - Stack containers and navigation
+- [Coordinator API](doc/api/coordinator.md) - Full coordinator reference
+- [Core Classes](doc/api/core-classes.md) - RouteTarget and fundamentals
 
 ### **💡 Examples**
 - [Imperative Example](example/lib/main_imperative.dart) - Multi-step form
@@ -343,7 +343,7 @@ Apache 2.0 License - see [LICENSE](LICENSE) for details.
 
 **The Ultimate Router for Flutter**
 
-[Documentation](docs/guides/getting-started.md) • [Examples](example/) • [Issues](https://github.com/definev/zenrouter/issues)
+[Documentation](doc/guides/getting-started.md) • [Examples](example/) • [Issues](https://github.com/definev/zenrouter/issues)
 
 **Happy Routing! 🧘**
 
