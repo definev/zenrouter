@@ -21,19 +21,28 @@ abstract class Coordinator<T extends RouteUnique> {
   
   // Additional paths for nested navigation
   List<StackPath> get paths;
+
+  // Active state properties
+  RouteLayout? get activeLayout;
+  List<RouteLayout> get activeLayouts;
+  List<StackPath> get activeHostPaths;
+  StackPath<T> get activePath;
+  Uri get currentUri;
+  NavigatorState get navigator;
   
   // Parse URLs into routes
   T parseRouteFromUri(Uri uri);
   
   // Navigation methods
-  Future<void> push(T route);
-  Future<void> pop();
-  Future<void> replace(T route);
-  Future<void> pushOrMoveToTop(T route);
+  Future<dynamic> push(T route);
+  void pop();
+  void replace(T route);
+  void pushOrMoveToTop(T route);
+  Future<bool?> tryPop();
   
   // Router integration
-  CoordinatorRouterDelegate<T> get routerDelegate;
-  CoordinatorRouteParser<T> get parser;
+  CoordinatorRouterDelegate get routerDelegate;
+  CoordinatorRouteParser get routeInformationParser;
 }
 ```
 
@@ -114,7 +123,33 @@ List<StackPath> get paths => [
 
 **Important:** Always include `root` in the list!
 
-### `routerDelegate` → `CoordinatorRouterDelegate<T>`
+### `activeLayout` → `RouteLayout?`
+
+Returns the deepest active `RouteLayout` in the navigation hierarchy.
+
+Returns `null` if the root is the active layout.
+
+### `activeLayouts` → `List<RouteLayout>`
+
+Returns all active `RouteLayout` instances in the navigation hierarchy, from root to deepest.
+
+### `activeHostPaths` → `List<StackPath>`
+
+Returns the list of active host paths in the navigation hierarchy, starting from `root`.
+
+### `activePath` → `StackPath<T>`
+
+Returns the currently active `StackPath`. This is the path that contains the currently active route.
+
+### `currentUri` → `Uri`
+
+Returns the current URI based on the active route.
+
+### `navigator` → `NavigatorState`
+
+Access to the `NavigatorState`.
+
+### `routerDelegate` → `CoordinatorRouterDelegate`
 
 Router delegate for `MaterialApp.router`.
 
@@ -136,7 +171,7 @@ final context = coordinator.routerDelegate.navigatorKey.currentContext;
 final navigator = coordinator.routerDelegate.navigatorKey.currentState;
 ```
 
-### `parser` → `CoordinatorRouteParser<T>`
+### `routeInformationParser` → `CoordinatorRouteParser`
 
 Route information parser for URL handling.
 
@@ -214,7 +249,7 @@ AppRoute parseRouteFromUri(Uri uri) {
 }
 ```
 
-### `push(T route)` → `Future<void>`
+### `push(T route)` → `Future<dynamic>`
 
 Pushes a route onto its appropriate navigation path.
 
@@ -266,7 +301,7 @@ coordinator.push(ProtectedRoute());
 
 **Returns:** Future that completes when route resolution is done.
 
-### `pop()` → `Future<void>`
+### `pop()` → `void`
 
 Pops the last route from the nearest dynamic path.
 
@@ -297,9 +332,9 @@ await coordinator.pop(); // Guard is consulted first
 **Behavior:**
 - If stack becomes empty after pop, the coordinator handles cleanup
 - Browser back button automatically calls `pop()`
-- Returns `Future<void>` that completes when pop is done
+- Returns `void`
 
-### `replace(T route)` → `Future<void>`
+### `replace(T route)` → `void`
 
 Wipes the current navigation stack and replaces it with the new route.
 
@@ -325,7 +360,7 @@ coordinator.replace(DashboardRoute());
 
 **Note:** Unlike `push()`, this **does not** consult guards. It's a forced reset.
 
-### `pushOrMoveToTop(T route)` → `Future<void>`
+### `pushOrMoveToTop(T route)` → `void`
 
 Pushes a route or moves it to the top if already present in its path.
 

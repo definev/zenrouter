@@ -11,12 +11,23 @@ import 'package:zentoast/zentoast.dart';
 /// - Ability to push pre-defined debug routes
 mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   /// Toggle debug overlay visibility.
+  ///
+  /// Defaults to `true`. Override this to conditionally enable/disable
+  /// the debug overlay (e.g., only in debug mode).
   bool get debugEnabled => true;
 
   /// Override this to provide a list of routes that can be quickly pushed
   /// from the debug overlay.
+  ///
+  /// This is useful for testing specific screens or flows without navigating
+  /// through the app manually.
   List<T> get debugRoutes => [];
 
+  /// Returns the number of "problems" or items that need attention.
+  ///
+  /// Currently, this counts the number of [debugRoutes] that fail to convert
+  /// to a URI (i.e., [toUri] throws an exception). This helps identify
+  /// routes that might be missing proper URI generation logic.
   int get problems => debugRoutes.where((r) {
     try {
       r.toUri();
@@ -27,16 +38,28 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   }).length;
 
   /// Override this to provide a custom label for a navigation path.
+  ///
+  /// By default, it returns `path.toString()`. You can override this to
+  /// provide more human-readable names for your paths in the debug overlay.
   String debugLabel(StackPath path) => path.toString();
 
   bool _debugOverlayOpen = false;
 
+  /// Toggles the visibility of the debug overlay.
+  ///
+  /// This method notifies listeners, which triggers a rebuild of the
+  /// [layoutBuilder] to show or hide the overlay.
   void toggleDebugOverlay() {
     _debugOverlayOpen = !_debugOverlayOpen;
     notifyListeners();
   }
 
   @override
+  /// Wraps the application layout with the debug overlay.
+  ///
+  /// If [debugEnabled] is `false`, it simply returns the result of `super.layoutBuilder(context)`.
+  /// Otherwise, it wraps the layout with a [ToastProvider] and an [Overlay]
+  /// containing the [_DebugOverlay].
   Widget layoutBuilder(BuildContext context) {
     if (!debugEnabled) return super.layoutBuilder(context);
 
@@ -88,6 +111,7 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
 }
 
 class _DebugOverlay<T extends RouteUnique> extends StatefulWidget {
+  /// Creates a debug overlay for the given [coordinator].
   const _DebugOverlay({required this.coordinator});
 
   final CoordinatorDebug<T> coordinator;
@@ -99,6 +123,8 @@ class _DebugOverlay<T extends RouteUnique> extends StatefulWidget {
 class _DebugOverlayState<T extends RouteUnique>
     extends State<_DebugOverlay<T>> {
   final TextEditingController _uriController = TextEditingController();
+
+  // 0: Inspect, 1: Routes
   int _selectedTabIndex = 0;
 
   void _handleUriChanged() {

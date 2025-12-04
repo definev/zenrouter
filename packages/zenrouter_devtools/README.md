@@ -1,39 +1,68 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# ZenRouter DevTools
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages).
-
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages).
--->
-
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+A powerful debugging tool for [ZenRouter](https://pub.dev/packages/zenrouter), providing a visual overlay to inspect navigation stacks, test deep links, and manage routes.
 
 ## Features
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
+- **Visual Stack Inspection**: View the current navigation hierarchy, including active paths, nested routers, and their stack history.
+- **Deep Link Testing**: Push or replace routes directly by entering a URI, making it easy to test deep linking logic.
+- **Quick Actions**: Define common debug routes (e.g., specific screens, edge cases) and access them with a single click.
+- **Route Management**: Pop routes from the stack or remove specific entries from history directly from the UI.
+- **Stateful Shell Support**: Identify and navigate between stateful shell branches.
 
 ## Getting started
 
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
+Add `zenrouter_devtools` to your `pubspec.yaml`:
+
+```yaml
+dev_dependencies:
+  zenrouter_devtools: ^latest_version
+```
 
 ## Usage
 
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
+To enable the devtools, mix `CoordinatorDebug` into your `Coordinator` class.
+
+### 1. Mixin `CoordinatorDebug`
 
 ```dart
-const like = 'sample';
+class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug<AppRoute> {
+  // ... your existing coordinator implementation
+}
 ```
 
-## Additional information
+### 2. Configure Debug Features (Optional)
 
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
+You can customize the devtools by overriding properties in your coordinator:
+
+```dart
+class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug<AppRoute> {
+  
+  // Only enable in debug mode
+  @override
+  bool get debugEnabled => kDebugMode;
+
+  // Add quick-access debug routes
+  @override
+  List<AppRoute> get debugRoutes => [
+    const LoginRoute(),
+    const UserProfileRoute(id: '123'),
+    const SettingsRoute(),
+  ];
+
+  // Customize how paths are labeled in the inspector
+  @override
+  String debugLabel(StackPath path) {
+    if (path is NavigationPath) return 'Main Stack';
+    return super.debugLabel(path);
+  }
+}
+```
+
+### 3. Accessing the Overlay
+
+Once integrated, a floating action button (FAB) with a bug icon will appear in your app (by default). Click it to open the debug overlay.
+
+- **Inspect Tab**: Shows the current navigation tree. You can see active paths, pop routes, and switch between stateful shell branches.
+- **Routes Tab**: Lists your `debugRoutes` for quick navigation.
+- **Input Area**: Type a URI (e.g., `/user/123`) and click "Push" or "Replace" to navigate.

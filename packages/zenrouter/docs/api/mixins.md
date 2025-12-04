@@ -24,6 +24,37 @@ Each mixin adds specific capabilities:
 - **RouteRedirect** - Redirects to different routes
 - **RouteDeepLink** - Custom deep link handling
 
+### Decision Tree
+
+```
+Which mixins do I need?
+│
+├─ Using Coordinator?
+│  ├─ Yes → Add RouteUnique ✓
+│  └─ No → Just extend RouteTarget
+│
+├─ Creating a navigation host (tabs, navigation-stack)?
+│  ├─ Yes → Add RouteLayout ✓
+│  └─ No → Continue
+│
+├─ Need custom page transitions?
+│  ├─ Yes → Add RouteTransition ✓
+│  └─ No → Continue
+│
+├─ Prevent navigation (unsaved changes)?
+│  ├─ Yes → Add RouteGuard ✓
+│  └─ No → Continue
+│
+├─ Conditional routing (auth, permissions)?
+│  ├─ Yes → Add RouteRedirect ✓
+│  └─ No → Continue
+│
+└─ Custom deep link handling?
+   ├─ Yes → Add RouteDeepLink ✓
+   └─ No → Done!
+```
+
+
 ## Mixin Reference
 
 ### RouteUnique
@@ -921,36 +952,6 @@ class ComplexRoute extends AppRoute
     return ComplexScreen(onChanged: () => isDirty = true);
   }
 }
-```
-
-## Decision Tree
-
-```
-Which mixins do I need?
-│
-├─ Using Coordinator?
-│  ├─ Yes → Add RouteUnique ✓
-│  └─ No → Just extend RouteTarget
-│
-├─ Creating a navigation host (tabs, navigation-stack)?
-│  ├─ Yes → Add RouteLayout ✓
-│  └─ No → Continue
-│
-├─ Need custom page transitions?
-│  ├─ Yes → Add RouteTransition ✓
-│  └─ No → Continue
-│
-├─ Prevent navigation (unsaved changes)?
-│  ├─ Yes → Add RouteGuard ✓
-│  └─ No → Continue
-│
-├─ Conditional routing (auth, permissions)?
-│  ├─ Yes → Add RouteRedirect ✓
-│  └─ No → Continue
-│
-└─ Custom deep link handling?
-   ├─ Yes → Add RouteDeepLink ✓
-   └─ No → Done!
 ```
 
 ## Best Practices
