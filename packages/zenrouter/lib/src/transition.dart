@@ -104,6 +104,7 @@ class CupertinoSheetPage<T extends Object> extends Page<T> {
   final WidgetBuilder builder;
 
   @override
+  /// Creates the route for this page.
   Route<T> createRoute(BuildContext context) {
     return CupertinoSheetRoute(settings: this, builder: builder);
   }
@@ -125,6 +126,7 @@ class DialogPage<T> extends Page<T> {
   final Widget child;
 
   @override
+  /// Creates the route for this page.
   Route<T> createRoute(BuildContext context) {
     return DialogRoute<T>(
       context: context,

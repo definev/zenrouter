@@ -2,11 +2,18 @@ import 'package:collection/collection.dart';
 import 'package:zenrouter/src/path.dart';
 
 /// Returns a `hashCode` for [props].
+///
+/// This combines the hash codes of all elements in [props] using the Jenkins
+/// hash function, similar to how `Equatable` calculates hash codes.
 int mapPropsToHashCode(Iterable<Object?>? props) {
   return _finish(props == null ? 0 : props.fold(0, _combine));
 }
 
 /// Determines whether two lists ([a] and [b]) are equal.
+///
+/// Returns `true` if both lists contain the same elements in the same order.
+/// Returns `false` if either list is null or if they have different lengths
+/// or contents.
 // See https://github.com/felangel/equatable/issues/187.
 @pragma('vm:prefer-inline')
 bool equals(List<Object?>? a, List<Object?>? b) {
@@ -16,6 +23,10 @@ bool equals(List<Object?>? a, List<Object?>? b) {
 }
 
 /// Determines whether two iterables are equal.
+///
+/// Returns `true` if both iterables contain the same elements in the same order.
+/// Throws an [AssertionError] if either argument is a [Set], as sets should
+/// be compared using [setEquals].
 @pragma('vm:prefer-inline')
 bool iterableEquals(Iterable<Object?> a, Iterable<Object?> b) {
   assert(
@@ -31,10 +42,15 @@ bool iterableEquals(Iterable<Object?> a, Iterable<Object?> b) {
 }
 
 /// Determines whether two numbers are equal.
+///
+/// Returns `true` if [a] and [b] are equal.
 @pragma('vm:prefer-inline')
 bool numEquals(num a, num b) => a == b;
 
 /// Determines whether two sets are equal.
+///
+/// Returns `true` if both sets contain the same elements, regardless of order.
+/// Elements are compared using [objectsEquals].
 bool setEquals(Set<Object?> a, Set<Object?> b) {
   if (identical(a, b)) return true;
   if (a.length != b.length) return false;
@@ -45,6 +61,9 @@ bool setEquals(Set<Object?> a, Set<Object?> b) {
 }
 
 /// Determines whether two maps are equal.
+///
+/// Returns `true` if both maps contain the same keys and values.
+/// Keys and values are compared using [objectsEquals].
 bool mapEquals(Map<Object?, Object?> a, Map<Object?, Object?> b) {
   if (identical(a, b)) return true;
   if (a.length != b.length) return false;
@@ -55,6 +74,9 @@ bool mapEquals(Map<Object?, Object?> a, Map<Object?, Object?> b) {
 }
 
 /// Determines whether two objects are equal.
+///
+/// This handles various types including numbers, [RouteTarget]s, [Set]s,
+/// [Iterable]s, and [Map]s. It performs deep equality checks where appropriate.
 @pragma('vm:prefer-inline')
 bool objectsEquals(Object? a, Object? b) {
   if (identical(a, b)) return true;

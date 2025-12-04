@@ -8,33 +8,63 @@ part of 'path.dart';
 enum DeeplinkStrategy { replace, push, custom }
 
 mixin RouteDeepLink on RouteUnique {
+  /// The strategy to use when handling this deep link.
   DeeplinkStrategy get deeplinkStrategy;
 
+  /// Custom handler for deep links.
+  ///
+  /// This is called when [deeplinkStrategy] is [DeeplinkStrategy.custom].
   FutureOr<void> deeplinkHandler(covariant Coordinator coordinator, Uri uri) =>
       null;
 }
 
+/// Mixin for routes that need to guard against being popped.
+///
+/// Implement [popGuard] to control whether the route can be popped.
 mixin RouteGuard on RouteTarget {
+  /// Called when the route is about to be popped.
+  ///
+  /// Return `true` to allow the pop, or `false` to prevent it.
   FutureOr<bool> popGuard();
 }
 
+/// Builder function for creating a layout widget.
 typedef RouteLayoutBuilder<T extends RouteUnique> =
     Widget Function(
       Coordinator coordinator,
       StackPath<T> path,
       RouteLayout<T>? layout,
     );
+
+/// Constructor function for creating a layout instance.
 typedef RouteLayoutConstructor<T extends RouteUnique> =
     RouteLayout<T> Function();
 
+/// Mixin for routes that define a layout structure.
+///
+/// A layout is a route that wraps other routes, such as a shell or a tab bar.
+/// It defines how its children are displayed and managed.
 mixin RouteLayout<T extends RouteUnique> on RouteUnique {
+  /// Identifier for the standard navigation path layout.
   static const navigationPath = 'NavigationPath';
+
+  /// Identifier for the indexed stack path layout.
   static const indexedStackPath = 'IndexedStackPath';
+
+  /// Registers a custom layout constructor.
+  ///
+  /// Use this to define how a specific layout type should be instantiated.
   static void defineLayout<T extends RouteLayout>(
     Type homeHost,
     T Function() constructor,
   ) => RouteLayout.layoutConstructorTable[homeHost] = constructor;
+
+  /// Table of registered layout constructors.
   static Map<Type, RouteLayoutConstructor> layoutConstructorTable = {};
+
+  /// Table of registered layout builders.
+  ///
+  /// This maps layout identifiers to their widget builder functions.
   static Map<String, RouteLayoutBuilder> layoutBuilderTable = {
     navigationPath: (coordinator, path, layout) => NavigationStack(
       path: path as NavigationPath<RouteUnique>,
@@ -63,6 +93,9 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
     ),
   };
 
+  /// Resolves the stack path for this layout.
+  ///
+  /// This determines which [StackPath] this layout manages.
   StackPath<RouteUnique> resolvePath(covariant Coordinator coordinator);
 
   /// URI not use in RouteLayout
@@ -96,7 +129,12 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
   int get hashCode => runtimeType.hashCode;
 }
 
+/// Mixin for routes that redirect to another route.
+///
+/// This is useful for authentication flows (redirect to login if not authenticated)
+/// or for aliases.
 mixin RouteRedirect<T extends RouteTarget> on RouteTarget {
+  /// Resolves the final destination route, following any redirects.
   static Future<T> resolve<T extends RouteTarget>(T route) async {
     T target = route;
     while (target is RouteRedirect) {
@@ -109,15 +147,26 @@ mixin RouteRedirect<T extends RouteTarget> on RouteTarget {
     return target;
   }
 
+  /// Returns the route to redirect to, or `null` to stay on the current route.
   FutureOr<T?> redirect();
 }
 
+/// The base class for all navigation targets (routes).
+///
+/// A [RouteTarget] represents a destination in the app. It can hold state
+/// and parameters.
+///
+/// Subclasses should implement [props] for equality checks if they have parameters.
 abstract class RouteTarget extends Object {
   final Completer<dynamic> _onResult = Completer();
 
   StackPath? _path;
 
   Object? _resultValue;
+
+  /// Whether this route was popped by the path mechanism.
+  ///
+  /// This is used internally to prevent double removal.
   bool isPopByPath = false;
 
   @override
@@ -127,6 +176,9 @@ abstract class RouteTarget extends Object {
       _onResult.hashCode ^
       mapPropsToHashCode(props);
 
+  /// The list of properties used for equality comparison.
+  ///
+  /// Override this to include route parameters in equality checks.
   List<Object?> get props => [];
 
   @override
@@ -150,6 +202,9 @@ abstract class RouteTarget extends Object {
   String toString() =>
       '$runtimeType${props.isEmpty ? '' : '[${props.map((p) => p.toString()).join(',')}]'}';
 
+  /// Completes the route's result future.
+  ///
+  /// This is called when the route is popped with a result.
   void completeOnResult(
     Object? result,
     covariant Coordinator? coordinator, [
@@ -166,7 +221,9 @@ abstract class RouteTarget extends Object {
   }
 }
 
+/// Mixin for routes that define a custom transition.
 mixin RouteTransition on RouteUnique {
+  /// Returns the [StackTransition] for this route.
   StackTransition<T> transition<T extends RouteUnique>(
     covariant Coordinator coordinator,
   ) => StackTransition.material(
@@ -174,8 +231,19 @@ mixin RouteTransition on RouteUnique {
   );
 }
 
+/// Base mixin for unique routes in the application.
+///
+/// Most routes should mix this in. It provides integration with the [Coordinator]
+/// and layout system.
 mixin RouteUnique on RouteTarget {
+  /// The type of layout that wraps this route.
+  ///
+  /// Return the type of the [RouteLayout] subclass that should contain this route.
   Type? get layout => null;
+
+  /// Creates an instance of the layout for this route.
+  ///
+  /// This uses the registered constructor from [RouteLayout.layoutConstructorTable].
   RouteLayout? createLayout(covariant Coordinator coordinator) {
     final constructor = RouteLayout.layoutConstructorTable[layout];
     if (constructor == null) {
@@ -186,6 +254,10 @@ mixin RouteUnique on RouteTarget {
     return constructor();
   }
 
+  /// Resolves the active layout instance for this route.
+  ///
+  /// Checks if an instance of the required layout is already active in the
+  /// coordinator. If so, returns it. Otherwise, creates a new one.
   RouteLayout? resolveLayout(covariant Coordinator coordinator) {
     if (layout == null) return null;
     final layouts = coordinator.activeLayouts;
@@ -197,8 +269,10 @@ mixin RouteUnique on RouteTarget {
     return createLayout(coordinator);
   }
 
+  /// Builds the widget for this route.
   Widget build(covariant Coordinator coordinator, BuildContext context);
 
+  /// Returns the URI representation of this route.
   Uri toUri();
 
   @override

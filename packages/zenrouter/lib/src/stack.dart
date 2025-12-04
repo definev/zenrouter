@@ -1,5 +1,9 @@
 part of 'path.dart';
 
+/// A widget that renders a stack of pages based on a [NavigationPath].
+///
+/// This is the core widget for imperative navigation. It listens to the [path]
+/// and updates the [Navigator] with the corresponding pages.
 class NavigationStack<T extends RouteTarget> extends StatefulWidget {
   const NavigationStack({
     super.key,
@@ -10,6 +14,10 @@ class NavigationStack<T extends RouteTarget> extends StatefulWidget {
     this.navigatorKey,
   });
 
+  /// Creates a declarative navigation stack.
+  ///
+  /// This factory method creates a [DeclarativeNavigationStack] which manages
+  /// the stack based on a list of routes.
   static DeclarativeNavigationStack<T> declarative<T extends RouteTarget>({
     required List<T> routes,
     required StackTransitionResolver<T> resolver,
@@ -40,6 +48,7 @@ class NavigationStack<T extends RouteTarget> extends StatefulWidget {
   final T? defaultRoute;
 
   @override
+  // ignore: library_private_types_in_public_api
   State<NavigationStack<T>> createState() => _NavigationStackState<T>();
 }
 
@@ -104,6 +113,11 @@ class _NavigationStackState<T extends RouteTarget>
   }
 }
 
+/// A widget that manages a navigation stack declaratively.
+///
+/// Instead of pushing and popping, you provide a list of [routes]. The widget
+/// calculates the difference between the old and new routes (using Myers diff)
+/// and updates the stack accordingly.
 class DeclarativeNavigationStack<T extends RouteTarget> extends StatefulWidget {
   const DeclarativeNavigationStack({
     super.key,
@@ -113,12 +127,20 @@ class DeclarativeNavigationStack<T extends RouteTarget> extends StatefulWidget {
     required this.resolver,
   });
 
+  /// The list of routes to display.
   final List<T> routes;
+
+  /// Optional key for the navigator.
   final GlobalKey<NavigatorState>? navigatorKey;
+
+  /// Optional debug label for the path.
   final String? debugLabel;
+
+  /// Callback to resolve routes to pages.
   final StackTransitionResolver<T> resolver;
 
   @override
+  // ignore: library_private_types_in_public_api
   State<DeclarativeNavigationStack<T>> createState() =>
       _DeclarativeNavigationStackState<T>();
 }

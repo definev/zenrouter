@@ -6,10 +6,16 @@ sealed class DiffOp<T> {
 }
 
 /// Represents keeping an element at a specific index (no change).
+///
+/// Indicates that the element at [oldIndex] in the old list is the same
+/// as the element at [newIndex] in the new list.
 class Keep<T> extends DiffOp<T> {
   const Keep(this.oldIndex, this.newIndex);
 
+  /// The index of the element in the old list.
   final int oldIndex;
+
+  /// The index of the element in the new list.
   final int newIndex;
 
   @override
@@ -17,10 +23,15 @@ class Keep<T> extends DiffOp<T> {
 }
 
 /// Represents inserting a new element at a specific index.
+///
+/// Indicates that [element] should be inserted at [newIndex] in the new list.
 class Insert<T> extends DiffOp<T> {
   const Insert(this.element, this.newIndex);
 
+  /// The element to insert.
   final T element;
+
+  /// The index in the new list where the element should be inserted.
   final int newIndex;
 
   @override
@@ -28,9 +39,12 @@ class Insert<T> extends DiffOp<T> {
 }
 
 /// Represents deleting an element at a specific index.
+///
+/// Indicates that the element at [oldIndex] in the old list should be removed.
 class Delete<T> extends DiffOp<T> {
   const Delete(this.oldIndex);
 
+  /// The index of the element in the old list to be removed.
   final int oldIndex;
 
   @override

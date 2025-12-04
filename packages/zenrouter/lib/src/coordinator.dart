@@ -3,6 +3,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'path.dart';
 
+/// The core class that manages navigation state and logic.
+///
+/// The [Coordinator] is responsible for:
+/// - Managing the navigation stack(s) via [paths].
+/// - Handling deep links and URL parsing.
+/// - coordinating transitions and layouts.
+/// - Providing access to the [NavigatorState].
+///
+/// Subclasses should override [paths] to define their own navigation structure
+/// and [parseRouteFromUri] to handle deep linking.
 abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
   Coordinator() {
     for (final path in paths) {
@@ -29,6 +39,10 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
   /// If you add custom paths, make sure to override [paths]
   List<StackPath> get paths => [root];
 
+  /// Defines the layout structure for this coordinator.
+  ///
+  /// This method is called during initialization. Override this to register
+  /// custom layouts using [RouteLayout.defineLayout].
   void defineLayout() {}
 
   /// Returns the current URI based on the active route.
@@ -75,6 +89,10 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
     return layouts;
   }
 
+  /// Returns the list of active host paths in the navigation hierarchy.
+  ///
+  /// This starts from the [root] path and traverses down through active layouts,
+  /// collecting the [StackPath] for each level.
   List<StackPath> get activeHostPaths {
     List<StackPath> pathSegment = [root];
     StackPath path = root;
@@ -91,6 +109,9 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
     return pathSegment;
   }
 
+  /// Returns the currently active [StackPath].
+  ///
+  /// This is the path that contains the currently active route.
   StackPath<T> get activePath =>
       (activeHostPaths.lastOrNull ?? root) as StackPath<T>;
 
@@ -130,6 +151,13 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
     }
   }
 
+  /// Resolves and activates layouts for a given [layout].
+  ///
+  /// This ensures that all parent layouts in the hierarchy are properly
+  /// activated or pushed onto their respective paths.
+  ///
+  /// [preferPush] determines whether to push the layout onto the stack
+  /// or just activate it if it already exists.
   void _resolveLayouts(RouteLayout? layout, {bool preferPush = false}) {
     List<RouteLayout> layouts = [];
     List<StackPath> layoutPaths = [];

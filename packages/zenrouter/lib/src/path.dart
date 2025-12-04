@@ -10,7 +10,14 @@ part 'mixin.dart';
 part 'stack.dart';
 part 'transition.dart';
 
+/// Mixin for stack paths that support mutable operations (push/pop).
+///
+/// This provides standard implementations for [push], [pushOrMoveToTop], and [pop].
 mixin StackMutatable<T extends RouteTarget> on StackPath<T> {
+  /// Pushes a new route onto the stack.
+  ///
+  /// This handles redirects and sets up the route's path reference.
+  /// Returns a future that completes when the route is popped with a result.
   Future<dynamic> push(T element) async {
     T target = await RouteRedirect.resolve(element);
     target.isPopByPath = false;
@@ -60,14 +67,19 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T> {
 }
 
 /// A stack-based container for managing navigation history.
+///
+/// A [StackPath] holds a list of [RouteTarget]s and manages their lifecycle.
+/// It notifies listeners when the stack changes.
 abstract class StackPath<T extends RouteTarget> extends ChangeNotifier {
   StackPath._(this._stack, {this.debugLabel});
 
+  /// Creates a [NavigationPath] with an optional initial stack.
   static NavigationPath<T> navigationStack<T extends RouteTarget>([
     String? debugLabel,
     List<T>? stack,
   ]) => NavigationPath<T>(debugLabel, stack);
 
+  /// Creates an [IndexedStackPath] with a fixed list of routes.
   static IndexedStackPath<T> indexedStack<T extends RouteTarget>(
     List<T> stack, [
     String? debugLabel,
@@ -79,6 +91,7 @@ abstract class StackPath<T extends RouteTarget> extends ChangeNotifier {
   /// The internal mutable stack.
   final List<T> _stack;
 
+  /// The currently active route in this stack.
   T? get activeRoute;
 
   /// The current navigation stack as an unmodifiable list.
@@ -93,6 +106,10 @@ abstract class StackPath<T extends RouteTarget> extends ChangeNotifier {
   @mustCallSuper
   void reset();
 
+  /// Activates a specific route in the stack.
+  ///
+  /// The behavior depends on the implementation (e.g., switching tab index
+  /// or resetting stack to just this route).
   Future<void> activateRoute(T route);
 
   @override
@@ -100,7 +117,10 @@ abstract class StackPath<T extends RouteTarget> extends ChangeNotifier {
       '${debugLabel ?? hashCode} [${runtimeType.toString().replaceAll('Path', '')}]';
 }
 
-/// Stack path for navigation path
+/// A mutable stack path for standard navigation.
+///
+/// Supports pushing and popping routes. Used for the main navigation stack
+/// and modal flows.
 class NavigationPath<T extends RouteTarget> extends StackPath<T>
     with StackMutatable<T> {
   NavigationPath([String? debugLabel, List<T>? stack])
@@ -133,7 +153,10 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
   }
 }
 
-/// Fixed navigation path
+/// A fixed stack path for indexed navigation (like tabs).
+///
+/// Routes are pre-defined and cannot be added or removed. Navigation switches
+/// the active index.
 class IndexedStackPath<T extends RouteTarget> extends StackPath<T> {
   IndexedStackPath(super.stack, [String? debugLabel])
     : assert(stack.isNotEmpty, 'Read-only path must have at least one route'),
@@ -145,11 +168,16 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T> {
   }
 
   int _activePathIndex = 0;
+
+  /// The index of the currently active path in the stack.
   int get activePathIndex => _activePathIndex;
 
   @override
   T get activeRoute => stack[activePathIndex];
 
+  /// Switches the active route to the one at [index].
+  ///
+  /// Handles guards on the current route and redirects on the new route.
   Future<void> goToIndexed(int index) async {
     if (index >= stack.length) throw StateError('Index out of bounds');
     final oldIndex = _activePathIndex;
