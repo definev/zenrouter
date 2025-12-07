@@ -423,6 +423,7 @@ class CoordinatorGenerator implements Builder {
     // Generate navigation paths for layouts
     for (final layout in tree.layouts) {
       final pathFieldName = _getPathFieldName(layout.className);
+      final pathName = layout.className.replaceAll('Layout', '');
       if (layout.layoutType == LayoutType.indexed) {
         final routeInstances = layout.indexedRouteTypes
             .map((r) => '$r()')
@@ -431,12 +432,10 @@ class CoordinatorGenerator implements Builder {
           '  final IndexedStackPath<$routeBaseName> $pathFieldName = IndexedStackPath([',
         );
         buffer.writeln('    $routeInstances,');
-        buffer.writeln(
-          "  ], '${layout.pathSegments.isNotEmpty ? layout.pathSegments.last : 'indexed'}');",
-        );
+        buffer.writeln("  ], '$pathName');");
       } else {
         buffer.writeln(
-          "  final NavigationPath<$routeBaseName> $pathFieldName = NavigationPath('${layout.pathSegments.isNotEmpty ? layout.pathSegments.last : 'stack'}');",
+          "  final NavigationPath<$routeBaseName> $pathFieldName = NavigationPath('$pathName');",
         );
       }
     }

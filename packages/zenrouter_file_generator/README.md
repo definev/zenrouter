@@ -24,7 +24,7 @@ dependencies:
   zenrouter_file_annotation: ^0.2.1
 
 dev_dependencies:
-  build_runner: ^2.4.0
+  build_runner: ^2.10.4
   zenrouter_file_generator: ^0.2.1
 ```
 

@@ -48,15 +48,15 @@ abstract class AppRoute extends RouteTarget with RouteUnique {}
 
 /// Generated coordinator managing all routes.
 class AppCoordinator extends Coordinator<AppRoute> {
-  final NavigationPath<AppRoute> authPath = NavigationPath('stack');
+  final NavigationPath<AppRoute> authPath = NavigationPath('Auth');
   final IndexedStackPath<AppRoute> tabsPath = IndexedStackPath([
     FeedTabLayout(), TabProfileRoute(), TabSettingsRoute(),
-  ], 'tabs');
+  ], 'Tabs');
   final IndexedStackPath<AppRoute> feedTabPath = IndexedStackPath([
     FollowingLayout(), ForYouLayout(),
-  ], 'feed');
-  final NavigationPath<AppRoute> followingPath = NavigationPath('following');
-  final NavigationPath<AppRoute> forYouPath = NavigationPath('for-you');
+  ], 'FeedTab');
+  final NavigationPath<AppRoute> followingPath = NavigationPath('Following');
+  final NavigationPath<AppRoute> forYouPath = NavigationPath('ForYou');
 
   @override
   List<StackPath> get paths => [root, authPath, tabsPath, feedTabPath, followingPath, forYouPath];

@@ -1,3 +1,14 @@
+## 0.2.3
+
+- Format files
+
+## 0.2.2
+
+### Bug Fixes
+
+- Update the debug label correctly for the generated Path in the Coordinator
+- Update README.md
+
 ## 0.2.1
 
 ### New Features
