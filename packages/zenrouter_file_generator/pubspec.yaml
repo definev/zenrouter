@@ -1,6 +1,6 @@
 name: zenrouter_file_generator
 description: "A code generator for file-based routing in Flutter using zenrouter. Generate type-safe routes from your file/directory structure, similar to Next.js or Nuxt.js."
-version: 0.2.2
+version: 0.2.3
 homepage: https://github.com/definev/zenrouter/tree/main/packages/zenrouter_file_generator
 repository: https://github.com/definev/zenrouter/tree/main/packages/zenrouter_file_generator
 resolution: workspace

@@ -1,3 +1,7 @@
+## 0.2.3
+
+- Format files
+
 ## 0.2.2
 
 ### Bug Fixes
