@@ -1,0 +1,58 @@
+name: Test
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for coverage-badge-action to update gh-pages
+      pull-requests: write  # Required for commenting on PRs
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for coverage-badge-action
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: .
+
+      - name: Verify formatting
+        run: dart format --set-exit-if-changed .
+        continue-on-error: false
+
+      - name: Analyze code
+        run: flutter analyze
+        continue-on-error: false
+
+      - name: Run tests with coverage (zenrouter)
+        run: flutter test --coverage
+        working-directory: packages/zenrouter
+        continue-on-error: false
+
+      - name: Run tests with coverage (zenrouter_file_generator)
+        run: flutter test --coverage
+        working-directory: packages/zenrouter_file_generator
+        continue-on-error: false
+
+      - name: Upload coverage to Codecov (zenrouter)
+        uses: codecov/codecov-action@v4
+        with:
+            token: ${{ secrets.CODECOV_TOKEN }}  
+            files: packages/zenrouter/coverage/lcov.info
+            flags: zenrouter
+            disable_search: true
+            fail_ci_if_error: true

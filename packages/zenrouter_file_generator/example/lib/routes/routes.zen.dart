@@ -50,16 +50,26 @@ abstract class AppRoute extends RouteTarget with RouteUnique {}
 class AppCoordinator extends Coordinator<AppRoute> {
   final NavigationPath<AppRoute> authPath = NavigationPath('Auth');
   final IndexedStackPath<AppRoute> tabsPath = IndexedStackPath([
-    FeedTabLayout(), TabProfileRoute(), TabSettingsRoute(),
+    FeedTabLayout(),
+    TabProfileRoute(),
+    TabSettingsRoute(),
   ], 'Tabs');
   final IndexedStackPath<AppRoute> feedTabPath = IndexedStackPath([
-    FollowingLayout(), ForYouLayout(),
+    FollowingLayout(),
+    ForYouLayout(),
   ], 'FeedTab');
   final NavigationPath<AppRoute> followingPath = NavigationPath('Following');
   final NavigationPath<AppRoute> forYouPath = NavigationPath('ForYou');
 
   @override
-  List<StackPath> get paths => [root, authPath, tabsPath, feedTabPath, followingPath, forYouPath];
+  List<StackPath> get paths => [
+    root,
+    authPath,
+    tabsPath,
+    feedTabPath,
+    followingPath,
+    forYouPath,
+  ];
 
   @override
   void defineLayout() {
@@ -75,8 +85,15 @@ class AppCoordinator extends Coordinator<AppRoute> {
     return switch (uri.pathSegments) {
       [] => IndexRoute(),
       ['tabs', 'feed', 'for-you', 'sheet'] => ForYouSheetRoute(),
-      ['tabs', 'feed', 'following', final postId] => FeedPostRoute(postId: postId),
-      ['profile', final profileId, 'collections', final collectionId] => CollectionsCollectionIdRoute(profileId: profileId, collectionId: collectionId, queries: uri.queryParameters),
+      ['tabs', 'feed', 'following', final postId] => FeedPostRoute(
+        postId: postId,
+      ),
+      ['profile', final profileId, 'collections', final collectionId] =>
+        CollectionsCollectionIdRoute(
+          profileId: profileId,
+          collectionId: collectionId,
+          queries: uri.queryParameters,
+        ),
       ['tabs', 'feed', 'following'] => FollowingRoute(),
       ['tabs', 'feed', 'for-you'] => ForYouRoute(),
       ['profile', 'general'] => ProfileGeneralRoute(),
@@ -105,18 +122,54 @@ extension AppCoordinatorNav on AppCoordinator {
   Future<dynamic> pushIndex() => push(IndexRoute());
   void replaceIndex() => replace(IndexRoute());
   void recoverIndex() => recoverRouteFromUri(IndexRoute().toUri());
-  Future<dynamic> pushCollectionsCollectionId(String profileId, String collectionId, [Map<String, String> queries = const {}]) => push(CollectionsCollectionIdRoute(profileId: profileId, collectionId: collectionId, queries: queries));
-  void replaceCollectionsCollectionId(String profileId, String collectionId, [Map<String, String> queries = const {}]) => replace(CollectionsCollectionIdRoute(profileId: profileId, collectionId: collectionId, queries: queries));
-  void recoverCollectionsCollectionId(String profileId, String collectionId, [Map<String, String> queries = const {}]) => recoverRouteFromUri(CollectionsCollectionIdRoute(profileId: profileId, collectionId: collectionId, queries: queries).toUri());
-  Future<dynamic> pushProfileId(String profileId) => push(ProfileIdRoute(profileId: profileId));
-  void replaceProfileId(String profileId) => replace(ProfileIdRoute(profileId: profileId));
-  void recoverProfileId(String profileId) => recoverRouteFromUri(ProfileIdRoute(profileId: profileId).toUri());
+  Future<dynamic> pushCollectionsCollectionId(
+    String profileId,
+    String collectionId, [
+    Map<String, String> queries = const {},
+  ]) => push(
+    CollectionsCollectionIdRoute(
+      profileId: profileId,
+      collectionId: collectionId,
+      queries: queries,
+    ),
+  );
+  void replaceCollectionsCollectionId(
+    String profileId,
+    String collectionId, [
+    Map<String, String> queries = const {},
+  ]) => replace(
+    CollectionsCollectionIdRoute(
+      profileId: profileId,
+      collectionId: collectionId,
+      queries: queries,
+    ),
+  );
+  void recoverCollectionsCollectionId(
+    String profileId,
+    String collectionId, [
+    Map<String, String> queries = const {},
+  ]) => recoverRouteFromUri(
+    CollectionsCollectionIdRoute(
+      profileId: profileId,
+      collectionId: collectionId,
+      queries: queries,
+    ).toUri(),
+  );
+  Future<dynamic> pushProfileId(String profileId) =>
+      push(ProfileIdRoute(profileId: profileId));
+  void replaceProfileId(String profileId) =>
+      replace(ProfileIdRoute(profileId: profileId));
+  void recoverProfileId(String profileId) =>
+      recoverRouteFromUri(ProfileIdRoute(profileId: profileId).toUri());
   Future<dynamic> pushProfileGeneral() => push(ProfileGeneralRoute());
   void replaceProfileGeneral() => replace(ProfileGeneralRoute());
-  void recoverProfileGeneral() => recoverRouteFromUri(ProfileGeneralRoute().toUri());
-  Future<dynamic> pushFeedPost(String postId) => push(FeedPostRoute(postId: postId));
+  void recoverProfileGeneral() =>
+      recoverRouteFromUri(ProfileGeneralRoute().toUri());
+  Future<dynamic> pushFeedPost(String postId) =>
+      push(FeedPostRoute(postId: postId));
   void replaceFeedPost(String postId) => replace(FeedPostRoute(postId: postId));
-  void recoverFeedPost(String postId) => recoverRouteFromUri(FeedPostRoute(postId: postId).toUri());
+  void recoverFeedPost(String postId) =>
+      recoverRouteFromUri(FeedPostRoute(postId: postId).toUri());
   Future<dynamic> pushFollowing() => push(FollowingRoute());
   void replaceFollowing() => replace(FollowingRoute());
   void recoverFollowing() => recoverRouteFromUri(FollowingRoute().toUri());
