@@ -202,7 +202,7 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
   /// Pushes a new route onto its navigation path.
   ///
   /// For shell routes, ensures the shell layout exists in the parent path first.
-  Future<dynamic> push(T route) async {
+  Future<R?> push<R extends Object>(T route) async {
     T target = await RouteRedirect.resolve(route);
     final layout = target.resolveLayout(this);
     final path = layout?.resolvePath(this) ?? root;

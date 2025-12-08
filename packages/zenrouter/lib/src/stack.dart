@@ -48,67 +48,108 @@ class NavigationStack<T extends RouteTarget> extends StatefulWidget {
   final T? defaultRoute;
 
   @override
-  // ignore: library_private_types_in_public_api
   State<NavigationStack<T>> createState() => _NavigationStackState<T>();
 }
 
 class _NavigationStackState<T extends RouteTarget>
     extends State<NavigationStack<T>> {
+  List<Page> _pages = [];
+  List<T> _previousRoutes = [];
+
   @override
   void initState() {
     super.initState();
     if (widget.defaultRoute != null) {
       widget.path.pushOrMoveToTop(widget.defaultRoute!);
     }
+    widget.path.addListener(_updatePages);
+    _updatePages();
+  }
+
+  @override
+  void dispose() {
+    widget.path.removeListener(_updatePages);
+    super.dispose();
+  }
+
+  Page _buildPage(T route) {
+    final destination = widget.resolver(route);
+    return destination.pageBuilder(
+      context,
+      ValueKey(route),
+      PopScope(
+        canPop: switch (route) {
+          RouteGuard() => false,
+          _ when destination.guard != null => false,
+          _ => true,
+        },
+        onPopInvokedWithResult: (didPop, result) async {
+          switch (didPop) {
+            case true when result != null:
+              route.onDidPop(result, widget.coordinator);
+              route.completeOnResult(result, widget.coordinator);
+            case true:
+              route.onDidPop(result, widget.coordinator);
+              route.completeOnResult(route._resultValue, widget.coordinator);
+            case false when route is RouteGuard:
+              widget.path.pop();
+            case false when destination.guard != null:
+              final processed = await destination.guard?.popGuard();
+              if (processed == true) widget.path.pop();
+            case false:
+          }
+        },
+        child: destination.builder(context),
+      ),
+    );
+  }
+
+  void _updatePages() {
+    final currentRoutes = widget.path.stack;
+
+    // Calculate diff between previous and current routes
+    final diffOps = myersDiff(_previousRoutes, currentRoutes);
+
+    // Build new pages list using diff operations
+    final newPages = <Page>[];
+    for (final op in diffOps) {
+      switch (op) {
+        case Keep<T>(:final oldIndex):
+          // Reuse existing page
+          newPages.add(_pages[oldIndex]);
+        case Insert<T>(:final element):
+          // Create new page
+          newPages.add(_buildPage(element));
+        case Delete<T>():
+          // Skip deleted pages
+          break;
+      }
+    }
+
+    _pages = newPages;
+    _previousRoutes = List.from(currentRoutes);
+    setState(() {});
+  }
+
+  @override
+  void didUpdateWidget(covariant NavigationStack<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.path != widget.path) {
+      oldWidget.path.removeListener(_updatePages);
+      widget.path.addListener(_updatePages);
+      // Reset previous routes and rebuild pages for the new path
+      _previousRoutes = [];
+      _updatePages();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: widget.path,
-      builder: (context, _) {
-        final pages = widget.path.stack.map((route) {
-          final destination = widget.resolver(route);
-          return destination.pageBuilder(
-            context,
-            ValueKey(route),
-            PopScope(
-              canPop: switch (route) {
-                RouteGuard() => false,
-                _ when destination.guard != null => false,
-                _ => true,
-              },
-              onPopInvokedWithResult: (didPop, result) async {
-                switch (didPop) {
-                  case true when result != null:
-                    route.onDidPop(result, widget.coordinator);
-                    route.completeOnResult(result, widget.coordinator);
-                  case true:
-                    route.onDidPop(result, widget.coordinator);
-                    route.completeOnResult(
-                      route._resultValue,
-                      widget.coordinator,
-                    );
-                  case false when route is RouteGuard:
-                    widget.path.pop();
-                  case false when destination.guard != null:
-                    final processed = await destination.guard?.popGuard();
-                    if (processed == true) widget.path.pop();
-                  case false:
-                }
-              },
-              child: destination.builder(context),
-            ),
-          );
-        }).toList();
-
-        if (pages.isEmpty) return const SizedBox.shrink();
-        return Navigator(
-          key: widget.navigatorKey,
-          pages: pages,
-          onDidRemovePage: (page) {},
-        );
-      },
+    if (_pages.isEmpty) return const SizedBox.shrink();
+    return Navigator(
+      key: widget.navigatorKey,
+      pages: _pages,
+      onDidRemovePage: (page) {},
     );
   }
 }

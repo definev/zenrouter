@@ -18,13 +18,13 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T> {
   ///
   /// This handles redirects and sets up the route's path reference.
   /// Returns a future that completes when the route is popped with a result.
-  Future<dynamic> push(T element) async {
+  Future<R?> push<R extends Object>(T element) async {
     T target = await RouteRedirect.resolve(element);
     target.isPopByPath = false;
     target._path = this;
     _stack.add(target);
     notifyListeners();
-    return target._onResult.future;
+    return target._onResult.future as Future<R?>;
   }
 
   /// Pushes a route to the top of the stack, or moves it if already present.
@@ -39,6 +39,11 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T> {
     target.isPopByPath = false;
     target._path = this;
     final index = _stack.indexOf(target);
+    if (_stack.isNotEmpty && index == _stack.length - 1) {
+      element._onResult = _stack.last._onResult;
+      return;
+    }
+
     if (index != -1) {
       final removed = _stack.removeAt(index);
 

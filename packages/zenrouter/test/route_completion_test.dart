@@ -302,11 +302,12 @@ void main() {
       path.push(routeA);
 
       // Push same route again via pushOrMoveToTop
-      path.pushOrMoveToTop(TestRoute('a'));
+      final newRouteA = TestRoute('a');
+      path.pushOrMoveToTop(newRouteA);
       await Future.delayed(const Duration(milliseconds: 100));
 
-      // The original should be completed and replaced
-      expect(routeA.resultCompleted, isTrue);
+      // The original should be replaced by the new route
+      expect(identical(routeA.onResult, newRouteA.onResult), isTrue);
       expect(path.stack.length, 1);
     });
   });

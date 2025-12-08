@@ -1,3 +1,7 @@
+## 0.3.0
+- Bump version to 0.3.0
+- Add support for `recover` function
+
 ## 0.2.0
 
 - Bump `zenrouter` version

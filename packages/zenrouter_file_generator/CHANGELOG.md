@@ -1,3 +1,6 @@
+## 0.3.0
+- Bump version to 0.3.0 
+
 ## 0.2.3
 
 - Format files
