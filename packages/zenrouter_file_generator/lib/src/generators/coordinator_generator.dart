@@ -712,12 +712,10 @@ class CoordinatorGenerator implements Builder {
     final argsStr = args.join(', ');
 
     if (paramsStr.isEmpty) {
-      buffer.writeln(
-        '  void $methodName() => recoverRouteFromUri($routeClassName().toUri());',
-      );
+      buffer.writeln('  void $methodName() => recover($routeClassName());');
     } else {
       buffer.writeln(
-        '  void $methodName($paramsStr) => recoverRouteFromUri($routeClassName($argsStr).toUri());',
+        '  void $methodName($paramsStr) => recover($routeClassName($argsStr));',
       );
     }
   }

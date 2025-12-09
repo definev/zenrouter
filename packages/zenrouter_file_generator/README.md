@@ -3,7 +3,7 @@
 [![Test](https://github.com/definev/zenrouter/actions/workflows/test.yml/badge.svg)](https://github.com/definev/zenrouter/actions/workflows/test.yml)
 [![Coverage](https://definev.github.io/zenrouter/badges/coverage-zenrouter_file_generator.svg)](https://github.com/definev/zenrouter/actions)
 
-A code generator for **file-based routing** in Flutter using [zenrouter](https://pub.dev/packages/zenrouter). Generate type-safe routes from your file/directory structure, similar to Next.js or Nuxt.js.
+A code generator for **file-based routing** in Flutter using [zenrouter](https://pub.dev/packages/zenrouter). Generate type-safe routes from your file/directory structure, similar to Next.js, Nuxt.js or expo-router.
 
 This package is part of the [ZenRouter](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/README.md) ecosystem and builds on the Coordinator paradigm for deep linking and web support.
 
