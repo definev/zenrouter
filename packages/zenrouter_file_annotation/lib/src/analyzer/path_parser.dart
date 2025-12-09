@@ -8,6 +8,9 @@ class PathParser {
   /// - `profile/[profileId]/collections/[collectionId]`
   ///   → segments: ['profile', ':profileId', 'collections', ':collectionId']
   ///   → params: [ParamInfo(name: 'profileId'), ParamInfo(name: 'collectionId')]
+  /// - `posts/[...slug]`
+  ///   → segments: ['posts', '...:slug']
+  ///   → params: [ParamInfo(name: 'slug', isRest: true)]
   static (List<String>, List<ParamInfo>, bool, String) parsePath(
     String relativePath,
   ) {
@@ -24,6 +27,9 @@ class PathParser {
     final fileName = parts.isNotEmpty ? parts.last : '';
     final isIndexFile = fileName == 'index';
 
+    // Track if we've seen a rest parameter
+    bool hasRestParam = false;
+
     // Process each path segment, extracting dynamic parameters
     // This correctly handles multiple parameters in nested routes
     for (final part in parts) {
@@ -33,9 +39,26 @@ class PathParser {
       // Skip route groups (name) - they don't add to URL path
       if (part.startsWith('(') && part.endsWith(')')) continue;
 
+      // Check for rest parameter [...name] - captures remaining segments
+      if (part.startsWith('[...') && part.endsWith(']')) {
+        final paramName = part.substring(4, part.length - 1);
+        if (paramName.isEmpty) {
+          throw ArgumentError(
+            'Rest parameter name cannot be empty in path: $relativePath',
+          );
+        }
+        if (hasRestParam) {
+          throw ArgumentError(
+            'Only one rest parameter [...] is allowed per route: $relativePath',
+          );
+        }
+        hasRestParam = true;
+        segments.add('...:$paramName');
+        params.add(ParamInfo(name: paramName, isRest: true));
+      }
       // Check for dynamic parameter [name]
       // Supports multiple parameters like [profileId] and [collectionId]
-      if (part.startsWith('[') && part.endsWith(']')) {
+      else if (part.startsWith('[') && part.endsWith(']')) {
         final paramName = part.substring(1, part.length - 1);
         if (paramName.isEmpty) {
           throw ArgumentError(
@@ -84,5 +107,8 @@ class PathParser {
 class ParamInfo {
   final String name;
 
-  ParamInfo({required this.name});
+  /// Whether this is a rest parameter that captures multiple segments.
+  final bool isRest;
+
+  ParamInfo({required this.name, this.isRest = false});
 }

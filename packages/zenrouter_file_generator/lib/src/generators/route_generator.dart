@@ -281,6 +281,11 @@ class RouteGenerator extends GeneratorForAnnotation<ZenRoute> {
 
     final segments = route.pathSegments
         .map((segment) {
+          if (segment.startsWith('...:')) {
+            // Rest parameter - interpolate
+            final paramName = segment.substring(4);
+            return '\${$paramName.join(\'/\')}';
+          }
           if (segment.startsWith(':')) {
             // Dynamic parameter - interpolate
             final paramName = segment.substring(1);

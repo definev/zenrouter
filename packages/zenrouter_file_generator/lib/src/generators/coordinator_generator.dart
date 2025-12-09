@@ -401,6 +401,7 @@ class CoordinatorGenerator implements Builder {
     }
     buffer.writeln();
 
+    buffer.writeln("export 'package:zenrouter/zenrouter.dart';");
     // Export all route and layout files using relative paths
     for (final export in sortedImports) {
       buffer.writeln("export '$export';");
@@ -473,12 +474,36 @@ class CoordinatorGenerator implements Builder {
     // Sort routes by specificity (more segments first, static before dynamic)
     // This ensures static routes come before dynamic routes, allowing both to coexist
     final sortedRoutes = List<RouteInfo>.from(tree.routes)..sort((a, b) {
-      // More segments first
+      // 1. Routes with rest params go last
+      final aHasRest = a.pathSegments.any((s) => s.startsWith('...:'));
+      final bHasRest = b.pathSegments.any((s) => s.startsWith('...:'));
+      if (aHasRest && !bHasRest) return 1; // a goes after b
+      if (!aHasRest && bHasRest) return -1; // a goes before b
+
+      // 2. More static segments first (rest params excluded from count)
+      final aStaticCount =
+          a.pathSegments
+              .where((s) => !s.startsWith(':') && !s.startsWith('...'))
+              .length;
+      final bStaticCount =
+          b.pathSegments
+              .where((s) => !s.startsWith(':') && !s.startsWith('...'))
+              .length;
+      if (aStaticCount != bStaticCount) return bStaticCount - aStaticCount;
+
+      // 3. More total segments first
       final segmentDiff = b.pathSegments.length - a.pathSegments.length;
       if (segmentDiff != 0) return segmentDiff;
-      // Static segments before dynamic
-      final aDynamic = a.pathSegments.where((s) => s.startsWith(':')).length;
-      final bDynamic = b.pathSegments.where((s) => s.startsWith(':')).length;
+
+      // 4. Static segments before dynamic (single params)
+      final aDynamic =
+          a.pathSegments
+              .where((s) => s.startsWith(':') && !s.startsWith('...'))
+              .length;
+      final bDynamic =
+          b.pathSegments
+              .where((s) => s.startsWith(':') && !s.startsWith('...'))
+              .length;
       return aDynamic - bDynamic;
     });
 
@@ -577,7 +602,8 @@ class CoordinatorGenerator implements Builder {
         route.className,
         params,
         args,
-        returnType: 'Future<dynamic>',
+        generic: 'T extends Object',
+        returnType: 'Future<T?>',
       );
 
       // Generate replace method
@@ -617,6 +643,10 @@ class CoordinatorGenerator implements Builder {
   String _generateSwitchPattern(RouteInfo route) {
     final parts = route.pathSegments
         .map((segment) {
+          if (segment.startsWith('...:')) {
+            final paramName = segment.substring(4);
+            return '...final $paramName';
+          }
           if (segment.startsWith(':')) {
             final paramName = segment.substring(1);
             return 'final $paramName';
@@ -663,7 +693,12 @@ class CoordinatorGenerator implements Builder {
 
     // Add path parameters
     for (final param in route.parameters) {
-      params.add('String ${param.name}');
+      switch (param.isRest) {
+        case true:
+          params.add('List<String> ${param.name}');
+        case false:
+          params.add('String ${param.name}');
+      }
       args.add('${param.name}: ${param.name}');
     }
 
@@ -683,19 +718,22 @@ class CoordinatorGenerator implements Builder {
     String routeClassName,
     List<String> params,
     List<String> args, {
+    String? generic,
     String returnType = 'Future<dynamic>',
   }) {
     final methodName = '$navMethod$baseMethodName';
     final paramsStr = params.join(', ');
     final argsStr = args.join(', ');
 
+    final genericStr = generic != null ? '<$generic>' : '';
+
     if (paramsStr.isEmpty) {
       buffer.writeln(
-        '  $returnType $methodName() => $navMethod($routeClassName());',
+        '  $returnType $methodName$genericStr() => $navMethod($routeClassName());',
       );
     } else {
       buffer.writeln(
-        '  $returnType $methodName($paramsStr) => $navMethod($routeClassName($argsStr));',
+        '  $returnType $methodName$genericStr($paramsStr) => $navMethod($routeClassName($argsStr));',
       );
     }
   }

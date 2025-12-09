@@ -79,7 +79,7 @@ class RouteElement {
 
 /// Represents a dynamic route parameter.
 class RouteParameter {
-  /// The parameter name (from [name] syntax).
+  /// The parameter name (from [name] or [...name] syntax).
   final String name;
 
   /// The Dart type for this parameter.
@@ -91,10 +91,14 @@ class RouteParameter {
   /// Default value if optional.
   final String? defaultValue;
 
+  /// Whether this is a rest parameter that captures multiple segments.
+  final bool isRest;
+
   RouteParameter({
     required this.name,
     this.type = 'String',
     this.isOptional = false,
     this.defaultValue,
+    this.isRest = false,
   });
 }

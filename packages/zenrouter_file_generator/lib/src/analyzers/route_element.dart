@@ -18,7 +18,20 @@ RouteElement? routeElementFromAnnotatedElement(
   // Convert ParamInfo to RouteParameter
   final params =
       paramInfos
-          .map((p) => RouteParameter(name: p.name, type: 'String'))
+          .map(
+            (p) => switch (p.isRest) {
+              true => RouteParameter(
+                name: p.name,
+                type: 'List<String>',
+                isRest: true,
+              ),
+              false => RouteParameter(
+                name: p.name,
+                type: 'String',
+                isRest: false,
+              ),
+            },
+          )
           .toList();
 
   // Read annotation values
