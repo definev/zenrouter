@@ -48,7 +48,7 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T> {
     if (index != -1) {
       final removed = _stack.removeAt(index);
       // Dispose the removed route to prevent memory leaks
-      removed.dispose();
+      removed._dispose();
     }
     _stack.add(target);
     notifyListeners();
@@ -142,14 +142,14 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
   /// Properly disposes the route to prevent memory leaks.
   void remove(T element) {
     _stack.remove(element);
-    element.dispose();
+    element._dispose();
     notifyListeners();
   }
 
   @override
   void reset() {
     for (final route in _stack) {
-      route.dispose();
+      route._dispose();
     }
     _stack.clear();
   }

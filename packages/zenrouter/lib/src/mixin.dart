@@ -170,7 +170,7 @@ mixin RouteRedirect<T extends RouteTarget> on RouteTarget {
       if (newTarget == target) break;
       if (newTarget is T) {
         // Dispose the redirected-from route to prevent memory leaks
-        target.dispose();
+        target._dispose();
         target = newTarget;
       }
     }
@@ -240,8 +240,10 @@ abstract class RouteTarget extends Object {
   /// Disposes of this route and cleans up resources.
   ///
   /// This ensures the [_onResult] Completer is completed to prevent memory leaks.
-  /// Called when a route is removed from the stack without being properly popped.
-  void dispose() {
+  /// Called internally when a route is removed from the stack without being properly popped.
+  ///
+  /// **Internal API** - Do not call directly. Route lifecycle is managed by [StackPath].
+  void _dispose() {
     // Use completeOnResult with failSilent to properly clean up
     completeOnResult(null, null, true);
   }
@@ -255,6 +257,11 @@ abstract class RouteTarget extends Object {
     bool failSilent = false,
   ]) {
     if (_onResult.isCompleted) {
+      assert(
+        failSilent,
+        'Attempted to complete already-completed route without failSilent. '
+        'This indicates a bug in navigation logic. Route: $this',
+      );
       if (failSilent) {
         _resultValue = null;
         _path = null;
