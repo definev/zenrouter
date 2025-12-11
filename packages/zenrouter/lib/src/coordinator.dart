@@ -142,16 +142,16 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
   ///
   /// If the route has [RouteDeepLink], its custom handler is called.
   /// Otherwise, [replace] is called.
-  FutureOr<void> recoverRouteFromUri(Uri uri) {
+  FutureOr<void> recoverRouteFromUri(Uri uri) async {
     final route = parseRouteFromUri(uri);
     if (route is RouteDeepLink) {
       switch (route.deeplinkStrategy) {
         case DeeplinkStrategy.push:
-          push(route);
+          await push(route);
         case DeeplinkStrategy.replace:
           replace(route);
         case DeeplinkStrategy.custom:
-          route.deeplinkHandler(this, uri);
+          await route.deeplinkHandler(this, uri);
       }
     } else {
       replace(route);
@@ -187,7 +187,20 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
   }
 
   /// Manually recover deep link from route
-  void recover(T route) => recoverRouteFromUri(route.toUri());
+  Future<void> recover(T route) async {
+    if (route is RouteDeepLink) {
+      switch (route.deeplinkStrategy) {
+        case DeeplinkStrategy.push:
+          await push(route);
+        case DeeplinkStrategy.replace:
+          replace(route);
+        case DeeplinkStrategy.custom:
+          await route.deeplinkHandler(this, route.toUri());
+      }
+    } else {
+      replace(route);
+    }
+  }
 
   /// Wipes the current navigation stack and replaces it with the new route.
   void replace(T route) async {

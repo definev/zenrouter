@@ -261,8 +261,6 @@ mixin RouteTransition on RouteUnique {
   /// Returns the [StackTransition] for this route.
   StackTransition<T> transition<T extends RouteUnique>(
     covariant Coordinator coordinator,
-  ) => StackTransition.material(
-    Builder(builder: (context) => build(coordinator, context)),
   );
 }
 
