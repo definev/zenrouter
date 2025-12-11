@@ -114,10 +114,15 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
     return _layoutBuilderTable[typeString]!(coordinator, path, layout);
   }
 
+  // coverage:ignore-start
+  /// Registers a custom layout builder.
+  ///
+  /// Use this to define how a specific layout type should be built.
   static void definePrimitivePath(Type type, RouteLayoutBuilder builder) {
     final typeString = type.toString().split('<').first;
     _layoutBuilderTable[typeString] = builder;
   }
+  // coverage:ignore-end
 
   /// Resolves the stack path for this layout.
   ///

@@ -89,12 +89,14 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
     return layouts;
   }
 
+  // coverage:ignore-start
   /// Returns the list of active layout paths in the navigation hierarchy.
   ///
   /// This starts from the [root] path and traverses down through active layouts,
   /// collecting the [StackPath] for each level.
   @Deprecated('Use `activeLayoutPaths` insteads')
   List<StackPath> get activeHostPaths => activeLayoutPaths;
+  // coverage:ignore-end
 
   /// Returns the list of active layout paths in the navigation hierarchy.
   ///
@@ -142,20 +144,9 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
   ///
   /// If the route has [RouteDeepLink], its custom handler is called.
   /// Otherwise, [replace] is called.
-  FutureOr<void> recoverRouteFromUri(Uri uri) async {
+  Future<void> recoverRouteFromUri(Uri uri) async {
     final route = parseRouteFromUri(uri);
-    if (route is RouteDeepLink) {
-      switch (route.deeplinkStrategy) {
-        case DeeplinkStrategy.push:
-          await push(route);
-        case DeeplinkStrategy.replace:
-          replace(route);
-        case DeeplinkStrategy.custom:
-          await route.deeplinkHandler(this, uri);
-      }
-    } else {
-      replace(route);
-    }
+    return recover(route);
   }
 
   /// Resolves and activates layouts for a given [layout].
@@ -203,7 +194,7 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
   }
 
   /// Wipes the current navigation stack and replaces it with the new route.
-  void replace(T route) async {
+  Future<void> replace(T route) async {
     for (final path in paths) {
       path.reset();
     }
@@ -212,7 +203,7 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
     final path = layout?.resolvePath(this) ?? root;
     _resolveLayouts(layout, preferPush: false);
 
-    path.activateRoute(target);
+    await path.activateRoute(target);
   }
 
   /// Pushes a new route onto its navigation path.

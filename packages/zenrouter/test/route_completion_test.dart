@@ -58,9 +58,6 @@ class TestRoute extends RouteTarget with RouteUnique {
   Widget build(Coordinator coordinator, BuildContext context) {
     return const Placeholder();
   }
-
-  @override
-  String toString() => 'TestRoute($id)';
 }
 
 /// Test route that redirects to another route
@@ -191,11 +188,38 @@ class SelfRedirectRoute extends RouteTarget
   }
 }
 
+class MultiPropsRoute extends RouteTarget with RouteUnique {
+  MultiPropsRoute(this.prop1, this.prop2);
+  final String prop1;
+  final String prop2;
+
+  @override
+  List<Object?> get props => [prop1, prop2];
+
+  @override
+  Uri toUri() => Uri.parse('/multi-props/$prop1/$prop2');
+
+  @override
+  Widget build(Coordinator coordinator, BuildContext context) {
+    return const Placeholder();
+  }
+}
+
 // ============================================================================
 // Tests
 // ============================================================================
 
 void main() {
+  group('Route creation', () {
+    test('toString()', () {
+      expect(TestRoute('test').toString(), equals('TestRoute[test]'));
+      expect(
+        MultiPropsRoute('a', 'b').toString(),
+        equals('MultiPropsRoute[a,b]'),
+      );
+    });
+  });
+
   group('pushOrMoveToTop - Route Completion', () {
     test('completes result future when moving existing route to top', () async {
       final path = NavigationPath<TestRoute>('test');

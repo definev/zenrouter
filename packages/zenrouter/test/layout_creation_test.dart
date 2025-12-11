@@ -74,14 +74,6 @@ class TestSettingsLayout extends TestRoute with RouteLayout<TestRoute> {
   @override
   NavigationPath<TestRoute> resolvePath(TestCoordinator coordinator) =>
       coordinator.settingsStack;
-
-  @override
-  Uri toUri() => Uri.parse('/settings');
-
-  @override
-  Widget build(TestCoordinator coordinator, BuildContext context) {
-    return const Placeholder();
-  }
 }
 
 /// TabBar layout - nested in HomeLayout
@@ -99,11 +91,6 @@ class TestTabBarLayout extends TestRoute with RouteLayout<TestRoute> {
 
   @override
   Uri toUri() => Uri.parse('/home/tabs');
-
-  @override
-  Widget build(TestCoordinator coordinator, BuildContext context) {
-    return const Placeholder();
-  }
 }
 
 /// Feed tab layout - nested in TabBarLayout

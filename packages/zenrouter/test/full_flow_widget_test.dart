@@ -282,17 +282,157 @@ class ShellChildRoute extends AppRoute {
   List<Object?> get props => [id];
 }
 
+/// Tab routes for IndexedStackPath testing
+class HomeTab extends AppRoute {
+  @override
+  Uri toUri() => Uri.parse('/tabs/home');
+
+  @override
+  Widget build(covariant TestCoordinator coordinator, BuildContext context) {
+    return Scaffold(
+      key: const ValueKey('home-tab'),
+      appBar: AppBar(title: const Text('Home Tab')),
+      body: Column(
+        children: [
+          const Text('Home Tab Content'),
+          ElevatedButton(
+            key: const ValueKey('goto-search-tab'),
+            onPressed: () => coordinator.tabStack.goToIndexed(1),
+            child: const Text('Go to Search Tab'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  List<Object?> get props => [];
+}
+
+class SearchTab extends AppRoute {
+  @override
+  Uri toUri() => Uri.parse('/tabs/search');
+
+  @override
+  Widget build(covariant TestCoordinator coordinator, BuildContext context) {
+    return Scaffold(
+      key: const ValueKey('search-tab'),
+      appBar: AppBar(title: const Text('Search Tab')),
+      body: Column(
+        children: [
+          const Text('Search Tab Content'),
+          ElevatedButton(
+            key: const ValueKey('goto-profile-tab'),
+            onPressed: () => coordinator.tabStack.goToIndexed(2),
+            child: const Text('Go to Profile Tab'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  List<Object?> get props => [];
+}
+
+class ProfileTab extends AppRoute {
+  @override
+  Uri toUri() => Uri.parse('/tabs/profile');
+
+  @override
+  Widget build(covariant TestCoordinator coordinator, BuildContext context) {
+    return Scaffold(
+      key: const ValueKey('profile-tab'),
+      appBar: AppBar(title: const Text('Profile Tab')),
+      body: Column(
+        children: [
+          const Text('Profile Tab Content'),
+          ElevatedButton(
+            key: const ValueKey('goto-home-tab'),
+            onPressed: () => coordinator.tabStack.goToIndexed(0),
+            child: const Text('Go to Home Tab'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  List<Object?> get props => [];
+}
+
+/// Profile layout for nested navigation (no build override - tests automatic build)
+class ProfileLayout extends AppRoute with RouteLayout<AppRoute> {
+  @override
+  NavigationPath<AppRoute> resolvePath(TestCoordinator coordinator) =>
+      coordinator.profileStack;
+
+  @override
+  Uri toUri() => Uri.parse('/profile-layout');
+
+  // NOTE: No build() override - testing automatic build from RouteLayout
+
+  @override
+  List<Object?> get props => [];
+}
+
+/// Route within profile layout
+class ProfileChildRoute extends AppRoute {
+  ProfileChildRoute({required this.section});
+  final String section;
+
+  @override
+  Type get layout => ProfileLayout;
+
+  @override
+  Uri toUri() => Uri.parse('/profile-layout/$section');
+
+  @override
+  Widget build(covariant TestCoordinator coordinator, BuildContext context) {
+    return Scaffold(
+      key: ValueKey('profile-child-$section'),
+      appBar: AppBar(title: Text('Profile: $section')),
+      body: Column(
+        children: [
+          Text('Profile section: $section'),
+          ElevatedButton(
+            key: ValueKey(
+              'navigate-to-${section == "edit" ? "settings" : "edit"}',
+            ),
+            onPressed: () => coordinator.push(
+              ProfileChildRoute(
+                section: section == 'edit' ? 'settings' : 'edit',
+              ),
+            ),
+            child: Text('Go to ${section == "edit" ? "Settings" : "Edit"}'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  List<Object?> get props => [section];
+}
+
 /// Test coordinator
 class TestCoordinator extends Coordinator<AppRoute> {
   final NavigationPath<AppRoute> shellStack = NavigationPath('shell');
+  late final IndexedStackPath<AppRoute> tabStack = IndexedStackPath([
+    HomeTab(),
+    SearchTab(),
+    ProfileTab(),
+  ], 'tabs');
+  final NavigationPath<AppRoute> profileStack = NavigationPath('profile');
 
   @override
   void defineLayout() {
     RouteLayout.defineLayout(ShellRoute, () => ShellRoute());
+    RouteLayout.defineLayout(ProfileLayout, () => ProfileLayout());
   }
 
   @override
-  List<StackPath> get paths => [root, shellStack];
+  List<StackPath> get paths => [root, shellStack, tabStack, profileStack];
 
   @override
   AppRoute parseRouteFromUri(Uri uri) {
@@ -316,6 +456,11 @@ class TestCoordinator extends Coordinator<AppRoute> {
       ),
       ['shell'] => ShellRoute(),
       ['shell', final id] => ShellChildRoute(id: id),
+      ['tabs', 'home'] => HomeTab(),
+      ['tabs', 'search'] => SearchTab(),
+      ['tabs', 'profile'] => ProfileTab(),
+      ['profile-layout'] => ProfileLayout(),
+      ['profile-layout', final section] => ProfileChildRoute(section: section),
       _ => HomeRoute(),
     };
   }
@@ -326,6 +471,218 @@ class TestCoordinator extends Coordinator<AppRoute> {
 // ============================================================================
 
 void main() {
+  group('Full Flow Widget Tests - Coordinator', () {
+    group('Basic Information', () {
+      test('activeLayout returns null when no layout is active', () async {
+        final coordinator = TestCoordinator();
+        await coordinator.replace(HomeRoute());
+
+        expect(coordinator.activeLayout, isNull);
+      });
+
+      test('activeLayout returns the deepest active layout', () async {
+        final coordinator = TestCoordinator();
+
+        // Push a route with ShellRoute layout
+        await coordinator.replace(ShellChildRoute(id: 'test'));
+
+        final activeLayout = coordinator.activeLayout;
+        expect(activeLayout, isNotNull);
+        expect(activeLayout, isA<ShellRoute>());
+      });
+
+      test('activeLayout returns deepest layout in nested hierarchy', () async {
+        final coordinator = TestCoordinator();
+
+        // Push a route with ProfileLayout
+        await coordinator.replace(ProfileChildRoute(section: 'edit'));
+
+        final activeLayout = coordinator.activeLayout;
+        expect(activeLayout, isNotNull);
+        expect(activeLayout, isA<ProfileLayout>());
+      });
+
+      test('activeLayouts returns all active layouts in hierarchy', () async {
+        final coordinator = TestCoordinator();
+
+        // Simple route - no layouts
+        await coordinator.replace(HomeRoute());
+        expect(coordinator.activeLayouts, isEmpty);
+
+        // Route with one layout
+        await coordinator.replace(ShellChildRoute(id: 'test'));
+        expect(coordinator.activeLayouts.length, 1);
+        expect(coordinator.activeLayouts.first, isA<ShellRoute>());
+
+        // Route with layout
+        await coordinator.replace(ProfileChildRoute(section: 'settings'));
+        expect(coordinator.activeLayouts.length, 1);
+        expect(coordinator.activeLayouts.first, isA<ProfileLayout>());
+      });
+
+      test('activePath returns root when no layouts are active', () async {
+        final coordinator = TestCoordinator();
+        await coordinator.replace(HomeRoute());
+
+        expect(coordinator.activePath, coordinator.root);
+      });
+
+      test('activePath returns the deepest active path', () async {
+        final coordinator = TestCoordinator();
+
+        // Push shell child route
+        await coordinator.replace(ShellChildRoute(id: 'test'));
+
+        expect(coordinator.activePath, coordinator.shellStack);
+      });
+
+      test('activeLayoutPaths returns correct path hierarchy', () async {
+        final coordinator = TestCoordinator();
+
+        // Simple route - only root
+        await coordinator.replace(HomeRoute());
+        expect(coordinator.activeLayoutPaths.length, 1);
+        expect(coordinator.activeLayoutPaths.first, coordinator.root);
+
+        // Route with shell layout
+        await coordinator.replace(ShellChildRoute(id: 'test'));
+        expect(coordinator.activeLayoutPaths.length, 2);
+        expect(coordinator.activeLayoutPaths[0], coordinator.root);
+        expect(coordinator.activeLayoutPaths[1], coordinator.shellStack);
+      });
+
+      test('currentUri returns correct URI for active route', () async {
+        final coordinator = TestCoordinator();
+
+        await coordinator.replace(HomeRoute());
+        expect(coordinator.currentUri.toString(), '/');
+
+        await coordinator.replace(ProfileRoute(userId: '123'));
+        expect(coordinator.currentUri.toString(), '/profile/123');
+
+        await coordinator.replace(SettingsRoute());
+        expect(coordinator.currentUri.toString(), '/settings');
+      });
+    });
+
+    group('Recover Method', () {
+      testWidgets('recover with push strategy pushes route onto stack', (
+        tester,
+      ) async {
+        final coordinator = TestCoordinator();
+
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerDelegate: coordinator.routerDelegate,
+            routeInformationParser: coordinator.routeInformationParser,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Navigate to create initial stack
+        coordinator.push(SettingsRoute());
+        await tester.pumpAndSettle();
+
+        final stackLengthBefore = coordinator.root.stack.length;
+
+        // Recover with push strategy
+        coordinator.recover(
+          DeepLinkRoute(path: 'user1', strategy: DeeplinkStrategy.push),
+        );
+        await tester.pumpAndSettle();
+
+        // Should push onto existing stack
+        expect(coordinator.root.stack.length, stackLengthBefore + 1);
+        expect(find.byKey(const ValueKey('deeplink-user1')), findsOneWidget);
+      });
+
+      testWidgets('recover with replace strategy replaces entire stack', (
+        tester,
+      ) async {
+        final coordinator = TestCoordinator();
+
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerDelegate: coordinator.routerDelegate,
+            routeInformationParser: coordinator.routeInformationParser,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Navigate to create initial stack
+        coordinator.push(SettingsRoute());
+        coordinator.push(ProfileRoute(userId: '456'));
+        await tester.pumpAndSettle();
+
+        expect(coordinator.root.stack.length, 3); // Home + Settings + Profile
+
+        // Recover with replace strategy
+        await coordinator.recover(
+          DeepLinkRoute(path: 'user2', strategy: DeeplinkStrategy.replace),
+        );
+        await tester.pumpAndSettle();
+
+        // Should replace entire stack
+        expect(coordinator.root.stack.length, 1);
+        expect(find.byKey(const ValueKey('deeplink-user2')), findsOneWidget);
+      });
+
+      testWidgets('recover with custom strategy invokes custom handler', (
+        tester,
+      ) async {
+        final coordinator = TestCoordinator();
+
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerDelegate: coordinator.routerDelegate,
+            routeInformationParser: coordinator.routeInformationParser,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Recover with custom strategy
+        await coordinator.recover(
+          DeepLinkRoute(path: 'customUser', strategy: DeeplinkStrategy.custom),
+        );
+        await tester.pumpAndSettle();
+
+        // Custom handler should navigate to profile with the path as userId
+        expect(
+          find.byKey(const ValueKey('profile-customUser')),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('recover with non-deeplink route uses replace', (
+        tester,
+      ) async {
+        final coordinator = TestCoordinator();
+
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerDelegate: coordinator.routerDelegate,
+            routeInformationParser: coordinator.routeInformationParser,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Navigate to create initial stack
+        coordinator.push(SettingsRoute());
+        coordinator.push(ProfileRoute(userId: '789'));
+        await tester.pumpAndSettle();
+
+        expect(coordinator.root.stack.length, 3);
+
+        // Recover with non-deeplink route
+        await coordinator.recover(HomeRoute());
+        await tester.pumpAndSettle();
+
+        // Should replace stack (default behavior)
+        expect(coordinator.root.stack.length, 1);
+        expect(find.byKey(const ValueKey('home')), findsOneWidget);
+      });
+    });
+  });
   group('Full Flow Widget Tests - Basic Navigation', () {
     testWidgets('Home screen renders correctly', (tester) async {
       final coordinator = TestCoordinator();
@@ -800,6 +1157,289 @@ void main() {
 
       // Should be back at ProfileRoute('1')
       expect(find.byKey(const ValueKey('profile-1')), findsOneWidget);
+    });
+  });
+
+  group('Full Flow Widget Tests - IndexedStackPath Tab Navigation', () {
+    testWidgets('Tab stack initializes with first tab active', (tester) async {
+      final coordinator = TestCoordinator();
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify tab stack is initialized
+      expect(coordinator.tabStack.stack.length, 3);
+      expect(coordinator.tabStack.activeIndex, 0);
+      expect(coordinator.tabStack.activeRoute, isA<HomeTab>());
+    });
+
+    testWidgets('Switching tabs updates active index', (tester) async {
+      final coordinator = TestCoordinator();
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Test switching tabs via goToIndexed
+      expect(coordinator.tabStack.activeIndex, 0);
+
+      coordinator.tabStack.goToIndexed(1);
+      await tester.pumpAndSettle();
+
+      expect(coordinator.tabStack.activeIndex, 1);
+      expect(coordinator.tabStack.activeRoute, isA<SearchTab>());
+    });
+
+    testWidgets('Can navigate between all tabs', (tester) async {
+      final coordinator = TestCoordinator();
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Test direct index navigation
+      coordinator.tabStack.goToIndexed(0);
+      await tester.pumpAndSettle();
+      expect(coordinator.tabStack.activeIndex, 0);
+      expect(coordinator.tabStack.activeRoute, isA<HomeTab>());
+
+      coordinator.tabStack.goToIndexed(1);
+      await tester.pumpAndSettle();
+      expect(coordinator.tabStack.activeIndex, 1);
+      expect(coordinator.tabStack.activeRoute, isA<SearchTab>());
+
+      coordinator.tabStack.goToIndexed(2);
+      await tester.pumpAndSettle();
+      expect(coordinator.tabStack.activeIndex, 2);
+      expect(coordinator.tabStack.activeRoute, isA<ProfileTab>());
+
+      coordinator.tabStack.goToIndexed(0);
+      await tester.pumpAndSettle();
+      expect(coordinator.tabStack.activeIndex, 0);
+      expect(coordinator.tabStack.activeRoute, isA<HomeTab>());
+    });
+
+    testWidgets('Tab stack maintains state between switches', (tester) async {
+      final coordinator = TestCoordinator();
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Switch between tabs multiple times
+      coordinator.tabStack.goToIndexed(0);
+      await tester.pumpAndSettle();
+      expect(coordinator.tabStack.activeIndex, 0);
+
+      coordinator.tabStack.goToIndexed(2);
+      await tester.pumpAndSettle();
+      expect(coordinator.tabStack.activeIndex, 2);
+
+      coordinator.tabStack.goToIndexed(1);
+      await tester.pumpAndSettle();
+      expect(coordinator.tabStack.activeIndex, 1);
+
+      // Verify all tabs still exist
+      expect(coordinator.tabStack.stack.length, 3);
+    });
+
+    testWidgets('activateRoute switches to correct tab', (tester) async {
+      final coordinator = TestCoordinator();
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Start at home tab
+      expect(coordinator.tabStack.activeIndex, 0);
+
+      // Activate search tab
+      await coordinator.tabStack.activateRoute(SearchTab());
+      await tester.pumpAndSettle();
+
+      expect(coordinator.tabStack.activeIndex, 1);
+      expect(coordinator.tabStack.activeRoute, isA<SearchTab>());
+    });
+
+    testWidgets('Tab stack resets to first tab', (tester) async {
+      final coordinator = TestCoordinator();
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Navigate to profile tab
+      coordinator.tabStack.goToIndexed(2);
+      await tester.pumpAndSettle();
+      expect(coordinator.tabStack.activeIndex, 2);
+
+      // Reset
+      coordinator.tabStack.reset();
+      await tester.pumpAndSettle();
+
+      // Should be back to first tab
+      expect(coordinator.tabStack.activeIndex, 0);
+    });
+
+    testWidgets('parseRouteFromUri creates correct tab routes', (tester) async {
+      final coordinator = TestCoordinator();
+
+      expect(
+        coordinator.parseRouteFromUri(Uri.parse('/tabs/home')),
+        isA<HomeTab>(),
+      );
+      expect(
+        coordinator.parseRouteFromUri(Uri.parse('/tabs/search')),
+        isA<SearchTab>(),
+      );
+      expect(
+        coordinator.parseRouteFromUri(Uri.parse('/tabs/profile')),
+        isA<ProfileTab>(),
+      );
+    });
+  });
+
+  group('Full Flow Widget Tests - ProfileLayout Automatic Build', () {
+    testWidgets('ProfileLayout uses automatic build', (tester) async {
+      final coordinator = TestCoordinator();
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Push a profile child route which should trigger layout creation
+      coordinator.push(ProfileChildRoute(section: 'edit'));
+      await tester.pumpAndSettle();
+
+      // Should render the layout and child
+      expect(find.byKey(const ValueKey('profile-child-edit')), findsOneWidget);
+      expect(find.text('Profile section: edit'), findsOneWidget);
+    });
+
+    testWidgets('Navigate within profile layout', (tester) async {
+      final coordinator = TestCoordinator();
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Start with edit section
+      coordinator.push(ProfileChildRoute(section: 'edit'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('profile-child-edit')), findsOneWidget);
+
+      // Navigate to settings within profile layout
+      await tester.tap(find.byKey(const ValueKey('navigate-to-settings')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('profile-child-settings')),
+        findsOneWidget,
+      );
+      expect(find.text('Profile section: settings'), findsOneWidget);
+
+      // Should have both routes in profile stack
+      expect(coordinator.profileStack.stack.length, 2);
+    });
+
+    testWidgets('Profile layout resolves correct path', (tester) async {
+      final coordinator = TestCoordinator();
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final layout = ProfileLayout();
+      final path = layout.resolvePath(coordinator);
+
+      expect(path, equals(coordinator.profileStack));
+      expect(path.debugLabel, 'profile');
+    });
+
+    testWidgets('Navigate back and forth in profile layout', (tester) async {
+      final coordinator = TestCoordinator();
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Push edit section
+      coordinator.push(ProfileChildRoute(section: 'edit'));
+      await tester.pumpAndSettle();
+
+      // Go to settings
+      await tester.tap(find.byKey(const ValueKey('navigate-to-settings')));
+      await tester.pumpAndSettle();
+
+      expect(coordinator.profileStack.stack.length, 2);
+
+      // Go back to edit
+      await tester.tap(find.byKey(const ValueKey('navigate-to-edit')));
+      await tester.pumpAndSettle();
+
+      expect(coordinator.profileStack.stack.length, 3);
+      expect(find.byKey(const ValueKey('profile-child-edit')), findsOneWidget);
+    });
+
+    testWidgets('parseRouteFromUri creates correct profile routes', (
+      tester,
+    ) async {
+      final coordinator = TestCoordinator();
+
+      expect(
+        coordinator.parseRouteFromUri(Uri.parse('/profile-layout')),
+        isA<ProfileLayout>(),
+      );
+      expect(
+        coordinator.parseRouteFromUri(Uri.parse('/profile-layout/edit')),
+        isA<ProfileChildRoute>(),
+      );
+      final route =
+          coordinator.parseRouteFromUri(Uri.parse('/profile-layout/settings'))
+              as ProfileChildRoute;
+      expect(route.section, 'settings');
     });
   });
 }

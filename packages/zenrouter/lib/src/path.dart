@@ -142,8 +142,8 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
   /// Guards are NOT consulted. Use with caution.
   void remove(T element) {
     element._path = null;
-    _stack.remove(element);
-    notifyListeners();
+    final removed = _stack.remove(element);
+    if (removed) notifyListeners();
   }
 
   @override
