@@ -10,6 +10,16 @@ import 'package:zenrouter_file_annotation/zenrouter_file_annotation.dart';
 ///
 /// Generates the `_$LayoutName` base class for each @ZenLayout annotated class.
 class LayoutGenerator extends GeneratorForAnnotation<ZenLayout> {
+  // Cached regex patterns for performance
+  static final _routeBaseMatchSingleQuote = RegExp(r"routeBase:\s*'([^']+)'");
+  static final _routeBaseMatchDoubleQuote = RegExp(r'routeBase:\s*"([^"]+)"');
+  static final _nameMatchSingleQuote = RegExp(r"name:\s*'([^']+)'");
+  static final _nameMatchDoubleQuote = RegExp(r'name:\s*"([^"]+)"');
+  static final _classMatchLayout = RegExp(r'class\s+(\w+Layout)\s+extends');
+
+  // Cache coordinator config to avoid re-reading the file for every layout
+  static ({String routeBase, String coordinatorName})? _cachedConfig;
+  static bool _configLoaded = false;
   @override
   Future<String> generateForAnnotatedElement(
     Element element,
@@ -62,6 +72,12 @@ class LayoutGenerator extends GeneratorForAnnotation<ZenLayout> {
     BuildStep buildStep,
     String routesDir,
   ) async {
+    // Performance optimization: cache the coordinator config
+    if (_configLoaded) {
+      return _cachedConfig ??
+          (routeBase: 'AppRoute', coordinatorName: 'AppCoordinator');
+    }
+
     String routeBase = 'AppRoute';
     String coordinatorName = 'AppCoordinator';
 
@@ -70,12 +86,12 @@ class LayoutGenerator extends GeneratorForAnnotation<ZenLayout> {
       final content = await buildStep.readAsString(asset);
 
       // Parse routeBase
-      final routeBaseMatchSingle = RegExp(
-        r"routeBase:\s*'([^']+)'",
-      ).firstMatch(content);
-      final routeBaseMatchDouble = RegExp(
-        r'routeBase:\s*"([^"]+)"',
-      ).firstMatch(content);
+      final routeBaseMatchSingle = _routeBaseMatchSingleQuote.firstMatch(
+        content,
+      );
+      final routeBaseMatchDouble = _routeBaseMatchDoubleQuote.firstMatch(
+        content,
+      );
       if (routeBaseMatchSingle != null) {
         routeBase = routeBaseMatchSingle.group(1)!;
       } else if (routeBaseMatchDouble != null) {
@@ -83,8 +99,8 @@ class LayoutGenerator extends GeneratorForAnnotation<ZenLayout> {
       }
 
       // Parse coordinator name
-      final nameMatchSingle = RegExp(r"name:\s*'([^']+)'").firstMatch(content);
-      final nameMatchDouble = RegExp(r'name:\s*"([^"]+)"').firstMatch(content);
+      final nameMatchSingle = _nameMatchSingleQuote.firstMatch(content);
+      final nameMatchDouble = _nameMatchDoubleQuote.firstMatch(content);
       if (nameMatchSingle != null) {
         coordinatorName = nameMatchSingle.group(1)!;
       } else if (nameMatchDouble != null) {
@@ -92,7 +108,9 @@ class LayoutGenerator extends GeneratorForAnnotation<ZenLayout> {
       }
     }
 
-    return (routeBase: routeBase, coordinatorName: coordinatorName);
+    _cachedConfig = (routeBase: routeBase, coordinatorName: coordinatorName);
+    _configLoaded = true;
+    return _cachedConfig!;
   }
 
   /// Find the closest parent _layout.dart file (in PARENT directories only).
@@ -135,9 +153,7 @@ class LayoutGenerator extends GeneratorForAnnotation<ZenLayout> {
       await for (final asset in buildStep.findAssets(layoutGlob)) {
         // Found a layout file, extract the class name
         final content = await buildStep.readAsString(asset);
-        final classMatch = RegExp(
-          r'class\s+(\w+Layout)\s+extends',
-        ).firstMatch(content);
+        final classMatch = _classMatchLayout.firstMatch(content);
         if (classMatch != null) {
           return classMatch.group(1);
         }
@@ -151,9 +167,7 @@ class LayoutGenerator extends GeneratorForAnnotation<ZenLayout> {
     final rootLayoutGlob = Glob('$routesDir/_layout.dart');
     await for (final asset in buildStep.findAssets(rootLayoutGlob)) {
       final content = await buildStep.readAsString(asset);
-      final classMatch = RegExp(
-        r'class\s+(\w+Layout)\s+extends',
-      ).firstMatch(content);
+      final classMatch = _classMatchLayout.firstMatch(content);
       if (classMatch != null) {
         return classMatch.group(1);
       }

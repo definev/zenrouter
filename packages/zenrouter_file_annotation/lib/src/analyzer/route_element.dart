@@ -29,6 +29,9 @@ class RouteElement {
   /// Whether this route has RouteTransition mixin.
   final bool hasTransition;
 
+  /// Whether this route has deferred import.
+  final bool hasDeferredImport;
+
   /// Expected query parameter names (if any).
   final List<String>? queries;
 
@@ -42,6 +45,7 @@ class RouteElement {
     this.hasRedirect = false,
     this.deepLinkStrategy,
     this.hasTransition = false,
+    this.hasDeferredImport = false,
     this.queries,
   });
 
@@ -72,6 +76,7 @@ class RouteElement {
       hasRedirect: hasRedirect,
       deepLinkStrategy: deepLinkStrategy,
       hasTransition: hasTransition,
+      hasDeferredImport: hasDeferredImport,
       queries: queries,
     );
   }

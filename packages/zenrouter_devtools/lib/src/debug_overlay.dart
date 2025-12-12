@@ -355,11 +355,11 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
   // URI NAVIGATION METHODS
   // ===========================================================================
 
-  void _pushUri(String uriString) {
+  void _pushUri(String uriString) async {
     if (uriString.isEmpty) return;
     try {
       final uri = Uri.parse(uriString);
-      final route = widget.coordinator.parseRouteFromUri(uri);
+      final route = await widget.coordinator.parseRouteFromUri(uri);
       widget.coordinator.push(route);
       _showToast('Navigated to $uriString', type: ToastType.push);
     } catch (e) {
@@ -367,11 +367,11 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
     }
   }
 
-  void _replaceUri(String uriString) {
+  void _replaceUri(String uriString) async {
     if (uriString.isEmpty) return;
     try {
       final uri = Uri.parse(uriString);
-      final route = widget.coordinator.parseRouteFromUri(uri);
+      final route = await widget.coordinator.parseRouteFromUri(uri);
       widget.coordinator.replace(route);
       _showToast('Replaced with $uriString', type: ToastType.replace);
     } catch (e) {
@@ -379,11 +379,11 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
     }
   }
 
-  void _recoverUri(String uriString) {
+  void _recoverUri(String uriString) async {
     if (uriString.isEmpty) return;
     try {
       final uri = Uri.parse(uriString);
-      final route = widget.coordinator.parseRouteFromUri(uri);
+      final route = await widget.coordinator.parseRouteFromUri(uri);
       widget.coordinator.recover(route);
       _showToast('Recover with $uriString', type: ToastType.replace);
     } catch (e) {

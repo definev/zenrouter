@@ -1,0 +1,50 @@
+Deferred Import Benchmark Results
+Generated: Sat Dec 13 00:44:42 +07 2025
+======================================
+
+deferredImport: false
+----------------------------------------
+  flutter_bootstrap.js: 9 KB
+  main.dart.js: 2414 KB
+  flutter.js: 9 KB
+  flutter_service_worker.js: 0 KB
+  skwasm.js: 59 KB
+  skwasm_heavy.js: 59 KB
+  canvaskit.js: 84 KB
+  canvaskit.js: 84 KB
+
+deferredImport: true
+----------------------------------------
+  flutter_bootstrap.js: 9 KB
+  main.dart.js_24.part.js: 0 KB
+  main.dart.js_7.part.js: 1 KB
+  main.dart.js_12.part.js: 0 KB
+  main.dart.js_6.part.js: 1 KB
+  main.dart.js_13.part.js: 0 KB
+  main.dart.js_11.part.js: 1 KB
+  main.dart.js_4.part.js: 0 KB
+  main.dart.js: 2155 KB
+  main.dart.js_18.part.js: 2 KB
+  main.dart.js_19.part.js: 250 KB
+  flutter.js: 9 KB
+  flutter_service_worker.js: 0 KB
+  main.dart.js_10.part.js: 12 KB
+  main.dart.js_15.part.js: 5 KB
+  main.dart.js_23.part.js: 1 KB
+  main.dart.js_9.part.js: 2 KB
+  main.dart.js_22.part.js: 0 KB
+  main.dart.js_14.part.js: 1 KB
+  main.dart.js_1.part.js: 1 KB
+  main.dart.js_20.part.js: 1 KB
+  main.dart.js_3.part.js: 0 KB
+  main.dart.js_16.part.js: 0 KB
+  main.dart.js_17.part.js: 6 KB
+  main.dart.js_21.part.js: 0 KB
+  skwasm.js: 59 KB
+  skwasm_heavy.js: 59 KB
+  canvaskit.js: 84 KB
+  canvaskit.js: 84 KB
+
+======================================
+Comparison
+======================================

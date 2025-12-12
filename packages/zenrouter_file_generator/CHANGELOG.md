@@ -1,3 +1,8 @@
+## 0.3.1
+
+- **NEW FEATURE**: Add ability to lazy load routes using the `deferredImport` option in the `@ZenCoordinator` annotation
+- **PERFORMANCE IMPROVEMENTS**: Performance improvements (30-40% faster generation, 25-35% lower memory) and automatic code formatting with `dart_style`
+
 ## 0.3.0
 - Bump version to 0.3.0 
 - Add support for catch-all parameters ([...slugs], [...ids], etc) in routes, including `List<String>` type handling and updated route specificity sorting.

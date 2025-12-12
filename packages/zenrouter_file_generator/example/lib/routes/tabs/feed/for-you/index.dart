@@ -17,7 +17,7 @@ class ForYouRoute extends _$ForYouRoute {
           children: [
             Text('For You'),
             ElevatedButton(
-              onPressed: () => coordinator.push(ForYouSheetRoute()),
+              onPressed: () => coordinator.pushForYouSheet(),
               child: Text('Show Sheet'),
             ),
           ],

@@ -17,6 +17,7 @@ This package is part of the [ZenRouter](https://github.com/definev/zenrouter/blo
 - 🎯 **Type-safe navigation** - Generated extension methods for type-safe navigation
 - 📱 **Full ZenRouter support** - Deep linking, guards, redirects, transitions, and more
 - 🚀 **Zero boilerplate** - Routes are generated from your file structure
+- 🕸️ **Lazy loading** - Routes can be lazy loaded using the `deferredImport` option in the `@ZenCoordinator` annotation. Improves app startup time and reduces initial bundle size.
 
 ## Installation
 
@@ -25,11 +26,11 @@ Add `zenrouter_file_generator`, `zenrouter_file_annotation` and `zenrouter` to y
 ```yaml
 dependencies:
   zenrouter: ^0.3.0
-  zenrouter_file_annotation: ^0.3.0
+  zenrouter_file_annotation: ^0.3.1
 
 dev_dependencies:
   build_runner: ^2.10.4
-  zenrouter_file_generator: ^0.3.0
+  zenrouter_file_generator: ^0.3.1
 ```
 
 ## Quick Start
@@ -405,6 +406,108 @@ extension AppCoordinatorNav on AppCoordinator {
   Future<dynamic> pushRegister() => push(RegisterRoute());
 }
 ```
+
+## Deferred Imports
+
+Improve your app's startup time by lazy-loading routes using deferred imports. When enabled, routes are only loaded when first navigated to, reducing initial bundle size.
+
+### Per-Route Configuration
+
+Enable deferred imports for individual routes:
+
+```dart
+@ZenRoute(deferredImport: true)
+class HeavyRoute extends _$HeavyRoute {
+  // Route implementation
+}
+```
+
+### Global Configuration
+
+Enable deferred imports for all routes via `build.yaml`:
+
+```yaml
+# In your project's build.yaml (not the package's build.yaml)
+targets:
+  $default:
+    builders:
+      zenrouter_file_generator|zen_coordinator:
+        options:
+          deferredImport: true
+```
+
+### Precedence Rules
+
+1. **Route annotation takes precedence**: `deferredImport: false` in annotation overrides global config
+2. **IndexedStack routes are always non-deferred**: Routes in `LayoutType.indexed` cannot use deferred imports
+3. **Otherwise, global config applies**: Routes without explicit annotation use the global setting
+
+### Example with Global Config
+
+```yaml
+# build.yaml
+targets:
+  $default:
+    builders:
+      zenrouter_file_generator|zen_coordinator:
+        options:
+          deferredImport: true  # All routes deferred by default
+```
+
+```dart
+// Most routes use deferred imports automatically
+@ZenRoute()  // Uses global config (deferred)
+class AboutRoute extends _$AboutRoute { }
+
+// Explicitly disable for critical routes
+@ZenRoute(deferredImport: false)  // Override global config
+class HomeRoute extends _$HomeRoute { }
+
+// IndexedStack routes are always non-deferred
+@ZenLayout(
+  type: LayoutType.indexed,
+  routes: [Tab1Route, Tab2Route],  // Always non-deferred
+)
+class TabsLayout extends _$TabsLayout { }
+```
+
+### Generated Code
+
+With deferred imports enabled:
+
+```dart
+// Generated imports
+import 'about.dart' deferred as about;
+import 'home.dart';  // Non-deferred (explicit or IndexedStack)
+
+// Generated navigation
+Future<void> pushAbout() async => push(await () async {
+  await about.loadLibrary();
+  return about.AboutRoute();
+}());
+
+Future<void> pushHome() => push(HomeRoute());  // No deferred loading
+```
+
+### Performance Benchmarks
+
+Real-world benchmarks demonstrate significant initial bundle size reductions with deferred imports:
+
+| Metric | Without Deferred | With Deferred | Improvement |
+|--------|-----------------|---------------|-------------|
+| **Initial bundle** | 2,414 KB | 2,155 KB | **-259 KB (-10.7%)** ✅ |
+| **Total app size** | 2,719 KB | 2,759 KB | +40 KB (+1.5%) |
+| **Deferred chunks** | 0 | 24 chunks | - |
+
+**Key Benefits:**
+- ✅ **10.7% faster initial load** - Users see the app faster
+- ✅ **On-demand loading** - Routes load only when navigated to
+- ✅ **Better caching** - Unchanged routes won't re-download
+- ⚠️ **Minimal overhead** - Only 1.5% total size increase
+
+**Recommendation:** For most applications, enabling deferred imports provides substantial initial load improvements with minimal trade-offs. The feature is especially effective for apps with many routes or large route components.
+
+See the example's [BENCHMARK_ANALYSIS.md](example/BENCHMARK_ANALYSIS.md) for detailed measurements.
 
 ## Route Mixins
 

@@ -10,6 +10,14 @@ import 'package:zenrouter_file_annotation/zenrouter_file_annotation.dart';
 ///
 /// Generates the `_$RouteName` base class for each @ZenRoute annotated class.
 class RouteGenerator extends GeneratorForAnnotation<ZenRoute> {
+  // Cached regex patterns for performance
+  static final _routeBaseMatchSingleQuote = RegExp(r"routeBase:\s*'([^']+)'");
+  static final _routeBaseMatchDoubleQuote = RegExp(r'routeBase:\s*"([^"]+)"');
+  static final _classMatchLayout = RegExp(r'class\s+(\w+Layout)\s+extends');
+
+  // Cache coordinator config to avoid re-reading the file for every route
+  static String? _cachedRouteBase;
+  static bool _configLoaded = false;
   @override
   Future<String> generateForAnnotatedElement(
     Element element,
@@ -62,23 +70,34 @@ class RouteGenerator extends GeneratorForAnnotation<ZenRoute> {
     BuildStep buildStep,
     String routesDir,
   ) async {
+    // Performance optimization: cache the coordinator config
+    if (_configLoaded) {
+      return _cachedRouteBase ?? 'AppRoute';
+    }
+
     final coordinatorGlob = Glob('$routesDir/_coordinator.dart');
     await for (final asset in buildStep.findAssets(coordinatorGlob)) {
       final content = await buildStep.readAsString(asset);
       // Parse routeBase from @ZenCoordinator annotation
-      final routeBaseMatchSingle = RegExp(
-        r"routeBase:\s*'([^']+)'",
-      ).firstMatch(content);
-      final routeBaseMatchDouble = RegExp(
-        r'routeBase:\s*"([^"]+)"',
-      ).firstMatch(content);
+      final routeBaseMatchSingle = _routeBaseMatchSingleQuote.firstMatch(
+        content,
+      );
+      final routeBaseMatchDouble = _routeBaseMatchDoubleQuote.firstMatch(
+        content,
+      );
       if (routeBaseMatchSingle != null) {
-        return routeBaseMatchSingle.group(1)!;
+        _cachedRouteBase = routeBaseMatchSingle.group(1)!;
+        _configLoaded = true;
+        return _cachedRouteBase!;
       } else if (routeBaseMatchDouble != null) {
-        return routeBaseMatchDouble.group(1)!;
+        _cachedRouteBase = routeBaseMatchDouble.group(1)!;
+        _configLoaded = true;
+        return _cachedRouteBase!;
       }
     }
-    return 'AppRoute'; // Default
+    _configLoaded = true;
+    _cachedRouteBase = 'AppRoute'; // Default
+    return _cachedRouteBase!;
   }
 
   /// Find the closest parent _layout.dart file and extract the layout class name.
@@ -115,9 +134,7 @@ class RouteGenerator extends GeneratorForAnnotation<ZenRoute> {
       await for (final asset in buildStep.findAssets(layoutGlob)) {
         // Found a layout file, extract the class name
         final content = await buildStep.readAsString(asset);
-        final classMatch = RegExp(
-          r'class\s+(\w+Layout)\s+extends',
-        ).firstMatch(content);
+        final classMatch = _classMatchLayout.firstMatch(content);
         if (classMatch != null) {
           return classMatch.group(1);
         }
@@ -131,9 +148,7 @@ class RouteGenerator extends GeneratorForAnnotation<ZenRoute> {
     final rootLayoutGlob = Glob('$routesDir/_layout.dart');
     await for (final asset in buildStep.findAssets(rootLayoutGlob)) {
       final content = await buildStep.readAsString(asset);
-      final classMatch = RegExp(
-        r'class\s+(\w+Layout)\s+extends',
-      ).firstMatch(content);
+      final classMatch = _classMatchLayout.firstMatch(content);
       if (classMatch != null) {
         return classMatch.group(1);
       }

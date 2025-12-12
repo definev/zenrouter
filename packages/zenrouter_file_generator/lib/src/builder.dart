@@ -21,5 +21,7 @@ Builder zenRouteBuilder(BuilderOptions options) {
 /// - Navigation paths
 /// - Type-safe navigation extensions
 Builder zenCoordinatorBuilder(BuilderOptions options) {
-  return CoordinatorGenerator();
+  final globalDeferredImport =
+      options.config['deferredImport'] as bool? ?? false;
+  return CoordinatorGenerator(globalDeferredImport: globalDeferredImport);
 }

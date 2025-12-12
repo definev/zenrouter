@@ -9,6 +9,17 @@ builders:
     applies_builders: ["source_gen|combining_builder"]
 
   # Coordinator generator - aggregates all routes into routes.zen.dart
+  # 
+  # Configuration options:
+  #   deferredImport: bool (default: false)
+  #     When true, all routes will use deferred imports unless explicitly 
+  #     disabled in the route annotation. This can improve app startup time
+  #     by lazy-loading route implementations.
+  #     
+  #     Precedence rules:
+  #     - Route-level explicit deferredImport annotation takes precedence
+  #     - Routes in IndexedStack layouts are always non-deferred
+  #     - Otherwise, uses this global config value
   zen_coordinator:
     import: "package:zenrouter_file_generator/builder.dart"
     builder_factories: ["zenCoordinatorBuilder"]
@@ -16,3 +27,4 @@ builders:
       "$lib$": ["routes/routes.zen.dart"]
     auto_apply: dependents
     build_to: source
+

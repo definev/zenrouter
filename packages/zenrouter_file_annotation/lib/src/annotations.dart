@@ -132,6 +132,14 @@ class ZenRoute {
   /// custom page transition animations.
   final bool transition;
 
+  /// Whether this route can have the deferred import.
+  ///
+  /// When true, the generator will use this route as a `deferred as` import.
+  /// It's useful to reduce the initial app size. One caveat is that the
+  /// deferred import [Route] can't be used in [IndexedStackPath] since it fixed,
+  /// loaded at runtime and can't be changed at runtime.
+  final bool deferredImport;
+
   /// List of expected query parameter names.
   ///
   /// When provided, the route will have access to query parameters
@@ -146,6 +154,7 @@ class ZenRoute {
     this.redirect = false,
     this.deepLink,
     this.transition = false,
+    this.deferredImport = false,
     this.queries,
   });
 }

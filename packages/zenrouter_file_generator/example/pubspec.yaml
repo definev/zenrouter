@@ -14,8 +14,7 @@ dependencies:
   
   zenrouter: ^0.3.0
   zenrouter_devtools: ^0.3.0
-  zenrouter_file_annotation:
-    path: ../
+  zenrouter_file_annotation: ^0.3.1
 
 dev_dependencies:
   flutter_test:

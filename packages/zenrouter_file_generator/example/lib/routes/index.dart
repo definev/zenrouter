@@ -21,7 +21,7 @@ class IndexRoute extends _$IndexRoute {
               const Text('Welcome to ZenRouter File-based Routing!'),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () => coordinator.push(AboutRoute()),
+                onPressed: () => coordinator.pushAbout(),
                 child: const Text('Go to About'),
               ),
               const SizedBox(height: 12),
@@ -31,7 +31,7 @@ class IndexRoute extends _$IndexRoute {
               ),
               const SizedBox(height: 12),
               ElevatedButton(
-                onPressed: () => coordinator.push(FollowingRoute()),
+                onPressed: () => coordinator.pushFollowing(),
                 child: const Text('Go to Tabs'),
               ),
               const SizedBox(height: 12),
