@@ -3,6 +3,8 @@ import 'package:glob/glob.dart';
 
 import 'package:zenrouter_file_annotation/zenrouter_file_annotation.dart';
 
+typedef FileImportPath = (String path, bool isDeferred);
+
 /// Generator that produces the aggregated Coordinator and route infrastructure.
 ///
 /// This generator runs after all individual route generators and produces:
@@ -23,7 +25,8 @@ class CoordinatorGenerator implements Builder {
     final routes = <RouteInfo>[];
     final layouts = <LayoutInfo>[];
     String? customNotFoundRoutePath;
-    final allFilePaths = <String>[]; // Collect all file paths for imports
+    // Collect all file paths for imports
+    final allFilePaths = <FileImportPath>{};
 
     // Default coordinator configuration
     String coordinatorName = 'AppCoordinator';
@@ -59,11 +62,6 @@ class CoordinatorGenerator implements Builder {
       // Collect all file paths for importing
       final relativePath = input.path.replaceFirst('lib/routes/', '');
       final fileName = relativePath.split('/').last;
-      // Skip private files except _layout and _coordinator
-      if (!fileName.startsWith('_') || fileName == '_layout.dart') {
-        allFilePaths.add(relativePath);
-      }
-
       final content = await buildStep.readAsString(input);
 
       // Skip coordinator config file (already processed)
@@ -91,6 +89,16 @@ class CoordinatorGenerator implements Builder {
           layouts.add(info);
         }
       }
+
+      // Skip private files except _layout and _coordinator
+      if (!fileName.startsWith('_') || fileName == '_layout.dart') {
+        if (info is RouteInfo) {
+          allFilePaths.add((relativePath, info.hasDeferredImport));
+        }
+        if (info is LayoutInfo) {
+          allFilePaths.add((relativePath, false));
+        }
+      }
     }
 
     // Only generate if we found routes
@@ -105,7 +113,7 @@ class CoordinatorGenerator implements Builder {
     final output = _generateCoordinatorCode(
       tree,
       customNotFoundRoutePath,
-      allFilePaths,
+      allFilePaths.toList(),
       coordinatorName,
       routeBaseName,
     );
@@ -205,6 +213,7 @@ class CoordinatorGenerator implements Builder {
     final hasGuard = content.contains('guard: true');
     final hasRedirect = content.contains('redirect: true');
     final hasTransition = content.contains('transition: true');
+    final hasDeferredImport = content.contains('deferredImport: true');
 
     DeeplinkStrategyType? deepLink;
     if (content.contains('.replace')) {
@@ -234,6 +243,7 @@ class CoordinatorGenerator implements Builder {
       hasRedirect: hasRedirect,
       deepLinkStrategy: deepLink,
       hasTransition: hasTransition,
+      hasDeferredImport: hasDeferredImport,
       isIndexFile: isIndex,
       originalFileName: fileName,
       queries: queries,
@@ -362,13 +372,69 @@ class CoordinatorGenerator implements Builder {
     }
   }
 
+  /// Validate that routes in IndexedStack layouts cannot be deferred imports.
+  ///
+  /// IndexedStack displays one child at a time but keeps all children in the
+  /// widget tree, so they must be available immediately and cannot use
+  /// deferred imports.
+  void _validateIndexedStackDeferredImports(
+    List<RouteInfo> routes,
+    List<LayoutInfo> layouts,
+  ) {
+    // Check each IndexedStack layout
+    for (final layout in layouts) {
+      if (layout.layoutType == LayoutType.indexed) {
+        // Check each route type listed in the IndexedStack
+        for (final routeType in layout.indexedRouteTypes) {
+          RouteInfo? route;
+          for (final r in routes) {
+            if (r.className == routeType) {
+              route = r;
+              break;
+            }
+          }
+          if (route == null) {
+            continue;
+          }
+
+          // Check if the route has deferred import
+          if (route.hasDeferredImport) {
+            throw ArgumentError(
+              'Route "${route.className}" in IndexedStack layout "${layout.className}" '
+              'cannot use deferred imports.\n'
+              'IndexedStack keeps all children in the widget tree, so deferred imports are not supported.\n'
+              'File: ${route.filePath}\n'
+              'Please remove "deferredImport: true" from the route annotation.',
+            );
+          }
+        }
+      }
+    }
+  }
+
+  String _getAliasImport(String path) {
+    return path
+        .replaceAll('...', '_')
+        .replaceAll('/[', '_')
+        .replaceAll('/', '_')
+        .replaceAll(']', '')
+        .replaceFirst('.dart', '');
+  }
+
+  String _wrapDeferredImportLoad(String importPath, String instance) {
+    final aliasImport = _getAliasImport(importPath);
+    return 'await () async { await $aliasImport.loadLibrary(); return $aliasImport.$instance; }()';
+  }
+
   String _generateCoordinatorCode(
     RouteTreeInfo tree,
     String? customNotFoundRoutePath,
-    List<String> allFilePaths,
+    List<FileImportPath> allFilePaths,
     String coordinatorName,
     String routeBaseName,
   ) {
+    final deferredImports = allFilePaths.where((f) => f.$2);
+
     final buffer = StringBuffer();
 
     // Header
@@ -383,7 +449,7 @@ class CoordinatorGenerator implements Builder {
     buffer.writeln();
 
     // Import all route and layout files using relative paths
-    final imports = <String>{};
+    final imports = <(String path, bool isDeferred)>{};
     for (final filePath in allFilePaths) {
       imports.add(filePath);
     }
@@ -393,18 +459,24 @@ class CoordinatorGenerator implements Builder {
         'lib/routes/',
         '',
       );
-      imports.add(relativePath);
+      imports.add((relativePath, false));
     }
-    final sortedImports = imports.toList()..sort();
+    final sortedImports =
+        imports.toList()..sort((a, b) => a.$1.compareTo(b.$1));
     for (final import in sortedImports) {
-      buffer.writeln("import '$import';");
+      if (import.$2 == true) {
+        final aliasImport = _getAliasImport(import.$1);
+        buffer.writeln("import '${import.$1}' deferred as $aliasImport;");
+      } else {
+        buffer.writeln("import '${import.$1}';");
+      }
     }
     buffer.writeln();
 
     buffer.writeln("export 'package:zenrouter/zenrouter.dart';");
     // Export all route and layout files using relative paths
-    for (final export in sortedImports) {
-      buffer.writeln("export '$export';");
+    for (final export in sortedImports.where((i) => i.$2 == false)) {
+      buffer.writeln("export '${export.$1}';");
     }
     buffer.writeln();
 
@@ -464,12 +536,20 @@ class CoordinatorGenerator implements Builder {
 
     // Generate parseRouteFromUri
     buffer.writeln('  @override');
-    buffer.writeln('  $routeBaseName parseRouteFromUri(Uri uri) {');
+    if (deferredImports.isNotEmpty) {
+      buffer.writeln(
+        '  Future<$routeBaseName> parseRouteFromUri(Uri uri) async {',
+      );
+    } else {
+      buffer.writeln('  $routeBaseName parseRouteFromUri(Uri uri) {');
+    }
     buffer.writeln('    return switch (uri.pathSegments) {');
 
     // Validate routes for conflicts before sorting
     // Validate routes for duplicates (static/dynamic conflicts are allowed)
     _validateRouteConflicts(tree.routes);
+    // Validate that routes in IndexedStack layouts cannot be deferred imports
+    _validateIndexedStackDeferredImports(tree.routes, tree.layouts);
 
     // Sort routes by specificity (more segments first, static before dynamic)
     // This ensures static routes come before dynamic routes, allowing both to coexist
@@ -511,13 +591,16 @@ class CoordinatorGenerator implements Builder {
     final rootRoute =
         sortedRoutes.where((r) => r.pathSegments.isEmpty).firstOrNull;
     if (rootRoute != null) {
-      if (rootRoute.hasQueries) {
+      final routeInstance =
+          rootRoute.hasQueries
+              ? '${rootRoute.className}(queries: uri.queryParameters)'
+              : '${rootRoute.className}()';
+      if (rootRoute.hasDeferredImport) {
         buffer.writeln(
-          '      [] => ${rootRoute.className}(queries: uri.queryParameters),',
+          '      [] => ${_wrapDeferredImportLoad(rootRoute.filePath!, routeInstance)},',
         );
-      } else {
-        buffer.writeln('      [] => ${rootRoute.className}(),');
       }
+      buffer.writeln('      [] => $routeInstance,');
     }
 
     // Other routes
@@ -593,6 +676,10 @@ class CoordinatorGenerator implements Builder {
     for (final route in tree.routes) {
       final baseMethodName = _getBaseMethodName(route.className);
       final (params, args) = _buildMethodParams(route);
+      final deferredImportPath =
+          route.hasDeferredImport
+              ? route.filePath!.replaceFirst('lib/routes/', '')
+              : null;
 
       // Generate push method
       _writeNavMethod(
@@ -602,6 +689,7 @@ class CoordinatorGenerator implements Builder {
         route.className,
         params,
         args,
+        deferredImportPath: deferredImportPath,
         generic: 'T extends Object',
         returnType: 'Future<T?>',
       );
@@ -614,7 +702,8 @@ class CoordinatorGenerator implements Builder {
         route.className,
         params,
         args,
-        returnType: 'void',
+        deferredImportPath: deferredImportPath,
+        returnType: 'Future<void>',
       );
 
       // Generate recoverFromUri method
@@ -624,6 +713,7 @@ class CoordinatorGenerator implements Builder {
         route.className,
         params,
         args,
+        deferredImportPath: deferredImportPath,
       );
     }
     buffer.writeln('}');
@@ -660,6 +750,7 @@ class CoordinatorGenerator implements Builder {
 
   String _generateConstructor(RouteInfo route) {
     final args = <String>[];
+    String routeInstance = '';
 
     // Add path parameters
     for (final param in route.parameters) {
@@ -672,10 +763,17 @@ class CoordinatorGenerator implements Builder {
     }
 
     if (args.isEmpty) {
-      return '${route.className}()';
+      routeInstance = '${route.className}()';
+    } else {
+      routeInstance = '${route.className}(${args.join(', ')})';
     }
 
-    return '${route.className}(${args.join(', ')})';
+    final relativePath = route.filePath!.replaceFirst('lib/routes/', '');
+
+    if (route.hasDeferredImport) {
+      return _wrapDeferredImportLoad(relativePath, routeInstance);
+    }
+    return routeInstance;
   }
 
   String _getBaseMethodName(String className) {
@@ -720,6 +818,7 @@ class CoordinatorGenerator implements Builder {
     List<String> args, {
     String? generic,
     String returnType = 'Future<dynamic>',
+    String? deferredImportPath,
   }) {
     final methodName = '$navMethod$baseMethodName';
     final paramsStr = params.join(', ');
@@ -727,13 +826,30 @@ class CoordinatorGenerator implements Builder {
 
     final genericStr = generic != null ? '<$generic>' : '';
 
+    String routeInstance = '';
+    String arrowFunction = '';
+    if (paramsStr.isNotEmpty) {
+      routeInstance = '$routeClassName($argsStr)';
+    } else {
+      routeInstance = '$routeClassName()';
+    }
+    if (deferredImportPath != null) {
+      arrowFunction = 'async =>';
+      routeInstance = _wrapDeferredImportLoad(
+        deferredImportPath,
+        routeInstance,
+      );
+    } else {
+      arrowFunction = '=>';
+    }
+
     if (paramsStr.isEmpty) {
       buffer.writeln(
-        '  $returnType $methodName$genericStr() => $navMethod($routeClassName());',
+        '  $returnType $methodName$genericStr() $arrowFunction $navMethod($routeInstance);',
       );
     } else {
       buffer.writeln(
-        '  $returnType $methodName$genericStr($paramsStr) => $navMethod($routeClassName($argsStr));',
+        '  $returnType $methodName$genericStr($paramsStr) $arrowFunction $navMethod($routeInstance);',
       );
     }
   }
@@ -743,17 +859,40 @@ class CoordinatorGenerator implements Builder {
     String baseMethodName,
     String routeClassName,
     List<String> params,
-    List<String> args,
-  ) {
+    List<String> args, {
+    String? deferredImportPath,
+  }) {
     final methodName = 'recover$baseMethodName';
     final paramsStr = params.join(', ');
     final argsStr = args.join(', ');
+    String routeInstance = '';
+    if (paramsStr.isEmpty) {
+      routeInstance = '$routeClassName()';
+    } else {
+      routeInstance = '$routeClassName($argsStr)';
+    }
+
+    if (deferredImportPath != null) {
+      routeInstance = _wrapDeferredImportLoad(
+        deferredImportPath,
+        routeInstance,
+      );
+    }
+
+    String arrowFunction = '';
+    if (deferredImportPath != null) {
+      arrowFunction = 'async =>';
+    } else {
+      arrowFunction = '=>';
+    }
 
     if (paramsStr.isEmpty) {
-      buffer.writeln('  void $methodName() => recover($routeClassName());');
+      buffer.writeln(
+        '  Future<void> $methodName() $arrowFunction recover($routeInstance);',
+      );
     } else {
       buffer.writeln(
-        '  void $methodName($paramsStr) => recover($routeClassName($argsStr));',
+        '  Future<void> $methodName($paramsStr) $arrowFunction recover($routeInstance);',
       );
     }
   }
@@ -768,6 +907,7 @@ class RouteInfo {
   final bool hasRedirect;
   final DeeplinkStrategyType? deepLinkStrategy;
   final bool hasTransition;
+  final bool hasDeferredImport;
   final bool isIndexFile;
   final String originalFileName;
   final List<String>? queries;
@@ -782,6 +922,7 @@ class RouteInfo {
     this.hasRedirect = false,
     this.deepLinkStrategy,
     this.hasTransition = false,
+    this.hasDeferredImport = false,
     this.isIndexFile = false,
     this.originalFileName = '',
     this.queries,

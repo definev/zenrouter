@@ -138,14 +138,14 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
   ///   };
   /// }
   /// ```
-  T parseRouteFromUri(Uri uri);
+  FutureOr<T> parseRouteFromUri(Uri uri);
 
   /// Handles navigation from a deep link URI.
   ///
   /// If the route has [RouteDeepLink], its custom handler is called.
   /// Otherwise, [replace] is called.
   Future<void> recoverRouteFromUri(Uri uri) async {
-    final route = parseRouteFromUri(uri);
+    final route = await parseRouteFromUri(uri);
     return recover(route);
   }
 

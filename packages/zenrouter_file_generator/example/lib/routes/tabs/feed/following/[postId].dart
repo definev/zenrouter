@@ -6,7 +6,7 @@ import '../../../routes.zen.dart';
 part '[postId].g.dart';
 
 /// Feed post detail at /tabs/feed/:postId
-@ZenRoute(guard: true)
+@ZenRoute(guard: true, deferredImport: true)
 class FeedPostRoute extends _$FeedPostRoute {
   FeedPostRoute({required super.postId});
 

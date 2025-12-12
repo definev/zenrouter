@@ -38,6 +38,7 @@ RouteElement? routeElementFromAnnotatedElement(
   final guard = annotation.read('guard').boolValue;
   final redirect = annotation.read('redirect').boolValue;
   final transition = annotation.read('transition').boolValue;
+  final deferredImport = annotation.read('deferredImport').boolValue;
 
   DeeplinkStrategyType? deepLink;
   final deepLinkReader = annotation.read('deepLink');
@@ -64,6 +65,7 @@ RouteElement? routeElementFromAnnotatedElement(
     hasRedirect: redirect,
     deepLinkStrategy: deepLink,
     hasTransition: transition,
+    hasDeferredImport: deferredImport,
     queries: queries,
   );
 }
