@@ -489,6 +489,26 @@ Future<void> pushAbout() async => push(await () async {
 Future<void> pushHome() => push(HomeRoute());  // No deferred loading
 ```
 
+### Performance Benchmarks
+
+Real-world benchmarks demonstrate significant initial bundle size reductions with deferred imports:
+
+| Metric | Without Deferred | With Deferred | Improvement |
+|--------|-----------------|---------------|-------------|
+| **Initial bundle** | 2,414 KB | 2,155 KB | **-259 KB (-10.7%)** ✅ |
+| **Total app size** | 2,719 KB | 2,759 KB | +40 KB (+1.5%) |
+| **Deferred chunks** | 0 | 24 chunks | - |
+
+**Key Benefits:**
+- ✅ **10.7% faster initial load** - Users see the app faster
+- ✅ **On-demand loading** - Routes load only when navigated to
+- ✅ **Better caching** - Unchanged routes won't re-download
+- ⚠️ **Minimal overhead** - Only 1.5% total size increase
+
+**Recommendation:** For most applications, enabling deferred imports provides substantial initial load improvements with minimal trade-offs. The feature is especially effective for apps with many routes or large route components.
+
+See the example's [BENCHMARK_ANALYSIS.md](example/BENCHMARK_ANALYSIS.md) for detailed measurements.
+
 ## Route Mixins
 
 Enable advanced behaviors with annotation parameters:

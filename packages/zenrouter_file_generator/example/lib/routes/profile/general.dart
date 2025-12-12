@@ -4,7 +4,7 @@ import 'package:zenrouter_file_generator_example/routes/routes.zen.dart';
 
 part 'general.g.dart';
 
-@ZenRoute(deferredImport: true)
+@ZenRoute()
 class ProfileGeneralRoute extends _$ProfileGeneralRoute {
   @override
   Widget build(covariant AppCoordinator coordinator, BuildContext context) {
