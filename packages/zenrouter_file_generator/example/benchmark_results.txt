@@ -1,50 +1,80 @@
-Deferred Import Benchmark Results
-Generated: Sat Dec 13 00:44:42 +07 2025
-======================================
+ZenRouter Deferred Import Benchmark Results
+Generated: Sat Dec 13 21:23:47 +07 2025
+======================================================
 
-deferredImport: false
+Test 1: main_no_deferred.dart (Normal Import - Baseline)
 ----------------------------------------
+  canvaskit.js: 84 KB
+  canvaskit.js: 84 KB
+  skwasm.js: 59 KB
+  skwasm_heavy.js: 59 KB
+  flutter.js: 9 KB
   flutter_bootstrap.js: 9 KB
+  flutter_service_worker.js: 0 KB
   main.dart.js: 2414 KB
-  flutter.js: 9 KB
-  flutter_service_worker.js: 0 KB
-  skwasm.js: 59 KB
-  skwasm_heavy.js: 59 KB
-  canvaskit.js: 84 KB
-  canvaskit.js: 84 KB
+File count: 8
 
-deferredImport: true
+Test 2: main_deferred.dart (Deferred Import)
 ----------------------------------------
-  flutter_bootstrap.js: 9 KB
-  main.dart.js_24.part.js: 0 KB
-  main.dart.js_7.part.js: 1 KB
-  main.dart.js_12.part.js: 0 KB
-  main.dart.js_6.part.js: 1 KB
-  main.dart.js_13.part.js: 0 KB
-  main.dart.js_11.part.js: 1 KB
-  main.dart.js_4.part.js: 0 KB
-  main.dart.js: 2155 KB
-  main.dart.js_18.part.js: 2 KB
-  main.dart.js_19.part.js: 250 KB
-  flutter.js: 9 KB
-  flutter_service_worker.js: 0 KB
-  main.dart.js_10.part.js: 12 KB
-  main.dart.js_15.part.js: 5 KB
-  main.dart.js_23.part.js: 1 KB
-  main.dart.js_9.part.js: 2 KB
-  main.dart.js_22.part.js: 0 KB
-  main.dart.js_14.part.js: 1 KB
-  main.dart.js_1.part.js: 1 KB
-  main.dart.js_20.part.js: 1 KB
-  main.dart.js_3.part.js: 0 KB
-  main.dart.js_16.part.js: 0 KB
-  main.dart.js_17.part.js: 6 KB
-  main.dart.js_21.part.js: 0 KB
+  canvaskit.js: 84 KB
+  canvaskit.js: 84 KB
   skwasm.js: 59 KB
   skwasm_heavy.js: 59 KB
-  canvaskit.js: 84 KB
-  canvaskit.js: 84 KB
+  flutter.js: 9 KB
+  flutter_bootstrap.js: 9 KB
+  flutter_service_worker.js: 0 KB
+  main.dart.js: 1941 KB
+  main.dart.js_1.part.js: 1 KB
+  main.dart.js_10.part.js: 12 KB
+  main.dart.js_11.part.js: 0 KB
+  main.dart.js_12.part.js: 16 KB
+  main.dart.js_13.part.js: 1 KB
+  main.dart.js_14.part.js: 3 KB
+  main.dart.js_15.part.js: 0 KB
+  main.dart.js_16.part.js: 0 KB
+  main.dart.js_17.part.js: 0 KB
+  main.dart.js_18.part.js: 0 KB
+  main.dart.js_19.part.js: 0 KB
+  main.dart.js_2.part.js: 3 KB
+  main.dart.js_21.part.js: 1 KB
+  main.dart.js_23.part.js: 0 KB
+  main.dart.js_25.part.js: 2 KB
+  main.dart.js_27.part.js: 0 KB
+  main.dart.js_29.part.js: 1 KB
+  main.dart.js_30.part.js: 0 KB
+  main.dart.js_33.part.js: 2 KB
+  main.dart.js_34.part.js: 54 KB
+  main.dart.js_35.part.js: 1 KB
+  main.dart.js_36.part.js: 17 KB
+  main.dart.js_37.part.js: 5 KB
+  main.dart.js_39.part.js: 12 KB
+  main.dart.js_4.part.js: 21 KB
+  main.dart.js_40.part.js: 0 KB
+  main.dart.js_41.part.js: 0 KB
+  main.dart.js_43.part.js: 1 KB
+  main.dart.js_44.part.js: 0 KB
+  main.dart.js_45.part.js: 0 KB
+  main.dart.js_47.part.js: 1 KB
+  main.dart.js_49.part.js: 6 KB
+  main.dart.js_5.part.js: 1 KB
+  main.dart.js_50.part.js: 2 KB
+  main.dart.js_52.part.js: 0 KB
+  main.dart.js_54.part.js: 6 KB
+  main.dart.js_55.part.js: 2 KB
+  main.dart.js_56.part.js: 4 KB
+  main.dart.js_57.part.js: 250 KB
+  main.dart.js_58.part.js: 1 KB
+  main.dart.js_59.part.js: 0 KB
+  main.dart.js_6.part.js: 0 KB
+  main.dart.js_61.part.js: 1 KB
+  main.dart.js_63.part.js: 1 KB
+  main.dart.js_65.part.js: 1 KB
+  main.dart.js_67.part.js: 83 KB
+  main.dart.js_7.part.js: 0 KB
+  main.dart.js_8.part.js: 1 KB
+  main.dart.js_9.part.js: 2 KB
+File count: 57
 
-======================================
+======================================================
 Comparison
-======================================
+======================================================
