@@ -1,3 +1,7 @@
+
+## 0.3.1
+- Allow `parseRouteFromUri` to return `Future` for implementing deferred import/async route parsing
+
 ## 0.3.0
 - Breaking change: Change return of `Coordinator.push()` from `Future<dynamic>` to `Future<T?>`
 - Fix `NavigationStack` rerender page everytime `path` updated. Resolve [#10](https://github.com/definev/zenrouter/issues/10).
