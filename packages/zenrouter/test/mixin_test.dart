@@ -1218,17 +1218,20 @@ void main() {
 
       final asyncRoute = AsyncCustomDeeplinkRoute(path: 'async');
 
-      await tester.runAsync(() => coordinator.recover(asyncRoute));
+      await tester.runAsync(() async {
+        await coordinator.recover(asyncRoute);
 
-      // The recover method doesn't await async deeplinkHandler,
-      // so we need to wait for it manually (50ms delay in handler + buffer)
-      await tester.pumpAndSettle();
+        // The recover method doesn't await async deeplinkHandler,
+        // so we need to wait for it manually (50ms delay in handler + buffer)
+        await tester.pumpAndSettle();
 
-      expect(asyncRoute.handlerCompleted, isTrue);
-      expect(
-        find.byKey(const ValueKey('simple-async-custom-async')),
-        findsOneWidget,
-      );
+        expect(asyncRoute.handlerCompleted, isTrue);
+        expect(coordinator.root.activeRoute, isA<SimpleRoute>());
+        expect(
+          (coordinator.root.activeRoute as SimpleRoute).id,
+          'async-custom-async',
+        );
+      });
     });
   });
 

@@ -3,6 +3,27 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'path.dart';
 
+/// Strategy for resolving parent layouts during navigation.
+enum _ResolveLayoutStrategy {
+  /// Pops items from the stack until the target layout is active.
+  ///
+  /// Used during browser back/forward navigation to ensure we return
+  /// to a previous state rather than creating a duplicate one.
+  popUntil,
+
+  /// Pushes the layout to the top of the stack.
+  ///
+  /// Used when pushing new routes (e.g., [Coordinator.push]) to ensure
+  /// the new route's layout is added on top of the current stack.
+  pushToTop,
+
+  /// Directly activates the layout, potentially resetting the stack.
+  ///
+  /// This is the default strategy used for [Coordinator.replace] or
+  /// when recovering deep links, where the goal is to set a specific state.
+  override,
+}
+
 /// The core class that manages navigation state and logic.
 ///
 /// The [Coordinator] is responsible for:
@@ -156,7 +177,10 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
   ///
   /// [preferPush] determines whether to push the layout onto the stack
   /// or just activate it if it already exists.
-  void _resolveLayouts(RouteLayout? layout, {bool preferPush = false}) {
+  Future<bool> _resolveLayouts(
+    RouteLayout? layout, {
+    _ResolveLayoutStrategy strategy = _ResolveLayoutStrategy.override,
+  }) async {
     List<RouteLayout> layouts = [];
     List<StackPath> layoutPaths = [];
     while (layout != null) {
@@ -169,12 +193,27 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
     for (var i = layoutPaths.length - 1; i >= 1; i--) {
       final layoutOfLayoutPath = layoutPaths[i];
       final layout = layouts[i - 1];
-      if (layoutOfLayoutPath is StackMutatable && preferPush) {
-        layoutOfLayoutPath.pushOrMoveToTop(layout);
-      } else {
-        layoutOfLayoutPath.activateRoute(layout);
+      switch (strategy) {
+        case _ResolveLayoutStrategy.pushToTop
+            when layoutOfLayoutPath is StackMutatable:
+          layoutOfLayoutPath.pushOrMoveToTop(layout);
+        case _ResolveLayoutStrategy.popUntil
+            when layoutOfLayoutPath is StackMutatable:
+          final layoutIndex = layoutOfLayoutPath.stack.indexOf(layout);
+
+          /// If layoutIndex exists and not on the top
+          if (layoutIndex != -1 &&
+              layoutIndex != layoutOfLayoutPath.stack.length - 1) {
+            final allowPop = (await layoutOfLayoutPath.pop())!;
+            if (!allowPop) return false;
+          } else {
+            layoutOfLayoutPath.activateRoute(layout);
+          }
+        default:
+          layoutOfLayoutPath.activateRoute(layout);
       }
     }
+    return true;
   }
 
   /// Manually recover deep link from route
@@ -193,6 +232,76 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
     }
   }
 
+  /// Navigates to a specific route, handling history restoration and stack management.
+  ///
+  /// **Why this exists:**
+  /// Standard [push] always adds a new route to the stack, which can lead to
+  /// duplicate entries and confusing browser history (e.g., A -> B -> A -> B).
+  /// [navigate] is smarter: it checks if the target route already exists in the
+  /// stack (e.g., in a browser "Back" scenario) and pops back to it instead of
+  /// pushing a new instance. This ensures the navigation stack mirrors the
+  /// user's expected history state.
+  ///
+  /// This method is primarily used by [CoordinatorRouterDelegate.setNewRoutePath]
+  /// to handle browser back/forward navigation or direct URL updates.
+  ///
+  /// **Behavior:**
+  /// 1. Resolves the layout and path for the target [route].
+  /// 2. If the active path is a [NavigationPath]:
+  ///    - **Existing Route:** If the route is already in the stack (back navigation),
+  ///      it progressively pops the stack until the target route is reached.
+  ///      - Respects [RouteGuard]s during popping.
+  ///      - If a guard blocks popping, navigation is aborted and the URL is restored.
+  ///    - **New Route:** If the route is not in the stack, it calls [push] to add it.
+  /// 3. If the active path is an [IndexedStackPath]:
+  ///    - Resolves parent layouts and activates the target route (switching tabs).
+  ///
+  /// **Failure Handling:**
+  /// If layout resolution fails or a guard blocks the navigation, [notifyListeners]
+  /// is called to sync the browser URL back to the current application state.
+  Future<void> navigate(T route) async {
+    final layout = route.resolveLayout(this);
+    final routePath = layout?.resolvePath(this) ?? root;
+    var routeIndex = routePath.stack.indexOf(route);
+    switch (routePath) {
+      case NavigationPath():
+        if (routeIndex != -1) {
+          final popSuccess = await _resolveLayouts(
+            layout,
+            strategy: _ResolveLayoutStrategy.popUntil,
+          );
+          if (!popSuccess) {
+            // Layout resolution failed - restore the URL to current state
+            notifyListeners();
+            return;
+          }
+
+          // Pop until we reach the target route
+          while (routePath.stack.length > routeIndex + 1) {
+            final allowPop = await routePath.pop();
+            if (allowPop == null || !allowPop) {
+              // Guard blocked navigation or stack is empty - restore the URL
+              notifyListeners();
+              return;
+            }
+          }
+        } else {
+          push(route);
+        }
+      case IndexedStackPath():
+        final popSuccess = await _resolveLayouts(
+          layout,
+          strategy: _ResolveLayoutStrategy.popUntil,
+        );
+        if (!popSuccess) {
+          // Layout resolution failed - restore the URL to current state
+          notifyListeners();
+          return;
+        }
+        routePath.activateRoute(route);
+    }
+  }
+
   /// Wipes the current navigation stack and replaces it with the new route.
   Future<void> replace(T route) async {
     for (final path in paths) {
@@ -201,7 +310,7 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
     T target = await RouteRedirect.resolve(route);
     final layout = target.resolveLayout(this);
     final path = layout?.resolvePath(this) ?? root;
-    _resolveLayouts(layout, preferPush: false);
+    await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.override);
 
     await path.activateRoute(target);
   }
@@ -213,7 +322,7 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
     T target = await RouteRedirect.resolve(route);
     final layout = target.resolveLayout(this);
     final path = layout?.resolvePath(this) ?? root;
-    _resolveLayouts(layout, preferPush: true);
+    await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.pushToTop);
 
     switch (path) {
       case StackMutatable():
@@ -231,7 +340,7 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
     final target = await RouteRedirect.resolve(route);
     final layout = target.resolveLayout(this);
     final path = layout?.resolvePath(this) ?? root;
-    _resolveLayouts(layout, preferPush: true);
+    await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.pushToTop);
 
     switch (path) {
       case StackMutatable():
@@ -339,6 +448,8 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
 
   final Coordinator coordinator;
 
+  bool _initialRouteSet = false;
+
   @override
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -348,9 +459,49 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
   @override
   Widget build(BuildContext context) => coordinator.layoutBuilder(context);
 
+  /// Handles browser navigation events (back/forward buttons, URL changes).
+  ///
+  /// This method is called by Flutter's Router when the browser URL changes,
+  /// either from user action (back/forward buttons) or programmatic navigation.
+  ///
+  /// **Initial Route Handling:**
+  /// On first load ([_initialRouteSet] is false), uses [Coordinator.recover]
+  /// to handle deep linking according to the route's [DeeplinkStrategy].
+  ///
+  /// **Subsequent Navigation:**
+  /// For browser back/forward buttons:
+  ///
+  /// - **NavigationPath**: If the route exists in the stack, pops until
+  ///   reaching that route. If not found, pushes it as a new route.
+  ///   - Guards are consulted during popping
+  ///   - If any guard blocks navigation, the URL is restored via [notifyListeners]
+  ///   - Uses a while loop to handle dynamic stack changes during iteration
+  ///
+  /// - **IndexedStackPath**: Activates the route (switches tab) after ensuring
+  ///   parent layouts are properly resolved.
+  ///
+  /// **URL Synchronization:**
+  /// When navigation fails (guard blocks or layout resolution fails),
+  /// [notifyListeners] is called to restore the browser URL to match
+  /// the current app state, keeping URL and navigation state in sync.
+  ///
+  /// **Invariants:**
+  /// - Routes cannot exist in multiple paths (each route has one path)
+  /// - Route layouts are determined at creation and don't change
+  /// - Path types (NavigationPath vs IndexedStackPath) are static
   @override
-  Future<void> setNewRoutePath(Uri configuration) async =>
-      await coordinator.recoverRouteFromUri(configuration);
+  Future<void> setNewRoutePath(Uri configuration) async {
+    final route = await coordinator.parseRouteFromUri(configuration);
+
+    if (_initialRouteSet == false ||
+        route is RouteDeepLink &&
+            route.deeplinkStrategy == DeeplinkStrategy.custom) {
+      _initialRouteSet = true;
+      coordinator.recover(route);
+    } else {
+      coordinator.navigate(route);
+    }
+  }
 
   @override
   Future<bool> popRoute() async {

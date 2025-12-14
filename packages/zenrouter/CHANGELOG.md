@@ -1,3 +1,5 @@
+## 0.3.2
+- Add `navigate` function: A smarter alternative to `push` that handles browser history restoration by popping to existing routes instead of duplicating them.
 
 ## 0.3.1
 - Allow `parseRouteFromUri` to return `Future` for implementing deferred import/async route parsing

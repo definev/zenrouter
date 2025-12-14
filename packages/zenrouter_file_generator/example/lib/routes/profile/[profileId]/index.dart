@@ -26,7 +26,7 @@ class ProfileIdRoute extends _$ProfileIdRoute {
               child: const Text('Go Back'),
             ),
             ElevatedButton(
-              onPressed: () => coordinator.recoverCollectionsCollectionId(
+              onPressed: () => coordinator.pushCollectionsCollectionId(
                 profileId,
                 '123',
                 {'search': 'test'},

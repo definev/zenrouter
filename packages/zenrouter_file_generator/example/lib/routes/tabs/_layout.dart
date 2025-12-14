@@ -26,26 +26,29 @@ class TabsLayout extends _$TabsLayout {
         this,
       ),
       // User has full control over the navigation UI
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: path.activeIndex,
-        onDestinationSelected: (index) => coordinator.push(path.stack[index]),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.feed_outlined),
-            selectedIcon: Icon(Icons.feed),
-            label: 'Feed',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        ],
+      bottomNavigationBar: ListenableBuilder(
+        listenable: path,
+        builder: (context, _) => NavigationBar(
+          selectedIndex: path.activeIndex,
+          onDestinationSelected: (index) => coordinator.push(path.stack[index]),
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.feed_outlined),
+              selectedIcon: Icon(Icons.feed),
+              label: 'Feed',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.person_outline),
+              selectedIcon: Icon(Icons.person),
+              label: 'Profile',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(Icons.settings),
+              label: 'Settings',
+            ),
+          ],
+        ),
       ),
     );
   }

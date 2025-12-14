@@ -1,12 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:zenrouter_file_annotation/zenrouter_file_annotation.dart';
+import 'package:zenrouter_file_generator_example/routes/tabs/feed/following/index.dart';
 
 import '../../../routes.zen.dart';
 
 part '[postId].g.dart';
 
 /// Feed post detail at /tabs/feed/:postId
-@ZenRoute(guard: true)
+@ZenRoute(guard: true, deepLink: DeeplinkStrategyType.custom)
 class FeedPostRoute extends _$FeedPostRoute {
   FeedPostRoute({required super.postId});
 
@@ -34,5 +37,11 @@ class FeedPostRoute extends _$FeedPostRoute {
   Future<bool> popGuard() async {
     // Example: Always allow pop for this demo
     return true;
+  }
+
+  @override
+  FutureOr<void> deeplinkHandler(AppCoordinator coordinator, Uri uri) {
+    coordinator.recover(FollowingRoute());
+    coordinator.push(this);
   }
 }

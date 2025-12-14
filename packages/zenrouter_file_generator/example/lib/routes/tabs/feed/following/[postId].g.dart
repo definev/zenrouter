@@ -10,7 +10,7 @@ part of '[postId].dart';
 ///
 /// URI: /tabs/feed/following/:postId
 /// Layout: FollowingLayout
-abstract class _$FeedPostRoute extends AppRoute with RouteGuard {
+abstract class _$FeedPostRoute extends AppRoute with RouteGuard, RouteDeepLink {
   /// Dynamic parameter from path segment.
   final String postId;
 
@@ -24,4 +24,7 @@ abstract class _$FeedPostRoute extends AppRoute with RouteGuard {
 
   @override
   List<Object?> get props => [postId];
+
+  @override
+  DeeplinkStrategy get deeplinkStrategy => DeeplinkStrategy.custom;
 }
