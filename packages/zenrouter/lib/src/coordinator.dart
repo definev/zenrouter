@@ -55,8 +55,8 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   /// The root (primary) navigation path.
   ///
   /// All coordinators have at least this one path.
-  late final NavigationPath<T> root = NavigationPath.coordinator(
-    debugLabel: 'root',
+  late final NavigationPath<T> root = NavigationPath.createWith(
+    label: 'root',
     coordinator: this,
   );
 

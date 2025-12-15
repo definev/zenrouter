@@ -514,21 +514,23 @@ class NotFound extends AppRoute {
 
 class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug {
   // Navigation paths for different shells
-  late final NavigationPath<AppRoute> homeStack = NavigationPath.coordinator(
-    debugLabel: 'home',
+  late final NavigationPath<AppRoute> homeStack = NavigationPath.createWith(
+    label: 'home',
     coordinator: this,
   );
-  late final NavigationPath<AppRoute> settingsStack =
-      NavigationPath.coordinator(debugLabel: 'settings', coordinator: this);
+  late final NavigationPath<AppRoute> settingsStack = NavigationPath.createWith(
+    label: 'settings',
+    coordinator: this,
+  );
   late final IndexedStackPath<AppRoute> tabIndexed =
-      IndexedStackPath.coordinator(
-        [FeedTabLayout(), ProfileTab(), SettingsTab()],
-        debugLabel: 'home-tabs',
-        coordinator: this,
-      );
+      IndexedStackPath.createWith(coordinator: this, label: 'home-tabs', [
+        FeedTabLayout(),
+        ProfileTab(),
+        SettingsTab(),
+      ]);
 
-  late final NavigationPath<AppRoute> feedTabStack = NavigationPath.coordinator(
-    debugLabel: 'feed-nested',
+  late final NavigationPath<AppRoute> feedTabStack = NavigationPath.createWith(
+    label: 'feed-nested',
     coordinator: this,
   );
 

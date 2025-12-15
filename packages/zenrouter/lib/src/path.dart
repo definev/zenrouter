@@ -152,10 +152,8 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
 
   /// Creates a [NavigationPath] with an optional initial stack.
   ///
-  /// This is deprecated. Use [NavigationPath.navigationStack] or [NavigationPath.coordinator] instead.
-  @Deprecated(
-    'Use NavigationPath.navigationStack or NavigationPath.coordinator instead',
-  )
+  /// This is deprecated. Use [NavigationPath.create] or [NavigationPath.createWith] instead.
+  @Deprecated('Use NavigationPath.create or NavigationPath.createWith insteads')
   factory NavigationPath([
     String? debugLabel,
     List<T>? stack,
@@ -165,20 +163,21 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
   /// Creates a [NavigationPath] with an optional initial stack.
   ///
   /// This is the standard way to create a mutable navigation stack.
-  factory NavigationPath.navigationStack({
+  factory NavigationPath.create({
     String? debugLabel,
     List<T>? stack,
-  }) => NavigationPath._(debugLabel, stack ?? [], null);
+    Coordinator? coordinator,
+  }) => NavigationPath._(debugLabel, stack ?? [], coordinator);
 
   /// Creates a [NavigationPath] associated with a [Coordinator].
   ///
   /// This constructor binds the path to a specific coordinator, allowing it to
   /// interact with the coordinator for navigation actions.
-  factory NavigationPath.coordinator({
+  factory NavigationPath.createWith({
     required Coordinator coordinator,
-    String? debugLabel,
+    required String label,
     List<T>? stack,
-  }) => NavigationPath._(debugLabel, stack ?? [], coordinator);
+  }) => NavigationPath._(label, stack ?? [], coordinator);
 
   /// Removes a specific route from the stack (at any position).
   ///
@@ -222,7 +221,7 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T> {
   }
 
   @Deprecated(
-    'Use IndexedStackPath.indexedStack or IndexedStackPath.coordinator instead',
+    'Use IndexedStackPath.create or IndexedStackPath.createWith instead',
   )
   factory IndexedStackPath(
     List<T> stack, [
@@ -237,22 +236,25 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T> {
   /// Creates an [IndexedStackPath] with a fixed list of routes.
   ///
   /// This is the standard way to create a fixed stack for indexed navigation.
-  factory IndexedStackPath.indexedStack(List<T> stack, {String? debugLabel}) =>
-      IndexedStackPath._(stack, debugLabel: debugLabel, coordinator: null);
-
-  /// Creates an [IndexedStackPath] associated with a [Coordinator].
-  ///
-  /// This constructor binds the path to a specific coordinator, allowing it to
-  /// interact with the coordinator for navigation actions.
-  factory IndexedStackPath.coordinator(
+  factory IndexedStackPath.create(
     List<T> stack, {
-    required Coordinator coordinator,
-    required String? debugLabel,
+    String? debugLabel,
+    Coordinator? coordinator,
   }) => IndexedStackPath._(
     stack,
     debugLabel: debugLabel,
     coordinator: coordinator,
   );
+
+  /// Creates an [IndexedStackPath] associated with a [Coordinator].
+  ///
+  /// This constructor binds the path to a specific coordinator, allowing it to
+  /// interact with the coordinator for navigation actions.
+  factory IndexedStackPath.createWith(
+    List<T> stack, {
+    required Coordinator coordinator,
+    required String label,
+  }) => IndexedStackPath._(stack, debugLabel: label, coordinator: coordinator);
 
   int _activeIndex = 0;
 

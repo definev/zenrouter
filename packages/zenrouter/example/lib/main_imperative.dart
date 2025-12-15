@@ -846,7 +846,7 @@ class _ReviewItem extends StatelessWidget {
 // NAVIGATION PATH
 // =============================================================================
 
-final onboardingPath = NavigationPath<OnboardingRoute>.navigationStack()
+final onboardingPath = NavigationPath<OnboardingRoute>.create()
   ..push(WelcomeStep());
 
 class HomeView extends StatelessWidget {

@@ -46,25 +46,26 @@ abstract class AppRoute extends RouteTarget with RouteUnique {}
 
 /// Generated coordinator managing all routes.
 class AppCoordinator extends Coordinator<AppRoute> {
-  late final NavigationPath<AppRoute> authPath = NavigationPath.coordinator(
-    debugLabel: 'Auth',
+  late final NavigationPath<AppRoute> authPath = NavigationPath.createWith(
+    label: 'Auth',
     coordinator: this,
   );
-  late final IndexedStackPath<AppRoute> tabsPath = IndexedStackPath.coordinator(
-    [FeedTabLayout(), TabProfileRoute(), TabSettingsRoute()],
-    debugLabel: 'Tabs',
+  late final IndexedStackPath<AppRoute> tabsPath = IndexedStackPath.createWith(
     coordinator: this,
+    label: 'Tabs',
+    [FeedTabLayout(), TabProfileRoute(), TabSettingsRoute()],
   );
   late final IndexedStackPath<AppRoute> feedTabPath =
-      IndexedStackPath.coordinator(
-        [FollowingLayout(), ForYouLayout()],
-        debugLabel: 'FeedTab',
-        coordinator: this,
-      );
-  late final NavigationPath<AppRoute> followingPath =
-      NavigationPath.coordinator(debugLabel: 'Following', coordinator: this);
-  late final NavigationPath<AppRoute> forYouPath = NavigationPath.coordinator(
-    debugLabel: 'ForYou',
+      IndexedStackPath.createWith(coordinator: this, label: 'FeedTab', [
+        FollowingLayout(),
+        ForYouLayout(),
+      ]);
+  late final NavigationPath<AppRoute> followingPath = NavigationPath.createWith(
+    label: 'Following',
+    coordinator: this,
+  );
+  late final NavigationPath<AppRoute> forYouPath = NavigationPath.createWith(
+    label: 'ForYou',
     coordinator: this,
   );
 

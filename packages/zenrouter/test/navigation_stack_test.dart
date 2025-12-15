@@ -309,8 +309,8 @@ void main() {
     });
 
     testWidgets('works correctly when path is swapped', (tester) async {
-      final path1 = NavigationPath<TestRoute>.navigationStack();
-      final path2 = NavigationPath<TestRoute>.navigationStack();
+      final path1 = NavigationPath<TestRoute>.create();
+      final path2 = NavigationPath<TestRoute>.create();
 
       // Don't await push - it returns a Future that completes on pop
       path1.push(TestRoute('path1-home'));
