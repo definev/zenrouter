@@ -9,9 +9,6 @@ class TestRoute extends RouteTarget {
 
   @override
   List<Object?> get props => [id];
-
-  @override
-  String toString() => 'TestRoute($id)';
 }
 
 // Track widget builds for verification
@@ -312,8 +309,8 @@ void main() {
     });
 
     testWidgets('works correctly when path is swapped', (tester) async {
-      final path1 = NavigationPath<TestRoute>();
-      final path2 = NavigationPath<TestRoute>();
+      final path1 = NavigationPath<TestRoute>.navigationStack();
+      final path2 = NavigationPath<TestRoute>.navigationStack();
 
       // Don't await push - it returns a Future that completes on pop
       path1.push(TestRoute('path1-home'));

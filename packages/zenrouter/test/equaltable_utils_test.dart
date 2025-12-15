@@ -9,9 +9,6 @@ class TestRoute extends RouteTarget {
 
   @override
   List<Object?> get props => [id];
-
-  @override
-  String toString() => 'TestRoute($id)';
 }
 
 class MultiPropRoute extends RouteTarget {
@@ -21,9 +18,6 @@ class MultiPropRoute extends RouteTarget {
 
   @override
   List<Object?> get props => [id, value];
-
-  @override
-  String toString() => 'MultiPropRoute($id, $value)';
 }
 
 void main() {

@@ -25,7 +25,16 @@ mixin RouteGuard on RouteTarget {
   /// Called when the route is about to be popped.
   ///
   /// Return `true` to allow the pop, or `false` to prevent it.
-  FutureOr<bool> popGuard();
+  FutureOr<bool> popGuard() => true;
+
+  /// Use [popGuardWith] when using [RouteGuard] with [RouteUnique]
+  FutureOr<bool> popGuardWith(covariant Coordinator coordinator) {
+    assert(_path?._coordinator == null, '''
+[RouteGuard] The path [${_path.toString()}] isn't provided to the coordinator. You should change the constructor to .coordinator() and pass the coordinator to the path constructor.
+If you use with [Coordinator], put `late` keyword before the variable so you can access it in path constructor.
+''');
+    return popGuard();
+  }
 }
 
 /// Builder function for creating a layout widget.
@@ -166,10 +175,17 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
 /// or for aliases.
 mixin RouteRedirect<T extends RouteTarget> on RouteTarget {
   /// Resolves the final destination route, following any redirects.
-  static Future<T> resolve<T extends RouteTarget>(T route) async {
+  static Future<T> resolve<T extends RouteTarget>(
+    T route,
+    Coordinator? coordinator,
+  ) async {
     T target = route;
     while (target is RouteRedirect) {
-      final newTarget = await (target as RouteRedirect).redirect();
+      final redirect = target as RouteRedirect;
+      final newTarget = await switch (coordinator) {
+        null => redirect.redirect(),
+        final coordinator => redirect.redirectWith(coordinator),
+      };
       // If redirect returns null, do nothing
       if (newTarget == null) return route;
       if (newTarget == target) break;
@@ -183,7 +199,15 @@ mixin RouteRedirect<T extends RouteTarget> on RouteTarget {
   }
 
   /// Returns the route to redirect to, or `null` to stay on the current route.
-  FutureOr<T?> redirect();
+  FutureOr<T?> redirect() => null;
+
+  FutureOr<T?> redirectWith(covariant Coordinator coordinator) {
+    assert(_path?._coordinator == null, '''
+[RouteRedirect] The path [${_path.toString()}] isn't provided to the coordinator. You should change the constructor to .coordinator() and pass the coordinator to the path constructor.
+If you use with [Coordinator], put `late` keyword before the variable so you can access it in path constructor.
+''');
+    return redirect();
+  }
 }
 
 /// The base class for all navigation targets (routes).
@@ -192,7 +216,7 @@ mixin RouteRedirect<T extends RouteTarget> on RouteTarget {
 /// and parameters.
 ///
 /// Subclasses should implement [props] for equality checks if they have parameters.
-abstract class RouteTarget extends Object {
+abstract class RouteTarget extends Equatable {
   Completer<Object?> _onResult = Completer();
 
   @visibleForTesting
@@ -209,38 +233,17 @@ abstract class RouteTarget extends Object {
   /// This is used internally to prevent double removal.
   bool isPopByPath = false;
 
+  /// Internal properties that are hardcoded and cannot ignore.
   @override
-  int get hashCode =>
-      runtimeType.hashCode ^
-      _path.hashCode ^
-      _onResult.hashCode ^
-      mapPropsToHashCode(props);
+  List<Object?> get internalProps => [runtimeType, _path, _onResult];
 
   /// The list of properties used for equality comparison.
   ///
   /// Override this to include route parameters in equality checks.
+  @override
   List<Object?> get props => [];
 
-  @override
-  operator ==(Object other) => compareWith(other);
-
-  /// Checks if this route is equal to another route.
-  ///
-  /// Two routes are equal if they have the same runtime type and navigation path.
-  /// Must call this function when you override == operator.
-  @pragma('vm:prefer-inline')
-  bool compareWith(Object other) {
-    if (identical(this, other)) return true;
-    return other is RouteTarget &&
-        other.runtimeType == runtimeType &&
-        iterableEquals(props, other.props);
-  }
-
   void onDidPop(Object? result, covariant Coordinator? coordinator) {}
-
-  @override
-  String toString() =>
-      '$runtimeType${props.isEmpty ? '' : '[${props.map((p) => p.toString()).join(',')}]'}';
 
   /// Completes the route's result future.
   ///

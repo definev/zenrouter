@@ -12,10 +12,10 @@ void main() {
   runApp(const MyApp());
 }
 
-final appCoordinator = AppCoordinator();
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
+  static final appCoordinator = AppCoordinator();
 
   @override
   Widget build(BuildContext context) {
@@ -318,9 +318,9 @@ class FeedDetail extends AppRoute
 
   /// Showing confirm pop dialog
   @override
-  FutureOr<bool> popGuard() async {
+  FutureOr<bool> popGuardWith(AppCoordinator coordinator) async {
     final confirm = await showDialog<bool>(
-      context: appCoordinator.navigator.context,
+      context: coordinator.navigator.context,
       builder: (context) => AlertDialog(
         title: const Text('Confirm'),
         content: const Text('Are you sure you want to leave this page?'),
@@ -514,15 +514,23 @@ class NotFound extends AppRoute {
 
 class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug {
   // Navigation paths for different shells
-  final NavigationPath<AppRoute> homeStack = NavigationPath('home');
-  final NavigationPath<AppRoute> settingsStack = NavigationPath('settings');
-  final IndexedStackPath<AppRoute> tabIndexed = IndexedStackPath([
-    FeedTabLayout(),
-    ProfileTab(),
-    SettingsTab(),
-  ], 'home-tabs');
+  late final NavigationPath<AppRoute> homeStack = NavigationPath.coordinator(
+    debugLabel: 'home',
+    coordinator: this,
+  );
+  late final NavigationPath<AppRoute> settingsStack =
+      NavigationPath.coordinator(debugLabel: 'settings', coordinator: this);
+  late final IndexedStackPath<AppRoute> tabIndexed =
+      IndexedStackPath.coordinator(
+        [FeedTabLayout(), ProfileTab(), SettingsTab()],
+        debugLabel: 'home-tabs',
+        coordinator: this,
+      );
 
-  NavigationPath<AppRoute> feedTabStack = NavigationPath('feed-nested');
+  late final NavigationPath<AppRoute> feedTabStack = NavigationPath.coordinator(
+    debugLabel: 'feed-nested',
+    coordinator: this,
+  );
 
   @override
   void defineLayout() {

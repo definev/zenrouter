@@ -9,17 +9,11 @@ class TestRoute extends RouteTarget {
 
   @override
   List<Object?> get props => [id];
-
-  @override
-  String toString() => 'TestRoute($id)';
 }
 
 class CustomEqualsRoute extends RouteTarget {
   CustomEqualsRoute(this.value);
   final int value;
-
-  @override
-  String toString() => 'CustomEqualsRoute($value)';
 }
 
 void main() {

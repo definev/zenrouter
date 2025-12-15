@@ -95,9 +95,6 @@ class RedirectRoute extends RouteTarget
   Widget build(Coordinator coordinator, BuildContext context) {
     return const Placeholder();
   }
-
-  @override
-  String toString() => 'RedirectRoute(to: $redirectToId)';
 }
 
 /// Test route that chains to another redirect
@@ -342,7 +339,10 @@ void main() {
 
       // Must use RouteTarget as type parameter since RedirectRoute.redirect()
       // returns TestRoute which is not a subtype of RedirectRoute
-      final result = await RouteRedirect.resolve<RouteTarget>(redirectRoute);
+      final result = await RouteRedirect.resolve<RouteTarget>(
+        redirectRoute,
+        null,
+      );
 
       expect(result, isA<TestRoute>());
       expect((result as TestRoute).id, 'target');
@@ -353,7 +353,10 @@ void main() {
     test('does not complete route when redirect returns null', () async {
       final nullRedirect = NullRedirectRoute();
 
-      final result = await RouteRedirect.resolve<RouteTarget>(nullRedirect);
+      final result = await RouteRedirect.resolve<RouteTarget>(
+        nullRedirect,
+        null,
+      );
 
       // Should return original route
       expect(result, same(nullRedirect));
@@ -363,7 +366,10 @@ void main() {
     test('does not complete route when redirect returns itself', () async {
       final selfRedirect = SelfRedirectRoute();
 
-      final result = await RouteRedirect.resolve<RouteTarget>(selfRedirect);
+      final result = await RouteRedirect.resolve<RouteTarget>(
+        selfRedirect,
+        null,
+      );
 
       // Should return the same route, no completion
       expect(result, same(selfRedirect));
@@ -374,7 +380,10 @@ void main() {
       final innerRedirect = RedirectRoute(redirectToId: 'final');
       final outerRedirect = ChainedRedirectRoute(nextRedirect: innerRedirect);
 
-      final result = await RouteRedirect.resolve<RouteTarget>(outerRedirect);
+      final result = await RouteRedirect.resolve<RouteTarget>(
+        outerRedirect,
+        null,
+      );
 
       expect(result, isA<TestRoute>());
       expect((result as TestRoute).id, 'final');
@@ -501,7 +510,10 @@ void main() {
       final innerRedirect = RedirectRoute(redirectToId: 'final');
       final outerRedirect = ChainedRedirectRoute(nextRedirect: innerRedirect);
 
-      final result = await RouteRedirect.resolve<RouteTarget>(outerRedirect);
+      final result = await RouteRedirect.resolve<RouteTarget>(
+        outerRedirect,
+        null,
+      );
 
       // All intermediate routes should have their completers resolved
       expect(outerRedirect.resultCompleted, isTrue);

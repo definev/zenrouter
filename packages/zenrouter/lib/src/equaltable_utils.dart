@@ -82,7 +82,7 @@ bool objectsEquals(Object? a, Object? b) {
   if (identical(a, b)) return true;
   if (a is num && b is num) {
     return numEquals(a, b);
-  } else if (_isRouteTarget(a) && _isRouteTarget(b)) {
+  } else if (_isEquatable(a) && _isEquatable(b)) {
     return a == b;
   } else if (a is Set && b is Set) {
     return setEquals(a, b);
@@ -99,8 +99,8 @@ bool objectsEquals(Object? a, Object? b) {
 }
 
 @pragma('vm:prefer-inline')
-bool _isRouteTarget(Object? object) {
-  return object is RouteTarget;
+bool _isEquatable(Object? object) {
+  return object is Equatable;
 }
 
 /// Jenkins Hash Functions
@@ -138,4 +138,42 @@ int _finish(int hash) {
 /// Returns a string for [props].
 String mapPropsToString(Type runtimeType, List<Object?> props) {
   return '$runtimeType(${props.map((prop) => prop.toString()).join(', ')})';
+}
+
+///
+abstract class Equatable {
+  /// Internal properties that are used for deep equality comparison.
+  ///
+  /// These properties are hardcoded and cannot be ignored.
+  List<Object?> get internalProps => [];
+
+  /// The list of properties used for equality comparison.
+  ///
+  /// Override this to include route parameters in equality checks.
+  List<Object?> get props => [];
+
+  @override
+  operator ==(Object other) => compareWith(other);
+
+  /// Checks if this route is equal to another route.
+  ///
+  /// Two routes are equal if they have the same runtime type and navigation path.
+  /// Must call this function when you override == operator.
+  @pragma('vm:prefer-inline')
+  bool compareWith(Object other) {
+    if (identical(this, other)) return true;
+    return other is Equatable &&
+        other.runtimeType == runtimeType &&
+        iterableEquals(props, other.props);
+  }
+
+  @override
+  int get hashCode =>
+      mapPropsToHashCode(internalProps) ^ mapPropsToHashCode(props);
+
+  @override
+  String toString() {
+    if (props.isEmpty) return runtimeType.toString();
+    return '$runtimeType[${props.map((prop) => prop.toString()).join(',')}]';
+  }
 }
