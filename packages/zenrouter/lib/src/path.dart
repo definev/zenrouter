@@ -220,6 +220,9 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T> {
     }
   }
 
+  /// Creates an [IndexedStackPath] with a fixed list of routes.
+  ///
+  /// This is deprecated. Use [IndexedStackPath.create] or [IndexedStackPath.createWith] instead.
   @Deprecated(
     'Use IndexedStackPath.create or IndexedStackPath.createWith instead',
   )
@@ -272,6 +275,7 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T> {
 
     /// Ignore already active index
     if (index == _activeIndex) return;
+
     final oldIndex = _activeIndex;
     final oldRoute = stack[oldIndex];
     if (oldRoute is RouteGuard) {
@@ -297,6 +301,7 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T> {
   Future<void> activateRoute(T route) async {
     final index = stack.indexOf(route);
     route.completeOnResult(null, null, true);
+    if (index == _activeIndex) return;
     if (index == -1) throw StateError('Route not found');
     await goToIndexed(index);
   }
@@ -304,6 +309,7 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T> {
   @override
   void reset() {
     _activeIndex = 0;
+    notifyListeners();
   }
 }
 
