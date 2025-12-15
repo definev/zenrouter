@@ -318,21 +318,21 @@ Bạn phải định nghĩa `StackPath` trong `Coordinator`. Hãy tạo nó tron
 /// file: lib/routes/coordinator.dart
 
 class AppCoordinator extends Coordinator<AppRoute> {
-  late final homeIndexed = IndexedStackPath<AppRoute>.coordinator(
+  late final homeIndexed = IndexedStackPath<AppRoute>.createWith(
     [
       FeedLayout(),
       ProfileLayout(),
     ],
     coordinator: this,
-    debugLabel: 'home',
+    label: 'home',
   );
-  late final feedNavigation = NavigationPath<AppRoute>.coordinator(
+  late final feedNavigation = NavigationPath<AppRoute>.createWith(
     coordinator: this,
-    debugLabel: 'feed',
+    label: 'feed',
   );
-  late final profileNavigation = NavigationPath<AppRoute>.coordinator(
+  late final profileNavigation = NavigationPath<AppRoute>.createWith(
     coordinator: this,
-    debugLabel: 'profile',
+    label: 'profile',
   );
   
   /// QUAN TRỌNG: Bạn phải đăng ký tất cả các stack path của mình tại đây!

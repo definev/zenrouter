@@ -319,7 +319,7 @@ You must define the `StackPath` in the `Coordinator`. Let's create it in `lib/ro
 /// file: lib/routes/coordinator.dart
 
 class AppCoordinator extends Coordinator<AppRoute> {
-  late final homeIndexed = IndexedStackPath<AppRoute>.coordinator(
+  late final homeIndexed = IndexedStackPath<AppRoute>.createWith(
     [
       FeedLayout(),
       ProfileLayout(),

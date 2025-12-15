@@ -38,7 +38,7 @@ mixin RouteGuard on RouteTarget {
 [RouteGuard] The path [${_path.toString()}] is associated with a different coordinator (or null) than the one currently handling the navigation.
 Expected coordinator: $coordinator
 Path's coordinator: ${_path?.coordinator}
-Ensure that the path is created with the correct coordinator using `.coordinator()` and that routes are being managed by the correct coordinator.
+Ensure that the path is created with the correct coordinator using `.createWith()` and that routes are being managed by the correct coordinator.
 ''');
     return popGuard();
   }
