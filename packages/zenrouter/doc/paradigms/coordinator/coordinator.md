@@ -325,15 +325,15 @@ class AppCoordinator extends Coordinator<AppRoute> {
       ProfileLayout(),
     ],
     coordinator: this,
-    debugLabel: 'home',
+    label: 'home',
   );
-  late final feedNavigation = NavigationPath<AppRoute>.coordinator(
+  late final feedNavigation = NavigationPath<AppRoute>.createWith(
     coordinator: this,
-    debugLabel: 'feed',
+    label: 'feed',
   );
-  late final profileNavigation = NavigationPath<AppRoute>.coordinator(
+  late final profileNavigation = NavigationPath<AppRoute>.createWith(
     coordinator: this,
-    debugLabel: 'profile',
+    label: 'profile',
   );
 
   /// IMPORTANT: You must register all your stack paths here!
