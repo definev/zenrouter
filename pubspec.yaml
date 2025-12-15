@@ -9,3 +9,4 @@ workspace:
   - packages/zenrouter_file_generator
   - packages/zenrouter_file_generator/example
   - packages/zenrouter_file_annotation
+  - packages/zenrouter/doc/paradigms/coordinator/example

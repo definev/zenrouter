@@ -12,7 +12,7 @@ dependencies:
   flutter:
     sdk: flutter
   
-  zenrouter: ^0.3.0
+  zenrouter: 
   zenrouter_devtools: ^0.3.0
   zenrouter_file_annotation: ^0.3.1
 

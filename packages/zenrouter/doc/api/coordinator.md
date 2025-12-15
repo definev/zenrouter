@@ -51,12 +51,20 @@ abstract class Coordinator<T extends RouteUnique> {
 ```dart
 class AppCoordinator extends Coordinator<AppRoute> {
   // Define navigation paths
-  final NavigationPath<AppRoute> homeStack = NavigationPath('home');
-  final FixedNavigationPath<AppRoute> tabPath = FixedNavigationPath([
-    FeedTab(),
-    ProfileTab(),
-    SettingsTab(),
-  ]);
+  late final homeStack = NavigationPath<AppRoute>.createWith(
+    coordinator: this,
+    label: 'home',
+  );
+  
+  late final tabPath = IndexedStackPath<AppRoute>.createWith(
+    [
+      FeedTab(),
+      ProfileTab(),
+      SettingsTab(),
+    ],
+    coordinator: this,
+    label: 'tab',
+  );
   
   @override
   List<StackPath> get paths => [root, homeStack, tabPath];
@@ -671,5 +679,5 @@ class MyApp extends StatelessWidget {
 
 - [Coordinator Pattern Guide](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/coordinator.md) - Complete usage guide
 - [Route Mixins](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/mixins.md) - RouteUnique, RouteLayout, RouteDeepLink
-- [Navigation Paths](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/navigation-paths.md) - NavigationPath, FixedNavigationPath
+- [Navigation Paths](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/navigation-paths.md) - NavigationPath, IndexedStackPath
 - [Deep Linking Guide](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/guides/deep-linking.md) - Deep linking setup (if exists)

@@ -1,15 +1,17 @@
 name: coordinator_example
-description: "A new Flutter project."
+description: "Write your first coordinator example code"
 publish_to: 'none'
 version: 0.1.0+1
 
+resolution: workspace
+
 environment:
-  sdk: ^3.11.0-113.0.dev
+  sdk: ^3.9.0
 
 dependencies:
   flutter:
     sdk: flutter
-  zenrouter: ^0.2.3
+  zenrouter:
 
 dev_dependencies:
   flutter_test:

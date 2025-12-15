@@ -125,7 +125,8 @@ class RouteWithMockLayout extends ErrorTestRoute {
 
 /// Test coordinator
 class ErrorTestCoordinator extends Coordinator<ErrorTestRoute> {
-  final NavigationPath<ErrorTestRoute> testStack = NavigationPath('test');
+  late final NavigationPath<ErrorTestRoute> testStack =
+      NavigationPath.createWith(coordinator: this, label: 'test');
 
   @override
   void defineLayout() {
@@ -165,11 +166,11 @@ void main() {
     test(
       'goToIndexed throws StateError with meaningful message for out of bounds index',
       () {
-        final stack = IndexedStackPath<ErrorTestRoute>([
+        final stack = IndexedStackPath<ErrorTestRoute>.create([
           SimpleErrorRoute(id: 'tab1'),
           SimpleErrorRoute(id: 'tab2'),
           SimpleErrorRoute(id: 'tab3'),
-        ], 'test-tabs');
+        ], label: 'test-tabs');
 
         // Test index too high
         expect(
@@ -197,11 +198,11 @@ void main() {
     );
 
     test('goToIndexed allows valid indices', () {
-      final stack = IndexedStackPath<ErrorTestRoute>([
+      final stack = IndexedStackPath<ErrorTestRoute>.create([
         SimpleErrorRoute(id: 'tab1'),
         SimpleErrorRoute(id: 'tab2'),
         SimpleErrorRoute(id: 'tab3'),
-      ], 'test-tabs');
+      ], label: 'test-tabs');
 
       // These should not throw
       expect(() => stack.goToIndexed(0), returnsNormally);
@@ -212,10 +213,10 @@ void main() {
     test(
       'activateRoute throws StateError with meaningful message for route not in stack',
       () {
-        final stack = IndexedStackPath<ErrorTestRoute>([
+        final stack = IndexedStackPath<ErrorTestRoute>.create([
           SimpleErrorRoute(id: 'tab1'),
           SimpleErrorRoute(id: 'tab2'),
-        ], 'test-tabs');
+        ], label: 'test-tabs');
 
         final missingRoute = SimpleErrorRoute(id: 'not-in-stack');
 
@@ -236,10 +237,10 @@ void main() {
       final route1 = SimpleErrorRoute(id: 'tab1');
       final route2 = SimpleErrorRoute(id: 'tab2');
 
-      final stack = IndexedStackPath<ErrorTestRoute>([
+      final stack = IndexedStackPath<ErrorTestRoute>.create([
         route1,
         route2,
-      ], 'test-tabs');
+      ], label: 'test-tabs');
 
       // Should not throw
       expect(() => stack.activateRoute(route1), returnsNormally);
@@ -317,46 +318,13 @@ void main() {
         );
       },
     );
-
-    test(
-      'createLayout throws UnimplementedError with helpful message when layout constructor not defined',
-      () {
-        final coordinator = ErrorTestCoordinator();
-        final route = RouteWithUndefinedLayout();
-
-        expect(
-          () => route.createLayout(coordinator),
-          throwsA(
-            isA<UnimplementedError>()
-                .having(
-                  (e) => e.message,
-                  'message',
-                  contains(
-                    'Layout constructor for [UndefinedLayout] must define',
-                  ),
-                )
-                .having(
-                  (e) => e.message,
-                  'message',
-                  contains('[RouteLayout.layoutConstructorTable]'),
-                )
-                .having(
-                  (e) => e.message,
-                  'message',
-                  contains('[defineLayout] function'),
-                )
-                .having((e) => e.message, 'message', contains('[Coordinator]')),
-          ),
-        );
-      },
-    );
   });
 
   group('Error Message Quality Tests', () {
     test('StateError messages are concise and clear', () async {
-      final stack = IndexedStackPath<ErrorTestRoute>([
+      final stack = IndexedStackPath<ErrorTestRoute>.create([
         SimpleErrorRoute(id: 'tab1'),
-      ], 'test');
+      ], label: 'test');
 
       try {
         await stack.goToIndexed(5);
@@ -407,10 +375,10 @@ void main() {
         expect(e.message, contains('UndefinedLayout'));
         // Should tell where to define
         expect(e.message, contains('defineLayout'));
-        // Should mention the table
-        expect(e.message, contains('layoutConstructorTable'));
-        // Should reference coordinator
-        expect(e.message, contains('Coordinator'));
+        // Should mention how to define
+        expect(e.message, contains('RouteLayout.defineLayout'));
+        // Should reference your coordinator
+        expect(e.message, contains('ErrorTestCoordinator'));
       }
     });
 
@@ -429,15 +397,13 @@ void main() {
         final message = e.message ?? '';
 
         // What: mentions the specific layout type
+        expect(message, contains('Missing'));
         expect(message, contains('UndefinedLayout'));
 
         // Where: mentions where to register
-        expect(message, contains('layoutConstructorTable'));
+        expect(message, contains('RouteLayout.defineLayout'));
         expect(message, contains('defineLayout'));
-        expect(message, contains('Coordinator'));
-
-        // How: uses action words like "define" and "must"
-        expect(message, contains('must define'));
+        expect(message, contains('ErrorTestCoordinator'));
       }
     });
   });
@@ -446,7 +412,7 @@ void main() {
     test('IndexedStackPath prevents invalid construction', () {
       // Empty stack should be caught by assertion
       expect(
-        () => IndexedStackPath<ErrorTestRoute>([], 'test'),
+        () => IndexedStackPath<ErrorTestRoute>.create([], label: 'test'),
         throwsA(isA<AssertionError>()),
       );
     });
@@ -466,9 +432,9 @@ void main() {
       );
 
       // IndexedStackPath is registered by default
-      final indexedStack = IndexedStackPath<ErrorTestRoute>([
+      final indexedStack = IndexedStackPath<ErrorTestRoute>.create([
         SimpleErrorRoute(id: 'test'),
-      ], 'test');
+      ], label: 'test');
       expect(
         () => RouteLayout.buildPrimitivePath(
           IndexedStackPath,

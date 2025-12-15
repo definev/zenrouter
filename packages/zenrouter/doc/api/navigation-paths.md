@@ -18,45 +18,63 @@ Navigation paths are stack-based containers that hold routes. ZenRouter provides
 
 Base class for all navigation paths. Provides common functionality for managing route stacks.
 
+
 ### Factory Constructors
 
-#### `StackPath.navigationStack()`
+#### `NavigationPath.create()`
 
 Creates a mutable navigation path with push/pop operations.
 
 ```dart
-static NavigationPath<T> navigationStack<T extends RouteTarget>([
-  String? debugLabel,
+factory NavigationPath.create({
+  String? label,
   List<T>? stack,
-])
+  Coordinator? coordinator,
+})
 ```
 
 **Example:**
 ```dart
-final path = StackPath.navigationStack<MyRoute>(
-  'main-nav',
-  [HomeRoute()], // Start with home route
+final path = NavigationPath.create(
+  label: 'main-nav',
+  stack: [HomeRoute()], // Start with home route
 );
 ```
 
-#### `StackPath.indexedStack()`
+#### `IndexedStackPath.create()`
 
 Creates an indexed navigation path with index-based navigation.
 
 ```dart
-static IndexedStackPath<T> indexedStack<T extends RouteTarget>(
-  List<T> stack, [
-  String? debugLabel,
-])
+factory IndexedStackPath.create(
+  List<T> stack, {
+  String? label,
+  Coordinator? coordinator,
+})
 ```
 
 **Example:**
 ```dart
-final tabPath = StackPath.indexedStack<TabRoute>([
-  FeedTab(),
-  ProfileTab(),
-  SettingsTab(),
-], 'main-tabs');
+final tabPath = IndexedStackPath.create(
+  [
+    FeedTab(),
+    ProfileTab(),
+    SettingsTab(),
+  ], 
+  label: 'main-tabs',
+);
+```
+
+#### `createWith()`
+
+Both `NavigationPath` and `IndexedStackPath` also provide a `createWith` factory to strictly bind a path to a `Coordinator`.
+
+```dart
+factory NavigationPath.createWith({
+  required Coordinator coordinator,
+  required String label,
+  List<T>? stack,
+})
 ```
 
 ### Common Properties
@@ -115,18 +133,20 @@ A mutable navigation path with push/pop operations. Extends `StackPath` with `St
 
 ### Constructor
 
-```dart
-NavigationPath<T extends RouteTarget>([
-  String? debugLabel,
-  List<T>? stack,
-])
-```
+Use the factory constructors:
 
-**Or use factory:**
 ```dart
-final path = StackPath.navigationStack<MyRoute>(
-  'main-nav',
-  [HomeRoute()],
+// Standard creation
+final path = NavigationPath.create(
+  label: 'main-nav',
+  stack: [HomeRoute()],
+);
+
+// With explicit coordinator binding (inside Coordinator)
+late final path = NavigationPath.createWith(
+  coordinator: this,
+  label: 'main-nav',
+  stack: [HomeRoute()],
 );
 ```
 
@@ -270,20 +290,29 @@ An immutable navigation path with index-based navigation. Perfect for tab bars a
 
 ### Constructor
 
-```dart
-IndexedStackPath<T extends RouteTarget>(
-  List<T> stack, [
-  String? debugLabel,
-])
-```
+Use the factory constructors:
 
-**Or use factory:**
 ```dart
-final tabPath = StackPath.indexedStack<TabRoute>([
-  FeedTab(),
-  ProfileTab(),
-  SettingsTab(),
-], 'main-tabs');
+// Standard creation
+final tabPath = IndexedStackPath.create(
+  [
+    FeedTab(),
+    ProfileTab(),
+    SettingsTab(),
+  ], 
+  debugLabel: 'main-tabs',
+);
+
+// With explicit coordinator binding (inside Coordinator)
+late final tabPath = IndexedStackPath.createWith(
+  [
+    FeedTab(),
+    ProfileTab(),
+    SettingsTab(),
+  ], 
+  coordinator: this, 
+  label: 'main-tabs',
+);
 ```
 
 **Important:** The stack is immutable - you cannot add or remove routes after creation.
@@ -450,7 +479,7 @@ NavigationStack<T extends RouteTarget>({
 
 ```dart
 class MyApp extends StatelessWidget {
-  final path = StackPath.navigationStack<AppRoute>();
+  final path = NavigationPath.create();
   
   @override
   Widget build(BuildContext context) {

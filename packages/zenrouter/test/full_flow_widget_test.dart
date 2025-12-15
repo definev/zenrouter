@@ -417,13 +417,19 @@ class ProfileChildRoute extends AppRoute {
 
 /// Test coordinator
 class TestCoordinator extends Coordinator<AppRoute> {
-  final NavigationPath<AppRoute> shellStack = NavigationPath('shell');
-  late final IndexedStackPath<AppRoute> tabStack = IndexedStackPath([
-    HomeTab(),
-    SearchTab(),
-    ProfileTab(),
-  ], 'tabs');
-  final NavigationPath<AppRoute> profileStack = NavigationPath('profile');
+  late final NavigationPath<AppRoute> shellStack = NavigationPath.createWith(
+    coordinator: this,
+    label: 'shell',
+  );
+  late final IndexedStackPath<AppRoute> tabStack = IndexedStackPath.createWith(
+    [HomeTab(), SearchTab(), ProfileTab()],
+    coordinator: this,
+    label: 'tabs',
+  );
+  late final NavigationPath<AppRoute> profileStack = NavigationPath.createWith(
+    coordinator: this,
+    label: 'profile',
+  );
 
   @override
   void defineLayout() {

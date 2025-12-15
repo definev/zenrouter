@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:zenrouter/src/equaltable_utils.dart';
 import 'path.dart';
 
 /// Strategy for resolving parent layouts during navigation.
@@ -34,7 +35,8 @@ enum _ResolveLayoutStrategy {
 ///
 /// Subclasses should override [paths] to define their own navigation structure
 /// and [parseRouteFromUri] to handle deep linking.
-abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
+abstract class Coordinator<T extends RouteUnique> extends Equatable
+    with ChangeNotifier {
   Coordinator() {
     for (final path in paths) {
       path.addListener(notifyListeners);
@@ -53,7 +55,10 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
   /// The root (primary) navigation path.
   ///
   /// All coordinators have at least this one path.
-  final NavigationPath<T> root = NavigationPath('root');
+  late final NavigationPath<T> root = NavigationPath.createWith(
+    label: 'root',
+    coordinator: this,
+  );
 
   /// All navigation paths managed by this coordinator.
   ///
@@ -307,7 +312,7 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
     for (final path in paths) {
       path.reset();
     }
-    T target = await RouteRedirect.resolve(route);
+    T target = await RouteRedirect.resolve(route, this);
     final layout = target.resolveLayout(this);
     final path = layout?.resolvePath(this) ?? root;
     await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.override);
@@ -319,7 +324,7 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
   ///
   /// For shell routes, ensures the shell layout exists in the parent path first.
   Future<R?> push<R extends Object>(T route) async {
-    T target = await RouteRedirect.resolve(route);
+    T target = await RouteRedirect.resolve(route, this);
     final layout = target.resolveLayout(this);
     final path = layout?.resolvePath(this) ?? root;
     await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.pushToTop);
@@ -337,7 +342,7 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
   ///
   /// Useful for tab navigation where you don't want duplicates.
   void pushOrMoveToTop(T route) async {
-    final target = await RouteRedirect.resolve(route);
+    final target = await RouteRedirect.resolve(route, this);
     final layout = target.resolveLayout(this);
     final path = layout?.resolvePath(this) ?? root;
     await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.pushToTop);
@@ -378,7 +383,7 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
   /// - `true` if the route can pop
   /// - `false` if the route can't pop
   /// - `null` if the [RouteGuard] want manual control
-  Future<bool?> tryPop() async {
+  Future<bool?> tryPop([Object? result]) async {
     // Get all dynamic paths from the active layout paths
     final dynamicPaths = activeLayoutPaths.whereType<NavigationPath>().toList();
 
@@ -386,14 +391,7 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
     for (var i = dynamicPaths.length - 1; i >= 0; i--) {
       final path = dynamicPaths[i];
       if (path.stack.length >= 2) {
-        final last = path.stack.last;
-        if (last is RouteGuard) {
-          final didPop = await last.popGuard();
-          path.pop();
-          return didPop;
-        }
-        path.pop();
-        return true;
+        return await path.pop(result);
       }
     }
 
@@ -407,6 +405,10 @@ abstract class Coordinator<T extends RouteUnique> with ChangeNotifier {
   /// The router delegate for [Router]
   late final CoordinatorRouterDelegate routerDelegate =
       CoordinatorRouterDelegate(coordinator: this);
+
+  /// The router delegate for [Router]
+  CoordinatorRouterDelegate routerDelegateWithInitalRoute(T route) =>
+      CoordinatorRouterDelegate(coordinator: this, initialRoute: route);
 
   /// Access to the navigator state.
   NavigatorState get navigator => routerDelegate.navigatorKey.currentState!;
@@ -442,13 +444,12 @@ class CoordinatorRouteParser extends RouteInformationParser<Uri> {
 /// Manages the navigator stack and handles system navigation events.
 class CoordinatorRouterDelegate extends RouterDelegate<Uri>
     with ChangeNotifier, PopNavigatorRouterDelegateMixin<Uri> {
-  CoordinatorRouterDelegate({required this.coordinator}) {
+  CoordinatorRouterDelegate({required this.coordinator, this.initialRoute}) {
     coordinator.addListener(notifyListeners);
   }
 
   final Coordinator coordinator;
-
-  bool _initialRouteSet = false;
+  final RouteUnique? initialRoute;
 
   @override
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -459,14 +460,27 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
   @override
   Widget build(BuildContext context) => coordinator.layoutBuilder(context);
 
+  /// Handles the initial route path.
+  ///
+  /// This method is called by Flutter's Router when the app is first loaded.
+  ///
+  /// If the initial route is not null, it will be recovered using [Coordinator.recover].
+  /// Otherwise, the route will be parsed from the URI and recovered.
+  @override
+  Future<void> setInitialRoutePath(Uri configuration) async {
+    if (initialRoute != null &&
+        (configuration.path == '/' || configuration.path == '')) {
+      coordinator.recover(initialRoute!);
+      return;
+    }
+    final route = await coordinator.parseRouteFromUri(configuration);
+    coordinator.recover(route);
+  }
+
   /// Handles browser navigation events (back/forward buttons, URL changes).
   ///
   /// This method is called by Flutter's Router when the browser URL changes,
   /// either from user action (back/forward buttons) or programmatic navigation.
-  ///
-  /// **Initial Route Handling:**
-  /// On first load ([_initialRouteSet] is false), uses [Coordinator.recover]
-  /// to handle deep linking according to the route's [DeeplinkStrategy].
   ///
   /// **Subsequent Navigation:**
   /// For browser back/forward buttons:
@@ -493,10 +507,8 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
   Future<void> setNewRoutePath(Uri configuration) async {
     final route = await coordinator.parseRouteFromUri(configuration);
 
-    if (_initialRouteSet == false ||
-        route is RouteDeepLink &&
-            route.deeplinkStrategy == DeeplinkStrategy.custom) {
-      _initialRouteSet = true;
+    if (route is RouteDeepLink &&
+        route.deeplinkStrategy == DeeplinkStrategy.custom) {
       coordinator.recover(route);
     } else {
       coordinator.navigate(route);

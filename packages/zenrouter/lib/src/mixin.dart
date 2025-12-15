@@ -11,11 +11,13 @@ mixin RouteDeepLink on RouteUnique {
   /// The strategy to use when handling this deep link.
   DeeplinkStrategy get deeplinkStrategy;
 
+  // coverage:ignore-start
   /// Custom handler for deep links.
   ///
   /// This is called when [deeplinkStrategy] is [DeeplinkStrategy.custom].
   FutureOr<void> deeplinkHandler(covariant Coordinator coordinator, Uri uri) =>
       null;
+  // coverage:ignore-end
 }
 
 /// Mixin for routes that need to guard against being popped.
@@ -25,7 +27,21 @@ mixin RouteGuard on RouteTarget {
   /// Called when the route is about to be popped.
   ///
   /// Return `true` to allow the pop, or `false` to prevent it.
-  FutureOr<bool> popGuard();
+  FutureOr<bool> popGuard() => true;
+
+  /// Called in [Coordinator] or [StackPath] that contains [Coordinator] when the route is about to be popped.
+  ///
+  /// This method helps ensuring the path belong to that route have the same coordinator with coordinator that with function take.
+  /// Return `true` to allow the pop, or `false` to prevent it.
+  FutureOr<bool> popGuardWith(covariant Coordinator coordinator) {
+    assert(_path?.coordinator == coordinator, '''
+[RouteGuard] The path [${_path.toString()}] is associated with a different coordinator (or null) than the one currently handling the navigation.
+Expected coordinator: $coordinator
+Path's coordinator: ${_path?.coordinator}
+Ensure that the path is created with the correct coordinator using `.coordinator()` and that routes are being managed by the correct coordinator.
+''');
+    return popGuard();
+  }
 }
 
 /// Builder function for creating a layout widget.
@@ -93,11 +109,13 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
     ),
   };
 
+  // coverage:ignore-start
   @Deprecated(
     'Do not manage [layoutBuilderTable] manually. Instead, use [buildPrimitivePath] to access it and [definePrimitivePath] to register new builders.',
   )
   static Map<String, RouteLayoutBuilder> get layoutBuilderTable =>
       _layoutBuilderTable;
+  // coverage:ignore-end
 
   static Widget buildPrimitivePath<T extends RouteUnique>(
     Type type,
@@ -166,10 +184,17 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
 /// or for aliases.
 mixin RouteRedirect<T extends RouteTarget> on RouteTarget {
   /// Resolves the final destination route, following any redirects.
-  static Future<T> resolve<T extends RouteTarget>(T route) async {
+  static Future<T> resolve<T extends RouteTarget>(
+    T route,
+    Coordinator? coordinator,
+  ) async {
     T target = route;
     while (target is RouteRedirect) {
-      final newTarget = await (target as RouteRedirect).redirect();
+      final redirect = target as RouteRedirect;
+      final newTarget = await switch (coordinator) {
+        null => redirect.redirect(),
+        final coordinator => redirect.redirectWith(coordinator),
+      };
       // If redirect returns null, do nothing
       if (newTarget == null) return route;
       if (newTarget == target) break;
@@ -183,7 +208,13 @@ mixin RouteRedirect<T extends RouteTarget> on RouteTarget {
   }
 
   /// Returns the route to redirect to, or `null` to stay on the current route.
-  FutureOr<T?> redirect();
+  FutureOr<T?> redirect() => null;
+
+  /// Called in [Coordinator] or [StackPath] that contains [Coordinator] when the route is resolving.
+  ///
+  /// This method helps ensuring the path belong to that route have the same coordinator with coordinator that with function take.
+  /// Returns the route to redirect to, or `null` to stay on the current route.
+  FutureOr<T?> redirectWith(covariant Coordinator coordinator) => redirect();
 }
 
 /// The base class for all navigation targets (routes).
@@ -192,7 +223,7 @@ mixin RouteRedirect<T extends RouteTarget> on RouteTarget {
 /// and parameters.
 ///
 /// Subclasses should implement [props] for equality checks if they have parameters.
-abstract class RouteTarget extends Object {
+abstract class RouteTarget extends Equatable {
   Completer<Object?> _onResult = Completer();
 
   @visibleForTesting
@@ -209,38 +240,17 @@ abstract class RouteTarget extends Object {
   /// This is used internally to prevent double removal.
   bool isPopByPath = false;
 
+  /// Internal properties that are hardcoded and cannot ignore.
   @override
-  int get hashCode =>
-      runtimeType.hashCode ^
-      _path.hashCode ^
-      _onResult.hashCode ^
-      mapPropsToHashCode(props);
+  List<Object?> get internalProps => [runtimeType, _path, _onResult];
 
   /// The list of properties used for equality comparison.
   ///
   /// Override this to include route parameters in equality checks.
+  @override
   List<Object?> get props => [];
 
-  @override
-  operator ==(Object other) => compareWith(other);
-
-  /// Checks if this route is equal to another route.
-  ///
-  /// Two routes are equal if they have the same runtime type and navigation path.
-  /// Must call this function when you override == operator.
-  @pragma('vm:prefer-inline')
-  bool compareWith(Object other) {
-    if (identical(this, other)) return true;
-    return other is RouteTarget &&
-        other.runtimeType == runtimeType &&
-        iterableEquals(props, other.props);
-  }
-
   void onDidPop(Object? result, covariant Coordinator? coordinator) {}
-
-  @override
-  String toString() =>
-      '$runtimeType${props.isEmpty ? '' : '[${props.map((p) => p.toString()).join(',')}]'}';
 
   /// Completes the route's result future.
   ///
@@ -286,7 +296,7 @@ mixin RouteUnique on RouteTarget {
     final constructor = RouteLayout.layoutConstructorTable[layout];
     if (constructor == null) {
       throw UnimplementedError(
-        'Layout constructor for [$layout] must define in [RouteLayout.layoutConstructorTable] in [defineLayout] function at your [Coordinator]',
+        '$this: Missing RouteLayout constructor for [$layout] must define by calling [RouteLayout.defineLayout] in [defineLayout] function at [${coordinator.runtimeType}]',
       );
     }
     return constructor();

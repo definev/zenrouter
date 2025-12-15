@@ -442,6 +442,10 @@ Use this mixin when you need to protect forms with unsaved changes, prevent inte
 mixin RouteGuard on RouteTarget {
   // Return true to allow pop, false to prevent
   FutureOr<bool> popGuard();
+
+  // Called by system with coordinator context
+  // Asserts path/coordinator consistency then calls popGuard()
+  FutureOr<bool> popGuardWith(covariant Coordinator coordinator);
 }
 ```
 
@@ -561,6 +565,10 @@ mixin RouteRedirect<T extends RouteTarget> on RouteTarget {
   // Return `this` to proceed to the current route
   // Return null to cancel navigation
   FutureOr<T?> redirect();
+
+  // Called by system with coordinator context
+  // Intercepts and allows coordinator-aware redirect logic
+  FutureOr<T?> redirectWith(covariant Coordinator coordinator);
 }
 ```
 

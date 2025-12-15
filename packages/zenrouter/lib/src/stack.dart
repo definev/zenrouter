@@ -110,8 +110,13 @@ class _NavigationStackState<T extends RouteTarget>
             case false when route is RouteGuard:
               widget.path.pop();
             case false when destination.guard != null:
-              final processed = await destination.guard?.popGuard();
-              if (processed == true) widget.path.pop();
+              final popped = switch (widget.coordinator) {
+                null => await destination.guard?.popGuard(),
+                final coordinator => await destination.guard?.popGuardWith(
+                  coordinator,
+                ),
+              };
+              if (popped == true) widget.path.pop();
             case false:
           }
         },
@@ -204,7 +209,7 @@ class DeclarativeNavigationStack<T extends RouteTarget> extends StatefulWidget {
 
 class _DeclarativeNavigationStackState<T extends RouteTarget>
     extends State<DeclarativeNavigationStack<T>> {
-  late final path = NavigationPath<T>(widget.debugLabel);
+  late final path = NavigationPath<T>.create(label: widget.debugLabel);
   List<T> _previousRoutes = [];
 
   @override

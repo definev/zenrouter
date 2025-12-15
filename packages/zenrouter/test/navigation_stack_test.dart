@@ -9,9 +9,6 @@ class TestRoute extends RouteTarget {
 
   @override
   List<Object?> get props => [id];
-
-  @override
-  String toString() => 'TestRoute($id)';
 }
 
 // Track widget builds for verification
@@ -80,7 +77,7 @@ void main() {
 
   group('NavigationStack - Diff-based page updates', () {
     testWidgets('creates pages for initial routes', (tester) async {
-      final path = NavigationPath<TestRoute>();
+      final path = NavigationPath<TestRoute>.create();
 
       await tester.pumpWidget(
         MaterialApp(
@@ -97,7 +94,7 @@ void main() {
     });
 
     testWidgets('reuses pages when routes are unchanged', (tester) async {
-      final path = NavigationPath<TestRoute>();
+      final path = NavigationPath<TestRoute>.create();
 
       await tester.pumpWidget(
         MaterialApp(
@@ -122,7 +119,7 @@ void main() {
     });
 
     testWidgets('creates new page on push', (tester) async {
-      final path = NavigationPath<TestRoute>();
+      final path = NavigationPath<TestRoute>.create();
 
       await tester.pumpWidget(
         MaterialApp(
@@ -147,7 +144,7 @@ void main() {
     });
 
     testWidgets('removes page on pop', (tester) async {
-      final path = NavigationPath<TestRoute>();
+      final path = NavigationPath<TestRoute>.create();
 
       await tester.pumpWidget(
         MaterialApp(
@@ -176,7 +173,7 @@ void main() {
     testWidgets('preserves existing pages when pushing multiple routes', (
       tester,
     ) async {
-      final path = NavigationPath<TestRoute>();
+      final path = NavigationPath<TestRoute>.create();
 
       await tester.pumpWidget(
         MaterialApp(
@@ -203,7 +200,7 @@ void main() {
     });
 
     testWidgets('handles empty stack gracefully', (tester) async {
-      final path = NavigationPath<TestRoute>();
+      final path = NavigationPath<TestRoute>.create();
 
       await tester.pumpWidget(
         MaterialApp(
@@ -217,7 +214,7 @@ void main() {
     });
 
     testWidgets('handles push after empty stack', (tester) async {
-      final path = NavigationPath<TestRoute>();
+      final path = NavigationPath<TestRoute>.create();
 
       await tester.pumpWidget(
         MaterialApp(
@@ -237,7 +234,7 @@ void main() {
     testWidgets('correctly applies diff for complex stack changes', (
       tester,
     ) async {
-      final path = NavigationPath<TestRoute>();
+      final path = NavigationPath<TestRoute>.create();
 
       await tester.pumpWidget(
         MaterialApp(
@@ -279,7 +276,7 @@ void main() {
     testWidgets('pages maintain correct order after diff operations', (
       tester,
     ) async {
-      final path = NavigationPath<TestRoute>();
+      final path = NavigationPath<TestRoute>.create();
 
       await tester.pumpWidget(
         MaterialApp(
@@ -312,8 +309,8 @@ void main() {
     });
 
     testWidgets('works correctly when path is swapped', (tester) async {
-      final path1 = NavigationPath<TestRoute>();
-      final path2 = NavigationPath<TestRoute>();
+      final path1 = NavigationPath<TestRoute>.create();
+      final path2 = NavigationPath<TestRoute>.create();
 
       // Don't await push - it returns a Future that completes on pop
       path1.push(TestRoute('path1-home'));
@@ -345,7 +342,7 @@ void main() {
 
   group('NavigationStack - Page preservation', () {
     testWidgets('state is preserved when page is kept', (tester) async {
-      final path = NavigationPath<TestRoute>();
+      final path = NavigationPath<TestRoute>.create();
 
       // Use a stateful counter widget
       await tester.pumpWidget(

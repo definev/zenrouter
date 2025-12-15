@@ -140,10 +140,11 @@ class SearchTab extends AppRoute {
 }
 
 class TestCoordinator extends Coordinator<AppRoute> {
-  late final IndexedStackPath<AppRoute> tabStack = IndexedStackPath([
-    HomeTab(),
-    SearchTab(),
-  ], 'tabs');
+  late final IndexedStackPath<AppRoute> tabStack = IndexedStackPath.createWith(
+    [HomeTab(), SearchTab()],
+    coordinator: this,
+    label: 'tabs',
+  );
 
   @override
   List<StackPath> get paths => [root, tabStack];
@@ -314,6 +315,70 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(coordinator.root.stack.length, 2);
+      expect(coordinator.root.stack.last, isA<SettingsRoute>());
+      expect(find.text('Settings'), findsOneWidget);
+    });
+  });
+
+  group('CoordinatorRouterDelegate.initialRoute', () {
+    late TestCoordinator coordinator;
+
+    setUp(() {
+      coordinator = TestCoordinator();
+    });
+
+    testWidgets('respects deep link even if initialRoute is provided', (
+      tester,
+    ) async {
+      // Create delegate with initial route (Settings)
+      final delegate = coordinator.routerDelegateWithInitalRoute(
+        SettingsRoute(),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: delegate,
+          routeInformationParser: coordinator.routeInformationParser,
+          routeInformationProvider: PlatformRouteInformationProvider(
+            initialRouteInformation: RouteInformation(
+              uri: Uri.parse('/profile/1'), // Should be respected now
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Expect ProfileRoute (from URL), ignoring initialRoute
+      expect(coordinator.root.stack.length, 1);
+      expect(coordinator.root.stack.last, isA<ProfileRoute>());
+      expect(find.text('Profile 1'), findsOneWidget);
+    });
+
+    testWidgets('uses initialRoute when configuration is root (/)', (
+      tester,
+    ) async {
+      // Create delegate with initial route (Settings)
+      final delegate = coordinator.routerDelegateWithInitalRoute(
+        SettingsRoute(),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: delegate,
+          routeInformationParser: coordinator.routeInformationParser,
+          routeInformationProvider: PlatformRouteInformationProvider(
+            initialRouteInformation: RouteInformation(
+              uri: Uri.parse('/'), // Should fallback to initialRoute
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Expect SettingsRoute (from initialRoute) since path is /
+      expect(coordinator.root.stack.length, 1);
       expect(coordinator.root.stack.last, isA<SettingsRoute>());
       expect(find.text('Settings'), findsOneWidget);
     });

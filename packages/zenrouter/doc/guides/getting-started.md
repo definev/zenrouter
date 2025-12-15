@@ -108,8 +108,7 @@ class ProfileRoute extends AppRoute {
 ### 2. Create Navigation Path
 
 ```dart
-final path = NavigationPath<AppRoute>();
-// Or use factory: StackPath.navigationStack<AppRoute>()
+final path = NavigationPath<AppRoute>.create();
 ```
 
 ### 3. Render with NavigationStack

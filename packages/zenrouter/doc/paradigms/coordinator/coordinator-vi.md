@@ -318,15 +318,23 @@ Bạn phải định nghĩa `StackPath` trong `Coordinator`. Hãy tạo nó tron
 /// file: lib/routes/coordinator.dart
 
 class AppCoordinator extends Coordinator<AppRoute> {
-  final homeIndexed = IndexedStackPath<AppRoute>(
-    routes: [
+  late final homeIndexed = IndexedStackPath<AppRoute>.coordinator(
+    [
       FeedLayout(),
       ProfileLayout(),
     ],
+    coordinator: this,
+    debugLabel: 'home',
   );
-  final feedNavigation = NavigationPath<AppRoute>();
-  final profileNavigation = NavigationPath<AppRoute>();
-
+  late final feedNavigation = NavigationPath<AppRoute>.coordinator(
+    coordinator: this,
+    debugLabel: 'feed',
+  );
+  late final profileNavigation = NavigationPath<AppRoute>.coordinator(
+    coordinator: this,
+    debugLabel: 'profile',
+  );
+  
   /// QUAN TRỌNG: Bạn phải đăng ký tất cả các stack path của mình tại đây!
   /// ZenRouter sử dụng danh sách này để quản lý trạng thái điều hướng và các listener.
   /// Đừng quên bao gồm đường dẫn 'root' được cung cấp bởi Coordinator.

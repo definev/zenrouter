@@ -319,14 +319,22 @@ You must define the `StackPath` in the `Coordinator`. Let's create it in `lib/ro
 /// file: lib/routes/coordinator.dart
 
 class AppCoordinator extends Coordinator<AppRoute> {
-  final homeIndexed = IndexedStackPath<AppRoute>(
-    routes: [
+  late final homeIndexed = IndexedStackPath<AppRoute>.coordinator(
+    [
       FeedLayout(),
       ProfileLayout(),
     ],
+    coordinator: this,
+    debugLabel: 'home',
   );
-  final feedNavigation = NavigationPath<AppRoute>();
-  final profileNavigation = NavigationPath<AppRoute>();
+  late final feedNavigation = NavigationPath<AppRoute>.coordinator(
+    coordinator: this,
+    debugLabel: 'feed',
+  );
+  late final profileNavigation = NavigationPath<AppRoute>.coordinator(
+    coordinator: this,
+    debugLabel: 'profile',
+  );
 
   /// IMPORTANT: You must register all your stack paths here!
   /// ZenRouter uses this list to manage navigation state and listeners.

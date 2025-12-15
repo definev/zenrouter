@@ -183,13 +183,22 @@ class TestProfileDetail extends TestRoute {
 // ============================================================================
 
 class TestCoordinator extends Coordinator<TestRoute> {
-  final NavigationPath<TestRoute> homeStack = NavigationPath('home');
-  final NavigationPath<TestRoute> settingsStack = NavigationPath('settings');
-  final IndexedStackPath<TestRoute> tabIndexed = IndexedStackPath<TestRoute>([
-    TestFeedTabLayout(),
-    TestProfileTab(),
-  ], 'tabs');
-  final NavigationPath<TestRoute> feedTabStack = NavigationPath('feed');
+  late final NavigationPath<TestRoute> homeStack = NavigationPath.createWith(
+    coordinator: this,
+    label: 'home',
+  );
+  late final NavigationPath<TestRoute> settingsStack =
+      NavigationPath.createWith(coordinator: this, label: 'settings');
+  late final IndexedStackPath<TestRoute> tabIndexed =
+      IndexedStackPath<TestRoute>.createWith(
+        [TestFeedTabLayout(), TestProfileTab()],
+        coordinator: this,
+        label: 'tabs',
+      );
+  late final NavigationPath<TestRoute> feedTabStack = NavigationPath.createWith(
+    coordinator: this,
+    label: 'feed',
+  );
 
   @override
   void defineLayout() {

@@ -20,7 +20,7 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T> {
   /// This handles redirects and sets up the route's path reference.
   /// Returns a future that completes when the route is popped with a result.
   Future<R?> push<R extends Object>(T element) async {
-    T target = await RouteRedirect.resolve(element);
+    T target = await RouteRedirect.resolve(element, coordinator);
     target.isPopByPath = false;
     target._path = this;
     _stack.add(target);
@@ -36,7 +36,7 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T> {
   /// Useful for tab navigation where you want to switch to a tab
   /// without duplicating it in the stack.
   Future<void> pushOrMoveToTop(T element) async {
-    T target = await RouteRedirect.resolve(element);
+    T target = await RouteRedirect.resolve(element, coordinator);
     target.isPopByPath = false;
     target._path = this;
     final index = _stack.indexOf(target);
@@ -65,7 +65,10 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T> {
     }
     final last = _stack.last;
     if (last is RouteGuard) {
-      final canPop = await last.popGuard();
+      final canPop = await switch (coordinator) {
+        null => last.popGuard(),
+        final coordinator => last.popGuardWith(coordinator),
+      };
       if (!canPop) return false;
     }
 
@@ -81,26 +84,33 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T> {
 ///
 /// A [StackPath] holds a list of [RouteTarget]s and manages their lifecycle.
 /// It notifies listeners when the stack changes.
-abstract class StackPath<T extends RouteTarget> extends ChangeNotifier {
-  StackPath._(this._stack, {this.debugLabel});
+abstract class StackPath<T extends RouteTarget> with ChangeNotifier {
+  StackPath._(this._stack, {this.debugLabel, Coordinator? coordinator})
+    : _coordinator = coordinator;
 
   /// Creates a [NavigationPath] with an optional initial stack.
   static NavigationPath<T> navigationStack<T extends RouteTarget>([
     String? debugLabel,
     List<T>? stack,
-  ]) => NavigationPath<T>(debugLabel, stack);
+  ]) => NavigationPath<T>._(debugLabel, stack);
 
   /// Creates an [IndexedStackPath] with a fixed list of routes.
   static IndexedStackPath<T> indexedStack<T extends RouteTarget>(
     List<T> stack, [
     String? debugLabel,
-  ]) => IndexedStackPath<T>(stack, debugLabel);
+  ]) => IndexedStackPath<T>._(stack, debugLabel: debugLabel);
 
   /// A label for debugging purposes.
   final String? debugLabel;
 
   /// The internal mutable stack.
   final List<T> _stack;
+
+  /// This ensure 1-1 relationship between path and coordinator.
+  final Coordinator? _coordinator;
+
+  /// The coordinator this path belongs to.
+  Coordinator? get coordinator => _coordinator;
 
   /// The currently active route in this stack.
   T? get activeRoute;
@@ -134,8 +144,40 @@ abstract class StackPath<T extends RouteTarget> extends ChangeNotifier {
 /// and modal flows.
 class NavigationPath<T extends RouteTarget> extends StackPath<T>
     with StackMutatable<T> {
-  NavigationPath([String? debugLabel, List<T>? stack])
-    : super._(stack ?? [], debugLabel: debugLabel);
+  NavigationPath._([
+    String? debugLabel,
+    List<T>? stack,
+    Coordinator? coordinator,
+  ]) : super._(stack ?? [], debugLabel: debugLabel, coordinator: coordinator);
+
+  /// Creates a [NavigationPath] with an optional initial stack.
+  ///
+  /// This is deprecated. Use [NavigationPath.create] or [NavigationPath.createWith] instead.
+  @Deprecated('Use NavigationPath.create or NavigationPath.createWith insteads')
+  factory NavigationPath([
+    String? debugLabel,
+    List<T>? stack,
+    Coordinator? coordinator,
+  ]) => NavigationPath._(debugLabel, stack, coordinator);
+
+  /// Creates a [NavigationPath] with an optional initial stack.
+  ///
+  /// This is the standard way to create a mutable navigation stack.
+  factory NavigationPath.create({
+    String? label,
+    List<T>? stack,
+    Coordinator? coordinator,
+  }) => NavigationPath._(label, stack ?? [], coordinator);
+
+  /// Creates a [NavigationPath] associated with a [Coordinator].
+  ///
+  /// This constructor binds the path to a specific coordinator, allowing it to
+  /// interact with the coordinator for navigation actions.
+  factory NavigationPath.createWith({
+    required Coordinator coordinator,
+    required String label,
+    List<T>? stack,
+  }) => NavigationPath._(label, stack ?? [], coordinator);
 
   /// Removes a specific route from the stack (at any position).
   ///
@@ -169,14 +211,46 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
 /// Routes are pre-defined and cannot be added or removed. Navigation switches
 /// the active index.
 class IndexedStackPath<T extends RouteTarget> extends StackPath<T> {
-  IndexedStackPath(super.stack, [String? debugLabel])
+  IndexedStackPath._(super.stack, {super.debugLabel, super.coordinator})
     : assert(stack.isNotEmpty, 'Read-only path must have at least one route'),
-      super._(debugLabel: debugLabel) {
+      super._() {
     for (final path in stack) {
       /// Set the output of every route to null since this cannot pop
       path.completeOnResult(null, null);
     }
   }
+
+  @Deprecated(
+    'Use IndexedStackPath.create or IndexedStackPath.createWith instead',
+  )
+  factory IndexedStackPath(
+    List<T> stack, [
+    String? debugLabel,
+    Coordinator? coordinator,
+  ]) => IndexedStackPath._(
+    stack,
+    debugLabel: debugLabel,
+    coordinator: coordinator,
+  );
+
+  /// Creates an [IndexedStackPath] with a fixed list of routes.
+  ///
+  /// This is the standard way to create a fixed stack for indexed navigation.
+  factory IndexedStackPath.create(
+    List<T> stack, {
+    String? label,
+    Coordinator? coordinator,
+  }) => IndexedStackPath._(stack, debugLabel: label, coordinator: coordinator);
+
+  /// Creates an [IndexedStackPath] associated with a [Coordinator].
+  ///
+  /// This constructor binds the path to a specific coordinator, allowing it to
+  /// interact with the coordinator for navigation actions.
+  factory IndexedStackPath.createWith(
+    List<T> stack, {
+    required Coordinator coordinator,
+    required String label,
+  }) => IndexedStackPath._(stack, debugLabel: label, coordinator: coordinator);
 
   int _activeIndex = 0;
 
@@ -198,7 +272,11 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T> {
     final oldIndex = _activeIndex;
     final oldRoute = stack[oldIndex];
     if (oldRoute is RouteGuard) {
-      final canPop = await (oldRoute as RouteGuard).popGuard();
+      final guard = oldRoute as RouteGuard;
+      final canPop = await switch (coordinator) {
+        null => guard.popGuard(),
+        final coordinator => guard.popGuardWith(coordinator),
+      };
       if (!canPop) return;
     }
     var newRoute = stack[index];
@@ -227,5 +305,9 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T> {
 }
 
 /// Callback that builds a [Page] from a route and child widget.
-typedef PageCallback<T extends RouteTarget> =
-    Page<void> Function(BuildContext context, ValueKey<T> route, Widget child);
+typedef PageCallback<T> =
+    Page<void> Function(
+      BuildContext context,
+      ValueKey<T> routeKey,
+      Widget child,
+    );

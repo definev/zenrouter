@@ -1,3 +1,10 @@
+## 0.4.0
+- **Breaking Change**: Deprecated default constructors for `NavigationPath` and `IndexedStackPath`. Use `NavigationPath.create`/`createWith` and `IndexedStackPath.create`/`createWith` instead.
+- **Breaking Change**: Introduced `internalProps` to `RouteTarget` for better deep equality and hash code generation.
+- **Feat**: Added `popGuardWith` to `RouteGuard` and `redirectWith` to `RouteRedirect` for coordinator-aware mixin logic.
+- **Feat**: Added strict path-coordinator binding support via `createWith` factories.
+- **Docs**: Added comprehensive [Migration Guide](MIGRATION_GUIDE.md).
+
 ## 0.3.2
 - Add `navigate` function: A smarter alternative to `push` that handles browser history restoration by popping to existing routes instead of duplicating them.
 

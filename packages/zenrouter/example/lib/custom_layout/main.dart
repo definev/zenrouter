@@ -243,12 +243,15 @@ class NotFound extends AppRoute {
 }
 
 class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug {
-  final customIndexed = IndexedStackPath<AppRoute>([
-    FirstLayout(),
-    SecondTab(),
-    ThirdTab(),
-  ]);
-  final firstStack = NavigationPath<AppRoute>();
+  late final customIndexed = IndexedStackPath<AppRoute>.createWith(
+    coordinator: this,
+    label: 'CustomIndexed',
+    [FirstLayout(), SecondTab(), ThirdTab()],
+  );
+  late final firstStack = NavigationPath<AppRoute>.createWith(
+    label: 'FirstStack',
+    coordinator: this,
+  );
 
   @override
   List<StackPath<RouteTarget>> get paths => [root, customIndexed, firstStack];

@@ -2,12 +2,19 @@ import 'package:zenrouter/zenrouter.dart';
 import 'app_route.dart';
 
 class AppCoordinator extends Coordinator<AppRoute> {
-  final homeIndexed = IndexedStackPath<AppRoute>([
-    FeedLayout(),
-    ProfileLayout(),
-  ]);
-  final feedNavigation = NavigationPath<AppRoute>();
-  final profileNavigation = NavigationPath<AppRoute>();
+  late final homeIndexed = IndexedStackPath<AppRoute>.createWith(
+    coordinator: this,
+    label: 'home',
+    [FeedLayout(), ProfileLayout()],
+  );
+  late final feedNavigation = NavigationPath<AppRoute>.createWith(
+    coordinator: this,
+    label: 'feed',
+  );
+  late final profileNavigation = NavigationPath<AppRoute>.createWith(
+    coordinator: this,
+    label: 'profile',
+  );
 
   @override
   List<StackPath<RouteTarget>> get paths => [
