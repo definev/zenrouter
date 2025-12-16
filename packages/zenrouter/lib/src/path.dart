@@ -110,7 +110,7 @@ abstract class StackPath<T extends RouteTarget> with ChangeNotifier {
   final Coordinator? _coordinator;
 
   /// The coordinator this path belongs to.
-  Coordinator? get coordinator => _coordinator;
+  Coordinator? get coordinator => _coordinator?.self();
 
   /// The currently active route in this stack.
   T? get activeRoute;

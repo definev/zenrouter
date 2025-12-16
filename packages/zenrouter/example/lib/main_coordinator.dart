@@ -12,17 +12,97 @@ void main() {
   runApp(const MyApp());
 }
 
+class ProxyCoordinator extends Coordinator<RouteUnique> {
+  ProxyCoordinator({required this.reevaluator, required this.resolver}) {
+    reevaluator.addListener(_reevaluate);
+  }
+
+  final Listenable reevaluator;
+  final FutureOr<Coordinator<RouteUnique>> Function() resolver;
+
+  Coordinator<RouteUnique>? _coordinator;
+
+  @override
+  C self<C extends Coordinator<RouteUnique>>() {
+    return _coordinator! as C;
+  }
+
+  void _reevaluate() async {
+    _coordinator?.removeListener(notifyListeners);
+    _coordinator = await resolver();
+    _coordinator!.addListener(notifyListeners);
+    _coordinator!.routerDelegate.setInitialRoutePath(Uri.parse('/'));
+  }
+
+  @override
+  void dispose() {
+    reevaluator.removeListener(_reevaluate);
+    _coordinator?.removeListener(notifyListeners);
+    super.dispose();
+  }
+
+  @override
+  FutureOr<RouteUnique> parseRouteFromUri(Uri uri) async {
+    _coordinator ??= await () async {
+      final coordinator = await resolver();
+      coordinator.addListener(notifyListeners);
+      return coordinator;
+    }();
+    return _coordinator!.parseRouteFromUri(uri);
+  }
+
+  @override
+  Future<R?> push<R extends Object>(RouteUnique route) =>
+      _coordinator!.push(route);
+
+  @override
+  Future<void> replace(RouteUnique route) => _coordinator!.replace(route);
+
+  @override
+  Future<void> pop([Object? result]) async => _coordinator!.pop(result);
+
+  @override
+  Future<bool?> tryPop([Object? result]) => _coordinator!.tryPop(result);
+
+  @override
+  Future<void> navigate(RouteUnique route) => _coordinator!.navigate(route);
+
+  @override
+  RouteLayout<RouteUnique>? get activeLayout => _coordinator?.activeLayout;
+
+  @override
+  List<RouteLayout<RouteUnique>> get activeLayouts =>
+      _coordinator?.activeLayouts ?? [];
+
+  @override
+  List<StackPath<RouteTarget>> get activeLayoutPaths =>
+      _coordinator?.activeLayoutPaths ?? [];
+
+  @override
+  StackPath<RouteUnique> get activePath => _coordinator?.activePath ?? root;
+
+  @override
+  Widget layoutBuilder(BuildContext context) =>
+      _coordinator?.layoutBuilder(context) ?? const SizedBox.shrink();
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   static final appCoordinator = AppCoordinator();
+  static final noLoginCoordinatoor = NoLoginCoordinator();
+
+  static final proxyCoordinator = ProxyCoordinator(
+    reevaluator: loginState,
+    resolver: () => loginState.value ? appCoordinator : noLoginCoordinatoor,
+  );
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'ZenRouter Nested Routes Example',
-      routerDelegate: appCoordinator.routerDelegate,
-      routeInformationParser: appCoordinator.routeInformationParser,
+      routerDelegate: proxyCoordinator.routerDelegate,
+      routeInformationParser: proxyCoordinator.routeInformationParser,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
@@ -590,15 +670,43 @@ class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug {
   }
 }
 
-class Login extends AppRoute {
-  @override
-  Uri toUri() => Uri.parse('/login');
+abstract class NoLoginRoute extends RouteTarget with RouteUnique {}
 
+class LoginNowRoute extends NoLoginRoute {
   @override
   Widget build(
     covariant Coordinator<RouteUnique> coordinator,
     BuildContext context,
   ) {
+    return Scaffold(
+      body: Center(
+        child: ElevatedButton(
+          onPressed: () => loginState.value = true,
+          child: Text('Login Now'),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Uri toUri() => Uri.parse('/');
+}
+
+final loginState = ValueNotifier(false);
+
+class NoLoginCoordinator extends Coordinator<NoLoginRoute> {
+  @override
+  FutureOr<NoLoginRoute> parseRouteFromUri(Uri uri) {
+    return LoginNowRoute();
+  }
+}
+
+class Login extends AppRoute {
+  @override
+  Uri toUri() => Uri.parse('/login');
+
+  @override
+  Widget build(covariant AppCoordinator coordinator, BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         leading: BackButton(onPressed: () => coordinator.tryPop()),

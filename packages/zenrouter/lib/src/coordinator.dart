@@ -74,6 +74,8 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   /// Returns the current URI based on the active route.
   Uri get currentUri => activePath.activeRoute?.toUri() ?? Uri.parse('/');
 
+  C self<C extends Coordinator<RouteUnique>>() => this as C;
+
   /// Returns the deepest active [RouteLayout] in the navigation hierarchy.
   ///
   /// This traverses through nested layouts to find the most deeply nested
@@ -87,7 +89,7 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     // Traverse through nested layouts to find the deepest one
     while (current is RouteLayout) {
       deepestLayout = current;
-      final path = current.resolvePath(this);
+      final path = current.resolvePath(self());
       current = path.activeRoute as T?;
 
       // If the next route is not a layout, we've found the deepest layout
@@ -108,7 +110,7 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     // Traverse through the hierarchy and collect all RouteLayout instances
     while (current != null && current is RouteLayout) {
       layouts.add(current);
-      final path = current.resolvePath(this);
+      final path = current.resolvePath(self());
       current = path.activeRoute as T?;
     }
 
@@ -136,7 +138,7 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
 
     while (current is RouteLayout) {
       final layout = current as RouteLayout;
-      path = layout.resolvePath(this);
+      path = layout.resolvePath(self());
       pathSegment.add(path);
       current = path.activeRoute as T?;
     }
@@ -190,8 +192,8 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     List<StackPath> layoutPaths = [];
     while (layout != null) {
       layouts.add(layout);
-      layoutPaths.add(layout.resolvePath(this));
-      layout = layout.resolveLayout(this);
+      layoutPaths.add(layout.resolvePath(self()));
+      layout = layout.resolveLayout(self());
     }
     layoutPaths.add(root);
 
@@ -265,8 +267,8 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   /// If layout resolution fails or a guard blocks the navigation, [notifyListeners]
   /// is called to sync the browser URL back to the current application state.
   Future<void> navigate(T route) async {
-    final layout = route.resolveLayout(this);
-    final routePath = layout?.resolvePath(this) ?? root;
+    final layout = route.resolveLayout(self());
+    final routePath = layout?.resolvePath(self()) ?? root;
     var routeIndex = routePath.stack.indexOf(route);
     switch (routePath) {
       case NavigationPath():
@@ -313,8 +315,8 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
       path.reset();
     }
     T target = await RouteRedirect.resolve(route, this);
-    final layout = target.resolveLayout(this);
-    final path = layout?.resolvePath(this) ?? root;
+    final layout = target.resolveLayout(self());
+    final path = layout?.resolvePath(self()) ?? root;
     await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.override);
 
     await path.activateRoute(target);
@@ -325,8 +327,8 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   /// For shell routes, ensures the shell layout exists in the parent path first.
   Future<R?> push<R extends Object>(T route) async {
     T target = await RouteRedirect.resolve(route, this);
-    final layout = target.resolveLayout(this);
-    final path = layout?.resolvePath(this) ?? root;
+    final layout = target.resolveLayout(self());
+    final path = layout?.resolvePath(self()) ?? root;
     await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.pushToTop);
 
     switch (path) {
@@ -343,8 +345,8 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   /// Useful for tab navigation where you don't want duplicates.
   void pushOrMoveToTop(T route) async {
     final target = await RouteRedirect.resolve(route, this);
-    final layout = target.resolveLayout(this);
-    final path = layout?.resolvePath(this) ?? root;
+    final layout = target.resolveLayout(self());
+    final path = layout?.resolvePath(self()) ?? root;
     await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.pushToTop);
 
     switch (path) {
