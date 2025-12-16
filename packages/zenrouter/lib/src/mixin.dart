@@ -88,11 +88,24 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
           ? coordinator.routerDelegate.navigatorKey
           : null,
       coordinator: coordinator,
-      resolver: (route) => switch (route) {
-        RouteTransition() => route.transition(coordinator),
-        _ => StackTransition.none(
-          Builder(builder: (context) => route.build(coordinator, context)),
-        ),
+      resolver: (route) {
+        switch (route) {
+          case RouteTransition():
+            return route.transition(coordinator);
+          default:
+            final builder = Builder(
+              builder: (context) => route.build(coordinator, context),
+            );
+            return switch (coordinator.transitionStrategy) {
+              DefaultTransitionStrategy.material => StackTransition.material(
+                builder,
+              ),
+              DefaultTransitionStrategy.cupertino => StackTransition.cupertino(
+                builder,
+              ),
+              DefaultTransitionStrategy.none => StackTransition.none(builder),
+            };
+        }
       },
     ),
     indexedStackPath: (coordinator, path, layout) => ListenableBuilder(
