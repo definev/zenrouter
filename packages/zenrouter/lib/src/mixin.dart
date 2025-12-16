@@ -90,7 +90,7 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
       coordinator: coordinator,
       resolver: (route) => switch (route) {
         RouteTransition() => route.transition(coordinator),
-        _ => StackTransition.material(
+        _ => StackTransition.none(
           Builder(builder: (context) => route.build(coordinator, context)),
         ),
       },

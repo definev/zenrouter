@@ -74,6 +74,16 @@ class StackTransition<T extends RouteTarget> {
     guard: guard,
   );
 
+  static StackTransition<T> none<T extends RouteTarget>(
+    Widget child, {
+    RouteGuard? guard,
+  }) => StackTransition<T>.custom(
+    builder: (context) => child,
+    pageBuilder: (context, route, child) =>
+        NoTransitionPage(key: route, child: child),
+    guard: guard,
+  );
+
   /// Builds the widget for this route.
   final WidgetBuilder builder;
 
@@ -134,4 +144,42 @@ class DialogPage<T> extends Page<T> {
       builder: (context) => child,
     );
   }
+}
+
+class NoTransitionPage<T> extends Page<T> {
+  const NoTransitionPage({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Route<T> createRoute(BuildContext context) {
+    return _NoTransitionRoute<T>(settings: this, child: child);
+  }
+}
+
+class _NoTransitionRoute<T> extends PageRoute<T> {
+  _NoTransitionRoute({super.settings, required this.child});
+
+  final Widget child;
+
+  @override
+  Color? get barrierColor => Colors.transparent;
+
+  @override
+  String? get barrierLabel => 'No transition';
+
+  @override
+  Widget buildPage(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) {
+    return child;
+  }
+
+  @override
+  bool get maintainState => true;
+
+  @override
+  Duration get transitionDuration => Duration.zero;
 }
