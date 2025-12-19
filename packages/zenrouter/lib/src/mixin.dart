@@ -167,6 +167,7 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
       null,
     );
   }
+
   /// Build the layout for this route.
   Widget buildPath(Coordinator coordinator) {
     final path = resolvePath(coordinator);
