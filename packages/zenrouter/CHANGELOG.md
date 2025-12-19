@@ -1,3 +1,9 @@
+## 0.4.3
+- **Feat**: Add `CoordinatorNavigatorObserver` mixin to provide a list of observers for the coordinator's navigator.
+- **Breaking Change**: Complete redesign [RouteLayout] builder to be more flexible and powerful.
+  - Deprecate static method `RouteLayout.buildPrimitivePath` and use `buildPath` function instead.
+  - Add ability to define new [StackPath] using `RouteLayout.definePath`. You can create custom behavior path builder. (Eg: RecoverableHistoryStack like unrouter)
+
 ## 0.4.2
 - **Feat**: Add `transitionStrategy` to `Coordinator` for default stack transition setup
 - **Fix**: Ensure when [Navigator.pop] called sync new stack with [NavigationPath]

@@ -10,6 +10,7 @@ class NavigationStack<T extends RouteTarget> extends StatefulWidget {
     required this.path,
     required this.resolver,
     this.defaultRoute,
+    this.observers = const [],
     this.coordinator,
     this.navigatorKey,
   });
@@ -38,6 +39,9 @@ class NavigationStack<T extends RouteTarget> extends StatefulWidget {
   /// The associated coordinator
   final Coordinator? coordinator;
 
+  /// A list of observers for this navigator.
+  final List<NavigatorObserver> observers;
+
   /// The navigation path to render.
   final NavigationPath<T> path;
 
@@ -56,6 +60,18 @@ class _NavigationStackState<T extends RouteTarget>
   List<Page> _pages = [];
   List<T> _previousRoutes = [];
 
+  List<NavigatorObserver> _observers = [];
+
+  void _updateObservers() {
+    _observers = switch (widget.coordinator) {
+      CoordinatorNavigatorObserver coordinator => [
+        ...coordinator.observers,
+        ...widget.observers,
+      ],
+      _ => widget.observers,
+    };
+  }
+
   @override
   void initState() {
     super.initState();
@@ -64,6 +80,7 @@ class _NavigationStackState<T extends RouteTarget>
     }
     widget.path.addListener(_updatePages);
     _updatePages();
+    _updateObservers();
   }
 
   @override
@@ -152,6 +169,14 @@ class _NavigationStackState<T extends RouteTarget>
     setState(() {});
   }
 
+  bool coordinatorEquals(Coordinator? a, Coordinator? b) {
+    if (a is CoordinatorNavigatorObserver &&
+        b is CoordinatorNavigatorObserver) {
+      return listEquals(a.observers, b.observers);
+    }
+    return false;
+  }
+
   @override
   void didUpdateWidget(covariant NavigationStack<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -162,6 +187,10 @@ class _NavigationStackState<T extends RouteTarget>
       _previousRoutes = [];
       _updatePages();
     }
+    if (!listEquals(oldWidget.observers, widget.observers) ||
+        !coordinatorEquals(oldWidget.coordinator, widget.coordinator)) {
+      _updateObservers();
+    }
   }
 
   @override
@@ -170,6 +199,7 @@ class _NavigationStackState<T extends RouteTarget>
     return Navigator(
       key: widget.navigatorKey,
       pages: _pages,
+      observers: _observers,
       onDidRemovePage: (page) {},
     );
   }

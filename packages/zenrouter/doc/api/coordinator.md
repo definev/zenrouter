@@ -528,9 +528,171 @@ class EditorRoute extends AppRoute with RouteGuard {
 
 ---
 
-## Helper Methods
+## Mixins
 
+### CoordinatorNavigatorObserver
 
+Mixin that provides a list of observers for the coordinator's navigator.
+
+When applied to a `Coordinator`, this mixin allows you to define global `NavigatorObserver`s that will be automatically applied to all `NavigationStack` widgets that use this coordinator.
+
+#### Mixin Definition
+
+```dart
+mixin CoordinatorNavigatorObserver on Coordinator {
+  /// A list of observers that apply for every NavigationPath in the coordinator.
+  List<NavigatorObserver> get observers;
+}
+```
+
+#### Usage
+
+```dart
+class AppCoordinator extends Coordinator<AppRoute>
+    with CoordinatorNavigatorObserver {
+  
+  // Define global observers
+  @override
+  List<NavigatorObserver> get observers => [
+    MyAnalyticsObserver(),
+    MyLoggingObserver(),
+  ];
+  
+  @override
+  AppRoute parseRouteFromUri(Uri uri) {
+    // ... route parsing
+  }
+}
+```
+
+#### How It Works
+
+When a `NavigationStack` is created with a coordinator that has this mixin:
+
+1. The `NavigationStack` checks if the coordinator implements `CoordinatorNavigatorObserver`
+2. If yes, it combines the coordinator's observers with any local observers
+3. All observers are passed to the underlying `Navigator` widget
+
+```dart
+// In NavigationStack
+Navigator(
+  observers: [
+    ...coordinator.observers,  // From CoordinatorNavigatorObserver
+    ...widget.observers,        // Local observers
+  ],
+)
+```
+
+#### Example: Analytics Observer
+
+```dart
+class AnalyticsObserver extends NavigatorObserver {
+  @override
+  void didPush(Route route, Route? previousRoute) {
+    analytics.logScreenView(route.settings.name);
+  }
+  
+  @override
+  void didPop(Route route, Route? previousRoute) {
+    analytics.logScreenView(previousRoute?.settings.name);
+  }
+}
+
+class AppCoordinator extends Coordinator<AppRoute>
+    with CoordinatorNavigatorObserver {
+  
+  @override
+  List<NavigatorObserver> get observers => [
+    AnalyticsObserver(),
+  ];
+  
+  // ... rest of coordinator
+}
+```
+
+#### Example: Combining Global and Local Observers
+
+```dart
+// Global observers in coordinator
+class AppCoordinator extends Coordinator<AppRoute>
+    with CoordinatorNavigatorObserver {
+  
+  @override
+  List<NavigatorObserver> get observers => [
+    AnalyticsObserver(),      // Track all navigation
+    PerformanceObserver(),    // Monitor performance
+  ];
+}
+
+// Local observers in NavigationStack
+NavigationStack<AppRoute>(
+  path: coordinator.root,
+  coordinator: coordinator,
+  observers: [
+    DebugObserver(),  // Only for this stack
+  ],
+  resolver: (route) => route.transition,
+)
+
+// Result: Navigator gets all three observers:
+// [AnalyticsObserver, PerformanceObserver, DebugObserver]
+```
+
+#### Example: Logging Observer
+
+```dart
+class LoggingObserver extends NavigatorObserver {
+  @override
+  void didPush(Route route, Route? previousRoute) {
+    print('📍 Pushed: ${route.settings.name}');
+  }
+  
+  @override
+  void didPop(Route route, Route? previousRoute) {
+    print('📍 Popped: ${route.settings.name}');
+  }
+  
+  @override
+  void didRemove(Route route, Route? previousRoute) {
+    print('📍 Removed: ${route.settings.name}');
+  }
+  
+  @override
+  void didReplace({Route? newRoute, Route? oldRoute}) {
+    print('📍 Replaced: ${oldRoute?.settings.name} → ${newRoute?.settings.name}');
+  }
+}
+
+class AppCoordinator extends Coordinator<AppRoute>
+    with CoordinatorNavigatorObserver {
+  
+  @override
+  List<NavigatorObserver> get observers => [
+    if (kDebugMode) LoggingObserver(),
+  ];
+}
+```
+
+#### Benefits
+
+- **Centralized Monitoring**: Define observers once in the coordinator instead of repeating them for each `NavigationStack`
+- **Consistent Tracking**: Ensures all navigation paths use the same observers
+- **Easy Testing**: Mock or replace observers at the coordinator level
+- **Clean Separation**: Keep navigation logic separate from observation logic
+
+#### When to Use
+
+Use `CoordinatorNavigatorObserver` when you need to:
+- Track all navigation events for analytics
+- Log navigation for debugging
+- Monitor performance across all routes
+- Implement global navigation behaviors
+- Test navigation flows
+
+Use local observers (on `NavigationStack`) when you need:
+- Stack-specific tracking
+- Different observers for different navigation contexts
+- Temporary debugging observers
 
 ---
 
