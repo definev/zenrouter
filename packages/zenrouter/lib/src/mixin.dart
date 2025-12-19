@@ -126,7 +126,7 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
 
   // coverage:ignore-start
   @Deprecated(
-    'Do not manage [layoutBuilderTable] manually. Instead, use [RouteLayout.buildPath] to access it and [defineLayout] to register new builders.',
+    'Do not manage [layoutBuilderTable] manually. Instead, use [RouteLayout.buildPath] to access it and [definePath] to register new builders.',
   )
   static Map<PathKey, RouteLayoutBuilder> get layoutBuilderTable =>
       _layoutBuilderTable;
