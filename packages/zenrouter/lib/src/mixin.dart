@@ -152,13 +152,21 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
   }
   // coverage:ignore-end
 
-  static Widget buildRoot(Coordinator coordinator) =>
-      _layoutBuilderTable[coordinator.root.pathKey]!(
-        coordinator,
-        coordinator.root,
-        null,
-      );
+  static Widget buildRoot(Coordinator coordinator) {
+    final rootPathKey = coordinator.root.pathKey;
 
+    if (!_layoutBuilderTable.containsKey(rootPathKey)) {
+      throw UnimplementedError(
+        'You are not provide layout builder for [${rootPathKey.path}] yet. If you extends [StackPath] class you must register it by [RouteLayout.definePath] to use the [RouteLayout.buildRoot]',
+      );
+    }
+
+    return _layoutBuilderTable[rootPathKey]!(
+      coordinator,
+      coordinator.root,
+      null,
+    );
+  }
   /// Build the layout for this route.
   Widget buildPath(Coordinator coordinator) {
     final path = resolvePath(coordinator);
