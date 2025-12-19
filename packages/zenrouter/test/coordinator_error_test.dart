@@ -369,14 +369,14 @@ void main() {
                   (e) => e.message,
                   'message',
                   contains(
-                    'You are not provide layout builder for [FakeStackPathType] yet',
+                    'No layout builder provided for [FakeStackPathType]',
                   ),
                 )
                 .having(
                   (e) => e.message,
                   'message',
                   contains(
-                    'If you extends [StackPath] class you must register it',
+                    'If you extend the [StackPath] class, you must register it',
                   ),
                 )
                 .having(
@@ -414,9 +414,7 @@ void main() {
         expect(exception, isA<UnimplementedError>());
         expect(
           (exception as UnimplementedError).message,
-          contains(
-            'You are not provide layout builder for [FakeStackPathType] yet',
-          ),
+          contains('No layout builder provided for [FakeStackPathType]'),
         );
       },
     );
@@ -462,7 +460,7 @@ void main() {
         // Should tell where to register
         expect(e.message, contains('RouteLayout.definePath'));
         // Should explain the condition
-        expect(e.message, contains('extends [StackPath]'));
+        expect(e.message, contains('extend the [StackPath]'));
       }
 
       // Test createLayout error
@@ -558,9 +556,7 @@ void main() {
         expect(exception, isA<UnimplementedError>());
         expect(
           (exception as UnimplementedError).message,
-          contains(
-            'If you extends [StackPath] class you must register it by [RouteLayout.definePath]',
-          ),
+          contains('If you extend the [StackPath] class, you must register it'),
         );
       },
     );

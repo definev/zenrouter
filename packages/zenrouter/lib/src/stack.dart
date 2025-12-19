@@ -121,7 +121,7 @@ class _NavigationStackState<T extends RouteTarget>
                 route._resultValue,
                 widget.coordinator,
 
-                /// Fail silent if it's force pop from platform
+                /// Fail silently if it's a force pop from the platform.
                 route.isPopByPath == false,
               );
             case false when route is RouteGuard:
@@ -277,9 +277,8 @@ class _DeclarativeNavigationStackState<T extends RouteTarget>
   }
 }
 
-/// Widget that builds an [IndexedStack] from a [IndexedStackPath]
-/// This will ensure that the stack will cache pages when rebuilding
-/// the widget tree.
+/// Widget that builds an [IndexedStack] from an [IndexedStackPath].
+/// Ensures that the stack caches pages when rebuilding the widget tree.
 class IndexedStackPathBuilder<T extends RouteUnique> extends StatefulWidget {
   const IndexedStackPathBuilder({
     super.key,

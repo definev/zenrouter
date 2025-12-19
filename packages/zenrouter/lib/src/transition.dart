@@ -8,14 +8,69 @@ part of 'path.dart';
 /// - [pageBuilder]: How to wrap the widget in a Flutter [Page]
 /// - [guard]: Optional guard that applies even if the route doesn't have [RouteGuard]
 ///
-/// Use the factory methods for common patterns:
-/// - [StackTransition.material] - Material page transition
-/// - [StackTransition.cupertino] - Cupertino page transition
+/// ## Built-in Factories
+///
+/// Use these for common patterns:
+/// - [StackTransition.material] - Material page transition (Android)
+/// - [StackTransition.cupertino] - Cupertino page transition (iOS)
 /// - [StackTransition.sheet] - Bottom sheet presentation
 /// - [StackTransition.dialog] - Dialog presentation
-/// - [RouteDestination.custom] - Custom page and transition
+/// - [StackTransition.none] - No animation (testing/screenshots)
+/// - [StackTransition.custom] - Full control over page and transition
+///
+/// ## Custom Transitions
+///
+/// For custom animations, use [StackTransition.custom]:
+///
+/// ```dart
+/// // Fade transition example
+/// StackTransition.custom<MyRoute>(
+///   builder: (context) => MyWidget(),
+///   pageBuilder: (context, routeKey, child) => FadePage(
+///     key: routeKey,
+///     child: child,
+///   ),
+/// )
+/// ```
+///
+/// To create a custom page with animation:
+///
+/// ```dart
+/// class FadePage<T> extends Page<T> {
+///   const FadePage({super.key, required this.child});
+///   final Widget child;
+///
+///   @override
+///   Route<T> createRoute(BuildContext context) {
+///     return PageRouteBuilder<T>(
+///       settings: this,
+///       pageBuilder: (context, animation, _) => FadeTransition(
+///         opacity: animation,
+///         child: child,
+///       ),
+///       transitionDuration: Duration(milliseconds: 300),
+///     );
+///   }
+/// }
+/// ```
 class StackTransition<T extends RouteTarget> {
-  /// Creates a custom route destination.
+  /// Creates a custom route destination with full control.
+  ///
+  /// **Parameters:**
+  /// - [builder]: Returns the widget for this route
+  /// - [pageBuilder]: Wraps the widget in a [Page] for the Navigator
+  /// - [guard]: Optional guard (useful for route-agnostic guards)
+  ///
+  /// **Example - Slide from bottom:**
+  /// ```dart
+  /// StackTransition.custom<MyRoute>(
+  ///   builder: (context) => MySheet(),
+  ///   pageBuilder: (context, routeKey, child) => SlideUpPage(
+  ///     key: routeKey,
+  ///     child: child,
+  ///   ),
+  /// )
+  /// ```
   const StackTransition.custom({
     required this.builder,
     required this.pageBuilder,
@@ -74,6 +129,15 @@ class StackTransition<T extends RouteTarget> {
     guard: guard,
   );
 
+  /// Creates a [NoTransitionPage] with instant appearance.
+  ///
+  /// Routes appear and disappear instantly without animation.
+  ///
+  /// **Use cases:**
+  /// - Widget tests (avoid waiting for animations)
+  /// - Screenshot tools
+  /// - When custom animations are handled elsewhere
+  /// - Performance-sensitive scenarios
   static StackTransition<T> none<T extends RouteTarget>(
     Widget child, {
     RouteGuard? guard,
@@ -94,7 +158,43 @@ class StackTransition<T extends RouteTarget> {
   final RouteGuard? guard;
 }
 
-/// Callback that resolves a stack transition in [NavigationStack]
+/// Callback that maps routes to their [StackTransition].
+///
+/// Used by [NavigationStack] to determine how each route should be displayed.
+///
+/// **Example - Route-based transitions:**
+/// ```dart
+/// NavigationStack(
+///   path: coordinator.root,
+///   coordinator: coordinator,
+///   resolver: (route) {
+///     return switch (route) {
+///       // Dialogs use dialog transition
+///       ConfirmRoute() => StackTransition.dialog(route.build(coordinator, context)),
+///
+///       // Sheets use sheet transition
+///       ShareRoute() => StackTransition.sheet(route.build(coordinator, context)),
+///
+///       // iOS gets cupertino, others get material
+///       _ when Platform.isIOS => StackTransition.cupertino(
+///         route.build(coordinator, context),
+///       ),
+///       _ => StackTransition.material(route.build(coordinator, context)),
+///     };
+///   },
+/// )
+/// ```
+///
+/// **Example - RouteTransition mixin:**
+/// Routes can also define their own transition by mixing in [RouteTransition]:
+/// ```dart
+/// class SettingsRoute extends RouteTarget with RouteUnique, RouteTransition {
+///   @override
+///   StackTransition<T> transition<T extends RouteUnique>(Coordinator coordinator) {
+///     return StackTransition.cupertino(build(coordinator, context));
+///   }
+/// }
+/// ```
 typedef StackTransitionResolver<T extends RouteTarget> =
     StackTransition<T> Function(T route);
 
@@ -105,7 +205,7 @@ typedef StackTransitionResolver<T extends RouteTarget> =
 ///
 /// Example:
 /// ```dart
-/// RouteDestination.sheet(MyWidget())
+///   StackTransition.sheet(MyWidget())
 /// ```
 class CupertinoSheetPage<T extends Object> extends Page<T> {
   const CupertinoSheetPage({super.key, required this.builder});
@@ -127,7 +227,7 @@ class CupertinoSheetPage<T extends Object> extends Page<T> {
 ///
 /// Example:
 /// ```dart
-/// RouteDestination.dialog(AlertWidget())
+///   StackTransition.dialog(AlertWidget())
 /// ```
 class DialogPage<T> extends Page<T> {
   const DialogPage({super.key, required this.child});

@@ -11,17 +11,43 @@ part 'mixin.dart';
 part 'stack.dart';
 part 'transition.dart';
 
-/// Extension type for path keys.
+/// A type-safe identifier for [StackPath] types.
+///
+/// [PathKey] is used to register and look up layout builders in
+/// [RouteLayout.definePath]. Each [StackPath] subclass should have
+/// a unique static [PathKey].
+///
+/// **Built-in keys:**
+/// - [NavigationPath.key]: `PathKey('NavigationPath')`
+/// - [IndexedStackPath.key]: `PathKey('IndexedStackPath')`
+///
+/// **Custom path example:**
+/// ```dart
+/// class ModalPath<T extends RouteTarget> extends StackPath<T>
+///     with StackMutatable<T> {
+///   static const key = PathKey('ModalPath');
+///
+///   @override
+///   PathKey get pathKey => key;
+/// }
+/// ```
 extension type const PathKey(String path) {}
 
 /// Mixin for stack paths that support mutable operations (push/pop).
 ///
-/// This provides standard implementations for [push], [pushOrMoveToTop], and [pop].
+/// Apply this mixin to [StackPath] subclasses that need push/pop navigation.
+/// This provides standard implementations for:
+/// - [push]: Add a route to the top
+/// - [pushOrMoveToTop]: Add or promote existing route
+/// - [pop]: Remove the top route (with guard support)
 mixin StackMutatable<T extends RouteTarget> on StackPath<T> {
   /// Pushes a new route onto the stack.
   ///
   /// This handles redirects and sets up the route's path reference.
   /// Returns a future that completes when the route is popped with a result.
+  ///
+  /// **Error Handling:**
+  /// Exceptions from [RouteRedirect.resolve] propagate to the caller.
   Future<R?> push<R extends Object>(T element) async {
     T target = await RouteRedirect.resolve(element, coordinator);
     target.isPopByPath = false;
@@ -60,8 +86,14 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T> {
 
   /// Removes the top route from the navigation stack.
   ///
-  /// Returns `true` if the pop was successful, `false` if the guard cancelled it,
-  /// or `null` if the stack was empty.
+  /// **Difference from [NavigationPath.remove]:**
+  /// - [pop]: Respects [RouteGuard], removes only the top route, returns result
+  /// - [remove]: Bypasses guards, removes at any index, no result
+  ///
+  /// **Return values:**
+  /// - `true`: Pop was successful
+  /// - `false`: Guard cancelled the pop (route remains on stack)
+  /// - `null`: Stack was empty (nothing to pop)
   Future<bool?> pop([Object? result]) async {
     if (_stack.isEmpty) {
       return null;
@@ -87,6 +119,66 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T> {
 ///
 /// A [StackPath] holds a list of [RouteTarget]s and manages their lifecycle.
 /// It notifies listeners when the stack changes.
+///
+/// ## Built-in Implementations
+///
+/// - **[NavigationPath]**: Mutable stack with push/pop for standard navigation
+/// - **[IndexedStackPath]**: Fixed stack for indexed navigation (tabs)
+///
+/// ## Creating Custom Stack Paths
+///
+/// To create a custom stack path (e.g., for modals, sheets, or custom navigation):
+///
+/// ```dart
+/// class ModalPath<T extends RouteTarget> extends StackPath<T>
+///     with StackMutatable<T> {
+///   // 1. Define a unique PathKey
+///   static const key = PathKey('ModalPath');
+///
+///   ModalPath._(
+///     super.stack, {
+///     super.debugLabel,
+///     super.coordinator,
+///   });
+///
+///   factory ModalPath.createWith({
+///     required Coordinator coordinator,
+///     required String label,
+///   }) => ModalPath._([], debugLabel: label, coordinator: coordinator);
+///
+///   // 2. Return the key
+///   @override
+///   PathKey get pathKey => key;
+///
+///   @override
+///   T? get activeRoute => _stack.lastOrNull;
+///
+///   @override
+///   void reset() {
+///     for (final route in _stack) {
+///       route.completeOnResult(null, null, true);
+///     }
+///     _stack.clear();
+///   }
+///
+///   @override
+///   Future<void> activateRoute(T route) async {
+///     reset();
+///     push(route);
+///   }
+/// }
+/// ```
+///
+/// Then register a builder in your coordinator's [defineLayout]:
+/// ```dart
+/// @override
+/// void defineLayout() {
+///   RouteLayout.definePath(
+///     ModalPath.key,
+///     (coordinator, path, layout) => ModalStack(path: path as ModalPath),
+///   );
+/// }
+/// ```
 abstract class StackPath<T extends RouteTarget> with ChangeNotifier {
   StackPath(this._stack, {this.debugLabel, Coordinator? coordinator})
     : _coordinator = coordinator;
@@ -111,17 +203,26 @@ abstract class StackPath<T extends RouteTarget> with ChangeNotifier {
   /// The internal mutable stack.
   final List<T> _stack;
 
-  /// This ensure 1-1 relationship between path and coordinator.
+  /// The coordinator this path is bound to.
+  ///
+  /// This creates a 1-1 relationship between path and coordinator,
+  /// ensuring routes are managed correctly. Always use [createWith]
+  /// factory constructors to bind paths to coordinators.
   final Coordinator? _coordinator;
 
   /// The coordinator this path belongs to.
   Coordinator? get coordinator => _coordinator;
 
   /// The currently active route in this stack.
+  ///
+  /// For [NavigationPath], this is the top of the stack.
+  /// For [IndexedStackPath], this is the route at [activeIndex].
   T? get activeRoute;
 
-  /// The key of this path
+  /// The unique key identifying this path type.
   ///
+  /// Used by [RouteLayout.buildPath] to look up the appropriate builder.
+  /// Each [StackPath] subclass should define a unique static [PathKey].
   PathKey get pathKey;
 
   /// The current navigation stack as an unmodifiable list.
@@ -130,16 +231,22 @@ abstract class StackPath<T extends RouteTarget> with ChangeNotifier {
   /// and the last element is the top of the stack (current route).
   List<T> get stack => List.unmodifiable(_stack);
 
-  /// Reset all routes from the navigation stack.
+  /// Clears all routes from this path.
   ///
-  /// This force clears the entire navigation history. Guards are NOT consulted.
+  /// **Important:** Guards are NOT consulted. Use this for forced resets
+  /// like logout or app restart. For user-initiated back navigation,
+  /// use [StackMutatable.pop] which respects guards.
   @mustCallSuper
   void reset();
 
   /// Activates a specific route in the stack.
   ///
-  /// The behavior depends on the implementation (e.g., switching tab index
-  /// or resetting stack to just this route).
+  /// **Behavior varies by implementation:**
+  /// - [NavigationPath]: Resets stack and pushes this route
+  /// - [IndexedStackPath]: Switches to the route's index
+  ///
+  /// **Error Handling:**
+  /// - [IndexedStackPath] throws [StateError] if route not in stack
   Future<void> activateRoute(T route);
 
   @override
@@ -163,7 +270,7 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
   /// Creates a [NavigationPath] with an optional initial stack.
   ///
   /// This is deprecated. Use [NavigationPath.create] or [NavigationPath.createWith] instead.
-  @Deprecated('Use NavigationPath.create or NavigationPath.createWith insteads')
+  @Deprecated('Use NavigationPath.create or NavigationPath.createWith instead')
   factory NavigationPath([
     String? debugLabel,
     List<T>? stack,
@@ -197,9 +304,20 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
   @override
   PathKey get pathKey => key;
 
-  /// Removes a specific route from the stack (at any position).
+  /// Removes a specific route from the stack at any position.
   ///
-  /// Guards are NOT consulted. Use with caution.
+  /// **Difference from [pop]:**
+  /// - [remove]: Bypasses guards, can remove at any index, no result returned
+  /// - [pop]: Respects [RouteGuard], only removes top route, returns result
+  ///
+  /// **When to use:**
+  /// - Removing routes that were force-closed by the system
+  /// - Cleaning up routes during navigation state changes
+  /// - Internal framework operations
+  ///
+  /// **Avoid when:**
+  /// - User-initiated back navigation (use [pop] instead)
+  /// - You need to respect guards
   void remove(T element) {
     element._path = null;
     final removed = _stack.remove(element);
@@ -286,7 +404,7 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T> {
 
   // coverage:ignore-start
   /// The index of the currently active path in the stack.
-  @Deprecated('Use `activeIndex` insteads. This will be removed in 1.0.0')
+  @Deprecated('Use `activeIndex` instead. This will be removed in 1.0.0')
   int get activePathIndex => _activeIndex;
   // coverage:ignore-end
 

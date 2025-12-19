@@ -22,19 +22,81 @@ mixin RouteDeepLink on RouteUnique {
 
 /// Mixin for routes that need to guard against being popped.
 ///
-/// Implement [popGuard] to control whether the route can be popped.
+/// Use this mixin to intercept pop operations and conditionally prevent them.
+/// Common use cases include:
+/// - **Unsaved changes**: Prompt user before losing form data
+/// - **Confirmation dialogs**: Require explicit confirmation before leaving
+/// - **Async validation**: Check with a server before allowing navigation
+///
+/// **Example - Confirmation Dialog:**
+/// ```dart
+/// class EditFormRoute extends RouteTarget with RouteUnique, RouteGuard {
+///   bool hasUnsavedChanges = false;
+///
+///   @override
+///   FutureOr<bool> popGuard() async {
+///     if (!hasUnsavedChanges) return true;
+///
+///     // Show confirmation dialog
+///     final shouldPop = await showDialog<bool>(
+///       context: navigatorContext,
+///       builder: (context) => AlertDialog(
+///         title: Text('Discard changes?'),
+///         content: Text('You have unsaved changes.'),
+///         actions: [
+///           TextButton(
+///             onPressed: () => Navigator.pop(context, false),
+///             child: Text('Cancel'),
+///           ),
+///           TextButton(
+///             onPressed: () => Navigator.pop(context, true),
+///             child: Text('Discard'),
+///           ),
+///         ],
+///       ),
+///     );
+///     return shouldPop ?? false;
+///   }
+/// }
+/// ```
+///
+/// **Note:** Guards are consulted during:
+/// - [NavigationPath.pop] and [Coordinator.tryPop]
+/// - Browser back button navigation
+/// - [IndexedStackPath.goToIndexed] when leaving the current tab
 mixin RouteGuard on RouteTarget {
   // coverage:ignore-start
   /// Called when the route is about to be popped.
   ///
   /// Return `true` to allow the pop, or `false` to prevent it.
+  /// This can be async to show dialogs or perform validation.
+  ///
+  /// **Important:** This method should not have side effects beyond
+  /// showing UI (like dialogs). The actual pop happens after this returns.
   FutureOr<bool> popGuard() => true;
   // coverage:ignore-end
 
-  /// Called in [Coordinator] or [StackPath] that contains [Coordinator] when the route is about to be popped.
+  /// Called when the route is about to be popped, with coordinator access.
   ///
-  /// This method helps ensuring the path belong to that route have the same coordinator with coordinator that with function take.
-  /// Return `true` to allow the pop, or `false` to prevent it.
+  /// This variant provides access to the [Coordinator] for routes that need
+  /// to check application state or access dependencies during the guard check.
+  ///
+  /// **Coordinator Binding:**
+  /// The assertion ensures the route's path was created with the same coordinator
+  /// that is handling the navigation. This prevents bugs where routes are
+  /// accidentally managed by the wrong coordinator.
+  ///
+  /// **Example - State-dependent guard:**
+  /// ```dart
+  /// @override
+  /// FutureOr<bool> popGuardWith(AppCoordinator coordinator) async {
+  ///   // Access app state through coordinator
+  ///   if (coordinator.authState.isLoggingOut) {
+  ///     return false; // Prevent navigation during logout
+  ///   }
+  ///   return popGuard();
+  /// }
+  /// ```
   FutureOr<bool> popGuardWith(covariant Coordinator coordinator) {
     assert(_path?.coordinator == coordinator, '''
 [RouteGuard] The path [${_path.toString()}] is associated with a different coordinator (or null) than the one currently handling the navigation.
@@ -145,7 +207,7 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
 
     if (!_layoutBuilderTable.containsKey(key)) {
       throw UnimplementedError(
-        'You are not provide layout builder for [$typeString] yet. If you extends [StackPath] class you must register it at [RouteLayout.layoutBuilderTable] to use the [RouteLayout.buildPath]',
+        'No layout builder provided for [$typeString]. If you extend the [StackPath] class, you must register it in [RouteLayout.definePath] to use [RouteLayout.buildPath].',
       );
     }
     return _layoutBuilderTable[key]!(coordinator, path, layout);
@@ -157,7 +219,7 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
 
     if (!_layoutBuilderTable.containsKey(rootPathKey)) {
       throw UnimplementedError(
-        'You are not provide layout builder for [${rootPathKey.path}] yet. If you extends [StackPath] class you must register it by [RouteLayout.definePath] to use the [RouteLayout.buildRoot]',
+        'No layout builder provided for [${rootPathKey.path}]. If you extend the [StackPath] class, you must register it via [RouteLayout.definePath] to use [RouteLayout.buildRoot].',
       );
     }
 
@@ -174,7 +236,7 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
 
     if (!_layoutBuilderTable.containsKey(path.pathKey)) {
       throw UnimplementedError(
-        'You are not provide layout builder for [${path.pathKey.path}] yet. If you extends [StackPath] class you must register it by [RouteLayout.definePath] to use the [RouteLayout.buildPath]',
+        'No layout builder provided for [${path.pathKey.path}]. If you extend the [StackPath] class, you must register it via [RouteLayout.definePath] to use [RouteLayout.buildPath].',
       );
     }
     return _layoutBuilderTable[path.pathKey]!(coordinator, path, this);
@@ -194,7 +256,7 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
   StackPath<RouteUnique> resolvePath(covariant Coordinator coordinator);
 
   // coverage:ignore-start
-  /// URI not use in RouteLayout
+  /// RouteLayout does not use a URI.
   @override
   Uri toUri() => Uri.parse('/');
   // coverage:ignore-end
@@ -217,12 +279,61 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
   int get hashCode => runtimeType.hashCode;
 }
 
-/// Mixin for routes that redirect to another route.
+/// A mixin that provides redirection logic for routes.
 ///
-/// This is useful for authentication flows (redirect to login if not authenticated)
-/// or for aliases.
+/// `RouteRedirect` allows a route to specify another route to navigate to
+/// instead of itself. This is commonly used for:
+/// - **Authentication**: Redirecting unauthenticated users to a login page.
+/// - **Permissions**: Redirecting users to an "Access Denied" page.
+/// - **Aliases**: Mapping old route definitions to new ones.
+///
+/// When a route with this mixin is resolved by the [Coordinator], it calls
+/// [redirect] (or [redirectWith]) to determine the final target. If multiple
+/// redirects are chained, they are followed sequentially until a non-redirecting
+/// route is reached.
+///
+/// **Example - Authentication Redirect:**
+/// ```dart
+/// class ProfileRoute extends RouteTarget with RouteUnique, RouteRedirect<AppRoute> {
+///   @override
+///   FutureOr<AppRoute?> redirectWith(AppCoordinator coordinator) {
+///     // Check authentication state
+///     if (!coordinator.authService.isLoggedIn) {
+///       return LoginRoute(returnTo: this);
+///     }
+///     // Return self to stop redirection and navigate here
+///     return this;
+///   }
+/// }
+/// ```
+///
+/// **Example - Chained Redirects:**
+/// ```dart
+/// class OldDashboardRoute extends RouteTarget with RouteUnique, RouteRedirect<AppRoute> {
+///   @override
+///   FutureOr<AppRoute?> redirect() => NewDashboardRoute();
+/// }
+///
+/// class NewDashboardRoute extends RouteTarget with RouteUnique, RouteRedirect<AppRoute> {
+///   @override
+///   FutureOr<AppRoute?> redirect() => this; // Stop here
+/// }
+/// ```
+///
+/// **Redirect Resolution Order:**
+/// 1. Framework calls [redirectWith] (or [redirect] if no coordinator)
+/// 2. If result is `null`, redirection is cancelled (user handled navigation manually)
+/// 3. If result is `this`, navigation proceeds to this route
+/// 4. If result is another route, process repeats with the new route
 mixin RouteRedirect<T extends RouteTarget> on RouteTarget {
-  /// Resolves the final destination route, following any redirects.
+  /// Resolves the final destination route by following any redirects.
+  ///
+  /// This method is used internally by the framework to find the ultimate [RouteTarget].
+  /// It follows the [redirect] chain until it reaches a route that doesn't redirect.
+  ///
+  /// **Error Handling:**
+  /// If any redirect throws an exception, it propagates up to the caller
+  /// (typically [Coordinator.push] or [Coordinator.replace]).
   static Future<T> resolve<T extends RouteTarget>(
     T route,
     Coordinator? coordinator,
@@ -234,9 +345,13 @@ mixin RouteRedirect<T extends RouteTarget> on RouteTarget {
         null => redirect.redirect(),
         final coordinator => redirect.redirectWith(coordinator),
       };
-      // If redirect returns null, do nothing
+
+      // If redirect returns null, stop redirection and return the original route
       if (newTarget == null) return route;
+
+      // If it redirects to itself, we've found our destination
       if (newTarget == target) break;
+
       if (newTarget is T) {
         /// Complete the result future to prevent the route from being popped.
         target.completeOnResult(null, null, true);
@@ -247,24 +362,102 @@ mixin RouteRedirect<T extends RouteTarget> on RouteTarget {
   }
 
   // coverage:ignore-start
-  /// Returns the route to redirect to, or `null` to stay on the current route.
+  /// Defines the redirection target for this route.
+  ///
+  /// Implement this method to return:
+  /// - `null`: Redirect was handled manually by user code (e.g., you called
+  ///   [Coordinator.push] yourself). Framework stops and uses original route.
+  /// - `this`: Stop here and navigate to this route.
+  /// - `anotherRoute`: Continue redirection with the new target.
+  ///
+  /// **Async Support:**
+  /// This method returns [FutureOr], allowing async operations like
+  /// checking server state or loading data before determining the target.
   FutureOr<T?> redirect() => null;
   // coverage:ignore-end
 
-  /// Called in [Coordinator] or [StackPath] that contains [Coordinator] when the route is resolving.
+  /// Called when the route is being resolved, providing access to the [Coordinator].
   ///
-  /// This method helps ensuring the path belong to that route have the same coordinator with coordinator that with function take.
-  /// Returns the route to redirect to, or `null` to stay on the current route.
+  /// This variant is preferred when redirection logic depends on application state
+  /// or services accessible via the coordinator.
+  ///
+  /// **Example:**
+  /// ```dart
+  /// @override
+  /// FutureOr<AppRoute?> redirectWith(AppCoordinator coordinator) async {
+  ///   final user = await coordinator.userService.getCurrentUser();
+  ///   if (user == null) return LoginRoute();
+  ///   if (!user.hasPermission('admin')) return AccessDeniedRoute();
+  ///   return this;
+  /// }
+  /// ```
+  ///
+  /// Default implementation calls [redirect].
   FutureOr<T?> redirectWith(covariant Coordinator coordinator) => redirect();
 }
 
 /// The base class for all navigation targets (routes).
 ///
 /// A [RouteTarget] represents a destination in the app. It can hold state
-/// and parameters.
+/// and parameters. Every screen, dialog, or navigable destination should
+/// extend this class.
 ///
-/// Subclasses should implement [props] for equality checks if they have parameters.
+/// ## Route Lifecycle
+///
+/// Routes go through distinct phases during their lifetime:
+///
+/// ```
+/// ┌─────────────────────────────────────────────────────────────────────┐
+/// │                        ROUTE LIFECYCLE                              │
+/// ├─────────────────────────────────────────────────────────────────────┤
+/// │  1. CREATION        → Route instance created (constructor called)   │
+/// │  2. REDIRECT CHECK  → RouteRedirect.redirect() called if applicable │
+/// │  3. PATH BINDING    → Route assigned to a StackPath (_path set)     │
+/// │  4. BUILD           → build() called to create the widget           │
+/// │  5. ACTIVE          → Route is visible and receiving interactions   │
+/// │  6. POP REQUEST     → User/system requests pop (guard consulted)    │
+/// │  7. POP COMPLETION  → onDidPop() + completeOnResult() called        │
+/// │  8. CLEANUP         → Route removed from path, _path set to null    │
+/// └─────────────────────────────────────────────────────────────────────┘
+/// ```
+///
+/// ## Internal State
+///
+/// Routes maintain internal state managed by the framework:
+/// - **`_path`**: The [StackPath] containing this route. Set during push.
+/// - **`_onResult`**: A [Completer] that resolves when the route is popped.
+/// - **`_resultValue`**: The result passed to [pop] before [onDidPop] is called.
+/// - **`isPopByPath`**: Whether the pop was initiated by [StackPath.pop].
+///
+/// ## Result Handling
+///
+/// Routes can return a result when popped:
+/// ```dart
+/// // Pushing with result
+/// final result = await coordinator.push<String>(SelectColorRoute());
+/// print('Selected: $result');
+///
+/// // Popping with result (in route or widget)
+/// coordinator.pop('blue');
+/// ```
+///
+/// ## Equality
+///
+/// Override [props] to include route parameters in equality checks:
+/// ```dart
+/// class ProductRoute extends RouteTarget with RouteUnique {
+///   final String productId;
+///   ProductRoute(this.productId);
+///
+///   @override
+///   List<Object?> get props => [productId];
+/// }
+/// ```
 abstract class RouteTarget extends Equatable {
+  /// Completer that resolves when this route is popped.
+  ///
+  /// The future completes with the result passed to [pop] or [completeOnResult].
+  /// This is set fresh each time the route is pushed.
   Completer<Object?> _onResult = Completer();
 
   @visibleForTesting
@@ -272,22 +465,48 @@ abstract class RouteTarget extends Equatable {
   /// DO NOT USE THIS MANUALLY. USE [completeOnResult] instead.
   Completer<Object?> get onResult => _onResult;
 
+  /// The [StackPath] that currently contains this route.
+  ///
+  /// This is set when the route is pushed onto a path and cleared when popped.
+  /// Used internally to ensure routes are managed by the correct path.
   StackPath? _path;
 
+  /// The result value to be returned when this route is popped.
+  ///
+  /// This is set by [StackPath.pop] before [onDidPop] is called, allowing
+  /// the widget tree to access the result during disposal.
   Object? _resultValue;
 
   /// Whether this route was popped by the path mechanism.
   ///
-  /// This is used internally to prevent double removal.
+  /// When `true`, the pop was initiated by [NavigationPath.pop] or similar.
+  /// When `false`, the pop was initiated by the system (e.g., back button).
+  ///
+  /// This is used internally to prevent double removal from the stack.
   bool isPopByPath = false;
 
-  /// Internal properties that are hardcoded and cannot ignore.
+  /// Internal properties that are hardcoded and cannot be ignored.
+  ///
+  /// These are used for identity checks within the framework. Do not override.
+  /// See [props] for user-defined equality properties.
   @override
   List<Object?> get internalProps => [runtimeType, _path, _onResult];
 
   /// The list of properties used for equality comparison.
   ///
   /// Override this to include route parameters in equality checks.
+  /// Two routes are equal if they have the same type and equal [props].
+  ///
+  /// **Example:**
+  /// ```dart
+  /// class UserRoute extends RouteTarget with RouteUnique {
+  ///   final int userId;
+  ///   UserRoute(this.userId);
+  ///
+  ///   @override
+  ///   List<Object?> get props => [userId];
+  /// }
+  /// ```
   @override
   List<Object?> get props => [];
 

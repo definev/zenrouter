@@ -70,14 +70,74 @@ enum DefaultTransitionStrategy {
 
 /// The core class that manages navigation state and logic.
 ///
-/// The [Coordinator] is responsible for:
-/// - Managing the navigation stack(s) via [paths].
-/// - Handling deep links and URL parsing.
-/// - coordinating transitions and layouts.
-/// - Providing access to the [NavigatorState].
+/// ## Architecture Overview
 ///
-/// Subclasses should override [paths] to define their own navigation structure
-/// and [parseRouteFromUri] to handle deep linking.
+/// ZenRouter uses a coordinator-based architecture where the [Coordinator]
+/// is the central hub for all navigation operations.
+///
+/// ## Core Components
+///
+/// - **[Coordinator]**: Manages navigation state, handles deep links, and
+///   coordinates between stack paths. Your app typically has one coordinator.
+///
+/// - **[StackPath]**: A container holding a stack of routes. Two variants:
+///   - [NavigationPath]: Mutable stack (push/pop) for standard navigation
+///   - [IndexedStackPath]: Fixed stack for indexed navigation (tabs)
+///
+/// - **[RouteTarget]**: Base class for all navigable destinations. Mix in:
+///   - [RouteUnique]: Required for coordinator integration
+///   - [RouteGuard]: Intercept and conditionally prevent pops
+///   - [RouteRedirect]: Redirect to different routes
+///   - [RouteLayout]: Define shell/wrapper with nested [StackPath]
+///   - [RouteTransition]: Custom page transitions
+///
+/// ## Navigation Flow
+///
+/// When you call a navigation method:
+///
+/// 1. **Route Resolution**: [RouteRedirect.resolve] follows any redirects
+/// 2. **Layout Resolution**: Find/create required [RouteLayout] hierarchy
+/// 3. **Stack Update**: Push/pop/activate routes on appropriate [StackPath]
+/// 4. **Widget Rebuild**: [NavigationStack] rebuilds with new pages
+/// 5. **URL Update**: Browser URL synced via [CoordinatorRouterDelegate]
+///
+/// ## Navigation Methods
+///
+/// Choose the right navigation method for your use case:
+///
+/// | Method        | Use Case                                              |
+/// |---------------|-------------------------------------------------------|
+/// | [push]        | Standard forward navigation (adds to stack)           |
+/// | [pop]         | Go back (removes from stack)                          |
+/// | [replace]     | Reset navigation to a single route (clears stack)     |
+/// | [navigate]    | Browser back/forward (smart stack manipulation)       |
+/// | [recover]     | Deep link handling (respects [RouteDeepLink] strategy)|
+///
+/// See each method's documentation for detailed behavior and examples.
+///
+/// ## Quick Start
+///
+/// ```dart
+/// // 1. Define your route type
+/// abstract class AppRoute extends RouteTarget with RouteUnique {}
+///
+/// // 2. Create a coordinator
+/// class AppCoordinator extends Coordinator<AppRoute> {
+///   @override
+///   FutureOr<AppRoute> parseRouteFromUri(Uri uri) {
+///     return switch (uri.pathSegments) {
+///       ['product', final id] => ProductRoute(id),
+///       _ => HomeRoute(),
+///     };
+///   }
+/// }
+///
+/// // 3. Use in MaterialApp.router
+/// MaterialApp.router(
+///   routerDelegate: coordinator.routerDelegate,
+///   routeInformationParser: coordinator.routeInformationParser,
+/// )
+/// ```
 abstract class Coordinator<T extends RouteUnique> extends Equatable
     with ChangeNotifier {
   Coordinator() {
@@ -154,7 +214,7 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   /// Returns the deepest active [RouteLayout] in the navigation hierarchy.
   ///
   /// This traverses through nested layouts to find the most deeply nested
-  /// layout that is currently active. Returns `null` that mean root is active layout.
+  /// layout that is currently active. Returns `null` if the root layout is active.
   RouteLayout? get activeLayout {
     T? current = root.activeRoute;
     if (current == null || current is! RouteLayout) return null;
@@ -197,7 +257,7 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   ///
   /// This starts from the [root] path and traverses down through active layouts,
   /// collecting the [StackPath] for each level.
-  @Deprecated('Use `activeLayoutPaths` insteads')
+  @Deprecated('Use `activeLayoutPaths` instead')
   List<StackPath> get activeHostPaths => activeLayoutPaths;
   // coverage:ignore-end
 
@@ -298,7 +358,22 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     return true;
   }
 
-  /// Manually recover deep link from route
+  /// Recovers navigation state from a route, respecting deep link strategies.
+  ///
+  /// **When to use:**
+  /// Use this when handling deep links or restoring navigation state.
+  /// Prefer [push] for regular navigation and [replace] for resetting state.
+  ///
+  /// **Behavior:**
+  /// - If the route implements [RouteDeepLink], uses its [DeeplinkStrategy]:
+  ///   - [DeeplinkStrategy.push]: Calls [push] to add route to stack
+  ///   - [DeeplinkStrategy.replace]: Calls [replace] to reset stack
+  ///   - [DeeplinkStrategy.custom]: Calls the route's [deeplinkHandler]
+  /// - Otherwise, defaults to [replace]
+  ///
+  /// **Error Handling:**
+  /// Exceptions from redirect resolution or deep link handlers propagate
+  /// to the caller. Handle these in your app's error boundary.
   Future<void> recover(T route) async {
     if (route is RouteDeepLink) {
       switch (route.deeplinkStrategy) {
@@ -384,7 +459,27 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     }
   }
 
-  /// Wipes the current navigation stack and replaces it with the new route.
+  /// Clears all navigation stacks and navigates to a single route.
+  ///
+  /// **When to use:**
+  /// - App startup/initialization
+  /// - After logout (clear all navigation history)
+  /// - Deep link recovery (default strategy)
+  /// - Resetting to a known state
+  ///
+  /// **Avoid when:**
+  /// - User is navigating forward (use [push] instead)
+  /// - You want to preserve back navigation history
+  ///
+  /// **Behavior:**
+  /// 1. Calls [reset] on ALL paths (clears entire navigation history)
+  /// 2. Resolves any [RouteRedirect]s
+  /// 3. Activates required layouts
+  /// 4. Places the final route on its appropriate path
+  ///
+  /// **Error Handling:**
+  /// Exceptions from redirect resolution propagate to the caller.
+  /// Guards are NOT consulted since all routes are cleared.
   Future<void> replace(T route) async {
     for (final path in paths) {
       path.reset();
@@ -397,9 +492,34 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     await path.activateRoute(target);
   }
 
-  /// Pushes a new route onto its navigation path.
+  /// Pushes a new route onto the navigation stack.
   ///
-  /// For shell routes, ensures the shell layout exists in the parent path first.
+  /// **When to use:**
+  /// - Standard forward navigation (user taps a button/link)
+  /// - Opening details, forms, or modals
+  /// - Any navigation where back should return to current screen
+  ///
+  /// **Avoid when:**
+  /// - Handling deep links (use [recover] instead)
+  /// - Resetting navigation state (use [replace] instead)
+  /// - Browser back/forward navigation (use [navigate] instead)
+  ///
+  /// **Behavior:**
+  /// 1. Resolves any [RouteRedirect]s (authentication, permissions, etc.)
+  /// 2. Ensures required [RouteLayout] hierarchy is active
+  /// 3. Adds the route to its [StackPath]
+  ///
+  /// **Result handling:**
+  /// Returns a [Future] that completes when the route is popped:
+  /// ```dart
+  /// final result = await coordinator.push<String>(SelectColorRoute());
+  /// if (result != null) {
+  ///   print('User selected: $result');
+  /// }
+  /// ```
+  ///
+  /// **Error Handling:**
+  /// Exceptions from redirect resolution propagate to the caller.
   Future<R?> push<R extends Object>(T route) async {
     T target = await RouteRedirect.resolve(route, this);
     final layout = target.resolveLayout(this);
@@ -485,7 +605,7 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
       _routerDelegate ??= CoordinatorRouterDelegate(coordinator: this);
 
   /// Creates a new router delegate with the given initial route.
-  CoordinatorRouterDelegate routerDelegateWithInitalRoute(T initialRoute) {
+  CoordinatorRouterDelegate routerDelegateWithInitialRoute(T initialRoute) {
     if (_routerDelegate case CoordinatorRouterDelegate delegate) {
       if (delegate.initialRoute != initialRoute) {
         delegate.dispose();

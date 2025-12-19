@@ -332,7 +332,7 @@ void main() {
     ) async {
       await tester.pumpWidget(
         MaterialApp.router(
-          routerDelegate: coordinator.routerDelegateWithInitalRoute(
+          routerDelegate: coordinator.routerDelegateWithInitialRoute(
             SettingsRoute(),
           ),
           routeInformationParser: coordinator.routeInformationParser,
@@ -357,7 +357,7 @@ void main() {
     ) async {
       await tester.pumpWidget(
         MaterialApp.router(
-          routerDelegate: coordinator.routerDelegateWithInitalRoute(
+          routerDelegate: coordinator.routerDelegateWithInitialRoute(
             SettingsRoute(),
           ),
           routeInformationParser: coordinator.routeInformationParser,
@@ -378,7 +378,7 @@ void main() {
     });
   });
 
-  group('Coordinator.routerDelegateWithInitalRoute', () {
+  group('Coordinator.routerDelegateWithInitialRoute', () {
     late TestCoordinator coordinator;
 
     setUp(() {
@@ -387,7 +387,7 @@ void main() {
 
     test('creates new delegate with initial route', () {
       final initialRoute = SettingsRoute();
-      final delegate = coordinator.routerDelegateWithInitalRoute(initialRoute);
+      final delegate = coordinator.routerDelegateWithInitialRoute(initialRoute);
 
       expect(delegate, isNotNull);
       expect(delegate.initialRoute, initialRoute);
@@ -396,8 +396,10 @@ void main() {
 
     test('reuses delegate when initial route is the same', () {
       final initialRoute = SettingsRoute();
-      final delegate1 = coordinator.routerDelegateWithInitalRoute(initialRoute);
-      final delegate2 = coordinator.routerDelegateWithInitalRoute(
+      final delegate1 = coordinator.routerDelegateWithInitialRoute(
+        initialRoute,
+      );
+      final delegate2 = coordinator.routerDelegateWithInitialRoute(
         SettingsRoute(),
       );
 
@@ -409,8 +411,8 @@ void main() {
       final route1 = SettingsRoute();
       final route2 = HomeRoute();
 
-      final delegate1 = coordinator.routerDelegateWithInitalRoute(route1);
-      final delegate2 = coordinator.routerDelegateWithInitalRoute(route2);
+      final delegate1 = coordinator.routerDelegateWithInitialRoute(route1);
+      final delegate2 = coordinator.routerDelegateWithInitialRoute(route2);
 
       // Should create a new delegate
       expect(delegate1, isNot(same(delegate2)));
@@ -421,13 +423,13 @@ void main() {
     test('disposes old delegate when recreating with different route', () {
       final route2 = HomeRoute();
 
-      final delegate1 = coordinator.routerDelegateWithInitalRoute(
+      final delegate1 = coordinator.routerDelegateWithInitialRoute(
         SettingsRoute(),
       );
-      final delegate1Same = coordinator.routerDelegateWithInitalRoute(
+      final delegate1Same = coordinator.routerDelegateWithInitialRoute(
         SettingsRoute(),
       );
-      final delegate2 = coordinator.routerDelegateWithInitalRoute(HomeRoute());
+      final delegate2 = coordinator.routerDelegateWithInitialRoute(HomeRoute());
 
       expect(delegate1, same(delegate1Same));
 
@@ -443,7 +445,7 @@ void main() {
         final initialRoute = ProfileRoute('123');
 
         // routerDelegate has not been accessed yet
-        final delegate = freshCoordinator.routerDelegateWithInitalRoute(
+        final delegate = freshCoordinator.routerDelegateWithInitialRoute(
           initialRoute,
         );
 
@@ -454,12 +456,12 @@ void main() {
     );
 
     test('works with different route types', () {
-      final homeDelegate = coordinator.routerDelegateWithInitalRoute(
+      final homeDelegate = coordinator.routerDelegateWithInitialRoute(
         HomeRoute(),
       );
       expect(homeDelegate.initialRoute, isA<HomeRoute>());
 
-      final profileDelegate = coordinator.routerDelegateWithInitalRoute(
+      final profileDelegate = coordinator.routerDelegateWithInitialRoute(
         ProfileRoute('42'),
       );
       expect(profileDelegate.initialRoute, isA<ProfileRoute>());

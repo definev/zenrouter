@@ -141,24 +141,105 @@ String mapPropsToString(Type runtimeType, List<Object?> props) {
 }
 
 /// Base class for objects that can be compared for equality.
+///
+/// [Equatable] provides value-based equality for ZenRouter routes and paths.
+/// Unlike Dart's default reference equality, two [Equatable] objects are
+/// equal if they have the same [runtimeType] and [props].
+///
+/// ## Why ZenRouter has its own Equatable
+///
+/// While similar to the `equatable` package, this implementation:
+/// - Integrates with ZenRouter's internal state ([internalProps])
+/// - Provides [compareWith] for controlled equality checks
+/// - Avoids external dependencies
+///
+/// ## props vs internalProps
+///
+/// | Property       | Purpose                                    | When to override? |
+/// |----------------|-------------------------------------------|-------------------|
+/// | [props]        | User-defined equality (route parameters)   | **Yes** - always  |
+/// | [internalProps]| Framework state (path, completer, etc.)    | **Never**         |
+///
+/// **Example:**
+/// ```dart
+/// class ProductRoute extends RouteTarget with RouteUnique {
+///   final String productId;
+///   final String? variant;
+///
+///   ProductRoute(this.productId, {this.variant});
+///
+///   // Include all parameters that make this route unique
+///   @override
+///   List<Object?> get props => [productId, variant];
+///
+///   // Do NOT override internalProps - framework manages it
+/// }
+/// ```
+///
+/// ## Equality Behavior
+///
+/// Two routes are equal when:
+/// 1. Same [runtimeType] (e.g., both are `ProductRoute`)
+/// 2. Same [props] values (e.g., same `productId`)
+///
+/// [internalProps] are NOT compared in [compareWith] but ARE used for:
+/// - Hash code generation
+/// - Internal framework identity checks
 abstract class Equatable {
-  /// Internal properties that are used for deep equality comparison.
+  /// Framework-managed properties for internal identity.
   ///
-  /// These properties are hardcoded and cannot be ignored.
+  /// **Do not override.** This is used by ZenRouter to track:
+  /// - Runtime type
+  /// - Path binding (`_path`)
+  /// - Result completer (`_onResult`)
+  ///
+  /// These are combined with [props] for hash code generation but are
+  /// NOT compared in [compareWith] / `==` operator.
   List<Object?> get internalProps => [];
 
-  /// The list of properties used for equality comparison.
+  /// User-defined properties for equality comparison.
   ///
-  /// Override this to include route parameters in equality checks.
+  /// Override this to include all parameters that make this route unique.
+  ///
+  /// **Guidelines:**
+  /// - Include all constructor parameters that affect identity
+  /// - Use consistent ordering across instances
+  /// - Avoid including mutable state
+  ///
+  /// **Example:**
+  /// ```dart
+  /// class OrderRoute extends RouteTarget with RouteUnique {
+  ///   final String orderId;
+  ///   final bool isReadOnly;
+  ///
+  ///   OrderRoute(this.orderId, {this.isReadOnly = false});
+  ///
+  ///   @override
+  ///   List<Object?> get props => [orderId, isReadOnly];
+  /// }
+  /// ```
   List<Object?> get props => [];
 
   @override
   operator ==(Object other) => compareWith(other);
 
-  /// Checks if this route is equal to another route.
+  /// Compares this object with another for equality.
   ///
-  /// Two routes are equal if they have the same runtime type and navigation path.
-  /// Must call this function when you override == operator.
+  /// This is the implementation behind the `==` operator. It checks:
+  /// 1. Identity (same reference)
+  /// 2. Type equality
+  /// 3. [props] equality (deep comparison)
+  ///
+  /// **When to use directly:**
+  /// Call this from a custom `==` override if you need pre/post processing:
+  /// ```dart
+  /// @override
+  /// operator ==(Object other) {
+  ///   if (other is! MyRoute) return false;
+  ///   // Custom pre-check
+  ///   return compareWith(other);
+  /// }
+  /// ```
   @pragma('vm:prefer-inline')
   bool compareWith(Object other) {
     if (identical(this, other)) return true;
