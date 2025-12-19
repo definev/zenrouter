@@ -440,8 +440,13 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T> {
       newRoute = redirectTo;
     }
 
-    _activeIndex = index;
-    notifyListeners();
+    final newIndex = stack.indexOf(newRoute);
+    if (newIndex == -1 && coordinator != null) {
+      coordinator!.recover(newRoute as RouteUnique);
+    } else {
+      _activeIndex = newIndex;
+      notifyListeners();
+    }
   }
 
   @override

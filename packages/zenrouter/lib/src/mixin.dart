@@ -218,9 +218,11 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
     final rootPathKey = coordinator.root.pathKey;
 
     if (!_layoutBuilderTable.containsKey(rootPathKey)) {
+      // coverage:ignore-start
       throw UnimplementedError(
         'No layout builder provided for [${rootPathKey.path}]. If you extend the [StackPath] class, you must register it via [RouteLayout.definePath] to use [RouteLayout.buildRoot].',
       );
+      // coverage:ignore-end
     }
 
     return _layoutBuilderTable[rootPathKey]!(
@@ -268,8 +270,11 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
   @override
   void onDidPop(Object? result, covariant Coordinator? coordinator) {
     super.onDidPop(result, coordinator);
-    if (coordinator == null) return;
-    resolvePath(coordinator).reset();
+    assert(
+      coordinator != null,
+      '[RouteLayout] must be used with a [Coordinator]',
+    );
+    resolvePath(coordinator!).reset();
   }
 
   @override

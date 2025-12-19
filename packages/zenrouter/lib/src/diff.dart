@@ -122,7 +122,9 @@ List<DiffOp<T>> myersDiff<T>(
           : -1;
       final kPlusOne = (kPlusOneIndex >= 0 && kPlusOneIndex < vSize)
           ? v[kPlusOneIndex]
+          // coverage:ignore-start
           : -1;
+      // coverage:ignore-end
 
       if (k == -d || (k != d && kMinusOne < kPlusOne)) {
         x = kPlusOne;
@@ -281,7 +283,9 @@ void applyDiff<T extends RouteTarget>(
       if (insert.newIndex <= stackList.length) {
         stackList.insert(insert.newIndex, insert.element);
       } else {
+        // coverage:ignore-start
         stackList.add(insert.element);
+        // coverage:ignore-end
       }
     }
 

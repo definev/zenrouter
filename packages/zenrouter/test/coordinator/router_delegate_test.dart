@@ -208,6 +208,13 @@ void main() {
       expect(coordinator.root.stack.length, 2);
       expect(coordinator.root.stack.last, isA<SettingsRoute>());
       expect(find.text('Settings'), findsOneWidget);
+
+      await coordinator.routerDelegate.popRoute();
+      await tester.pumpAndSettle();
+
+      expect(coordinator.root.stack.length, 1);
+      expect(coordinator.root.stack.last, isA<HomeRoute>());
+      expect(find.text('Home'), findsOneWidget);
     });
 
     testWidgets('Browser forward/new route pushes to stack', (tester) async {

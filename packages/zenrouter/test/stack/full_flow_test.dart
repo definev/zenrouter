@@ -9,10 +9,7 @@ import 'package:zenrouter/zenrouter.dart';
 // ============================================================================
 
 /// Comprehensive test route hierarchy
-abstract class AppRoute extends RouteTarget with RouteUnique {
-  @override
-  Uri toUri();
-}
+abstract class AppRoute extends RouteTarget with RouteUnique {}
 
 /// Home route - simple route
 class HomeRoute extends AppRoute {
@@ -224,9 +221,7 @@ class DeepLinkRoute extends AppRoute with RouteDeepLink {
 }
 
 /// Shell/Layout route
-class ShellRoute extends AppRoute with RouteLayout<AppRoute> {
-  ShellRoute();
-
+class ShellLayout extends AppRoute with RouteLayout<AppRoute> {
   @override
   NavigationPath<AppRoute> resolvePath(TestCoordinator coordinator) =>
       coordinator.shellStack;
@@ -258,7 +253,7 @@ class ShellChildRoute extends AppRoute {
   final String id;
 
   @override
-  Type get layout => ShellRoute;
+  Type get layout => ShellLayout;
 
   @override
   Uri toUri() => Uri.parse('/shell/$id');
@@ -424,14 +419,31 @@ class TestCoordinator extends Coordinator<AppRoute> {
     label: 'profile',
   );
 
+  late final IndexedStackPath<AppRoute> advancedTabStack =
+      IndexedStackPath.createWith(
+        [FirstTab(), SecondTab(), ThirdTab()],
+        coordinator: this,
+        label: 'advanced-tabs',
+      );
+
   @override
   void defineLayout() {
-    RouteLayout.defineLayout(ShellRoute, () => ShellRoute());
+    RouteLayout.defineLayout(ShellLayout, () => ShellLayout());
     RouteLayout.defineLayout(ProfileLayout, () => ProfileLayout());
+    RouteLayout.defineLayout(
+      AdvancedTabLayout,
+      () => AdvancedTabLayout(path: advancedTabStack),
+    );
   }
 
   @override
-  List<StackPath> get paths => [root, shellStack, tabStack, profileStack];
+  List<StackPath> get paths => [
+    root,
+    shellStack,
+    tabStack,
+    profileStack,
+    advancedTabStack,
+  ];
 
   @override
   AppRoute parseRouteFromUri(Uri uri) {
@@ -453,16 +465,149 @@ class TestCoordinator extends Coordinator<AppRoute> {
           _ => DeeplinkStrategy.custom,
         },
       ),
-      ['shell'] => ShellRoute(),
+      ['shell'] => ShellLayout(),
       ['shell', final id] => ShellChildRoute(id: id),
       ['tabs', 'home'] => HomeTab(),
       ['tabs', 'search'] => SearchTab(),
       ['tabs', 'profile'] => ProfileTab(),
       ['profile-layout'] => ProfileLayout(),
       ['profile-layout', final section] => ProfileChildRoute(section: section),
+      ['tabs', 'advanced'] => AdvancedTabLayout(path: advancedTabStack),
       _ => HomeRoute(),
     };
   }
+}
+
+/// Advanced Tab Layout
+class AdvancedTabLayout extends AppRoute with RouteLayout<AppRoute> {
+  AdvancedTabLayout({required this.path});
+  final IndexedStackPath<AppRoute> path;
+
+  @override
+  IndexedStackPath<AppRoute> resolvePath(TestCoordinator coordinator) => path; // Not used for IndexedStackPath directly in this test
+
+  @override
+  Uri toUri() => Uri.parse('/tabs/advanced');
+
+  @override
+  Widget build(TestCoordinator coordinator, BuildContext context) {
+    return Scaffold(
+      key: const ValueKey('advanced-tab-layout'),
+      body: IndexedStackPathBuilder(path: path, coordinator: coordinator),
+    );
+  }
+
+  @override
+  List<Object?> get props => [path];
+}
+
+class FirstTab extends AppRoute with RouteGuard {
+  @override
+  Type? get layout => AdvancedTabLayout;
+
+  @override
+  Uri toUri() => Uri.parse('/tabs/first');
+
+  @override
+  Future<bool> popGuardWith(TestCoordinator coordinator) async {
+    final context = coordinator.routerDelegate.navigatorKey.currentContext;
+    if (context == null) return true;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm'),
+        content: const Text('Allow switch?'),
+        actions: [
+          TextButton(
+            key: const ValueKey('confirm-yes'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Yes'),
+          ),
+          TextButton(
+            key: const ValueKey('confirm-no'),
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('No'),
+          ),
+        ],
+      ),
+    );
+
+    return result ?? false;
+  }
+
+  @override
+  Widget build(covariant TestCoordinator coordinator, BuildContext context) {
+    return const Scaffold(
+      key: ValueKey('first-tab'),
+      body: Text('First Tab Content'),
+    );
+  }
+
+  @override
+  List<Object?> get props => [];
+}
+
+class SecondTab extends AppRoute with RouteRedirect<AppRoute> {
+  @override
+  Type? get layout => AdvancedTabLayout;
+
+  @override
+  Uri toUri() => Uri.parse('/tabs/second');
+
+  @override
+  FutureOr<AppRoute?> redirect() {
+    return ThirdTab();
+  }
+
+  @override
+  Widget build(covariant TestCoordinator coordinator, BuildContext context) {
+    return const Scaffold(key: ValueKey('second-tab'), body: Text('Redirects'));
+  }
+
+  @override
+  List<Object?> get props => [];
+}
+
+class ThirdTab extends AppRoute {
+  @override
+  Type? get layout => AdvancedTabLayout;
+
+  @override
+  Uri toUri() => Uri.parse('/tabs/third');
+
+  @override
+  Widget build(covariant TestCoordinator coordinator, BuildContext context) {
+    return const Scaffold(
+      key: ValueKey('third-tab'),
+      body: Text('Third Tab Content'),
+    );
+  }
+
+  @override
+  List<Object?> get props => [];
+}
+
+class FourthTab extends AppRoute with RouteRedirect<AppRoute> {
+  @override
+  Type? get layout => AdvancedTabLayout;
+
+  @override
+  Uri toUri() => Uri.parse('/tabs/fourth');
+
+  @override
+  AppRoute redirect() => HomeRoute();
+
+  @override
+  Widget build(covariant TestCoordinator coordinator, BuildContext context) {
+    return const Scaffold(
+      key: ValueKey('fourth-tab'),
+      body: Text('Fourth Tab Content'),
+    );
+  }
+
+  @override
+  List<Object?> get props => [];
 }
 
 // ============================================================================
@@ -487,7 +632,7 @@ void main() {
 
         final activeLayout = coordinator.activeLayout;
         expect(activeLayout, isNotNull);
-        expect(activeLayout, isA<ShellRoute>());
+        expect(activeLayout, isA<ShellLayout>());
       });
 
       test('activeLayout returns deepest layout in nested hierarchy', () async {
@@ -511,7 +656,7 @@ void main() {
         // Route with one layout
         await coordinator.replace(ShellChildRoute(id: 'test'));
         expect(coordinator.activeLayouts.length, 1);
-        expect(coordinator.activeLayouts.first, isA<ShellRoute>());
+        expect(coordinator.activeLayouts.first, isA<ShellLayout>());
 
         // Route with layout
         await coordinator.replace(ProfileChildRoute(section: 'settings'));
@@ -1007,6 +1152,70 @@ void main() {
       // Both children should be in shell stack
       expect(coordinator.shellStack.stack.length, 2);
     });
+
+    testWidgets('Pop from shell child returns to previous route', (
+      tester,
+    ) async {
+      final coordinator = TestCoordinator();
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Ensure we start at home
+      expect(find.byKey(const ValueKey('home')), findsOneWidget);
+
+      // Navigate to shell child
+      coordinator.push(ShellChildRoute(id: 'child1'));
+      await tester.pumpAndSettle();
+
+      // Verify we are at shell child
+      expect(find.byKey(const ValueKey('shell')), findsOneWidget);
+      expect(find.byKey(const ValueKey('shell-child-child1')), findsOneWidget);
+
+      // Pop
+      coordinator.pop();
+      await tester.pumpAndSettle();
+
+      // Verify we are back at home and shell is gone
+      expect(find.byKey(const ValueKey('home')), findsOneWidget);
+      expect(find.byKey(const ValueKey('shell')), findsNothing);
+    });
+
+    testWidgets('Navigate back home from shell child', (tester) async {
+      final coordinator = TestCoordinator();
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Ensure we start at home
+      expect(find.byKey(const ValueKey('home')), findsOneWidget);
+
+      // Navigate to shell child
+      coordinator.push(ShellChildRoute(id: 'child1'));
+      await tester.pumpAndSettle();
+
+      // Verify we are at shell child
+      expect(find.byKey(const ValueKey('shell')), findsOneWidget);
+      expect(find.byKey(const ValueKey('shell-child-child1')), findsOneWidget);
+
+      // Pop
+      coordinator.navigate(HomeRoute());
+      await tester.pumpAndSettle();
+
+      // Verify we are back at home and shell is gone
+      expect(find.byKey(const ValueKey('home')), findsOneWidget);
+      expect(find.byKey(const ValueKey('shell')), findsNothing);
+    });
   });
 
   group('Full Flow Widget Tests - URI Handling', () {
@@ -1320,6 +1529,56 @@ void main() {
         coordinator.parseRouteFromUri(Uri.parse('/tabs/profile')),
         isA<ProfileTab>(),
       );
+    });
+
+    testWidgets('guard and redirect work with IndexedStackPath', (
+      tester,
+    ) async {
+      final coordinator = TestCoordinator();
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Push a profile child route which should trigger layout creation
+      coordinator.push(FirstTab());
+      await tester.pumpAndSettle();
+
+      expect(coordinator.advancedTabStack.activeIndex, 0);
+
+      coordinator.advancedTabStack.goToIndexed(1);
+      await tester.pumpAndSettle();
+      // Still in first tab
+      expect(coordinator.advancedTabStack.activeIndex, 0);
+      expect(find.byKey(const ValueKey('confirm-yes')), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('confirm-yes')));
+      await tester.pumpAndSettle();
+
+      /// Since the second tab is redirect to third
+      expect(coordinator.advancedTabStack.activeIndex, 2);
+    });
+
+    testWidgets('redirect to other route not in tab', (tester) async {
+      final coordinator = TestCoordinator();
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      coordinator.push(FourthTab());
+      await tester.pumpAndSettle();
+
+      // Should be redirected to home
+      expect(coordinator.currentUri, Uri.parse('/'));
     });
   });
 
