@@ -145,7 +145,7 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
 
     if (!_layoutBuilderTable.containsKey(key)) {
       throw UnimplementedError(
-        'You are not provide layout builder for [$typeString] yet. If you extends [StackPath] class you must register it at [RouteLayout.layoutBuilderTable] to use the [RouteLayout.buildPath]',
+        'You have not provided layout builder for [$typeString] yet. If you extends [StackPath] class you must register it at [RouteLayout.layoutBuilderTable] to use the [RouteLayout.buildPath]',
       );
     }
     return _layoutBuilderTable[key]!(coordinator, path, layout);
@@ -157,7 +157,7 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
 
     if (!_layoutBuilderTable.containsKey(rootPathKey)) {
       throw UnimplementedError(
-        'You are not provide layout builder for [${rootPathKey.path}] yet. If you extends [StackPath] class you must register it by [RouteLayout.definePath] to use the [RouteLayout.buildRoot]',
+        'You have not provided layout builder for [${rootPathKey.path}] yet. If you extends [StackPath] class you must register it by [RouteLayout.definePath] to use the [RouteLayout.buildRoot]',
       );
     }
 
@@ -173,7 +173,7 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
 
     if (!_layoutBuilderTable.containsKey(path.pathKey)) {
       throw UnimplementedError(
-        'You are not provide layout builder for [${path.pathKey.path}] yet. If you extends [StackPath] class you must register it by [RouteLayout.definePath] to use the [RouteLayout.buildPath]',
+        'You have not provided layout builder for [${path.pathKey.path}] yet. If you extends [StackPath] class you must register it by [RouteLayout.definePath] to use the [RouteLayout.buildPath]',
       );
     }
     return _layoutBuilderTable[path.pathKey]!(coordinator, path, this);
