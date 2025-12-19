@@ -190,9 +190,10 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
     List<T>? stack,
   }) => NavigationPath._(label, stack ?? [], coordinator);
 
-  /// The key used to identify this type in [RouteLayout.layoutBuilderTable].
+  /// The key used to identify this type in [RouteLayout.definePath].
   static const key = PathKey('NavigationPath');
 
+  /// NavigationPath key. This is used to identify this type in [RouteLayout.definePath].
   @override
   PathKey get pathKey => key;
 
@@ -274,9 +275,10 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T> {
     required String label,
   }) => IndexedStackPath._(stack, debugLabel: label, coordinator: coordinator);
 
-  /// The key used to identify this type in [RouteLayout.layoutBuilderTable].
+  /// The key used to identify this type in [RouteLayout.definePath].
   static const key = PathKey('IndexedStackPath');
 
+  /// IndexedStackPath key. This is used to identify this type in [RouteLayout.definePath].
   @override
   PathKey get pathKey => key;
 
