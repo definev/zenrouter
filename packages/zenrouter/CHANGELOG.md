@@ -1,3 +1,7 @@
+## 0.4.4
+- **Feat**: New ZenRoute Logo!
+- **Docs**: Improve document and update outdate example
+
 ## 0.4.3
 - **Feat**: Add `CoordinatorNavigatorObserver` mixin to provide a list of observers for the coordinator's navigator.
 - **Breaking Change**: Complete redesign [RouteLayout] builder to be more flexible and powerful.
