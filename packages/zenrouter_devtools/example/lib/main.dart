@@ -135,8 +135,8 @@ class FirstTab extends AppRoute {
               'First page ${activeIndex == 0 ? '(Focused)' : '(No focused)'}',
             ),
             FilledButton(
-              onPressed:
-                  () => coordinator.push(FirstTabChild(message: "Hello")),
+              onPressed: () =>
+                  coordinator.push(FirstTabChild(message: "Hello")),
               child: Text('Go "Hello"'),
             ),
             FilledButton(
