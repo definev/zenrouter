@@ -9,10 +9,9 @@ import '(auth)/login.dart' deferred as _auth_login;
 import '(auth)/register.dart' deferred as _auth_register;
 import 'about.dart' deferred as about;
 import 'blog.[...slugs].dart' deferred as blog___slugs;
+import 'collection.list.dart' deferred as collection_list;
 import 'index.dart' deferred as index;
 import 'not_found.dart';
-import 'profile.[profileId].collections.[collectionId].dart'
-    deferred as profile__profileId_collections__collectionId;
 import 'profile/[profileId]/index.dart' deferred as profile__profileId_index;
 import 'profile/general.dart' deferred as profile_general;
 import 'settings.account.index.dart' deferred as settings_account_index;
@@ -122,15 +121,12 @@ class AppCoordinator extends Coordinator<AppRoute> {
         await tabs_feed_foryou_index.loadLibrary();
         return tabs_feed_foryou_index.ForYouRoute(queries: uri.queryParameters);
       }(),
-      ['profile', final profileId, 'collections', final collectionId] =>
-        await () async {
-          await profile__profileId_collections__collectionId.loadLibrary();
-          return profile__profileId_collections__collectionId.CollectionsCollectionIdRoute(
-            profileId: profileId,
-            collectionId: collectionId,
-            queries: uri.queryParameters,
-          );
-        }(),
+      ['collection', 'list'] => await () async {
+        await collection_list.loadLibrary();
+        return collection_list.CollectionListRoute(
+          queries: uri.queryParameters,
+        );
+      }(),
       ['profile', 'general'] => await () async {
         await profile_general.loadLibrary();
         return profile_general.ProfileGeneralRoute();
@@ -255,6 +251,24 @@ extension AppCoordinatorNav on AppCoordinator {
         await blog___slugs.loadLibrary();
         return blog___slugs.BlogSlugsRoute(slugs: slugs);
       }());
+  Future<T?> pushCollectionsCollectionId<T extends Object>({
+    Map<String, String> queries = const {},
+  }) async => push(await () async {
+    await collection_list.loadLibrary();
+    return collection_list.CollectionListRoute(queries: queries);
+  }());
+  Future<void> replaceCollectionsCollectionId({
+    Map<String, String> queries = const {},
+  }) async => replace(await () async {
+    await collection_list.loadLibrary();
+    return collection_list.CollectionListRoute(queries: queries);
+  }());
+  Future<void> recoverCollectionsCollectionId({
+    Map<String, String> queries = const {},
+  }) async => recover(await () async {
+    await collection_list.loadLibrary();
+    return collection_list.CollectionListRoute(queries: queries);
+  }());
   Future<T?> pushIndex<T extends Object>() async => push(await () async {
     await index.loadLibrary();
     return index.IndexRoute();
@@ -266,42 +280,6 @@ extension AppCoordinatorNav on AppCoordinator {
   Future<void> recoverIndex() async => recover(await () async {
     await index.loadLibrary();
     return index.IndexRoute();
-  }());
-  Future<T?> pushCollectionsCollectionId<T extends Object>({
-    required String profileId,
-    required String collectionId,
-    Map<String, String> queries = const {},
-  }) async => push(await () async {
-    await profile__profileId_collections__collectionId.loadLibrary();
-    return profile__profileId_collections__collectionId.CollectionsCollectionIdRoute(
-      profileId: profileId,
-      collectionId: collectionId,
-      queries: queries,
-    );
-  }());
-  Future<void> replaceCollectionsCollectionId({
-    required String profileId,
-    required String collectionId,
-    Map<String, String> queries = const {},
-  }) async => replace(await () async {
-    await profile__profileId_collections__collectionId.loadLibrary();
-    return profile__profileId_collections__collectionId.CollectionsCollectionIdRoute(
-      profileId: profileId,
-      collectionId: collectionId,
-      queries: queries,
-    );
-  }());
-  Future<void> recoverCollectionsCollectionId({
-    required String profileId,
-    required String collectionId,
-    Map<String, String> queries = const {},
-  }) async => recover(await () async {
-    await profile__profileId_collections__collectionId.loadLibrary();
-    return profile__profileId_collections__collectionId.CollectionsCollectionIdRoute(
-      profileId: profileId,
-      collectionId: collectionId,
-      queries: queries,
-    );
   }());
   Future<T?> pushProfileId<T extends Object>({
     required String profileId,

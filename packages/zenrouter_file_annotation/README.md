@@ -20,10 +20,10 @@ This package is usually added automatically when using `zenrouter_file_generator
 
 ```yaml
 dependencies:
-  zenrouter_file_annotation: ^0.2.1
+  zenrouter_file_annotation: ^0.4.6
 
 dev_dependencies:
-  zenrouter_file_generator: ^0.2.1
+  zenrouter_file_generator: ^0.4.6
 ```
 
 ## Usage
@@ -38,6 +38,10 @@ class MyRoute extends _$MyRoute { ... }
 
 @ZenLayout(type: LayoutType.stack)
 class MyLayout extends _$MyLayout { ... }
+
+// With query parameters
+@ZenRoute(queries: ['search', 'page'])
+class SearchRoute extends _$SearchRoute { ... }
 ```
 
 See [zenrouter_file_generator](https://pub.dev/packages/zenrouter_file_generator) for complete documentation and usage examples.

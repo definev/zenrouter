@@ -113,10 +113,8 @@ class IndexRoute extends _$IndexRoute {
                     ),
                     const SizedBox(height: 8),
                     ElevatedButton.icon(
-                      onPressed: () => coordinator.pushCollectionsCollectionId(
-                        profileId: 'user-123',
-                        collectionId: 'col-789',
-                      ),
+                      onPressed: () =>
+                          coordinator.pushCollectionsCollectionId(),
                       icon: const Icon(Icons.collections),
                       label: const Text('Collections (hybrid)'),
                       style: ElevatedButton.styleFrom(

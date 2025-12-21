@@ -94,6 +94,9 @@ mixin RouteQueryParameters on RouteUnique {
   }
 }
 
+/// Widget builder for query parameters.
+///
+/// You can use this typedef to allow passing the [RouteQueryParameters.selectorBuilder] to inner widgets.
 typedef QuerySelectorBuilder<T> =
     Widget Function({
       required T Function(Map<String, String> queries) selector,

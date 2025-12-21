@@ -277,8 +277,81 @@ class RouteGenerator extends GeneratorForAnnotation<ZenRoute> {
       );
     }
 
+    // Generate query selector helpers
+    if (route.hasQueries && route.queries != null) {
+      for (final query in route.queries!) {
+        // Skip invalid query names or wildcards
+        if (query == '*' || !_isValidQueryParam(query)) continue;
+
+        final camelCaseName = _toCamelCase(query);
+        buffer.writeln();
+        buffer.writeln('  Widget ${camelCaseName}Builder<T>({');
+        buffer.writeln(
+          '    required T Function(String? $camelCaseName) selector,',
+        );
+        buffer.writeln(
+          '    required Widget Function(BuildContext, T $camelCaseName) builder,',
+        );
+        buffer.writeln('  }) => selectorBuilder<T>(');
+        buffer.writeln(
+          '    selector: (queries) => selector(queries[\'$query\']),',
+        );
+        buffer.writeln(
+          '    builder: (context, $camelCaseName) => builder(context, $camelCaseName),',
+        );
+        buffer.writeln('  );');
+      }
+    }
+
     buffer.writeln('}');
 
+    return buffer.toString();
+  }
+
+  bool _isValidQueryParam(String name) {
+    if (name.isEmpty) return false;
+    // Allow any non-empty string that doesn't look like garbage?
+    // Actually, we just want to ensure we can make a valid identifier out of it.
+    // Let's just ban '*' explicitly and allow most things, trusting _toCamelCase handles them.
+    if (name == '*') return false;
+
+    // We should probably still avoid completely weird characters that can't be part of a URL param easily
+    // or just trust the user.
+    // For now, let's just allow alphanumeric, underscore, AND hyphens.
+    for (var i = 0; i < name.length; i++) {
+      final char = name.codeUnitAt(i);
+      // Allow A-Z, a-z, 0-9, _, -
+      if (!((char >= 65 && char <= 90) || // A-Z
+          (char >= 97 && char <= 122) || // a-z
+          (char >= 48 && char <= 57) || // 0-9
+          char == 95 || // _
+          char == 45)) {
+        // -
+        return false;
+      }
+    }
+    return true;
+  }
+
+  String _toCamelCase(String str) {
+    if (str.isEmpty) return str;
+    final parts = str.split(RegExp(r'[_\-]+'));
+    if (parts.isEmpty) return str;
+
+    final buffer = StringBuffer();
+    // First part is lower case
+    buffer.write(parts.first.toLowerCase());
+
+    // Subsequent parts are capitalized
+    for (var i = 1; i < parts.length; i++) {
+      final part = parts[i];
+      if (part.isNotEmpty) {
+        buffer.write(part[0].toUpperCase());
+        if (part.length > 1) {
+          buffer.write(part.substring(1).toLowerCase());
+        }
+      }
+    }
     return buffer.toString();
   }
 

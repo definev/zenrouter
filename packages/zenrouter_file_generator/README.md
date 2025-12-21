@@ -32,12 +32,12 @@ Add `zenrouter_file_generator`, `zenrouter_file_annotation` and `zenrouter` to y
 
 ```yaml
 dependencies:
-  zenrouter: ^0.3.0
-  zenrouter_file_annotation: ^0.3.1
+  zenrouter: ^0.4.6
+  zenrouter_file_annotation: ^0.4.6
 
 dev_dependencies:
   build_runner: ^2.10.4
-  zenrouter_file_generator: ^0.3.1
+  zenrouter_file_generator: ^0.4.6
 ```
 
 ## Quick Start
@@ -299,6 +299,19 @@ coordinator.recoverTabProfile();       // Deep link to /tabs/profile
 | `_*.dart` | - | Private files (ignored) |
 | `(group)/` | - | Route group (layout without URL segment) |
 
+### Dot Notation
+
+You can also use dot notation in file names to represent directory nesting. This helps flatten your file structure while keeping deep URL paths.
+
+`parent.child.dart` is equivalent to `parent/child.dart`.
+
+**Examples:**
+- `shop.products.[id].dart` → `/shop/products/:id`
+- `settings.account.dart` → `/settings/account`
+- `docs.[version].index.dart` → `/docs/:version`
+
+This is especially useful for grouping related deep routes without creating many nested folders.
+
 ## Route Groups `(name)`
 
 Route groups allow you to wrap routes with a layout **without adding the folder name to the URL path**. This is useful for:
@@ -550,6 +563,62 @@ class CheckoutRoute extends _$CheckoutRoute {
     return CheckoutScreen(search: searchTerm, page: page);
   }
 }
+```
+
+## Route Query Parameters
+
+You can easily handle query parameters with reactive updates using the `queries` parameter in `@ZenRoute`.
+
+### 1. Enable Query Support
+
+```dart
+// Enable all query parameters
+@ZenRoute(queries: ['*'])
+class SearchRoute extends _$SearchRoute { ... }
+
+// OR enable specific parameters
+@ZenRoute(queries: ['q', 'page', 'sort'])
+class SearchRoute extends _$SearchRoute { ... }
+```
+
+### 2. Access and Watch Queries
+
+Use `selectorBuilder` to rebuild *only* when specific query parameters change, avoiding unnecessary rebuilds.
+
+```dart
+@override
+Widget build(AppCoordinator coordinator, BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(title: Text('Search Results')),
+    body: Column(
+      children: [
+        // Rebuilds ONLY when 'q' query param changes
+        selectorBuilder<String>(
+          selector: (queries) => queries['q'] ?? '',
+          builder: (context, searchTerm) {
+            return Text('Searching for: $searchTerm');
+          },
+        ),
+        // ... rest of UI
+      ],
+    ),
+  );
+}
+```
+
+### 3. Update Queries
+
+You can update queries without full navigation (preserving widget state where possible). The URL will be updated automatically.
+
+```dart
+// Update specific query param
+updateQueries(
+  coordinator, 
+  queries: {...queries, 'page': '2'},
+);
+
+// Clear all queries
+updateQueries(coordinator, queries: {});
 ```
 
 ## Layout Types

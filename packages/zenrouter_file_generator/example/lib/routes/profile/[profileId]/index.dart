@@ -26,11 +26,7 @@ class ProfileIdRoute extends _$ProfileIdRoute {
               child: const Text('Go Back'),
             ),
             ElevatedButton(
-              onPressed: () => coordinator.pushCollectionsCollectionId(
-                profileId: profileId,
-                collectionId: '123',
-                queries: {'search': 'test'},
-              ),
+              onPressed: () {},
               child: const Text('Go to Collections'),
             ),
           ],

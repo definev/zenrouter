@@ -1,3 +1,6 @@
+## 0.4.6
+- **Feat**: Add `RouteQueryParameters` mixin for targeted query parameter updates using `ValueNotifier`.
+
 ## 0.4.4
 - **Feat**: New ZenRoute Logo!
 - **Docs**: Improve document and update outdate example
