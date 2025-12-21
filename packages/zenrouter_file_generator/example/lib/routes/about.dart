@@ -19,7 +19,7 @@ class AboutRoute extends _$AboutRoute {
             const Text('About Page'),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () => coordinator.pop(),
+              onPressed: () => Navigator.pop(context),
               child: const Text('Go Back'),
             ),
           ],

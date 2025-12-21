@@ -24,7 +24,7 @@ class FeedPostRoute extends _$FeedPostRoute {
             Text('Post ID: $postId', style: const TextStyle(fontSize: 24)),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () => coordinator.pop(),
+              onPressed: () => Navigator.pop(context),
               child: const Text('Go Back'),
             ),
           ],

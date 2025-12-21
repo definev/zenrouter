@@ -22,14 +22,14 @@ class ProfileIdRoute extends _$ProfileIdRoute {
             Text('User ID: $profileId', style: const TextStyle(fontSize: 24)),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () => coordinator.pop(),
+              onPressed: () => Navigator.pop(context),
               child: const Text('Go Back'),
             ),
             ElevatedButton(
               onPressed: () => coordinator.pushCollectionsCollectionId(
-                profileId,
-                '123',
-                {'search': 'test'},
+                profileId: profileId,
+                collectionId: '123',
+                queries: {'search': 'test'},
               ),
               child: const Text('Go to Collections'),
             ),

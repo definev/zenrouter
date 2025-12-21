@@ -151,6 +151,92 @@ void main() {
           throwsA(isA<ArgumentError>()),
         );
       });
+
+      group('dot-notation file naming', () {
+        test('parses simple dot notation', () {
+          final (segments, params, isIndex, fileName) = PathParser.parsePath(
+            'docs.[id].detail.dart',
+          );
+
+          expect(segments, ['docs', ':id', 'detail']);
+          expect(params.length, 1);
+          expect(params[0].name, 'id');
+          expect(isIndex, false);
+          expect(fileName, 'detail');
+        });
+
+        test('parses rest param with dot notation', () {
+          final (segments, params, isIndex, fileName) = PathParser.parsePath(
+            'docs.[...slugs].dart',
+          );
+
+          expect(segments, ['docs', '...:slugs']);
+          expect(params.length, 1);
+          expect(params[0].name, 'slugs');
+          expect(params[0].isRest, true);
+          expect(isIndex, false);
+          expect(fileName, '[...slugs]');
+        });
+
+        test('parses hybrid path with trailing dot segments', () {
+          final (segments, params, isIndex, fileName) = PathParser.parsePath(
+            'feed/tab/[id].detail.dart',
+          );
+
+          expect(segments, ['feed', 'tab', ':id', 'detail']);
+          expect(params.length, 1);
+          expect(params[0].name, 'id');
+          expect(isIndex, false);
+          expect(fileName, 'detail');
+        });
+
+        test('parses route group with dot notation', () {
+          final (segments, params, isIndex, fileName) = PathParser.parsePath(
+            '(auth).login.dart',
+          );
+
+          expect(segments, ['login']);
+          expect(params, isEmpty);
+          expect(isIndex, false);
+          expect(fileName, 'login');
+        });
+
+        test('parses complex hybrid with groups and params', () {
+          final (segments, params, isIndex, fileName) = PathParser.parsePath(
+            '(auth)/settings.[userId].profile.dart',
+          );
+
+          expect(segments, ['settings', ':userId', 'profile']);
+          expect(params.length, 1);
+          expect(params[0].name, 'userId');
+          expect(isIndex, false);
+          expect(fileName, 'profile');
+        });
+
+        test('parses index with dot notation', () {
+          final (segments, params, isIndex, fileName) = PathParser.parsePath(
+            'settings.index.dart',
+          );
+
+          expect(segments, ['settings']);
+          expect(params, isEmpty);
+          expect(isIndex, true);
+          expect(fileName, 'index');
+        });
+
+        test('parses multiple params with dot notation', () {
+          final (segments, params, isIndex, fileName) = PathParser.parsePath(
+            'users.[userId].posts.[postId].dart',
+          );
+
+          expect(segments, ['users', ':userId', 'posts', ':postId']);
+          expect(params.length, 2);
+          expect(params[0].name, 'userId');
+          expect(params[1].name, 'postId');
+          expect(isIndex, false);
+          expect(fileName, '[postId]');
+        });
+      });
     });
 
     group('parseLayoutPath', () {
@@ -202,6 +288,14 @@ void main() {
         );
 
         expect(segments, ['dashboard', 'weekly']);
+      });
+
+      test('parses layout path with dot notation', () {
+        final segments = PathParser.parseLayoutPath(
+          'settings.profile._layout.dart',
+        );
+
+        expect(segments, ['settings', 'profile']);
       });
     });
   });

@@ -26,7 +26,8 @@ class IndexRoute extends _$IndexRoute {
               ),
               const SizedBox(height: 12),
               ElevatedButton(
-                onPressed: () => coordinator.pushProfileId('user-123'),
+                onPressed: () =>
+                    coordinator.pushProfileId(profileId: 'user-123'),
                 child: const Text('Go to Profile'),
               ),
               const SizedBox(height: 12),
@@ -40,8 +41,94 @@ class IndexRoute extends _$IndexRoute {
                 child: const Text('Go to For you sheets'),
               ),
               const SizedBox(height: 24),
-              // Route Groups Demo
+              // Dot Notation Demo
               Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.teal.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.teal.shade200),
+                ),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Dot Notation Demo',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.teal,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Routes defined using dots instead of folders\n'
+                      'e.g., blog.[...slugs].dart → /blog/*',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      onPressed: () => coordinator.pushBlogSlugs(
+                        slugs: ['2024', '12', 'hello-world'],
+                      ),
+                      icon: const Icon(Icons.article),
+                      label: const Text('Blog Post (catch-all)'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.teal,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      onPressed: () =>
+                          coordinator.pushShopProductsProductIdReviews(
+                            productId: 'prod-456',
+                          ),
+                      icon: const Icon(Icons.reviews),
+                      label: const Text('Product Reviews'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.teal,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      onPressed: () => coordinator.pushSettingsAccountIndex(),
+                      icon: const Icon(Icons.settings),
+                      label: const Text('Account Settings'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.teal,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      onPressed: () => coordinator.pushForgotPassword(),
+                      icon: const Icon(Icons.lock_reset),
+                      label: const Text('Forgot Password'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.teal,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      onPressed: () => coordinator.pushCollectionsCollectionId(
+                        profileId: 'user-123',
+                        collectionId: 'col-789',
+                      ),
+                      icon: const Icon(Icons.collections),
+                      label: const Text('Collections (hybrid)'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.teal,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                margin: EdgeInsets.only(top: 16),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.purple.shade50,

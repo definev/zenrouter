@@ -175,6 +175,7 @@ class RouteGenerator extends GeneratorForAnnotation<ZenRoute> {
     if (route.hasRedirect) mixins.add('RouteRedirect<$routeBase>');
     if (route.deepLinkStrategy != null) mixins.add('RouteDeepLink');
     if (route.hasTransition) mixins.add('RouteTransition');
+    if (route.hasQueries) mixins.add('RouteQueryParameters');
 
     final mixinStr = mixins.isNotEmpty ? ' with ${mixins.join(', ')}' : '';
 
@@ -198,10 +199,12 @@ class RouteGenerator extends GeneratorForAnnotation<ZenRoute> {
       }
     }
 
-    // Generate queries field for query parameters (only if declared)
+    // Generate queryNotifier field for query parameters (overrides mixin)
     if (route.hasQueries) {
-      buffer.writeln('  /// Query parameters from the URI.');
-      buffer.writeln('  final Map<String, String> queries;');
+      buffer.writeln('  @override');
+      buffer.writeln(
+        '  late final ValueNotifier<Map<String, String>> queryNotifier;',
+      );
       buffer.writeln();
     }
 
@@ -212,7 +215,7 @@ class RouteGenerator extends GeneratorForAnnotation<ZenRoute> {
           .join(', ');
       if (route.hasQueries) {
         buffer.writeln(
-          '  ${route.generatedBaseClassName}({$paramsList, this.queries = const {}});',
+          '  ${route.generatedBaseClassName}({$paramsList, Map<String, String> queries = const {}}) : queryNotifier = ValueNotifier(queries);',
         );
       } else {
         buffer.writeln('  ${route.generatedBaseClassName}({$paramsList});');
@@ -220,7 +223,7 @@ class RouteGenerator extends GeneratorForAnnotation<ZenRoute> {
     } else {
       if (route.hasQueries) {
         buffer.writeln(
-          '  ${route.generatedBaseClassName}({this.queries = const {}});',
+          '  ${route.generatedBaseClassName}({Map<String, String> queries = const {}}) : queryNotifier = ValueNotifier(queries);',
         );
       } else {
         buffer.writeln('  ${route.generatedBaseClassName}();');
@@ -228,13 +231,7 @@ class RouteGenerator extends GeneratorForAnnotation<ZenRoute> {
     }
     buffer.writeln();
 
-    // Generate query() method to get individual query parameters (only if declared)
-    if (route.hasQueries) {
-      buffer.writeln('  /// Get a query parameter by name.');
-      buffer.writeln('  /// Returns null if the parameter is not present.');
-      buffer.writeln('  String? query(String name) => queries[name];');
-      buffer.writeln();
-    }
+    // query() method is inherited from RouteQueryParameter mixin
 
     // Generate layout getter if route has a parent layout
     if (route.parentLayoutType != null) {
@@ -260,21 +257,15 @@ class RouteGenerator extends GeneratorForAnnotation<ZenRoute> {
     }
     buffer.writeln();
 
-    // Generate props for equality (include queries if declared)
+    // Generate props for equality (path params only, NOT queries)
+    // Queries are intentionally excluded so that updating query params
+    // doesn't trigger route changes - same path = same route identity
     buffer.writeln('  @override');
     if (route.hasDynamicParameters) {
       final propsItems = route.parameters.map((p) => p.name).join(', ');
-      if (route.hasQueries) {
-        buffer.writeln('  List<Object?> get props => [$propsItems, queries];');
-      } else {
-        buffer.writeln('  List<Object?> get props => [$propsItems];');
-      }
+      buffer.writeln('  List<Object?> get props => [$propsItems];');
     } else {
-      if (route.hasQueries) {
-        buffer.writeln('  List<Object?> get props => [queries];');
-      } else {
-        buffer.writeln('  List<Object?> get props => [];');
-      }
+      buffer.writeln('  List<Object?> get props => [];');
     }
 
     // Generate deep link strategy getter if needed

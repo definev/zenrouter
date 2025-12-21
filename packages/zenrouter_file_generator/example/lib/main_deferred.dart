@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:zenrouter_file_generator_example/flutter_scan.dart';
 import 'routes/routes.zen.dart' deferred as routes hide AppCoordinatorNav;
 
 void main() {
-  runApp(const MyApp());
+  runApp(FlutterScan(child: const MyApp()));
 }
 
 class MyApp extends StatelessWidget {

@@ -476,27 +476,42 @@ class CoordinatorGenerator implements Builder {
   }
 
   String _getAliasImport(String path) {
-    // Performance optimization: single-pass character iteration instead of 7 replaceAll calls
+    // Performance optimization: single-pass character iteration
+    // Track bracket depth to preserve dots inside brackets (e.g., [...slugs])
     final buffer = StringBuffer();
+    int bracketDepth = 0;
+
     for (var i = 0; i < path.length; i++) {
       final char = path[i];
       switch (char) {
-        case '.':
-          if (i + 2 < path.length && path.substring(i, i + 3) == '...') {
-            buffer.write('_');
-            i += 2; // Skip the next two dots
-          } else if (i + 4 < path.length &&
-              path.substring(i, i + 5) == '.dart') {
-            // Skip .dart extension at end
-            i += 4;
-          } else {
-            buffer.write(char);
-          }
-        case '/':
         case '[':
-        case '(':
+          bracketDepth++;
           buffer.write('_');
         case ']':
+          bracketDepth--;
+          // Skip closing bracket
+          break;
+        case '.':
+          if (bracketDepth > 0) {
+            // Inside brackets: check for rest parameter ...
+            if (i + 2 < path.length && path.substring(i, i + 3) == '...') {
+              buffer.write('_');
+              i += 2; // Skip the next two dots
+            }
+            // Otherwise skip single dots inside brackets
+          } else {
+            // Outside brackets: check for .dart extension
+            if (i + 4 < path.length && path.substring(i, i + 5) == '.dart') {
+              // Skip .dart extension
+              i += 4;
+            } else {
+              // Dot outside brackets becomes underscore (path separator)
+              buffer.write('_');
+            }
+          }
+        case '/':
+        case '(':
+          buffer.write('_');
         case ')':
         case '-':
           // Skip these characters
@@ -867,20 +882,20 @@ class CoordinatorGenerator implements Builder {
     final params = <String>[];
     final args = <String>[];
 
-    // Add path parameters
+    // Add path parameters as named parameters
     for (final param in route.parameters) {
       switch (param.isRest) {
         case true:
-          params.add('List<String> ${param.name}');
+          params.add('required List<String> ${param.name}');
         case false:
-          params.add('String ${param.name}');
+          params.add('required String ${param.name}');
       }
       args.add('${param.name}: ${param.name}');
     }
 
     // Add optional query parameters only if route expects them
     if (route.hasQueries) {
-      params.add('[Map<String, String> queries = const {}]');
+      params.add('Map<String, String> queries = const {}');
       args.add('queries: queries');
     }
 
@@ -899,14 +914,14 @@ class CoordinatorGenerator implements Builder {
     String? deferredImportPath,
   }) {
     final methodName = '$navMethod$baseMethodName';
-    final paramsStr = params.join(', ');
+    final paramsStr = params.isEmpty ? '' : '{${params.join(', ')}}';
     final argsStr = args.join(', ');
 
     final genericStr = generic != null ? '<$generic>' : '';
 
     String routeInstance = '';
     String arrowFunction = '';
-    if (paramsStr.isNotEmpty) {
+    if (args.isNotEmpty) {
       routeInstance = '$routeClassName($argsStr)';
     } else {
       routeInstance = '$routeClassName()';
@@ -941,10 +956,10 @@ class CoordinatorGenerator implements Builder {
     String? deferredImportPath,
   }) {
     final methodName = 'recover$baseMethodName';
-    final paramsStr = params.join(', ');
+    final paramsStr = params.isEmpty ? '' : '{${params.join(', ')}}';
     final argsStr = args.join(', ');
     String routeInstance = '';
-    if (paramsStr.isEmpty) {
+    if (args.isEmpty) {
       routeInstance = '$routeClassName()';
     } else {
       routeInstance = '$routeClassName($argsStr)';

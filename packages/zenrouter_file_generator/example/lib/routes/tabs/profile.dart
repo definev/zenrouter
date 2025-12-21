@@ -19,7 +19,8 @@ class TabProfileRoute extends _$TabProfileRoute {
           const Text('Profile Tab', style: TextStyle(fontSize: 24)),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () => coordinator.pushProfileId('current-user'),
+            onPressed: () =>
+                coordinator.pushProfileId(profileId: 'current-user'),
             child: const Text('View Full Profile'),
           ),
         ],

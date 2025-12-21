@@ -17,11 +17,12 @@ class PathParser {
     final segments = <String>[];
     final params = <ParamInfo>[];
 
-    // Remove .dart extension
+    // Remove .dart extension and normalize dot-notation
     var path = relativePath;
     if (path.endsWith('.dart')) {
       path = path.substring(0, path.length - 5);
     }
+    path = _normalizeFilePath(path);
 
     final parts = path.split('/').where((p) => p.isNotEmpty).toList();
     final fileName = parts.isNotEmpty ? parts.last : '';
@@ -82,11 +83,12 @@ class PathParser {
   static List<String> parseLayoutPath(String relativePath) {
     final segments = <String>[];
 
-    // Remove .dart extension and _layout
+    // Remove .dart extension and _layout, then normalize dot-notation
     var path = relativePath;
     if (path.endsWith('.dart')) {
       path = path.substring(0, path.length - 5);
     }
+    path = _normalizeFilePath(path);
     if (path.endsWith('/_layout')) {
       path = path.substring(0, path.length - 8);
     }
@@ -100,6 +102,40 @@ class PathParser {
     }
 
     return segments;
+  }
+
+  /// Normalize a file path that may contain dot-notation segments.
+  ///
+  /// Converts dot-notation to folder structure:
+  /// - `docs.[id].detail` → `docs/[id]/detail`
+  /// - `feed/tab/[id].detail` → `feed/tab/[id]/detail` (hybrid)
+  ///
+  /// Rules:
+  /// - Dots inside brackets are preserved: `[...slugs]` stays as `[...slugs]`
+  /// - Dots outside brackets become `/` separators
+  /// - Works with hybrid paths mixing `/` and `.`
+  static String _normalizeFilePath(String path) {
+    final buffer = StringBuffer();
+    int bracketDepth = 0;
+
+    for (int i = 0; i < path.length; i++) {
+      final char = path[i];
+
+      if (char == '[') {
+        bracketDepth++;
+        buffer.write(char);
+      } else if (char == ']') {
+        bracketDepth--;
+        buffer.write(char);
+      } else if (char == '.' && bracketDepth == 0) {
+        // Dot outside brackets becomes a path separator
+        buffer.write('/');
+      } else {
+        buffer.write(char);
+      }
+    }
+
+    return buffer.toString();
   }
 }
 

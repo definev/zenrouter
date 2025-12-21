@@ -17,7 +17,7 @@ class FollowingRoute extends _$FollowingRoute {
           return ListTile(
             title: Text('Post ${index + 1}'),
             subtitle: const Text('Tap to view details'),
-            onTap: () => coordinator.pushFeedPost('post-$index'),
+            onTap: () => coordinator.pushFeedPost(postId: 'post-$index'),
           );
         },
       ),
