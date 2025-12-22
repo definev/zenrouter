@@ -23,7 +23,7 @@ The imperative paradigm gives you full, explicit control over the navigation sta
 In imperative navigation, you work directly with a `NavigationPath` - a stack-based container for routes. You push routes onto the stack, pop them off, and replace the entire stack as needed.
 
 ```dart
-final path = NavigationPath<RouteTarget>();
+final path = NavigationPath<RouteTarget>.create();
 // Or: StackPath.navigationStack<RouteTarget>()
 
 // Push a route
@@ -262,7 +262,7 @@ class SuccessStep extends OnboardingRoute {
 
 ```dart
 // Global navigation path for onboarding
-final onboardingPath = NavigationPath<OnboardingRoute>();
+final onboardingPath = NavigationPath<OnboardingRoute>.create();
 // Or: StackPath.navigationStack<OnboardingRoute>()
 ```
 

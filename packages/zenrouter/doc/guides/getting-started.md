@@ -350,7 +350,7 @@ NavigationStack.declarative(
 )
 
 // Use imperative for a modal flow (event-driven)
-final modalPath = NavigationPath<ModalRoute>();
+final modalPath = NavigationPath<ModalRoute>.create();
 modalPath.push(Step1Route());
 ```
 

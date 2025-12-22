@@ -1,3 +1,6 @@
+## 0.4.6
+- **Docs**: Update README and add screenshots
+
 ## 0.4.5
 - **Feat**: Add `RouteQueryParameters` mixin for targeted query parameter updates using `ValueNotifier`.
 - **Fix**: Ensure `path` is set for `RouteTarget` when initial `IndexedStackPath`.

@@ -513,8 +513,14 @@ class AppCoordinator extends Coordinator<AppRoute> {
       ProfileLayout(),
     ],
   );
-  final feedNavigation = NavigationPath<AppRoute>();
-  final profileNavigation = NavigationPath<AppRoute>();
+  late final feedNavigation = NavigationPath<AppRoute>.createWith(
+    coordinator: this,
+    label: 'feed',
+  );
+  late final profileNavigation = NavigationPath<AppRoute>.createWith(
+    coordinator: this,
+    label: 'profile',
+  );
 
   @override
   List<StackPath<RouteTarget>> get paths => [

@@ -1,3 +1,6 @@
+## 0.4.6
+- **Docs**: Update README and add screenshots
+
 ## 0.4.5
 - Support new `RouteQueryParameters` and new dot notation flavor in naming convention.
 

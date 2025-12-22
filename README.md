@@ -56,7 +56,7 @@ This monorepo contains:
 
 ```dart
 // Imperative: Direct control
-final path = NavigationPath<AppRoute>();
+final path = NavigationPath<AppRoute>.create();
 path.push(ProfileRoute());
 
 // Declarative: State-driven

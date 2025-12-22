@@ -1,3 +1,6 @@
+## 0.4.7
+- **Docs**: Update README and add screenshots
+
 ## 0.4.6
 - Downgrade `analyzer` to `^8.0.0` for compatibility.
 

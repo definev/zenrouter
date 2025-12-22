@@ -1,3 +1,6 @@
+## 0.4.1
+- **Docs**: Update README and add screenshots
+
 ## 0.4.0
 - Create `example` app
 - Update README.md
