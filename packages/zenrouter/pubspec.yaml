@@ -17,7 +17,7 @@ topics:
   - web
 
 screenshots:
-  - description: "Zen Logo"
+  - description: "Zen Logo for ZenRouter"
     path: screenshots/logo_light.png
 
 environment:
