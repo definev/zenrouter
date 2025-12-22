@@ -5,17 +5,11 @@ import '../coordinator_debug.dart';
 import '../widgets/badges.dart';
 import '../widgets/buttons.dart';
 import '../widgets/debug_theme.dart';
-import '../widgets/toast.dart';
 
 class PathListView<T extends RouteUnique> extends StatelessWidget {
-  const PathListView({
-    super.key,
-    required this.coordinator,
-    required this.onShowToast,
-  });
+  const PathListView({super.key, required this.coordinator});
 
   final CoordinatorDebug<T> coordinator;
-  final void Function(String message, {ToastType type}) onShowToast;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +29,6 @@ class PathListView<T extends RouteUnique> extends StatelessWidget {
               path: path,
               isActive: isActive,
               isReadOnly: isReadOnly,
-              onShowToast: onShowToast,
             );
           },
         );
@@ -50,14 +43,12 @@ class _PathItemView<T extends RouteUnique> extends StatelessWidget {
     required this.path,
     required this.isActive,
     required this.isReadOnly,
-    required this.onShowToast,
   });
 
   final CoordinatorDebug<T> coordinator;
   final StackPath path;
   final bool isActive;
   final bool isReadOnly;
-  final void Function(String message, {ToastType type}) onShowToast;
 
   @override
   Widget build(BuildContext context) {
@@ -122,23 +113,7 @@ class _PathItemView<T extends RouteUnique> extends StatelessWidget {
               onTap:
                   path.stack.length > 1
                       ? () async {
-                        final route = path.stack.last;
                         await (path as NavigationPath).pop();
-                        final routeName = () {
-                          try {
-                            if (route is RouteLayout) {
-                              final shellPath = route.resolvePath(coordinator);
-                              final debugLabel = coordinator.debugLabel(
-                                shellPath,
-                              );
-                              return 'all $debugLabel';
-                            }
-                            return (route as RouteLayout).toUri();
-                          } catch (_) {
-                            return route.toString();
-                          }
-                        }();
-                        onShowToast('Popped $routeName', type: ToastType.pop);
                       }
                       : null,
               color:
@@ -163,7 +138,6 @@ class _PathItemView<T extends RouteUnique> extends StatelessWidget {
           routeIndex: routeIndex,
           isRouteActive: isRouteActive,
           readOnlyPath: indexedPath,
-          onShowToast: onShowToast,
         );
       }).toList();
     }
@@ -178,7 +152,6 @@ class _PathItemView<T extends RouteUnique> extends StatelessWidget {
         isTop: isTop,
         isRouteActive: isRouteActive,
         path: path,
-        onShowToast: onShowToast,
       );
     }).toList();
   }
@@ -190,14 +163,12 @@ class _ReadOnlyRouteItem extends StatefulWidget {
     required this.routeIndex,
     required this.isRouteActive,
     required this.readOnlyPath,
-    required this.onShowToast,
   });
 
   final RouteUnique route;
   final int routeIndex;
   final bool isRouteActive;
   final IndexedStackPath readOnlyPath;
-  final void Function(String message, {ToastType type}) onShowToast;
 
   @override
   State<_ReadOnlyRouteItem> createState() => _ReadOnlyRouteItemState();
@@ -213,15 +184,7 @@ class _ReadOnlyRouteItemState extends State<_ReadOnlyRouteItem> {
       onExit: (_) => setState(() => _isHovered = false),
       child: GestureDetector(
         onTap: () async {
-          try {
-            await widget.readOnlyPath.goToIndexed(widget.routeIndex);
-            widget.onShowToast(
-              'Navigated to ${widget.route}',
-              type: ToastType.push,
-            );
-          } catch (e) {
-            widget.onShowToast('Error: $e', type: ToastType.error);
-          }
+          await widget.readOnlyPath.goToIndexed(widget.routeIndex);
         },
         child: Container(
           padding: const EdgeInsets.only(
@@ -288,14 +251,12 @@ class _NavigationRouteItem extends StatelessWidget {
     required this.isTop,
     required this.isRouteActive,
     required this.path,
-    required this.onShowToast,
   });
 
   final RouteUnique route;
   final bool isTop;
   final bool isRouteActive;
   final StackPath path;
-  final void Function(String message, {ToastType type}) onShowToast;
 
   @override
   Widget build(BuildContext context) {
@@ -342,7 +303,6 @@ class _NavigationRouteItem extends StatelessWidget {
                   path.stack.length > 1
                       ? () {
                         (path as NavigationPath).remove(route);
-                        onShowToast('Removed $route', type: ToastType.remove);
                       }
                       : null,
               color: const Color(0xFFEF9A9A),

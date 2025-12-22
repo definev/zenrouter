@@ -4,17 +4,11 @@ import 'package:zenrouter/zenrouter.dart';
 import '../coordinator_debug.dart';
 import '../widgets/buttons.dart';
 import '../widgets/debug_theme.dart';
-import '../widgets/toast.dart';
 
 class DebugRoutesListView<T extends RouteUnique> extends StatelessWidget {
-  const DebugRoutesListView({
-    super.key,
-    required this.coordinator,
-    required this.onShowToast,
-  });
+  const DebugRoutesListView({super.key, required this.coordinator});
 
   final CoordinatorDebug<T> coordinator;
-  final void Function(String message, {ToastType type}) onShowToast;
 
   @override
   Widget build(BuildContext context) {
@@ -37,11 +31,7 @@ class DebugRoutesListView<T extends RouteUnique> extends StatelessWidget {
       itemCount: coordinator.debugRoutes.length,
       itemBuilder: (context, index) {
         final route = coordinator.debugRoutes[index];
-        return DebugRouteItem<T>(
-          route: route,
-          coordinator: coordinator,
-          onShowToast: onShowToast,
-        );
+        return DebugRouteItem<T>(route: route, coordinator: coordinator);
       },
     );
   }
@@ -52,12 +42,10 @@ class DebugRouteItem<T extends RouteUnique> extends StatelessWidget {
     super.key,
     required this.route,
     required this.coordinator,
-    required this.onShowToast,
   });
 
   final T route;
   final CoordinatorDebug<T> coordinator;
-  final void Function(String message, {ToastType type}) onShowToast;
 
   String get _status {
     try {
@@ -112,7 +100,6 @@ class DebugRouteItem<T extends RouteUnique> extends StatelessWidget {
             icon: CupertinoIcons.add,
             onTap: () {
               coordinator.push(route);
-              onShowToast('Pushed $route', type: ToastType.push);
             },
           ),
           const SizedBox(width: DebugTheme.spacingXs),
@@ -120,7 +107,6 @@ class DebugRouteItem<T extends RouteUnique> extends StatelessWidget {
             icon: CupertinoIcons.arrow_swap,
             onTap: () {
               coordinator.replace(route);
-              onShowToast('Replaced with $route', type: ToastType.replace);
             },
           ),
           const SizedBox(width: DebugTheme.spacingXs),
@@ -128,7 +114,6 @@ class DebugRouteItem<T extends RouteUnique> extends StatelessWidget {
             icon: CupertinoIcons.link,
             onTap: () {
               coordinator.recover(route);
-              onShowToast('Recover $route', type: ToastType.replace);
             },
           ),
         ],

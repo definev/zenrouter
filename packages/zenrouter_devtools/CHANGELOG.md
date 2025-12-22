@@ -1,3 +1,6 @@
+## 0.4.3 
+- Remove toast notifications
+
 ## 0.4.2
 - **Docs**: Update README
 

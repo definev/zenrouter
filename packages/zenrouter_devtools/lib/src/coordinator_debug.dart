@@ -1,9 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:zenrouter/zenrouter.dart';
-import 'package:zentoast/zentoast.dart';
 
 import 'debug_overlay.dart';
-import 'widgets/widgets.dart';
 
 /// Mixin to add debug capabilities to a [Coordinator].
 ///
@@ -107,65 +105,44 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   Widget layoutBuilder(BuildContext context) {
     if (!debugEnabled) return super.layoutBuilder(context);
 
-    return ToastProvider.create(
-      child: Stack(
-        children: [
-          Builder(builder: (context) => super.layoutBuilder(context)),
-          SafeArea(
-            child: ToastThemeProvider(
-              data: ToastTheme(
-                viewerPadding: const EdgeInsets.only(
-                  top: DebugTheme.spacingLg,
-                  left: DebugTheme.spacingLg,
-                  right: DebugTheme.spacingLg,
-                ),
-                gap: DebugTheme.spacing,
-              ),
-              child: const ToastViewer(
-                delay: Duration(seconds: 3),
-                width: 420,
-                alignment: Alignment.topRight,
-              ),
-            ),
-          ),
-          Overlay(
-            initialEntries: [
-              OverlayEntry(
-                builder:
-                    (context) => MediaQuery.fromView(
-                      view: View.of(context),
-                      child: DefaultTextStyle(
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
-                          fontFamily: 'Inter',
-                          height: 1.4,
-                          decoration: TextDecoration.none,
-                        ),
-                        child: Builder(
-                          builder: (context) {
-                            final viewInsets = MediaQuery.viewInsetsOf(context);
-                            final viewPadding = MediaQuery.viewPaddingOf(
-                              context,
-                            );
-                            return Padding(
-                              padding: EdgeInsets.only(
-                                bottom: switch (viewInsets.bottom) {
-                                  > 0 => viewInsets.bottom,
-                                  _ => viewPadding.bottom,
-                                },
-                              ),
-                              child: DebugOverlay(coordinator: this),
-                            );
-                          },
-                        ),
+    return Stack(
+      children: [
+        Builder(builder: (context) => super.layoutBuilder(context)),
+        Overlay(
+          initialEntries: [
+            OverlayEntry(
+              builder:
+                  (context) => MediaQuery.fromView(
+                    view: View.of(context),
+                    child: DefaultTextStyle(
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        fontFamily: 'Inter',
+                        height: 1.4,
+                        decoration: TextDecoration.none,
+                      ),
+                      child: Builder(
+                        builder: (context) {
+                          final viewInsets = MediaQuery.viewInsetsOf(context);
+                          final viewPadding = MediaQuery.viewPaddingOf(context);
+                          return Padding(
+                            padding: EdgeInsets.only(
+                              bottom: switch (viewInsets.bottom) {
+                                > 0 => viewInsets.bottom,
+                                _ => viewPadding.bottom,
+                              },
+                            ),
+                            child: DebugOverlay(coordinator: this),
+                          );
+                        },
                       ),
                     ),
-              ),
-            ],
-          ),
-        ],
-      ),
+                  ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
