@@ -138,6 +138,30 @@ class NormalNavigationLayout extends ErrorTestRoute
   List<Object?> get props => [];
 }
 
+/// Route that is NOT in the IndexedStackPath but uses the same layout
+class MissingTabRoute extends ErrorTestRoute {
+  @override
+  Type get layout => NormalIndexedStackLayout;
+
+  @override
+  Uri toUri() => Uri.parse('/missing-tab');
+
+  @override
+  Widget build(
+    covariant ErrorTestCoordinator coordinator,
+    BuildContext context,
+  ) {
+    return const Scaffold(
+      key: ValueKey('missing-tab'),
+      body: Text('Missing Tab'),
+    );
+  }
+
+  @override
+  List<Object?> get props => [];
+}
+
+
 /// Test coordinator
 class ErrorTestCoordinator extends Coordinator<ErrorTestRoute> {
   late final UnregisteredCustomPath<ErrorTestRoute> testStack =
@@ -158,6 +182,10 @@ class ErrorTestCoordinator extends Coordinator<ErrorTestRoute> {
     RouteLayout.defineLayout(
       MockUnregisteredPathLayout,
       () => MockUnregisteredPathLayout(),
+    );
+    RouteLayout.defineLayout(
+      NormalIndexedStackLayout,
+      () => NormalIndexedStackLayout(),
     );
   }
 
@@ -687,6 +715,113 @@ void main() {
           () => route.popGuardWith(coordinator2),
           throwsA(isA<AssertionError>()),
         );
+      },
+    );
+  });
+
+  group('IndexedStackPath Missing Route Tests', () {
+    test(
+      'resolveLayout throws AssertionError when route not in IndexedStackPath',
+      () {
+        final coordinator = ErrorTestCoordinator();
+        final missingRoute = MissingTabRoute();
+
+        // Attempting to resolve layout for a route that's not in the IndexedStackPath
+        // should trigger an assertion error
+        expect(
+          () => missingRoute.resolveLayout(coordinator),
+          throwsA(
+            isA<AssertionError>().having(
+              (e) => e.message.toString(),
+              'message',
+              allOf([
+                contains('MissingTabRoute'),
+                contains('IndexedStackPath'),
+                contains('not present in the initial stack'),
+                contains('root'), // The label of the indexed stack
+                contains('Fix:'),
+                contains('IndexedStackPath.createWith'),
+              ]),
+            ),
+          ),
+        );
+      },
+    );
+
+    testWidgets(
+      'navigate fails gracefully when route not in IndexedStackPath (production mode)',
+      (tester) async {
+        final coordinator = ErrorTestCoordinator();
+
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerDelegate: coordinator.routerDelegate,
+            routeInformationParser: coordinator.routeInformationParser,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // In production mode (assertions disabled), navigate should fail gracefully
+        // This simulates what would happen if someone bypassed the assertion
+        // The test runs with assertions enabled, so we test the guard in navigate()
+        
+        // First establish the IndexedStackPath layout
+        coordinator.push(NormalIndexedStackLayout());
+        await tester.pumpAndSettle();
+
+        // Now directly call navigate with a route not in the stack
+        // This would bypass the resolveLayout check in some scenarios
+        final missingRoute = MissingTabRoute();
+        
+        // Create the layout manually to bypass resolveLayout assertion
+        final layout = NormalIndexedStackLayout();
+        final path = layout.resolvePath(coordinator);
+        
+        // Verify the route is not in the stack
+        expect(path.stack.any((r) => r.runtimeType == MissingTabRoute), isFalse);
+        
+        // The navigate method should handle this gracefully and not crash
+        await coordinator.navigate(missingRoute);
+        await tester.pumpAndSettle();
+
+        // Verify no crash occurred and the UI is still functional
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    test(
+      'assertion message includes helpful information',
+      () {
+        final coordinator = ErrorTestCoordinator();
+        final missingRoute = MissingTabRoute();
+
+        try {
+          missingRoute.resolveLayout(coordinator);
+          fail('Should have thrown AssertionError');
+        } on AssertionError catch (e) {
+          final message = e.message.toString();
+          
+          // Should mention the route type
+          expect(message, contains('MissingTabRoute'));
+          
+          // Should mention IndexedStackPath
+          expect(message, contains('IndexedStackPath'));
+          
+          // Should show the path label
+          expect(message, contains('root'));
+          
+          // Should explain the problem
+          expect(message, contains('not present in the initial stack'));
+          
+          // Should show current stack contents
+          expect(message, contains('Current stack'));
+          expect(message, contains('SimpleErrorRoute'));
+          
+          // Should provide a fix with code example
+          expect(message, contains('Fix:'));
+          expect(message, contains('IndexedStackPath.createWith'));
+          expect(message, contains('MissingTabRoute()'));
+        }
       },
     );
   });
