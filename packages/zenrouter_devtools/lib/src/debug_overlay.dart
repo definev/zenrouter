@@ -156,16 +156,12 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
                   Expanded(
                     child: switch (_selectedTabIndex) {
                       0 => ProblemsTab<T>(coordinator: widget.coordinator),
-                      1 => PathListView<T>(
-                        coordinator: widget.coordinator,
-                        onShowToast: _showToast,
-                      ),
+                      1 => PathListView<T>(coordinator: widget.coordinator),
                       2 => ActiveLayoutsListView<T>(
                         coordinator: widget.coordinator,
                       ),
                       _ => DebugRoutesListView<T>(
                         coordinator: widget.coordinator,
-                        onShowToast: _showToast,
                       ),
                     },
                   ),
@@ -357,42 +353,23 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
 
   void _pushUri(String uriString) async {
     if (uriString.isEmpty) return;
-    try {
-      final uri = Uri.parse(uriString);
-      final route = await widget.coordinator.parseRouteFromUri(uri);
-      widget.coordinator.push(route);
-      _showToast('Navigated to $uriString', type: ToastType.push);
-    } catch (e) {
-      _showToast('Error: $e', type: ToastType.error);
-    }
+    final uri = Uri.parse(uriString);
+    final route = await widget.coordinator.parseRouteFromUri(uri);
+    widget.coordinator.push(route);
   }
 
   void _replaceUri(String uriString) async {
     if (uriString.isEmpty) return;
-    try {
-      final uri = Uri.parse(uriString);
-      final route = await widget.coordinator.parseRouteFromUri(uri);
-      widget.coordinator.replace(route);
-      _showToast('Replaced with $uriString', type: ToastType.replace);
-    } catch (e) {
-      _showToast('Error: $e', type: ToastType.error);
-    }
+    final uri = Uri.parse(uriString);
+    final route = await widget.coordinator.parseRouteFromUri(uri);
+    widget.coordinator.replace(route);
   }
 
   void _recoverUri(String uriString) async {
     if (uriString.isEmpty) return;
-    try {
-      final uri = Uri.parse(uriString);
-      final route = await widget.coordinator.parseRouteFromUri(uri);
-      widget.coordinator.recover(route);
-      _showToast('Recover with $uriString', type: ToastType.replace);
-    } catch (e) {
-      _showToast('Error: $e', type: ToastType.error);
-    }
-  }
-
-  void _showToast(String message, {ToastType type = ToastType.info}) {
-    showDebugToast(context, message, type: type);
+    final uri = Uri.parse(uriString);
+    final route = await widget.coordinator.parseRouteFromUri(uri);
+    widget.coordinator.recover(route);
   }
 }
 
