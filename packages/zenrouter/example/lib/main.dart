@@ -31,74 +31,81 @@ class CustomLayout extends AppRoute with RouteLayout<AppRoute> {
   Widget build(AppCoordinator coordinator, BuildContext context) {
     final path = resolvePath(coordinator);
     final size = MediaQuery.sizeOf(context);
-    return Scaffold(
-      body: switch (size.width) {
-        < 600 => Column(
-          children: [
-            Expanded(child: buildPath(coordinator)),
-            Container(
-              height: 60,
-              color: Colors.yellow,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  ElevatedButton(
-                    child: Text('One'),
-                    onPressed: () => coordinator.push(FirstLayout()),
-                  ),
-                  ElevatedButton(
-                    child: Text('Two'),
-                    onPressed: () => coordinator.push(SecondTab()),
-                  ),
-                  ElevatedButton(
-                    child: Text('Three'),
-                    onPressed: () => coordinator.push(ThirdTab()),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        _ => Column(
-          children: [
-            Expanded(
-              child: switch (path.activeRoute) {
-                ThirdTab() => path.activeRoute!.build(coordinator, context),
-                _ => Row(
+    return ListenableBuilder(
+      listenable: path,
+      builder: (context, child) => Scaffold(
+        body: switch (size.width) {
+          < 600 => Column(
+            children: [
+              Expanded(child: buildPath(coordinator)),
+              Container(
+                height: 60,
+                color: Colors.yellow,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    Expanded(child: path.stack[0].build(coordinator, context)),
-                    VerticalDivider(width: 1, color: Colors.amber),
-                    Expanded(child: path.stack[1].build(coordinator, context)),
+                    ElevatedButton(
+                      child: Text('One'),
+                      onPressed: () => coordinator.push(FirstLayout()),
+                    ),
+                    ElevatedButton(
+                      child: Text('Two'),
+                      onPressed: () => coordinator.push(SecondTab()),
+                    ),
+                    ElevatedButton(
+                      child: Text('Three'),
+                      onPressed: () => coordinator.push(ThirdTab()),
+                    ),
                   ],
                 ),
-              },
-            ),
-            Container(
-              height: 60,
-              color: Colors.yellow,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  ElevatedButton(
-                    child: Text('One/Two'),
-                    onPressed: () {
-                      if (path.activeRoute is FirstLayout) {
-                        coordinator.push(SecondTab());
-                      } else {
-                        coordinator.push(FirstLayout());
-                      }
-                    },
-                  ),
-                  ElevatedButton(
-                    child: Text('Three'),
-                    onPressed: () => coordinator.push(ThirdTab()),
-                  ),
-                ],
               ),
-            ),
-          ],
-        ),
-      },
+            ],
+          ),
+          _ => Column(
+            children: [
+              Expanded(
+                child: switch (path.activeRoute) {
+                  ThirdTab() => path.activeRoute!.build(coordinator, context),
+                  _ => Row(
+                    children: [
+                      Expanded(
+                        child: path.stack[0].build(coordinator, context),
+                      ),
+                      VerticalDivider(width: 1, color: Colors.amber),
+                      Expanded(
+                        child: path.stack[1].build(coordinator, context),
+                      ),
+                    ],
+                  ),
+                },
+              ),
+              Container(
+                height: 60,
+                color: Colors.yellow,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    ElevatedButton(
+                      child: Text('One/Two'),
+                      onPressed: () {
+                        if (path.activeRoute is FirstLayout) {
+                          coordinator.push(SecondTab());
+                        } else {
+                          coordinator.push(FirstLayout());
+                        }
+                      },
+                    ),
+                    ElevatedButton(
+                      child: Text('Three'),
+                      onPressed: () => coordinator.push(ThirdTab()),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        },
+      ),
     );
   }
 }
@@ -113,6 +120,25 @@ class FirstLayout extends AppRoute with RouteLayout {
   @override
   NavigationPath<AppRoute> resolvePath(AppCoordinator coordinator) =>
       coordinator.firstStack;
+
+  @override
+  Widget build(AppCoordinator coordinator, BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) {
+        if (coordinator.customIndexed.activeIndex != 0) {
+          coordinator.customIndexed.goToIndexed(0);
+        }
+      },
+      child: Listener(
+        onPointerSignal: (_) {
+          if (coordinator.customIndexed.activeIndex != 0) {
+            coordinator.customIndexed.goToIndexed(0);
+          }
+        },
+        child: super.build(coordinator, context),
+      ),
+    );
+  }
 }
 
 class FirstTab extends AppRoute {
@@ -124,28 +150,34 @@ class FirstTab extends AppRoute {
 
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
-    final activeIndex = coordinator.customIndexed.activeIndex;
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          spacing: 8,
-          children: [
-            Text(
-              'First page ${activeIndex == 0 ? '(Focused)' : '(No focused)'}',
+    return ListenableBuilder(
+      listenable: coordinator.customIndexed,
+      builder: (context, child) {
+        final activeIndex = coordinator.customIndexed.activeIndex;
+        return Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 8,
+              children: [
+                Text(
+                  'First page ${activeIndex == 0 ? '(Focused)' : '(No focused)'}',
+                ),
+                FilledButton(
+                  onPressed: () =>
+                      coordinator.push(FirstTabChild(message: "Hello")),
+                  child: Text('Go "Hello"'),
+                ),
+                FilledButton(
+                  onPressed: () =>
+                      coordinator.push(FirstTabChild(message: "Ciao")),
+                  child: Text('Go "Ciao"'),
+                ),
+              ],
             ),
-            FilledButton(
-              onPressed: () =>
-                  coordinator.push(FirstTabChild(message: "Hello")),
-              child: Text('Go "Hello"'),
-            ),
-            FilledButton(
-              onPressed: () => coordinator.push(FirstTabChild(message: "Ciao")),
-              child: Text('Go "Ciao"'),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
@@ -192,14 +224,33 @@ class SecondTab extends AppRoute {
 
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
-    final activeIndex = coordinator.customIndexed.activeIndex;
-    return Scaffold(
-      backgroundColor: Colors.red.shade100,
-      body: Center(
-        child: Text(
-          'Second tab (${activeIndex == 1 ? 'Focused' : 'No focused'})',
-        ),
-      ),
+    return ListenableBuilder(
+      listenable: coordinator.customIndexed,
+      builder: (context, child) {
+        final activeIndex = coordinator.customIndexed.activeIndex;
+        return MouseRegion(
+          onEnter: (_) {
+            if (coordinator.customIndexed.activeIndex != 1) {
+              coordinator.customIndexed.goToIndexed(1);
+            }
+          },
+          child: Listener(
+            onPointerSignal: (_) {
+              if (coordinator.customIndexed.activeIndex != 1) {
+                coordinator.customIndexed.goToIndexed(1);
+              }
+            },
+            child: Scaffold(
+              backgroundColor: Colors.red.shade100,
+              body: Center(
+                child: Text(
+                  'Second tab (${activeIndex == 1 ? 'Focused' : 'No focused'})',
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
