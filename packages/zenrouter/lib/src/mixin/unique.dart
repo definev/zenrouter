@@ -32,11 +32,44 @@ mixin RouteUnique on RouteTarget {
     if (layout == null) return null;
     final layouts = coordinator.activeLayouts;
     if (layouts.isEmpty && layout == null) return null;
+
+    // Find existing layout or create new one
+    RouteLayout? resolvedLayout;
     for (var i = layouts.length - 1; i >= 0; i -= 1) {
       final l = layouts[i];
-      if (l.runtimeType == layout) return l;
+      if (l.runtimeType == layout) {
+        resolvedLayout = l;
+        break;
+      }
     }
-    return createLayout(coordinator);
+    resolvedLayout ??= createLayout(coordinator);
+
+    // Validate that routes using IndexedStackPath are in the initial stack
+    // Using assert with closure to ensure all validation logic is removed in production
+    assert(() {
+      final path = resolvedLayout!.resolvePath(coordinator);
+      if (path is IndexedStackPath) {
+        final routeInStack = path.stack.any(
+          (r) => r.runtimeType == runtimeType,
+        );
+        if (!routeInStack) {
+          throw AssertionError(
+            'Route [$runtimeType] uses an IndexedStackPath layout but is not present in the initial stack.\n'
+            'IndexedStackPath: ${path.debugLabel ?? 'unlabeled'}\n'
+            'Current stack: ${path.stack.map((r) => r.runtimeType).toList()}\n\n'
+            'Fix: Add an instance of [$runtimeType] to the IndexedStackPath when creating it:\n'
+            '  IndexedStackPath.createWith(\n'
+            '    [...existing routes..., $runtimeType()],\n'
+            '    coordinator: this,\n'
+            '    label: \'${path.debugLabel ?? 'your-label'}\',\n'
+            '  )',
+          );
+        }
+      }
+      return true;
+    }());
+
+    return resolvedLayout;
   }
 
   /// Builds the widget for this route.

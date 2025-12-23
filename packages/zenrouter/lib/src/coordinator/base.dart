@@ -481,6 +481,13 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
           notifyListeners();
           return;
         }
+
+        if (routeIndex == -1) {
+          // Route not found in IndexedStackPath - restore the URL to current state
+          notifyListeners();
+          return;
+        }
+
         final existingRoute = routePath.stack[routeIndex];
         if (existingRoute is RouteQueryParameters &&
             route is RouteQueryParameters) {
