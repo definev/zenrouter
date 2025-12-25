@@ -69,6 +69,9 @@ abstract class RouteTarget extends Equatable {
   /// DO NOT USE THIS MANUALLY. USE [completeOnResult] instead.
   Completer<Object?> get onResult => _onResult;
 
+  /// The ID used for restoration.
+  String? get restorationId => null;
+
   /// The [StackPath] that currently contains this route.
   ///
   /// This is set when the route is pushed onto a path and cleared when popped.
