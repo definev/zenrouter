@@ -115,30 +115,7 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
   }
 
   @override
-  Future<void> setRestoredRoutePath(Uri configuration) async {
-    final coordinatorRestoration = _coordinatorRestorableKey.currentState!;
-    final bucket = coordinatorRestoration.bucket!;
-    final activeRoute = bucket.read('_activeRoute');
-    if (activeRoute is String) {
-      final sanitizedConfiguration = configuration.replace(
-        host: '',
-        scheme: '',
-      );
-      final activeRouteUri = Uri.tryParse(
-        activeRoute,
-      )?.replace(host: '', scheme: '');
-      if (sanitizedConfiguration == activeRouteUri) {
-        return;
-      }
-
-      /// Clear all restoration data since it's no longer valid
-      for (final path in coordinator.paths) {
-        path.reset();
-      }
-    }
-
-    return setNewRoutePath(configuration);
-  }
+  Future<void> setRestoredRoutePath(Uri configuration) async {}
 
   @override
   Future<bool> popRoute() async {
