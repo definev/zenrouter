@@ -15,18 +15,15 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  static final appCoordinator = AppCoordinator();
+  static final coordinator = AppCoordinator();
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'ZenRouter Nested Routes Example',
-      routerDelegate: appCoordinator.routerDelegate,
-      routeInformationParser: appCoordinator.routeInformationParser,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-      ),
+      restorationScopeId: 'main_coordinator',
+      routerDelegate: coordinator.routerDelegate,
+      routeInformationParser: coordinator.routeInformationParser,
     );
   }
 }
@@ -43,9 +40,6 @@ class HomeLayout extends AppRoute with RouteLayout<AppRoute>, RouteTransition {
   @override
   NavigationPath<AppRoute> resolvePath(AppCoordinator coordinator) =>
       coordinator.homeStack;
-
-  @override
-  Uri toUri() => Uri.parse('/home');
 
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
@@ -73,9 +67,6 @@ class TabBarLayout extends AppRoute with RouteLayout<AppRoute> {
   @override
   IndexedStackPath<AppRoute> resolvePath(AppCoordinator coordinator) =>
       coordinator.tabIndexed;
-
-  @override
-  Uri toUri() => Uri.parse('/home/tabs');
 
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
@@ -125,9 +116,6 @@ class SettingsLayout extends AppRoute with RouteLayout<AppRoute> {
       coordinator.settingsStack;
 
   @override
-  Uri toUri() => Uri.parse('/settings');
-
-  @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -144,9 +132,6 @@ class SettingsLayout extends AppRoute with RouteLayout<AppRoute> {
 // ============================================================================
 
 class FeedTabLayout extends AppRoute with RouteLayout<AppRoute> {
-  @override
-  Uri toUri() => Uri.parse('/home/tabs/feed');
-
   @override
   NavigationPath<AppRoute> resolvePath(AppCoordinator coordinator) =>
       coordinator.feedTabStack;
