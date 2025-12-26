@@ -12,20 +12,28 @@
 
 ZenRouter is the only router you'll ever need - supporting three distinct paradigms to handle any routing scenario. From simple mobile apps to complex web applications with deep linking, ZenRouter adapts to your needs.
 
+
 ---
 
-## Why ZenRouter?
+## Installation
 
-**One router. Three paradigms. Infinite possibilities.**
+Add ZenRouter to your `pubspec.yaml`:
 
-✨ **Three Paradigms in One** - Choose imperative, declarative, or coordinator based on your needs  
-🚀 **Start Simple, Scale Seamlessly** - Begin with basics, add complexity as you grow  
-🌐 **Full Web & Deep Linking** - Built-in URL handling and browser navigation  
-⚡ **Blazing Fast** - Efficient Myers diff algorithm for optimal performance  
-🔒 **Type-Safe** - Catch routing errors at compile-time, not runtime  
-🛡️ **Powerful Guards & Redirects** - Protect routes and control navigation flow  
-📦 **Zero Boilerplate** - Clean, mixin-based architecture  
-📝 **No Codegen Needed (for core)** - Pure Dart, no build_runner or generated files required. *(Optional file-based routing via `zenrouter_file_generator` is available when you want codegen.)*  
+```bash
+flutter pub add zenrouter
+```
+
+---
+
+## Features
+
+- 🎭 **Flexible Paradigms**: Choose between Imperative (simple), Declarative (state-driven), or Coordinator (complex) patterns.
+- 💾 **State Restoration**: Built-in support for restoring app state after process death (essential for Android).
+- 🔗 **Deep Linking**: Full support for deep links and web URLs with strict typing.
+- 🛡️ **Guards & Redirects**: Robust security and navigation flow control.
+- ⚡ **Performance**: Optimized diff algorithms for minimal widget rebuilds.
+- 🛠️ **DevTools**: Inspect your navigation stack and test deep links in real-time.
+- 🚫 **No CodeGen Required**: Works out of the box with standard Dart code.
 
 ---
 
@@ -55,6 +63,121 @@ Need web support, deep linking, and router devtools to handle complex scalable n
                 ✓ Full control
                 ✓ Perfect for mobile
 ```
+
+---
+
+### 🗺️ **Coordinator** - Deep Linking & Web
+*Perfect for web apps and complex navigation hierarchies*
+
+#### Quick Start
+
+Ready to level up? When your app needs to support deep linking, web URLs, or browser navigation, it's time to graduate to the **Coordinator** pattern. This is the final and most powerful routing paradigm in ZenRouter—built for production apps that need to handle complex navigation scenarios across multiple platforms.
+
+The Coordinator pattern gives you:
+- 🔗 **Deep linking** - Open specific screens from external sources (`myapp://profile/123`)
+- 🌐 **URL synchronization** - Keep browser URLs in sync with navigation state
+- 💾 **State Restoration** - Automatically save and restore state when the app is killed by the OS
+- ⬅️ **Browser back button** - Native web navigation that just works
+- 🛠️ **DevTools** - Built-in debugging and route inspection
+
+Let's build a Coordinator-powered app. First, define your routes with URI support:
+
+First, create a base route class for your app. The `RouteUnique` mixin is **required** for Coordinator—it enforces that every route must define a unique URI, which is essential for deep linking and URL synchronization:
+
+```dart
+abstract class AppRoute extends RouteTarget with RouteUnique {}
+```
+
+Now define your concrete routes by extending `AppRoute`:
+
+```dart
+class HomeRoute extends AppRoute {
+  @override
+  Uri toUri() => Uri.parse('/');
+  
+  @override
+  Widget build(AppCoordinator coordinator, BuildContext context) {
+    return HomePage(coordinator: coordinator);
+  }
+}
+
+class ProfileRoute extends AppRoute {
+  ProfileRoute(this.userId);
+  final String userId;
+
+  @override
+  List<Object?> get props => [userId];
+  
+  @override
+  Uri toUri() => Uri.parse('/profile/$userId');
+  
+  @override
+  Widget build(AppCoordinator coordinator, BuildContext context) {
+    return ProfilePage(userId: userId, coordinator: coordinator);
+  }
+}
+```
+
+> [!IMPORTANT]
+> Notice that the `build()` method uses `AppCoordinator` (not `Coordinator`) as the parameter type. This is because `Coordinator` is **covariant**—when you create your `AppCoordinator extends Coordinator<AppRoute>`, all your routes will receive that specific coordinator type, giving you type-safe access to any custom methods or properties you add to `AppCoordinator`.
+
+Next, create your Coordinator by extending the `Coordinator` class and implementing URI parsing:
+
+```dart
+class AppCoordinator extends Coordinator<RouteTarget> {
+  @override
+  RouteTarget parseRouteFromUri(Uri uri) {
+    return switch (uri.pathSegments) {
+      [] => HomeRoute(),
+      ['profile', String userId] => ProfileRoute(userId),
+      _ => NotFoundRoute(),
+    };
+  }
+}
+```
+
+Finally, wire it up with `MaterialApp.router` to enable full platform navigation:
+
+```dart
+class MyApp extends StatelessWidget {
+  final coordinator = AppCoordinator();
+  
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp.router(
+      routerDelegate: coordinator.routerDelegate,
+      routeInformationParser: coordinator.routeInformationParser,
+    );
+  }
+}
+```
+
+If you want `state restoration` support, just add `restorationScopeId` to `MaterialApp.router`:
+
+```dart
+return MaterialApp.router(
+  restorationScopeId: 'app',
+  routerDelegate: coordinator.routerDelegate,
+  routeInformationParser: coordinator.routeInformationParser,
+);
+```
+
+> [!IMPORTANT]
+> State restoration is supported on Android and iOS. It requires routes to be parsed synchronously during startup.
+>
+> If your `parseRouteFromUri` is asynchronous, you **must** override `parseRouteFromUriSync` to provide a synchronous parser. If `parseRouteFromUri` is already synchronous, it works out of the box.
+
+That's it! Your app now supports:
+- ✅ Deep links: `myapp://profile/joe` automatically navigates to Joe's profile
+- ✅ Web URLs: Users can bookmark and share `https://myapp.com/profile/joe`
+- ✅ Browser navigation: Back/forward buttons work seamlessly
+- ✅ Dev tools: Debug routes and navigation flows in real-time
+
+The Coordinator handles all the complexity of URI parsing, route restoration, and platform integration—you just focus on building your app.
+
+[→ Learn Coordinator Pattern](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/coordinator/coordinator.md)
+
+---
 
 ### 🎮 **Imperative** - Direct Control
 
@@ -182,109 +305,6 @@ That's it! The navigation stack stays perfectly in sync with your state—no man
 
 ---
 
-### 🗺️ **Coordinator** - Deep Linking & Web
-*Perfect for web apps and complex navigation hierarchies*
-
-#### Quick Start
-
-Ready to level up? When your app needs to support deep linking, web URLs, or browser navigation, it's time to graduate to the **Coordinator** pattern. This is the final and most powerful routing paradigm in ZenRouter—built for production apps that need to handle complex navigation scenarios across multiple platforms.
-
-The Coordinator pattern gives you:
-- 🔗 **Deep linking** - Open specific screens from external sources (`myapp://profile/123`)
-- 🌐 **URL synchronization** - Keep browser URLs in sync with navigation state
-- ⬅️ **Browser back button** - Native web navigation that just works
-- 🛠️ **Dev tools** - Built-in debugging and route inspection
-
-Let's build a Coordinator-powered app. First, define your routes with URI support:
-
-First, create a base route class for your app. The `RouteUnique` mixin is **required** for Coordinator—it enforces that every route must define a unique URI, which is essential for deep linking and URL synchronization:
-
-```dart
-abstract class AppRoute extends RouteTarget with RouteUnique {}
-```
-
-Now define your concrete routes by extending `AppRoute`:
-
-```dart
-class HomeRoute extends AppRoute {
-  @override
-  Uri toUri() => Uri.parse('/');
-  
-  @override
-  Widget build(AppCoordinator coordinator, BuildContext context) {
-    return HomePage(coordinator: coordinator);
-  }
-}
-
-class ProfileRoute extends AppRoute {
-  ProfileRoute(this.userId);
-  final String userId;
-
-  @override
-  List<Object?> get props => [userId];
-  
-  @override
-  Uri toUri() => Uri.parse('/profile/$userId');
-  
-  @override
-  Widget build(AppCoordinator coordinator, BuildContext context) {
-    return ProfilePage(userId: userId, coordinator: coordinator);
-  }
-}
-```
-
-> [!IMPORTANT]
-> Notice that the `build()` method uses `AppCoordinator` (not `Coordinator`) as the parameter type. This is because `Coordinator` is **covariant**—when you create your `AppCoordinator extends Coordinator<AppRoute>`, all your routes will receive that specific coordinator type, giving you type-safe access to any custom methods or properties you add to `AppCoordinator`.
-
-Next, create your Coordinator by extending the `Coordinator` class and implementing URI parsing:
-
-```dart
-class AppCoordinator extends Coordinator<RouteTarget> {
-  @override
-  RouteTarget parseRouteFromUri(Uri uri) {
-    return switch (uri.pathSegments) {
-      [] => HomeRoute(),
-      ['profile', String userId] => ProfileRoute(userId),
-      _ => NotFoundRoute(),
-    };
-  }
-}
-```
-
-Finally, wire it up with `MaterialApp.router` to enable full platform navigation:
-
-```dart
-class MyApp extends StatelessWidget {
-  final coordinator = AppCoordinator();
-  
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp.router(
-      routerDelegate: coordinator.routerDelegate,
-      routeInformationParser: coordinator.routeInformationParser,
-    );
-  }
-}
-```
-
-That's it! Your app now supports:
-- ✅ Deep links: `myapp://profile/joe` automatically navigates to Joe's profile
-- ✅ Web URLs: Users can bookmark and share `https://myapp.com/profile/joe`
-- ✅ Browser navigation: Back/forward buttons work seamlessly
-- ✅ Dev tools: Debug routes and navigation flows in real-time
-
-The Coordinator handles all the complexity of URI parsing, route restoration, and platform integration—you just focus on building your app.
-
-**When to use:**
-- Web applications
-- Deep linking requirements
-- Complex nested navigation
-- URL synchronization needed
-
-[→ Learn Coordinator Pattern](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/coordinator/coordinator.md)
-
----
-
 ## Quick Comparison
 
 |  | **Imperative** | **Declarative** | **Coordinator** |
@@ -305,7 +325,7 @@ The Coordinator handles all the complexity of URI parsing, route restoration, an
 - [Getting Started](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/guides/getting-started.md) - Choose your paradigm and get started
 - [Imperative Navigation](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/imperative.md) - Direct stack control
 - [Declarative Navigation](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/declarative.md) - State-driven routing
-- [Coordinator Pattern](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/coordinator.md) - Deep linking & web support
+- [Coordinator Pattern](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/coordinator/coordinator.md) - Deep linking & web support
 
 ### **🔧 API Reference**
 - [Route Mixins](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/mixins.md) - Guards, redirects, transitions, and more
