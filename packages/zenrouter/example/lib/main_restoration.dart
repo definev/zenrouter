@@ -140,7 +140,7 @@ class BookmarkDetailConverter extends RestorableConverter<BookmarkDetail> {
   }
 }
 
-class AppCoodinator extends Coordinator<AppRoute> {
+class AppCoordinator extends Coordinator<AppRoute> {
   @override
   void defineConverter() {
     RestorableConverter.defineConverter(
@@ -278,4 +278,4 @@ class BookmarkDetailView extends StatelessWidget {
   }
 }
 
-final coordinator = AppCoodinator();
+final coordinator = AppCoordinator();
