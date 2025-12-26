@@ -1,18 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:zenrouter/zenrouter.dart';
 
-/// Builder function for creating a layout widget.
-typedef RouteLayoutBuilder<T extends RouteUnique> =
-    Widget Function(
-      Coordinator coordinator,
-      StackPath<T> path,
-      RouteLayout<T>? layout,
-    );
-
-/// Constructor function for creating a layout instance.
-typedef RouteLayoutConstructor<T extends RouteUnique> =
-    RouteLayout<T> Function();
-
 /// Mixin for routes that define a layout structure.
 ///
 /// A layout is a route that wraps other routes, such as a shell or a tab bar.
@@ -44,6 +32,7 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
   static Map<Type, RouteLayoutConstructor> layoutConstructorTable = {};
 
   static final Map<String, Type> _reflectionLayoutType = {};
+  @protected
   static Type? getLayoutTypeByRuntimeType(String runtimeType) =>
       _reflectionLayoutType[runtimeType];
 

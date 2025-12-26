@@ -5,7 +5,7 @@ part of 'base.dart';
 /// Routes are pre-defined and cannot be added or removed. Navigation switches
 /// the active index.
 class IndexedStackPath<T extends RouteTarget> extends StackPath<T>
-    with RestorablePath {
+    with RestorablePath<T, int, int> {
   IndexedStackPath._(super.stack, {super.debugLabel, super.coordinator})
     : assert(stack.isNotEmpty, 'Read-only path must have at least one route'),
       super() {
@@ -72,15 +72,6 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T>
   int get activeIndex => _activeIndex;
 
   @override
-  void restore(dynamic data) {
-    final index = data as int;
-    if (index >= stack.length || index < 0) {
-      throw StateError('Index out of bounds');
-    }
-    _activeIndex = index;
-  }
-
-  @override
   T get activeRoute => stack[activeIndex];
 
   /// Switches the active route to the one at [index].
@@ -141,4 +132,16 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T>
     _activeIndex = 0;
     notifyListeners();
   }
+
+  @override
+  void restore(int data) {
+    assert(data >= 0 && data < stack.length, 'Index out of bounds');
+    _activeIndex = data;
+  }
+
+  @override
+  int serialize() => _activeIndex;
+
+  @override
+  int deserialize(int data) => data;
 }

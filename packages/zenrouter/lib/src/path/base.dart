@@ -277,11 +277,3 @@ abstract class StackPath<T extends RouteTarget> with ChangeNotifier {
   String toString() =>
       '${debugLabel ?? hashCode} [${runtimeType.toString().split('Path').first}]';
 }
-
-/// Callback that builds a [Page] from a route and child widget.
-typedef PageCallback<T> =
-    Page<void> Function(
-      BuildContext context,
-      ValueKey<T> routeKey,
-      Widget child,
-    );

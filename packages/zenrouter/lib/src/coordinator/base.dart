@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:zenrouter/src/coordinator/restoration.dart';
 import 'package:zenrouter/src/internal/equatable.dart';
+import 'package:zenrouter/src/internal/type.dart';
 import 'package:zenrouter/src/mixin/deeplink.dart';
 import 'package:zenrouter/src/mixin/layout.dart';
 import 'package:zenrouter/src/mixin/query_parameters.dart';
@@ -344,6 +346,13 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   /// }
   /// ```
   FutureOr<T> parseRouteFromUri(Uri uri);
+
+  /// Parses a [Uri] into a route object synchronously.
+  ///
+  /// If you have an asynchronous [parseRouteFromUri] and still want [restoration] working,
+  /// you have to provide a synchronous version of it.
+  RouteUriParserSync<T> get parseRouteFromUriSync =>
+      parseRouteFromUri as RouteUriParserSync<T>;
 
   /// Handles navigation from a deep link URI.
   ///

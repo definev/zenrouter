@@ -169,46 +169,6 @@ class StackTransition<T extends RouteTarget> {
   final RouteGuard? guard;
 }
 
-/// Callback that maps routes to their [StackTransition].
-///
-/// Used by [NavigationStack] to determine how each route should be displayed.
-///
-/// **Example - Route-based transitions:**
-/// ```dart
-/// NavigationStack(
-///   path: coordinator.root,
-///   coordinator: coordinator,
-///   resolver: (route) {
-///     return switch (route) {
-///       // Dialogs use dialog transition
-///       ConfirmRoute() => StackTransition.dialog(route.build(coordinator, context)),
-///
-///       // Sheets use sheet transition
-///       ShareRoute() => StackTransition.sheet(route.build(coordinator, context)),
-///
-///       // iOS gets cupertino, others get material
-///       _ when Platform.isIOS => StackTransition.cupertino(
-///         route.build(coordinator, context),
-///       ),
-///       _ => StackTransition.material(route.build(coordinator, context)),
-///     };
-///   },
-/// )
-/// ```
-///
-/// **Example - RouteTransition mixin:**
-/// Routes can also define their own transition by mixing in [RouteTransition]:
-/// ```dart
-/// class SettingsRoute extends RouteTarget with RouteUnique, RouteTransition {
-///   @override
-///   StackTransition<T> transition<T extends RouteUnique>(Coordinator coordinator) {
-///     return StackTransition.cupertino(build(coordinator, context));
-///   }
-/// }
-/// ```
-typedef StackTransitionResolver<T extends RouteTarget> =
-    StackTransition<T> Function(T route);
-
 /// A page that presents its route as a Cupertino-style bottom sheet.
 ///
 /// Use this for modal overlays that slide up from the bottom of the screen,

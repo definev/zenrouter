@@ -114,6 +114,7 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
     }
   }
 
+  /// Dont need to handle restored route since it handled in [CoordinatorRestorable]
   @override
   Future<void> setRestoredRoutePath(Uri configuration) async {}
 

@@ -1,8 +1,12 @@
 import 'package:flutter/widgets.dart';
 import 'package:zenrouter/zenrouter.dart';
 
-mixin RestorablePath {
-  void restore(dynamic data);
+mixin RestorablePath<T extends RouteTarget, S, D> on StackPath<T> {
+  S serialize();
+
+  D deserialize(S data);
+
+  void restore(D data);
 }
 
 class NavigationPathRestorable<T extends RouteTarget>
@@ -23,19 +27,19 @@ class NavigationPathRestorable<T extends RouteTarget>
 
     final list = data as List;
     for (final route in list) {
-      // RouteUnique restoration
-      if (route is String) {
-        final uri = Uri.parse(route);
-        result.add(parseRouteFromUri(uri));
-      }
-      // RouteRestorable restoration
-      if (route is Map) {
-        final rawMap = route.cast<String, dynamic>();
-        final recoveredRoute = RouteRestorable.deserialize(
-          rawMap,
-          parseRouteFromUri: parseRouteFromUri,
-        );
-        result.add(recoveredRoute);
+      switch (route) {
+        // RouteUnique restoration
+        case String route:
+          final uri = Uri.parse(route);
+          result.add(parseRouteFromUri(uri));
+        // RouteRestorable restoration
+        case Map route:
+          final rawMap = route.cast<String, dynamic>();
+          final recoveredRoute = RouteRestorable.deserialize(
+            rawMap,
+            parseRouteFromUri: parseRouteFromUri,
+          );
+          result.add(recoveredRoute);
       }
     }
 

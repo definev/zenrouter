@@ -16,3 +16,6 @@ export 'src/mixin/redirect.dart';
 export 'src/mixin/transition.dart';
 export 'src/mixin/unique.dart';
 export 'src/mixin/restoration.dart';
+
+/// Internal types
+export 'src/internal/type.dart';

@@ -5,7 +5,7 @@ part of 'base.dart';
 /// Supports pushing and popping routes. Used for the main navigation stack
 /// and modal flows.
 class NavigationPath<T extends RouteTarget> extends StackPath<T>
-    with StackMutatable<T>, RestorablePath {
+    with StackMutatable<T>, RestorablePath<T, List<dynamic>, List<T>> {
   NavigationPath._([
     String? debugLabel,
     List<T>? stack,
@@ -77,5 +77,67 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
       route._path = this;
       _stack.add(route as T);
     }
+  }
+
+  @override
+  List<dynamic> serialize() {
+    final result = <dynamic>[];
+    for (final route in stack) {
+      switch (route) {
+        case RouteLayout():
+          result.add({'type': 'layout', 'value': route.runtimeType.toString()});
+        case RouteRestorable():
+          result.add(RouteRestorable.serialize(route));
+        case RouteUnique():
+          result.add(route.toUri().toString());
+        default:
+          throw StateError('Unsupported route type: $route');
+      }
+    }
+    return result;
+  }
+
+  @override
+  List<T> deserialize(
+    List<dynamic> data, [
+    RouteUriParserSync<RouteUnique>? parseRouteFromUri,
+  ]) {
+    parseRouteFromUri ??= _coordinator?.parseRouteFromUriSync;
+    final list = <T>[];
+    for (final routeRaw in data) {
+      if (routeRaw is String) {
+        assert(parseRouteFromUri != null);
+        final route = parseRouteFromUri!(Uri.parse(routeRaw));
+        list.add(route as T);
+      }
+      if (routeRaw is Map) {
+        final isLayout = routeRaw['type'] == 'layout';
+        if (isLayout) {
+          // ignore: invalid_use_of_protected_member
+          final type = RouteLayout.getLayoutTypeByRuntimeType(
+            routeRaw['value'] as String,
+          );
+          if (type == null) throw UnimplementedError();
+          list.add(RouteLayout.layoutConstructorTable[type]!() as T);
+        } else {
+          final strategy = RestorationStrategy.values
+              .asNameMap()[routeRaw['strategy'] as String]!;
+          assert(
+            (strategy == RestorationStrategy.unique &&
+                    parseRouteFromUri != null) ||
+                strategy == RestorationStrategy.converter,
+            'If you want to use RouteRestoration with RestorationStrategy.unique, you must provide a coordinator',
+          );
+          final route =
+              RouteRestorable.deserialize(
+                    routeRaw.cast(),
+                    parseRouteFromUri: parseRouteFromUri,
+                  )
+                  as T;
+          list.add(route);
+        }
+      }
+    }
+    return list;
   }
 }

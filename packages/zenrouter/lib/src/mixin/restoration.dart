@@ -59,9 +59,6 @@ mixin RouteRestorable<T extends RouteTarget> on RouteTarget {
   String get restorationId;
 }
 
-typedef RestoratableConverterConstructor<T extends Object> =
-    RestorableConverter<T> Function();
-
 abstract class RestorableConverter<T extends Object> {
   const RestorableConverter();
 

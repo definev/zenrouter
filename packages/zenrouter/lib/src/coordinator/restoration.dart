@@ -22,7 +22,10 @@ class CoordinatorRestorable extends StatefulWidget {
 class CoordinatorRestorableState extends State<CoordinatorRestorable>
     with RestorationMixin {
   late final _restorable = _CoordinatorRestorable(widget.coordinator);
-  late final _activeRoute = _ActiveRoute(widget.coordinator);
+  late final _activeRoute = ActiveRouteRestorable(
+    initialRoute: widget.coordinator.activePath.activeRoute,
+    parseRouteFromUri: widget.coordinator.parseRouteFromUriSync,
+  );
 
   void _saveCoordinator() {
     final result = <String, dynamic>{};
@@ -104,29 +107,32 @@ class CoordinatorRestorableState extends State<CoordinatorRestorable>
   }
 }
 
-class _ActiveRoute<T extends RouteUnique>
-    extends RestorableValue<RouteUnique?> {
-  _ActiveRoute(this.coordinator);
-  final Coordinator coordinator;
+class ActiveRouteRestorable<T extends RouteUnique> extends RestorableValue<T?> {
+  ActiveRouteRestorable({
+    required this.initialRoute,
+    required this.parseRouteFromUri,
+  });
+  final T? initialRoute;
+  final RouteUriParserSync<RouteUnique> parseRouteFromUri;
 
   @override
-  RouteUnique? createDefaultValue() => coordinator.activePath.activeRoute;
+  T? createDefaultValue() => initialRoute;
 
   @override
-  void didUpdateValue(RouteUnique? oldValue) {
+  void didUpdateValue(T? oldValue) {
     notifyListeners();
   }
 
   @override
-  RouteUnique? fromPrimitives(Object? data) {
+  T? fromPrimitives(Object? data) {
     if (data == null) return null;
     if (data case String data) {
-      return coordinator.parseRouteFromUri(Uri.parse(data)) as T;
+      return parseRouteFromUri(Uri.parse(data)) as T;
     }
     if (data case Map<String, dynamic> data) {
       return RouteRestorable.deserialize(
             data,
-            parseRouteFromUri: coordinator.parseRouteFromUri,
+            parseRouteFromUri: parseRouteFromUri,
           )
           as T;
     }
@@ -173,33 +179,6 @@ class _CoordinatorRestorable<T extends RouteUnique>
   Map<String, dynamic> fromPrimitives(Object? data) {
     final result = <String, dynamic>{};
 
-    List<T> deserializeNavigationPath(List<dynamic> stack) {
-      final list = <T>[];
-      for (final routeRaw in stack) {
-        if (routeRaw is String) {
-          final route = coordinator.parseRouteFromUri(Uri.parse(routeRaw));
-          list.add(route as T);
-        }
-        if (routeRaw is Map) {
-          final isLayout = routeRaw['type'] == 'layout';
-          if (isLayout) {
-            final type = RouteLayout.getLayoutTypeByRuntimeType(
-              routeRaw['value']!,
-            );
-            if (type == null) throw UnimplementedError();
-            list.add(RouteLayout.layoutConstructorTable[type]!() as T);
-          } else {
-            final route = RouteRestorable.deserialize(
-              routeRaw.cast(),
-              parseRouteFromUri: coordinator.parseRouteFromUri,
-            );
-            list.add(route as T);
-          }
-        }
-      }
-      return list;
-    }
-
     final map = (data as Map).cast<String, dynamic>();
     for (final pathEntry in map.entries) {
       final path = coordinator.paths.firstWhereOrNull(
@@ -208,51 +187,27 @@ class _CoordinatorRestorable<T extends RouteUnique>
 
       /// Invalid cached
       if (path == null) return {};
-
-      final raw = pathEntry.value;
-      dynamic value;
-      if (raw is List) {
-        value = deserializeNavigationPath(raw);
-      } else if (raw is int) {
-        value = raw;
+      if (path case NavigationPath path) {
+        result[path.debugLabel!] = path.deserialize(
+          pathEntry.value,
+          coordinator.parseRouteFromUriSync,
+        );
       }
-      result[path.debugLabel!] = value;
+      if (path case RestorablePath path) {
+        result[path.debugLabel!] = path.deserialize(pathEntry.value);
+      }
     }
 
     return result;
   }
 
   @override
-  Object? toPrimitives() {
+  Map<String, dynamic> toPrimitives() {
     final result = <String, dynamic>{};
-    List<dynamic> serializeNavigationPath(NavigationPath path) {
-      final list = <dynamic>[];
-      for (final route in path.stack) {
-        if (route is RouteRestorable) {
-          list.add(RouteRestorable.serialize(route));
-        } else if (route is RouteLayout) {
-          list.add({'type': 'layout', 'value': route.runtimeType.toString()});
-        } else if (route is RouteUnique) {
-          list.add(route.toUri().toString());
-        } else {
-          throw UnimplementedError();
-        }
-      }
-      return list;
-    }
-
-    int serializeIndexedStackPath(IndexedStackPath path) {
-      return path.activeIndex;
-    }
 
     for (final path in coordinator.paths) {
-      if (path is NavigationPath) {
-        result[path.debugLabel!] = serializeNavigationPath(path);
-        continue;
-      }
-      if (path is IndexedStackPath) {
-        result[path.debugLabel!] = serializeIndexedStackPath(path);
-        continue;
+      if (path case RestorablePath path) {
+        result[path.debugLabel!] = path.serialize();
       }
       final converter = RestorableConverter.buildConverter(path.pathKey.key);
       if (converter == null) throw UnimplementedError();
