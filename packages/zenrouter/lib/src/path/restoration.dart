@@ -216,16 +216,15 @@ class NavigationPathRestorable<T extends RouteTarget>
       switch (route) {
         // RouteUnique restoration
         case String route:
-          final uri = Uri.parse(route);
-          result.add(parseRouteFromUri(uri));
+          result.add(parseRouteFromUri(Uri.parse(route)));
         // RouteRestorable restoration
         case Map route:
-          final rawMap = route.cast<String, dynamic>();
-          final recoveredRoute = RouteRestorable.deserialize(
-            rawMap,
-            parseRouteFromUri: parseRouteFromUri,
+          result.add(
+            RouteRestorable.deserialize(
+              route.cast(),
+              parseRouteFromUri: parseRouteFromUri,
+            ),
           );
-          result.add(recoveredRoute);
       }
     }
 
