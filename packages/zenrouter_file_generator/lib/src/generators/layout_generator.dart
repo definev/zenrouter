@@ -185,58 +185,12 @@ class LayoutGenerator extends GeneratorForAnnotation<ZenLayout> {
     LayoutElement layout,
     ({String routeBase, String coordinatorName}) config,
   ) {
-    final buffer = StringBuffer();
-    final routeBase = config.routeBase;
-    final coordinatorName = config.coordinatorName;
-
-    final pathType =
-        layout.layoutType == LayoutType.indexed
-            ? 'IndexedStackPath<$routeBase>'
-            : 'NavigationPath<$routeBase>';
-
-    // Generate class declaration
-    buffer.writeln('/// Generated base class for ${layout.className}.');
-    buffer.writeln('///');
-    buffer.writeln('/// URI: ${layout.uriPattern}');
-    buffer.writeln('/// Path type: ${layout.layoutType.name}');
-    if (layout.parentLayoutType != null) {
-      buffer.writeln('/// Parent layout: ${layout.parentLayoutType}');
-    }
-    buffer.writeln(
-      'abstract class ${layout.generatedBaseClassName} extends $routeBase with RouteLayout<$routeBase> {',
+    return LayoutCodeGenerator.generate(
+      layout,
+      LayoutCodeConfig(
+        routeBase: config.routeBase,
+        coordinatorName: config.coordinatorName,
+      ),
     );
-    buffer.writeln();
-
-    // Generate constructor
-    buffer.writeln('  ${layout.generatedBaseClassName}();');
-    buffer.writeln();
-
-    // Generate parent layout getter if nested
-    if (layout.parentLayoutType != null) {
-      buffer.writeln('  @override');
-      buffer.writeln('  Type? get layout => ${layout.parentLayoutType};');
-      buffer.writeln();
-    }
-
-    // Generate resolvePath method
-    buffer.writeln('  @override');
-    buffer.writeln(
-      '  $pathType resolvePath(covariant $coordinatorName coordinator) =>',
-    );
-    buffer.writeln('      coordinator.${layout.pathFieldName};');
-    buffer.writeln();
-
-    // Generate toUri method
-    buffer.writeln('  @override');
-    buffer.writeln('  Uri toUri() => Uri.parse(\'${layout.uriPattern}\');');
-    buffer.writeln();
-
-    // Generate props for equality
-    buffer.writeln('  @override');
-    buffer.writeln('  List<Object?> get props => [];');
-
-    buffer.writeln('}');
-
-    return buffer.toString();
   }
 }

@@ -141,10 +141,20 @@ class PathParser {
 
 /// Simplified parameter info for path parsing.
 class ParamInfo {
+  /// The name of the parameter extracted from the path segment.
+  ///
+  /// For a file path like `[userId]`, the name would be `userId`.
   final String name;
 
   /// Whether this is a rest parameter that captures multiple segments.
+  ///
+  /// Rest parameters use `[...name]` syntax and capture all remaining
+  /// path segments as a `List<String>`.
   final bool isRest;
 
+  /// Creates a new parameter info.
+  ///
+  /// The [name] is required and represents the parameter identifier.
+  /// Set [isRest] to `true` for rest parameters (`[...name]` syntax).
   ParamInfo({required this.name, this.isRest = false});
 }

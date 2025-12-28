@@ -6,15 +6,15 @@ part of 'collection.list.dart';
 // RouteGenerator
 // **************************************************************************
 
-/// Generated base class for CollectionsCollectionIdRoute.
+/// Generated base class for CollectionListRoute.
 ///
 /// URI: /collection/list
-abstract class _$CollectionsCollectionIdRoute extends AppRoute
+abstract class _$CollectionListRoute extends AppRoute
     with RouteQueryParameters {
   @override
   late final ValueNotifier<Map<String, String>> queryNotifier;
 
-  _$CollectionsCollectionIdRoute({Map<String, String> queries = const {}})
+  _$CollectionListRoute({Map<String, String> queries = const {}})
     : queryNotifier = ValueNotifier(queries);
 
   @override
@@ -35,12 +35,12 @@ abstract class _$CollectionsCollectionIdRoute extends AppRoute
     builder: (context, page) => builder(context, page),
   );
 
-  Widget sortBuilder<T>({
-    required T Function(String? sort) selector,
-    required Widget Function(BuildContext, T sort) builder,
+  Widget sortOrderBuilder<T>({
+    required T Function(String? sortOrder) selector,
+    required Widget Function(BuildContext, T sortOrder) builder,
   }) => selectorBuilder<T>(
-    selector: (queries) => selector(queries['sort']),
-    builder: (context, sort) => builder(context, sort),
+    selector: (queries) => selector(queries['sortOrder']),
+    builder: (context, sortOrder) => builder(context, sortOrder),
   );
 
   Widget filterBuilder<T>({

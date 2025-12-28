@@ -1,3 +1,20 @@
+## 0.4.10
+
+### New Features
+
+- **CoordinatorProvider**: Auto-generated `InheritedWidget` provider for accessing the coordinator from the widget tree via `context.appCoordinator`
+- **layoutBuilder override**: The generated Coordinator now includes a `layoutBuilder` override that wraps layouts with the provider
+- **deferredImport in `@ZenCoordinator`**: Configure global deferred import via annotation, overriding `build.yaml`
+- **routeBasePath in `@ZenCoordinator`**: Import a custom base route class from a specified path instead of generating it
+- **outputFile config**: New `build.yaml` option to customize the output filename (default: `routes.zen.dart`)
+
+### Bug Fixes
+
+- **Fixed file processing order**: Read `_coordinator.dart` directly first before processing routes to ensure correct configuration
+
+## 0.4.9
+- **Refactor**: Use shared code generation utilities (`LayoutCodeGenerator`, `RouteCodeGenerator`) from `zenrouter_file_annotation`
+
 ## 0.4.8
 - **Docs**: Update README
 

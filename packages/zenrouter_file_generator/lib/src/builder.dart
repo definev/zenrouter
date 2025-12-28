@@ -20,8 +20,17 @@ Builder zenRouteBuilder(BuilderOptions options) {
 /// - AppCoordinator class
 /// - Navigation paths
 /// - Type-safe navigation extensions
+///
+/// Configurable options in `build.yaml`:
+/// - `deferredImport`: Global deferred import setting (default: false)
+/// - `outputFile`: Output filename (default: 'routes.zen.dart')
 Builder zenCoordinatorBuilder(BuilderOptions options) {
   final globalDeferredImport =
       options.config['deferredImport'] as bool? ?? false;
-  return CoordinatorGenerator(globalDeferredImport: globalDeferredImport);
+  final outputFile =
+      options.config['outputFile'] as String? ?? 'routes.zen.dart';
+  return CoordinatorGenerator(
+    globalDeferredImport: globalDeferredImport,
+    outputFile: outputFile,
+  );
 }

@@ -20,6 +20,12 @@ class LayoutElement {
   /// The parent layout type (if nested).
   final String? parentLayoutType;
 
+  /// Creates a new layout element.
+  ///
+  /// The [className], [relativePath], [pathSegments], and [layoutType]
+  /// are required. For indexed layouts, provide [indexedRouteTypes] to
+  /// specify the route types in tab order. Set [parentLayoutType] if
+  /// this layout is nested within another layout.
   LayoutElement({
     required this.className,
     required this.relativePath,

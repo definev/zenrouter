@@ -20,7 +20,14 @@ class CoordinatorGenerator implements Builder {
   /// When true, all routes will use deferred imports unless explicitly disabled.
   final bool globalDeferredImport;
 
-  CoordinatorGenerator({this.globalDeferredImport = false});
+  /// Output filename for the generated coordinator file.
+  /// Defaults to 'routes.zen.dart'.
+  final String outputFile;
+
+  CoordinatorGenerator({
+    this.globalDeferredImport = false,
+    this.outputFile = 'routes.zen.dart',
+  });
 
   // Cached regex patterns for performance
   static final _annotationRegex = RegExp(r'@ZenCoordinator\s*\(([^)]+)\)');
@@ -34,8 +41,8 @@ class CoordinatorGenerator implements Builder {
   static final _queriesContentMatch = RegExp(r"'([^']+)'");
 
   @override
-  final buildExtensions = const {
-    r'$lib$': ['routes/routes.zen.dart'],
+  Map<String, List<String>> get buildExtensions => {
+    r'$lib$': ['routes/$outputFile'],
   };
 
   @override
@@ -50,28 +57,63 @@ class CoordinatorGenerator implements Builder {
     // Default coordinator configuration
     String coordinatorName = 'AppCoordinator';
     String routeBaseName = 'AppRoute';
+    String? routeBasePath;
+    // Effective deferred import (can be overridden by annotation)
+    bool effectiveDeferredImport = globalDeferredImport;
 
-    // Single pass: Process all files at once (performance optimization)
+    // Get language version for formatting from _coordinator.dart
+    LibraryElement? lib;
+    final coordinatorId = AssetId(
+      buildStep.inputId.package,
+      'lib/routes/_coordinator.dart',
+    );
+
+    // Read _coordinator.dart first to get configuration
+    if (await buildStep.canRead(coordinatorId)) {
+      try {
+        lib = await buildStep.resolver.libraryFor(
+          coordinatorId,
+          allowSyntaxErrors: true,
+        );
+      } catch (_) {
+        // Ignore errors, will use latest language version
+      }
+
+      final content = await buildStep.readAsString(coordinatorId);
+      if (content.contains('@ZenCoordinator')) {
+        final config = _parseCoordinatorConfig(content);
+        if (config != null) {
+          coordinatorName = config['name'] as String? ?? coordinatorName;
+          routeBaseName = config['routeBase'] as String? ?? routeBaseName;
+          routeBasePath = config['routeBasePath'] as String?;
+          // Annotation deferredImport overrides build.yaml config
+          if (config['deferredImport'] != null) {
+            effectiveDeferredImport = config['deferredImport'] as bool;
+          }
+        }
+      }
+    }
+
+    // Collect all route files
     final routeFiles = Glob('lib/routes/**.dart');
+    final allInputs = <AssetId>[];
     await for (final input in buildStep.findAssets(routeFiles)) {
       if (input.path.contains('.g.dart')) continue;
       if (input.path.contains('.zen.dart')) continue;
+      allInputs.add(input);
+    }
 
+    // Process all route and layout files
+    for (final input in allInputs) {
       final relativePath = input.path.replaceFirst('lib/routes/', '');
       final fileName = relativePath.split('/').last;
-      final content = await buildStep.readAsString(input);
 
-      // Check for @ZenCoordinator annotation
+      // Skip _coordinator.dart (already processed)
       if (fileName == '_coordinator.dart') {
-        if (content.contains('@ZenCoordinator')) {
-          final config = _parseCoordinatorConfig(content);
-          if (config != null) {
-            coordinatorName = config['name'] ?? coordinatorName;
-            routeBaseName = config['routeBase'] ?? routeBaseName;
-          }
-        }
         continue;
       }
+
+      final content = await buildStep.readAsString(input);
 
       // Check for custom NotFoundRoute
       if (content.contains('class NotFoundRoute') &&
@@ -82,7 +124,11 @@ class CoordinatorGenerator implements Builder {
       }
 
       // Parse route info from file content and path
-      final info = _parseRouteInfo(input.path, content);
+      final info = _parseRouteInfo(
+        input.path,
+        content,
+        effectiveDeferredImport,
+      );
       if (info != null) {
         if (info is RouteInfo) {
           // Store file path for error reporting
@@ -141,26 +187,9 @@ class CoordinatorGenerator implements Builder {
       allFilePaths,
       coordinatorName,
       routeBaseName,
+      routeBasePath,
       routeFileMap,
     );
-
-    // Get language version for formatting
-    // Try to resolve from _coordinator.dart, otherwise use latest
-    LibraryElement? lib;
-    try {
-      final coordinatorId = AssetId(
-        buildStep.inputId.package,
-        'lib/routes/_coordinator.dart',
-      );
-      if (await buildStep.canRead(coordinatorId)) {
-        lib = await buildStep.resolver.libraryFor(
-          coordinatorId,
-          allowSyntaxErrors: true,
-        );
-      }
-    } catch (_) {
-      // Ignore errors, will use latest language version
-    }
 
     // Format the generated code
     final formattedOutput = _formatOutput(lib, output);
@@ -168,7 +197,7 @@ class CoordinatorGenerator implements Builder {
     // Write output - path is relative to lib/ since we use $lib$ trigger
     final outputId = AssetId(
       buildStep.inputId.package,
-      'lib/routes/routes.zen.dart',
+      'lib/routes/$outputFile',
     );
     await buildStep.writeAsString(outputId, formattedOutput);
   }
@@ -190,8 +219,9 @@ class CoordinatorGenerator implements Builder {
 
   /// Parse @ZenCoordinator annotation from _coordinator.dart file.
   ///
-  /// Returns a map with 'name' and 'routeBase' keys, or null if not found.
-  Map<String, String>? _parseCoordinatorConfig(String content) {
+  /// Returns a map with 'name', 'routeBase', and 'deferredImport' keys,
+  /// or null if not found.
+  Map<String, Object?>? _parseCoordinatorConfig(String content) {
     if (!content.contains('@ZenCoordinator')) {
       return null;
     }
@@ -205,7 +235,7 @@ class CoordinatorGenerator implements Builder {
     }
 
     final params = annotationMatch.group(1)!;
-    final config = <String, String>{};
+    final config = <String, Object?>{};
 
     // Parse name parameter - supports both single and double quotes
     final nameMatchSingle = _nameMatchSingleQuote.firstMatch(params);
@@ -225,10 +255,34 @@ class CoordinatorGenerator implements Builder {
       config['routeBase'] = routeBaseMatchDouble.group(1)!;
     }
 
+    // Parse deferredImport parameter
+    if (params.contains('deferredImport: true')) {
+      config['deferredImport'] = true;
+    } else if (params.contains('deferredImport: false')) {
+      config['deferredImport'] = false;
+    }
+
+    // Parse routeBasePath parameter - supports both single and double quotes
+    final routeBasePathSingle = RegExp(
+      r"routeBasePath:\s*'([^']+)'",
+    ).firstMatch(params);
+    final routeBasePathDouble = RegExp(
+      r'routeBasePath:\s*"([^"]+)"',
+    ).firstMatch(params);
+    if (routeBasePathSingle != null) {
+      config['routeBasePath'] = routeBasePathSingle.group(1)!;
+    } else if (routeBasePathDouble != null) {
+      config['routeBasePath'] = routeBasePathDouble.group(1)!;
+    }
+
     return config.isEmpty ? null : config;
   }
 
-  Object? _parseRouteInfo(String path, String content) {
+  Object? _parseRouteInfo(
+    String path,
+    String content,
+    bool effectiveDeferredImport,
+  ) {
     // Extract relative path from routes directory
     final relativePath = path.replaceFirst('lib/routes/', '');
 
@@ -245,13 +299,21 @@ class CoordinatorGenerator implements Builder {
 
     // Check for @ZenRoute annotation
     if (content.contains('@ZenRoute')) {
-      return _parseRouteFromContent(relativePath, content);
+      return _parseRouteFromContent(
+        relativePath,
+        content,
+        effectiveDeferredImport,
+      );
     }
 
     return null;
   }
 
-  RouteInfo? _parseRouteFromContent(String relativePath, String content) {
+  RouteInfo? _parseRouteFromContent(
+    String relativePath,
+    String content,
+    bool effectiveDeferredImport,
+  ) {
     // Extract class name
     final classMatch = _classMatchRoute.firstMatch(content);
     if (classMatch == null) return null;
@@ -278,7 +340,7 @@ class CoordinatorGenerator implements Builder {
       hasDeferredImport = true;
     } else {
       // No explicit annotation - use global config
-      hasDeferredImport = globalDeferredImport;
+      hasDeferredImport = effectiveDeferredImport;
     }
 
     DeeplinkStrategyType? deepLink;
@@ -534,6 +596,7 @@ class CoordinatorGenerator implements Builder {
     List<FileImportPath> allFilePaths,
     String coordinatorName,
     String routeBaseName,
+    String? routeBasePath,
     Map<String, String> routeFileMap,
   ) {
     final deferredImports = allFilePaths.where((f) => f.$2);
@@ -544,11 +607,13 @@ class CoordinatorGenerator implements Builder {
     buffer.writeln('// GENERATED CODE - DO NOT MODIFY BY HAND');
     buffer.writeln('// ignore_for_file: type=lint');
     buffer.writeln();
-    // Only import Material if we're generating the default NotFoundRoute
-    if (customNotFoundRoutePath == null) {
-      buffer.writeln("import 'package:flutter/material.dart';");
-    }
+    // Always import Material for CoordinatorProvider (InheritedWidget)
+    buffer.writeln("import 'package:flutter/widgets.dart';");
     buffer.writeln("import 'package:zenrouter/zenrouter.dart';");
+    // Import custom route base class if path is specified
+    if (routeBasePath != null) {
+      buffer.writeln("import '$routeBasePath';");
+    }
     buffer.writeln();
 
     // Import all route and layout files using relative paths
@@ -581,14 +646,20 @@ class CoordinatorGenerator implements Builder {
     for (final export in sortedImports.where((i) => i.$2 == false)) {
       buffer.writeln("export '${export.$1}';");
     }
+    // Export custom route base class if path is specified
+    if (routeBasePath != null) {
+      buffer.writeln("export '$routeBasePath';");
+    }
     buffer.writeln();
 
-    // Generate route base class
-    buffer.writeln('/// Base class for all routes in this application.');
-    buffer.writeln(
-      'abstract class $routeBaseName extends RouteTarget with RouteUnique {}',
-    );
-    buffer.writeln();
+    // Generate route base class (only if routeBasePath is not specified)
+    if (routeBasePath == null) {
+      buffer.writeln('/// Base class for all routes in this application.');
+      buffer.writeln(
+        'abstract class $routeBaseName extends RouteTarget with RouteUnique {}',
+      );
+      buffer.writeln();
+    }
 
     // Generate Coordinator
     buffer.writeln('/// Generated coordinator managing all routes.');
@@ -711,6 +782,17 @@ class CoordinatorGenerator implements Builder {
     );
     buffer.writeln('    };');
     buffer.writeln('  }');
+    buffer.writeln();
+
+    // Generate layoutBuilder override for CoordinatorProvider
+    final providerName = '${coordinatorName}Provider';
+    buffer.writeln('  @override');
+    buffer.writeln('  Widget layoutBuilder(BuildContext context) {');
+    buffer.writeln('    return $providerName(');
+    buffer.writeln('      coordinator: this,');
+    buffer.writeln('      child: super.layoutBuilder(context),');
+    buffer.writeln('    );');
+    buffer.writeln('  }');
 
     buffer.writeln('}');
     buffer.writeln();
@@ -809,6 +891,46 @@ class CoordinatorGenerator implements Builder {
         deferredImportPath: deferredImportPath,
       );
     }
+    buffer.writeln('}');
+    buffer.writeln();
+
+    // Generate CoordinatorProvider (InheritedWidget)
+    final contextGetterName =
+        coordinatorName[0].toLowerCase() + coordinatorName.substring(1);
+
+    buffer.writeln(
+      '/// InheritedWidget provider for accessing the coordinator from the widget tree.',
+    );
+    buffer.writeln('class $providerName extends InheritedWidget {');
+    buffer.writeln('  const $providerName({');
+    buffer.writeln('    required this.coordinator,');
+    buffer.writeln('    required super.child,');
+    buffer.writeln('    super.key,');
+    buffer.writeln('  });');
+    buffer.writeln();
+    buffer.writeln(
+      '  /// Retrieves the [$coordinatorName] from the widget tree.',
+    );
+    buffer.writeln(
+      '  static $coordinatorName of(BuildContext context) => context.dependOnInheritedWidgetOfExactType<$providerName>()!.coordinator;',
+    );
+    buffer.writeln();
+    buffer.writeln('  final $coordinatorName coordinator;');
+    buffer.writeln();
+    buffer.writeln('  @override');
+    buffer.writeln('  bool updateShouldNotify($providerName oldWidget) =>');
+    buffer.writeln('      coordinator != oldWidget.coordinator;');
+    buffer.writeln('}');
+    buffer.writeln();
+
+    buffer.writeln(
+      '/// Extension on [BuildContext] for convenient coordinator access.',
+    );
+    buffer.writeln('extension ${coordinatorName}Getter on BuildContext {');
+    buffer.writeln('  /// Access the [$coordinatorName] from the widget tree.');
+    buffer.writeln(
+      '  $coordinatorName get $contextGetterName => $providerName.of(this);',
+    );
     buffer.writeln('}');
 
     return buffer.toString();

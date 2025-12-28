@@ -14,8 +14,8 @@ part 'collection.list.g.dart';
 ///
 /// File naming convention:
 /// `collection.list.dart` automatically maps to the route path `/collection/list`.
-@ZenRoute(queries: ['page', 'sort', 'filter'])
-class CollectionListRoute extends _$CollectionsCollectionIdRoute {
+@ZenRoute(queries: ['page', 'sortOrder', 'filter'])
+class CollectionListRoute extends _$CollectionListRoute {
   CollectionListRoute({super.queries = const {}});
 
   @override

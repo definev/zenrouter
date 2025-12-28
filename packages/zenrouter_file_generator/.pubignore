@@ -1,11 +1,5 @@
 doc/api
 doc/paradigms
 doc/guides
-example/android
-example/ios
-example/linux
-example/macos
-example/web
-example/windows
 build
 zenrouter_docs

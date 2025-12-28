@@ -231,6 +231,7 @@ class ZenLayout {
 /// @ZenCoordinator(
 ///   name: 'AppCoordinator',
 ///   routeBase: 'AppRoute',
+///   deferredImport: true,
 /// )
 /// class CoordinatorConfig {}
 /// ```
@@ -243,9 +244,35 @@ class ZenCoordinator {
   /// Defaults to 'AppRoute'.
   final String routeBase;
 
+  /// Path to import the base route class from.
+  ///
+  /// When set, the generator will import and export the base class from
+  /// this path instead of generating it. Use this when you have a custom
+  /// base route class defined elsewhere.
+  ///
+  /// Example:
+  /// ```dart
+  /// @ZenCoordinator(
+  ///   routeBase: 'MyAppRoute',
+  ///   routeBasePath: 'package:my_app/routes/base_route.dart',
+  /// )
+  /// ```
+  final String? routeBasePath;
+
+  /// Global deferred import configuration.
+  ///
+  /// When true, all routes will use deferred imports unless explicitly
+  /// disabled with `@ZenRoute(deferredImport: false)`.
+  ///
+  /// This setting overrides the `deferredImport` option in `build.yaml`.
+  /// Defaults to null (uses `build.yaml` config or false if not specified).
+  final bool? deferredImport;
+
   /// Creates a coordinator configuration annotation.
   const ZenCoordinator({
     this.name = 'AppCoordinator',
     this.routeBase = 'AppRoute',
+    this.routeBasePath,
+    this.deferredImport,
   });
 }

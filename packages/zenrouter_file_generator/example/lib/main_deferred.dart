@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:zenrouter_file_generator_example/flutter_scan.dart';
-import 'routes/routes.zen.dart' deferred as routes hide AppCoordinatorNav;
+import 'routes/routes.zen.dart'
+    deferred as routes
+    hide AppCoordinatorNav, AppCoordinatorGetter;
 
 void main() {
   runApp(FlutterScan(child: const MyApp()));

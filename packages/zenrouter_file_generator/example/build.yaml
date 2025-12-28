@@ -4,3 +4,4 @@ targets:
       zenrouter_file_generator|zen_coordinator:
         options:
           deferredImport: true
+          outputFile: 'routes.zen.dart'
