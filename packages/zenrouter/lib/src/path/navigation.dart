@@ -51,12 +51,7 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
   PathKey get pathKey => key;
 
   @override
-  void reset() {
-    for (final route in _stack) {
-      route.completeOnResult(null, null, true);
-    }
-    _stack.clear();
-  }
+  void reset() => clear();
 
   @override
   T? get activeRoute => _stack.lastOrNull;
@@ -80,20 +75,9 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
   }
 
   @override
-  List<dynamic> serialize() {
-    final result = <dynamic>[];
-    for (final route in stack) {
-      switch (route) {
-        case RouteLayout():
-          result.add({'type': 'layout', 'value': route.runtimeType.toString()});
-        case RouteRestorable():
-          result.add(RouteRestorable.serialize<RouteRestorable>(route));
-        case RouteUnique():
-          result.add(route.toUri().toString());
-      }
-    }
-    return result;
-  }
+  List<dynamic> serialize() => [
+    for (final route in stack) RouteTarget.serialize(route),
+  ];
 
   @override
   List<T> deserialize(
@@ -101,45 +85,10 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
     RouteUriParserSync<RouteUnique>? parseRouteFromUri,
   ]) {
     parseRouteFromUri ??= _coordinator?.parseRouteFromUriSync;
-    final list = <T>[];
-    for (final routeRaw in data) {
-      if (routeRaw is String) {
-        assert(parseRouteFromUri != null);
-        final route = parseRouteFromUri!(Uri.parse(routeRaw));
-        list.add(route as T);
-      }
-      if (routeRaw is Map) {
-        final isLayout = routeRaw['type'] == 'layout';
-        if (isLayout) {
-          // ignore: invalid_use_of_protected_member
-          final type = RouteLayout.getLayoutTypeByRuntimeType(
-            routeRaw['value'] as String,
-          );
-          if (type == null) {
-            throw UnimplementedError(
-              'The [${routeRaw['value']}] layout isn\'t defined. You must define it using RouteLayout.defineLayout',
-            );
-          }
-          list.add(RouteLayout.layoutConstructorTable[type]!() as T);
-        } else {
-          final strategy = RestorationStrategy.values
-              .asNameMap()[routeRaw['strategy'] as String]!;
-          assert(
-            (strategy == RestorationStrategy.unique &&
-                    parseRouteFromUri != null) ||
-                strategy == RestorationStrategy.converter,
-            'If you want to use RouteRestoration with RestorationStrategy.unique, you must provide a coordinator',
-          );
-          final route =
-              RouteRestorable.deserialize(
-                    routeRaw.cast(),
-                    parseRouteFromUri: parseRouteFromUri,
-                  )
-                  as T;
-          list.add(route);
-        }
-      }
-    }
-    return list;
+    return <T>[
+      for (final routeRaw in data)
+        RouteTarget.deserialize(routeRaw, parseRouteFromUri: parseRouteFromUri!)
+            as T,
+    ];
   }
 }

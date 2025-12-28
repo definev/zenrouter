@@ -2,7 +2,7 @@ name: zenrouter
 description: >-
   A powerful Flutter router with deep linking, web support, type-safe routing,
   guards, redirects, and zero boilerplate.
-version: 0.4.8
+version: 0.4.10
 
 repository: https://github.com/definev/zenrouter
 homepage: https://github.com/definev/zenrouter/tree/main/packages/zenrouter
@@ -12,9 +12,9 @@ documentation: https://github.com/definev/zenrouter/blob/main/packages/zenrouter
 topics:
   - router
   - navigation
-  - routing
+  - zenrouter
+  - state-restoration
   - deep-linking
-  - web
 
 screenshots:
   - description: "Zen Logo for ZenRouter"

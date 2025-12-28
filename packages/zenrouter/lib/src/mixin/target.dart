@@ -58,6 +58,45 @@ part of '../path/base.dart';
 /// }
 /// ```
 abstract class RouteTarget extends Equatable {
+  /// Converts [RouteTarget] to primitive data
+  ///
+  /// This is called by Flutter's restoration framework when the app is being
+  /// killed.
+  ///
+  /// Built-in Types supports:
+  /// - [RouteLayout] - Serialize [RouteLayout]
+  /// - [RouteRestorable] - Call custom `serialize` method
+  /// - [RouteUnique] - Leverage `toUri` for serialization
+  static Object serialize(RouteTarget value) => switch (value) {
+    RouteLayout() => value.serialize(),
+    RouteRestorable() => value.serialize(),
+    RouteUnique() => value.toUri().toString(),
+    _ => throw UnimplementedError(),
+  };
+
+  /// Converts saved primitive data back into a route object.
+  ///
+  /// This is called by Flutter's restoration framework when the app is being
+  /// restored. It receives the data that was previously returned by [toPrimitives]
+  /// and reconstructs the route stack.
+  static T? deserialize<T extends RouteTarget>(
+    Object value, {
+    required RouteUriParserSync? parseRouteFromUri,
+  }) => switch (value) {
+    String() => parseRouteFromUri!(Uri.parse(value)) as T,
+    Map() when value['type'] == 'layout' =>
+      RouteLayout.deserialize(value.cast()) as T,
+    Map() =>
+      RouteRestorable.deserialize(
+            value.cast(),
+            parseRouteFromUri: parseRouteFromUri,
+          )
+          as T,
+    // coverage:ignore-start
+    _ => null,
+    // coverage:ignore-end
+  };
+
   /// Completer that resolves when this route is popped.
   ///
   /// The future completes with the result passed to [pop] or [completeOnResult].

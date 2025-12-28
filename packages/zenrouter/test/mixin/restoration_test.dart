@@ -161,7 +161,7 @@ void main() {
         metadata: 'test metadata',
       );
 
-      final serialized = RouteRestorable.serialize(route);
+      final serialized = route.serialize();
 
       expect(serialized, isA<Map<String, dynamic>>());
       expect(serialized['strategy'], equals('converter'));
@@ -176,7 +176,7 @@ void main() {
     test('serializes route with unique strategy correctly', () {
       final route = UniqueRestorableRoute('456');
 
-      final serialized = RouteRestorable.serialize(route);
+      final serialized = route.serialize();
 
       expect(serialized, isA<Map<String, dynamic>>());
       expect(serialized['strategy'], equals('unique'));
@@ -191,7 +191,7 @@ void main() {
         metadata: null,
       );
 
-      final serialized = RouteRestorable.serialize(route);
+      final serialized = route.serialize();
 
       expect(serialized['value']['metadata'], isNull);
     });
@@ -208,7 +208,7 @@ void main() {
         },
       );
 
-      final serialized = RouteRestorable.serialize(route);
+      final serialized = route.serialize();
       final data = serialized['value']['data'] as Map;
 
       expect(data['nested']['deep'], equals('value'));
@@ -354,7 +354,7 @@ void main() {
         metadata: 'test',
       );
 
-      final serialized = RouteRestorable.serialize(original);
+      final serialized = original.serialize();
       final restored =
           RouteRestorable.deserialize<TestRoute>(
                 serialized,
@@ -370,7 +370,7 @@ void main() {
     test('unique strategy round-trip preserves route identity', () {
       final original = UniqueRestorableRoute('456');
 
-      final serialized = RouteRestorable.serialize(original);
+      final serialized = original.serialize();
       final restored =
           RouteRestorable.deserialize<TestRoute>(
                 serialized,

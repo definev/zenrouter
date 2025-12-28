@@ -7,6 +7,7 @@ export 'src/coordinator/router.dart';
 
 /// Path base
 export 'src/path/base.dart';
+export 'src/path/restoration.dart';
 
 /// Route target capabilities
 export 'src/mixin/deeplink.dart';

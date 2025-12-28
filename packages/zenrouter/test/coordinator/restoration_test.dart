@@ -457,7 +457,7 @@ void main() {
     test('serialize creates correct map structure for converter strategy', () {
       final route = BookmarkRoute(id: '123', customData: 'test');
 
-      final serialized = RouteRestorable.serialize(route);
+      final serialized = route.serialize();
 
       expect(serialized['strategy'], equals('converter'));
       expect(serialized['converter'], equals('test_bookmark'));
@@ -468,7 +468,7 @@ void main() {
     test('serialize creates URI string for unique strategy', () {
       final route = RestorableProfileRoute('456');
 
-      final serialized = RouteRestorable.serialize(route);
+      final serialized = route.serialize();
 
       expect(serialized['strategy'], equals('unique'));
       expect(serialized['value'], equals('/restorable-profile/456'));

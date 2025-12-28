@@ -424,26 +424,14 @@ class ActiveRouteRestorable<T extends RouteUnique> extends RestorableValue<T?> {
 
   @override
   T? fromPrimitives(Object? data) {
-    if (data case String data) {
-      return parseRouteFromUri(Uri.parse(data)) as T;
-    }
-    if (data case Map data) {
-      return RouteRestorable.deserialize(
-            data.cast(),
-            parseRouteFromUri: parseRouteFromUri,
-          )
-          as T;
-    }
-    return null;
+    if (data == null) return null;
+    return RouteTarget.deserialize(data, parseRouteFromUri: parseRouteFromUri);
   }
 
   @override
   Object? toPrimitives() {
     if (value == null) return null;
-    if (value case RouteRestorable value) {
-      return RouteRestorable.serialize(value);
-    }
-    return value!.toUri().toString();
+    return RouteTarget.serialize(value!);
   }
 }
 

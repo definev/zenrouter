@@ -1,6 +1,5 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
-import 'package:zenrouter/src/path/restoration.dart';
 import 'package:zenrouter/zenrouter.dart';
 
 part 'restoration.dart';

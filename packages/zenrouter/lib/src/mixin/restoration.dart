@@ -154,14 +154,14 @@ mixin RouteRestorable<T extends RouteTarget> on RouteTarget {
   /// This static method is called internally by the restoration system to convert a route
   /// into a format that can be saved to the restoration bucket. It inspects the route's
   /// [restorationStrategy] and delegates to either URI-based or converter-based serialization.
-  static Map<String, dynamic> serialize<T extends RouteRestorable>(T route) => {
-    'strategy': route.restorationStrategy.name,
-    if (route.restorationStrategy == RestorationStrategy.converter) ...{
-      'converter': route.converter.key,
-      'value': route.converter.serialize(route),
-    } else if (route.restorationStrategy == RestorationStrategy.unique &&
-        route is RouteUnique) ...{
-      'value': (route as RouteUnique).toUri().toString(),
+  Map<String, dynamic> serialize() => {
+    'strategy': restorationStrategy.name,
+    if (restorationStrategy == RestorationStrategy.converter) ...{
+      'converter': converter.key,
+      'value': converter.serialize(this as T),
+    } else if (restorationStrategy == RestorationStrategy.unique &&
+        this is RouteUnique) ...{
+      'value': (this as RouteUnique).toUri().toString(),
     },
   };
 

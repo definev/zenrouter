@@ -32,9 +32,15 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
   static Map<Type, RouteLayoutConstructor> layoutConstructorTable = {};
 
   static final Map<String, Type> _reflectionLayoutType = {};
-  @protected
-  static Type? getLayoutTypeByRuntimeType(String runtimeType) =>
-      _reflectionLayoutType[runtimeType];
+  static RouteLayout deserialize(Map<String, dynamic> value) {
+    final type = _reflectionLayoutType[value['value'] as String];
+    if (type == null) {
+      throw UnimplementedError(
+        'The [${value['value']}] layout isn\'t defined. You must define it using RouteLayout.defineLayout',
+      );
+    }
+    return RouteLayout.layoutConstructorTable[type]!();
+  }
 
   /// Table of registered layout builders.
   ///
@@ -191,4 +197,9 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
 
   @override
   int get hashCode => runtimeType.hashCode;
+
+  Map<String, dynamic> serialize() => {
+    'type': 'layout',
+    'value': runtimeType.toString(),
+  };
 }

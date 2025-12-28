@@ -1,6 +1,12 @@
+## 0.4.10
+- **Chore**: Fix analyzer warnings
+
+## 0.4.9
+- **Chore**: Standardize `serialize` and `deserialize` for supported `RouteTarget` type
+
 ## 0.4.8
 - **Feat**: Introduce new state restoration with `RouteRestoration` mixin. Support state restoration by default if `restorationScopeId` is provided in `MaterialApp.router` and using `Coordinator` pattern.
-- **Fix**: Resolve bug in `recover` method where `RouteRedirec` was ignored.
+- **Fix**: Resolve bug in `recover` method where `RouteRedirect` was ignored.
 
 ## 0.4.7
 - **Docs**: Update README

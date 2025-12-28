@@ -201,35 +201,12 @@ class NavigationPathRestorable<T extends RouteTarget>
   /// restored. It receives the data that was previously returned by [toPrimitives]
   /// and reconstructs the route stack.
   ///
-  /// For each item in the list:
-  /// - **String items**: Treated as URIs and parsed using [parseRouteFromUri]
-  /// - **Map items**: Treated as RouteRestorable data and deserialized using
-  ///   [RouteRestorable.deserialize] with the appropriate converter
-  ///
   /// Returns a list of route objects ready to be restored to the navigation stack.
   @override
-  List<T> fromPrimitives(Object? data) {
-    final result = <T>[];
-
-    final list = data as List;
-    for (final route in list) {
-      switch (route) {
-        // RouteUnique restoration
-        case String route:
-          result.add(parseRouteFromUri(Uri.parse(route)));
-        // RouteRestorable restoration
-        case Map route:
-          result.add(
-            RouteRestorable.deserialize(
-              route.cast(),
-              parseRouteFromUri: parseRouteFromUri,
-            ),
-          );
-      }
-    }
-
-    return result;
-  }
+  List<T> fromPrimitives(Object? data) => [
+    for (final route in data as List)
+      RouteTarget.deserialize(route, parseRouteFromUri: parseRouteFromUri) as T,
+  ];
 
   /// Converts the current route stack into primitive types for persistence.
   ///
@@ -244,18 +221,7 @@ class NavigationPathRestorable<T extends RouteTarget>
   /// Throws [UnimplementedError] if a route doesn't implement either [RouteUnique]
   /// or [RouteRestorable], as there's no way to serialize it.
   @override
-  Object? toPrimitives() {
-    final result = <Object?>[];
-    for (final route in value) {
-      result.add(switch (route) {
-        RouteRestorable route => RouteRestorable.serialize(route),
-        RouteUnique route => route.toUri().toString(),
-        _ => throw UnimplementedError(
-          'Type of [${route.runtimeType}] is not supported please mixin with [RouteUnique] or [RouteRestorable]',
-        ),
-      });
-    }
-
-    return result;
-  }
+  Object? toPrimitives() => [
+    for (final route in value) RouteTarget.serialize(route),
+  ];
 }

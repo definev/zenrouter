@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:zenrouter/src/internal/diff.dart';
 import 'package:zenrouter/src/internal/equatable.dart';
-import 'package:zenrouter/src/path/restoration.dart';
 import 'package:zenrouter/zenrouter.dart';
 
 part 'transition.dart';
@@ -255,7 +254,20 @@ abstract class StackPath<T extends RouteTarget> with ChangeNotifier {
   /// and the last element is the top of the stack (current route).
   List<T> get stack => List.unmodifiable(_stack);
 
+  @protected
   /// Clears all routes from this path.
+  ///
+  /// **Important:** Guards are NOT consulted. Use this for forced resets
+  /// like logout or app restart. For user-initiated back navigation,
+  /// use [StackMutatable.pop] which respects guards.
+  void clear() {
+    for (final route in _stack) {
+      route.completeOnResult(null, null, true);
+    }
+    _stack.clear();
+  }
+
+  /// Reset stack of this path.
   ///
   /// **Important:** Guards are NOT consulted. Use this for forced resets
   /// like logout or app restart. For user-initiated back navigation,
