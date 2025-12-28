@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:zenrouter/src/internal/diff.dart';
 import 'package:zenrouter/src/internal/equatable.dart';
-import 'package:zenrouter/src/path/restoration.dart';
 import 'package:zenrouter/zenrouter.dart';
 
 part 'transition.dart';

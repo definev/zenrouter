@@ -1,3 +1,6 @@
+## 0.4.10
+- **Chore**: Fix analyzer warnings
+
 ## 0.4.9
 - **Chore**: Standardize `serialize` and `deserialize` for supported `RouteTarget` type
 
