@@ -1,3 +1,6 @@
+## 0.4.9
+- **Refactor**: Use shared code generation utilities (`LayoutCodeGenerator`, `RouteCodeGenerator`) from `zenrouter_file_annotation`
+
 ## 0.4.8
 - **Docs**: Update README
 

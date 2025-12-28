@@ -251,19 +251,19 @@ extension AppCoordinatorNav on AppCoordinator {
         await blog___slugs.loadLibrary();
         return blog___slugs.BlogSlugsRoute(slugs: slugs);
       }());
-  Future<T?> pushCollectionsCollectionId<T extends Object>({
+  Future<T?> pushCollectionList<T extends Object>({
     Map<String, String> queries = const {},
   }) async => push(await () async {
     await collection_list.loadLibrary();
     return collection_list.CollectionListRoute(queries: queries);
   }());
-  Future<void> replaceCollectionsCollectionId({
+  Future<void> replaceCollectionList({
     Map<String, String> queries = const {},
   }) async => replace(await () async {
     await collection_list.loadLibrary();
     return collection_list.CollectionListRoute(queries: queries);
   }());
-  Future<void> recoverCollectionsCollectionId({
+  Future<void> recoverCollectionList({
     Map<String, String> queries = const {},
   }) async => recover(await () async {
     await collection_list.loadLibrary();

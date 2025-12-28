@@ -1,3 +1,6 @@
+## 0.4.9
+- **Refactor**: Extract shared code generation utilities (`LayoutCodeGenerator`, `RouteCodeGenerator`) for use by both `build_runner`
+
 ## 0.4.7
 - **Docs**: Update README
 
