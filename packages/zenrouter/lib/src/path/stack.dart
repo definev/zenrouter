@@ -133,10 +133,9 @@ class _NavigationStackState<T extends RouteTarget>
 
           switch (didPop) {
             case true when result != null:
-              route.onDidPop(result, widget.coordinator);
               route.completeOnResult(result, widget.coordinator);
-            case true:
               route.onDidPop(result, widget.coordinator);
+            case true:
               route.completeOnResult(
                 route._resultValue,
                 widget.coordinator,
@@ -144,6 +143,7 @@ class _NavigationStackState<T extends RouteTarget>
                 /// Fail silently if it's a force pop from the platform.
                 route.isPopByPath == false,
               );
+              route.onDidPop(result, widget.coordinator);
             case false when route is RouteGuard:
               widget.path.pop();
             case false when destination.guard != null:

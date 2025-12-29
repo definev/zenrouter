@@ -155,6 +155,8 @@ abstract class RouteTarget extends Equatable {
 
   @mustCallSuper
   void onDidPop(Object? result, covariant Coordinator? coordinator) {
+    onDiscard();
+
     /// Handle force pop from navigator
     if (isPopByPath == false && _path?.stack.contains(this) == true) {
       if (_path case StackMutatable path) {
@@ -178,6 +180,16 @@ abstract class RouteTarget extends Equatable {
     }
     _onResult.complete(result);
     _resultValue = result;
+    _path = null;
+  }
+
+  /// Call when the route is discarded.
+  ///
+  /// That is difference with [onDidPop], [onDidPop] called when route is removed from stack.
+  /// [onDiscard] called when route isn't in any path yet but it is in the process of being removed.
+  @mustCallSuper
+  void onDiscard() {
+    completeOnResult(null, null, true);
     _path = null;
   }
 }

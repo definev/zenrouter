@@ -77,11 +77,4 @@ mixin RouteUnique on RouteTarget {
 
   /// Returns the URI representation of this route.
   Uri toUri();
-
-  @override
-  @mustCallSuper
-  void onDidPop(
-    Object? result,
-    covariant Coordinator<RouteUnique>? coordinator,
-  ) => super.onDidPop(result, coordinator);
 }

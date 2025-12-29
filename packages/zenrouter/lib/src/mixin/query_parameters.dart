@@ -85,11 +85,8 @@ mixin RouteQueryParameters on RouteUnique {
   }
 
   @override
-  void onDidPop(
-    Object? result,
-    covariant Coordinator<RouteUnique>? coordinator,
-  ) {
-    super.onDidPop(result, coordinator);
+  void onDiscard() {
+    super.onDiscard();
     queryNotifier.dispose();
   }
 }

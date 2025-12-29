@@ -477,9 +477,9 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     var routeIndex = routePath.stack.indexOf(route);
 
     void discardRouteIfNeeded(T existingRoute) {
+      // Maximum reuse existing route
       if (existingRoute.hashCode != route.hashCode) {
-        route.onDidPop(null, this);
-        route.completeOnResult(null, this, true);
+        route.onDiscard();
       }
     }
 
