@@ -114,10 +114,9 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T>
   @override
   Future<void> activateRoute(T route) async {
     final index = stack.indexOf(route);
-    route.completeOnResult(null, null, true);
-    if (index == _activeIndex) {
-      final currentRoute = stack[_activeIndex];
+    final currentRoute = stack[_activeIndex];
 
+    if (index == _activeIndex) {
       /// If the route is a [RouteQueryParameters], update the queries
       if (currentRoute is RouteQueryParameters &&
           route is RouteQueryParameters) {
@@ -125,6 +124,11 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T>
       }
       return;
     }
+
+    if (currentRoute.hashCode != route.hashCode) {
+      route.onDiscard();
+    }
+
     if (index == -1) throw StateError('Route not found');
     await goToIndexed(index);
   }
@@ -155,17 +159,6 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T>
       notifyListeners();
       return;
     }
-
-    final existingRoute = stack[routeIndex];
-    if (existingRoute is RouteQueryParameters &&
-        route is RouteQueryParameters) {
-      existingRoute.queries = route.queries;
-      notifyListeners();
-    }
-
-    if (existingRoute.hashCode != route.hashCode) {
-      route.onDiscard();
-    }
-    await activateRoute(existingRoute);
+    await activateRoute(stack[routeIndex]);
   }
 }
