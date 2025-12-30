@@ -389,7 +389,7 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
 
           /// If layoutIndex exists and not on the top
           if (layoutIndex == -1) {
-            layoutOfLayoutPath.push(layout);
+            layoutOfLayoutPath.pushOrMoveToTop(layout);
           } else {
             /// Pop until layoutIndex is on the top
             final popCount = layoutOfLayoutPath.stack.length - layoutIndex - 1;
