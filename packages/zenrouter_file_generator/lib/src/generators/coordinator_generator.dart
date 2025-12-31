@@ -693,7 +693,7 @@ class CoordinatorGenerator implements Builder {
 
     // Generate paths getter
     buffer.writeln('  @override');
-    buffer.write('  List<StackPath> get paths => [root');
+    buffer.write('  List<StackPath> get paths => [...super.paths');
     for (final layout in tree.layouts) {
       buffer.write(', ${_getPathFieldName(layout.className)}');
     }
