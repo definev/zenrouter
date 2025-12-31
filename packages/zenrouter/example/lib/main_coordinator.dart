@@ -512,7 +512,7 @@ class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug {
 
   @override
   List<StackPath> get paths => [
-    root,
+    ...super.paths,
     homeStack,
     settingsStack,
     tabIndexed,

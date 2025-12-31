@@ -438,7 +438,7 @@ class TestCoordinator extends Coordinator<AppRoute> {
 
   @override
   List<StackPath> get paths => [
-    root,
+    ...super.paths,
     shellStack,
     tabStack,
     profileStack,

@@ -14,7 +14,7 @@ class TestCoordinator extends Coordinator<TestRoute> {
   void defineLayout() {}
 
   @override
-  List<StackPath> get paths => [root];
+  List<StackPath> get paths => [...super.paths];
 
   @override
   TestRoute parseRouteFromUri(Uri uri) {

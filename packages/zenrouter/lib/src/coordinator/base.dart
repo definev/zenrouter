@@ -170,6 +170,7 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   /// All navigation paths managed by this coordinator.
   ///
   /// If you add custom paths, make sure to override [paths]
+  @mustCallSuper
   List<StackPath> get paths => [root];
 
   /// Defines the layout structure for this coordinator.

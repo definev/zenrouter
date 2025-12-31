@@ -105,6 +105,7 @@ class DummyCoordinator extends Coordinator<RouteUnique> {
   RouteUnique parseRouteFromUri(Uri uri) => TestRoute(uri.path);
 
   @override
+  // ignore: must_call_super
   List<StackPath<RouteTarget>> get paths => [];
 }
 

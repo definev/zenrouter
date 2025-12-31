@@ -210,7 +210,7 @@ class TestCoordinator extends Coordinator<TestRoute> {
 
   @override
   List<StackPath> get paths => [
-    root,
+    ...super.paths,
     homeStack,
     settingsStack,
     tabIndexed,

@@ -298,7 +298,11 @@ class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug {
   );
 
   @override
-  List<StackPath<RouteTarget>> get paths => [root, customIndexed, firstStack];
+  List<StackPath<RouteTarget>> get paths => [
+    ...super.paths,
+    customIndexed,
+    firstStack,
+  ];
 
   @override
   void defineLayout() {

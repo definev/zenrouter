@@ -75,7 +75,7 @@ class AppCoordinator extends Coordinator<AppRoute> {
 
   @override
   List<StackPath> get paths => [
-    root,
+    ...super.paths,
     authPath,
     tabsPath,
     feedTabPath,

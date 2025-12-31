@@ -153,7 +153,7 @@ class IndexedTestCoordinator extends Coordinator<IndexedTestRoute> {
   );
 
   @override
-  List<StackPath<RouteTarget>> get paths => [root, indexed];
+  List<StackPath<RouteTarget>> get paths => [...super.paths, indexed];
 
   @override
   void defineLayout() {

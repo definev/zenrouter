@@ -194,7 +194,7 @@ class LayoutTestCoordinator extends Coordinator<LayoutTestRoute> {
   }
 
   @override
-  List<StackPath> get paths => [root, allowPopPath];
+  List<StackPath> get paths => [...super.paths, allowPopPath];
 
   @override
   LayoutTestRoute parseRouteFromUri(Uri uri) {

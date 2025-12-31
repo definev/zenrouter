@@ -189,7 +189,7 @@ class ErrorTestCoordinator extends Coordinator<ErrorTestRoute> {
   }
 
   @override
-  List<StackPath> get paths => [root, testStack];
+  List<StackPath> get paths => [...super.paths, testStack];
 
   @override
   ErrorTestRoute parseRouteFromUri(Uri uri) {

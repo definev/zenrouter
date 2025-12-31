@@ -18,7 +18,7 @@ class AppCoordinator extends Coordinator<AppRoute> {
 
   @override
   List<StackPath<RouteTarget>> get paths => [
-    root,
+    ...super.paths,
     homeIndexed,
     feedNavigation,
     profileNavigation,

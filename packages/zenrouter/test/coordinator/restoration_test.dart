@@ -218,7 +218,7 @@ class TestCoordinator extends Coordinator<AppRoute> {
   );
 
   @override
-  List<StackPath> get paths => [root, tabStack, undefinedTabStack];
+  List<StackPath> get paths => [...super.paths, tabStack, undefinedTabStack];
 
   @override
   void defineLayout() {
