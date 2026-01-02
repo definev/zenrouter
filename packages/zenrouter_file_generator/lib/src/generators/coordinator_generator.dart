@@ -676,16 +676,16 @@ class CoordinatorGenerator implements Builder {
             .map((r) => '$r()')
             .join(', ');
         buffer.writeln(
-          '  late final IndexedStackPath<$routeBaseName> $pathFieldName = IndexedStackPath.createWith('
+          '  late final $pathFieldName = IndexedStackPath<$routeBaseName>.createWith('
           'coordinator: this, '
           "label: '$pathName', "
           '[',
         );
         buffer.writeln('    $routeInstances,');
-        buffer.writeln("  ],);");
+        buffer.writeln("  ],)..bindLayout(${layout.className}.new);");
       } else {
         buffer.writeln(
-          "  late final NavigationPath<$routeBaseName> $pathFieldName = NavigationPath.createWith(coordinator: this, label: '$pathName');",
+          "  late final $pathFieldName = NavigationPath<$routeBaseName>.createWith(coordinator: this, label: '$pathName')..bindLayout(${layout.className}.new);",
         );
       }
     }
@@ -698,17 +698,6 @@ class CoordinatorGenerator implements Builder {
       buffer.write(', ${_getPathFieldName(layout.className)}');
     }
     buffer.writeln('];');
-    buffer.writeln();
-
-    // Generate defineLayout
-    buffer.writeln('  @override');
-    buffer.writeln('  void defineLayout() {');
-    for (final layout in tree.layouts) {
-      buffer.writeln(
-        '    RouteLayout.defineLayout(${layout.className}, () => ${layout.className}());',
-      );
-    }
-    buffer.writeln('  }');
     buffer.writeln();
 
     // Generate parseRouteFromUri

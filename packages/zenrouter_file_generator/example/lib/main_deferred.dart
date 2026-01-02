@@ -1,12 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:zenrouter_file_generator_example/flutter_scan.dart';
-import 'routes/routes.zen.dart'
-    deferred as routes
-    hide
-        AppCoordinatorNav,
-        AppCoordinatorGetter,
-        AppCoordinatorNavContext,
-        RouteLayoutBinding;
+import 'package:zenrouter_file_generator_example/routes/routes.zen.dart';
 
 void main() {
   runApp(FlutterScan(child: const MyApp()));
@@ -15,25 +9,18 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
+  static final coordinator = AppCoordinator();
+
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: routes.loadLibrary(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return SizedBox();
-        }
-        final coordinator = routes.AppCoordinator();
-        return MaterialApp.router(
-          title: 'ZenRouter File-Based Routing Example',
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-            useMaterial3: true,
-          ),
-          routerDelegate: coordinator.routerDelegate,
-          routeInformationParser: coordinator.routeInformationParser,
-        );
-      },
+    return MaterialApp.router(
+      title: 'ZenRouter File-Based Routing Example',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+        useMaterial3: true,
+      ),
+      routerDelegate: coordinator.routerDelegate,
+      routeInformationParser: coordinator.routeInformationParser,
     );
   }
 }

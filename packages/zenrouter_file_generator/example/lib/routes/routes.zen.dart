@@ -50,28 +50,28 @@ export '_route.dart';
 
 /// Generated coordinator managing all routes.
 class AppCoordinator extends Coordinator<AppRoute> {
-  late final NavigationPath<AppRoute> authPath = NavigationPath.createWith(
+  late final authPath = NavigationPath<AppRoute>.createWith(
     coordinator: this,
     label: 'Auth',
-  );
-  late final IndexedStackPath<AppRoute> tabsPath = IndexedStackPath.createWith(
+  )..bindLayout(AuthLayout.new);
+  late final tabsPath = IndexedStackPath<AppRoute>.createWith(
     coordinator: this,
     label: 'Tabs',
     [FeedTabLayout(), TabProfileRoute(), TabSettingsRoute()],
-  );
-  late final IndexedStackPath<AppRoute> feedTabPath =
-      IndexedStackPath.createWith(coordinator: this, label: 'FeedTab', [
-        FollowingLayout(),
-        ForYouLayout(),
-      ]);
-  late final NavigationPath<AppRoute> followingPath = NavigationPath.createWith(
+  )..bindLayout(TabsLayout.new);
+  late final feedTabPath = IndexedStackPath<AppRoute>.createWith(
+    coordinator: this,
+    label: 'FeedTab',
+    [FollowingLayout(), ForYouLayout()],
+  )..bindLayout(FeedTabLayout.new);
+  late final followingPath = NavigationPath<AppRoute>.createWith(
     coordinator: this,
     label: 'Following',
-  );
-  late final NavigationPath<AppRoute> forYouPath = NavigationPath.createWith(
+  )..bindLayout(FollowingLayout.new);
+  late final forYouPath = NavigationPath<AppRoute>.createWith(
     coordinator: this,
     label: 'ForYou',
-  );
+  )..bindLayout(ForYouLayout.new);
 
   @override
   List<StackPath> get paths => [
@@ -82,15 +82,6 @@ class AppCoordinator extends Coordinator<AppRoute> {
     followingPath,
     forYouPath,
   ];
-
-  @override
-  void defineLayout() {
-    RouteLayout.defineLayout(AuthLayout, () => AuthLayout());
-    RouteLayout.defineLayout(TabsLayout, () => TabsLayout());
-    RouteLayout.defineLayout(FeedTabLayout, () => FeedTabLayout());
-    RouteLayout.defineLayout(FollowingLayout, () => FollowingLayout());
-    RouteLayout.defineLayout(ForYouLayout, () => ForYouLayout());
-  }
 
   @override
   Future<AppRoute> parseRouteFromUri(Uri uri) async {
