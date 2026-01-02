@@ -1,3 +1,6 @@
+## 0.4.12
+- **Feat**: Add `super.paths` to ensure `root` always added in the `paths` getter (Thanks @mrgnhnt96)
+
 ## 0.4.11
 
 ### New Features

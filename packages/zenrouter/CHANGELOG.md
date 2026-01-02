@@ -1,3 +1,6 @@
+## 0.4.16
+- **Fix**: Future already completed bug when pushing the same route with `pushOrMoveToTop`.
+
 ## 0.4.15
 - **Feat**: Add `onUpdate` method to `RouteTarget` for handling in-place route updates when navigating to the same route with different state.
 - **Feat**: Add `bindLayout` method to `StackPath` as a convenient alternative for layout registration. (See [RouteLayout Guide](doc/guides/route-layout.md))
