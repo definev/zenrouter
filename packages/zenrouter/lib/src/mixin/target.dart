@@ -215,4 +215,43 @@ abstract class RouteTarget extends Equatable {
   void onDiscard() {
     completeOnResult(null, null, true);
   }
+
+  /// Called when this route is updated with state from a new route instance.
+  ///
+  /// When navigation occurs and a route with the same identity already exists
+  /// in the stack, instead of pushing a duplicate, the existing route's
+  /// [onUpdate] method is called with the new route instance as a parameter.
+  /// This allows you to transfer state from the new route to the existing one.
+  ///
+  /// **Common use cases:**
+  /// - Updating query parameters without rebuilding the route
+  /// - Refreshing route data when navigating to the same screen
+  /// - Syncing state between duplicate route instances
+  ///
+  /// **Example:**
+  /// ```dart
+  /// class ProductRoute extends RouteTarget with RouteUnique {
+  ///   ProductRoute(this.id, {this.highlightReview});
+  ///
+  ///   final String id;
+  ///   String? highlightReview;
+  ///
+  ///   @override
+  ///   void onUpdate(covariant ProductRoute newRoute) {
+  ///     super.onUpdate(newRoute);
+  ///     // Transfer the new highlight state to this existing route
+  ///     highlightReview = newRoute.highlightReview;
+  ///   }
+  ///
+  ///   @override
+  ///   List<Object?> get props => [id]; // highlightReview not in props
+  /// }
+  /// ```
+  ///
+  /// **Parameters:**
+  /// - [newRoute]: The new route instance being navigated to with potentially updated state.
+  ///
+  /// **Important:** Always call `super.onUpdate(newRoute)` if you override this.
+  @mustCallSuper
+  void onUpdate(covariant RouteTarget newRoute) {}
 }

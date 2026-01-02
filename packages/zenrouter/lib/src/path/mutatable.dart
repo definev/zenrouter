@@ -46,9 +46,7 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
     final index = _stack.indexOf(target);
     if (_stack.isNotEmpty && index == _stack.length - 1) {
       final last = _stack.last;
-      if (last is RouteQueryParameters && target is RouteQueryParameters) {
-        last.queries = target.queries;
-      }
+      last.onUpdate(target);
       target.onDiscard();
       target.clearStackPath();
       return;
@@ -136,11 +134,8 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
       }
 
       final existingRoute = stack[routeIndex];
-      if (existingRoute is RouteQueryParameters &&
-          target is RouteQueryParameters) {
-        existingRoute.queries = target.queries;
-        notifyListeners();
-      }
+      existingRoute.onUpdate(target);
+      notifyListeners();
 
       /// If routes differ by hash code, discard the incoming route
       if (existingRoute.hashCode != target.hashCode) {

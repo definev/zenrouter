@@ -203,3 +203,10 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
     'value': runtimeType.toString(),
   };
 }
+
+extension RouteLayoutBinding<T extends RouteUnique> on StackPath<T> {
+  void bindLayout(RouteLayoutConstructor constructor) {
+    final instance = constructor()..onDiscard();
+    RouteLayout.defineLayout(instance.runtimeType, constructor);
+  }
+}
