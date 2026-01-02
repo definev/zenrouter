@@ -29,6 +29,26 @@ class SimpleIndexedRoute extends IndexedTestRoute {
   List<Object?> get props => [id];
 }
 
+class RedirectNullRoute extends IndexedTestRoute
+    with RouteRedirect<IndexedTestRoute> {
+  @override
+  Type? get layout => IndexedStackLayout;
+
+  @override
+  Uri toUri() => Uri.parse('/redirect');
+
+  @override
+  IndexedTestRoute? redirectWith(Coordinator coordinator) => null;
+
+  @override
+  Widget build(covariant Coordinator coordinator, BuildContext context) {
+    return const SizedBox.shrink();
+  }
+
+  @override
+  List<Object?> get props => [];
+}
+
 class GuardedIndexedRoute extends IndexedTestRoute with RouteGuard {
   GuardedIndexedRoute({this.allowPop = false});
   final bool allowPop;
@@ -169,7 +189,12 @@ class HomeRoute extends IndexedTestRoute with RouteDeepLink {
 
 class IndexedTestCoordinator extends Coordinator<IndexedTestRoute> {
   late final indexed = IndexedStackPath<IndexedTestRoute>.create(
-    [CoordinatorFirstTab(), CoordinatorSecondTab(), CoordinatorThirdTab()],
+    [
+      CoordinatorFirstTab(),
+      CoordinatorSecondTab(),
+      CoordinatorThirdTab(),
+      RedirectNullRoute(),
+    ],
     coordinator: this,
     label: 'indexed',
   );
@@ -359,6 +384,32 @@ void main() {
       expect(path.activeRoute, route1);
     });
 
-    test('handle redirect null gracefully', () async {});
+    test('do nothing when redirectWith return null', () async {
+      final path = IndexedStackPath<IndexedTestRoute>.createWith(
+        [SimpleIndexedRoute('tab1'), RedirectNullRoute()],
+        coordinator: IndexedTestCoordinator(),
+        label: 'test-navigation',
+      );
+
+      path.navigate(RedirectNullRoute());
+      await Future.delayed(Duration.zero);
+
+      expect(path.activeIndex, 0);
+    });
+
+    test('coordinator do nothing when redirectWith return null', () async {
+      final coordinator = IndexedTestCoordinator();
+
+      coordinator.navigate(RedirectNullRoute());
+      await Future.delayed(Duration.zero);
+      coordinator.recover(RedirectNullRoute());
+      await Future.delayed(Duration.zero);
+      coordinator.push(RedirectNullRoute());
+      await Future.delayed(Duration.zero);
+      coordinator.pushOrMoveToTop(RedirectNullRoute());
+      await Future.delayed(Duration.zero);
+
+      expect(coordinator.indexed.activeIndex, 0);
+    });
   });
 }

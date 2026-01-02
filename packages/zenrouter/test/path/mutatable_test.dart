@@ -30,6 +30,24 @@ class SimpleRoute extends MutatableTestRoute {
   List<Object?> get props => [id];
 }
 
+class RedirectNullRoute extends MutatableTestRoute
+    with RouteRedirect<MutatableTestRoute> {
+  RedirectNullRoute();
+
+  @override
+  Uri toUri() => Uri.parse('/redirect-null');
+
+  @override
+  Widget build(covariant Coordinator coordinator, BuildContext context) {
+    return Text('RedirectNull');
+  }
+
+  @override
+  FutureOr<MutatableTestRoute?> redirectWith(
+    covariant Coordinator<RouteUnique> coordinator,
+  ) => null;
+}
+
 /// Route with query parameters for testing parameter updates
 class QueryRoute extends MutatableTestRoute with RouteQueryParameters {
   QueryRoute(this.id, [Map<String, String>? queries]) {
@@ -168,6 +186,17 @@ class MutatableTestCoordinator extends Coordinator<MutatableTestRoute> {
 
 void main() {
   group('StackMutatable - push()', () {
+    test('do nothing when redirectWith return null', () {
+      final path = NavigationPath<MutatableTestRoute>.createWith(
+        coordinator: MutatableTestCoordinator(),
+        label: 'test-navigation',
+      );
+
+      path.push(RedirectNullRoute());
+
+      expect(path.stack.isEmpty, true);
+    });
+
     test('pushes a simple route to empty stack', () async {
       final path = NavigationPath<MutatableTestRoute>.create();
       final route = SimpleRoute('1');
@@ -268,6 +297,17 @@ void main() {
   });
 
   group('StackMutatable - pushOrMoveToTop()', () {
+    test('do nothing when redirectWith return null', () {
+      final path = NavigationPath<MutatableTestRoute>.createWith(
+        coordinator: MutatableTestCoordinator(),
+        label: 'test-navigation',
+      );
+
+      path.pushOrMoveToTop(RedirectNullRoute());
+
+      expect(path.stack.isEmpty, true);
+    });
+
     test('pushes new route to top when not in stack', () async {
       final path = NavigationPath<MutatableTestRoute>.create();
       final route1 = SimpleRoute('1');
@@ -706,6 +746,17 @@ void main() {
   });
 
   group('StackMutatable - navigate()', () {
+    test('do nothing when redirectWith return null', () {
+      final path = NavigationPath<MutatableTestRoute>.createWith(
+        coordinator: MutatableTestCoordinator(),
+        label: 'test-navigation',
+      );
+
+      path.navigate(RedirectNullRoute());
+
+      expect(path.stack.isEmpty, true);
+    });
+
     test('pushes new route when not in stack', () async {
       final path = NavigationPath<MutatableTestRoute>.create();
       final route1 = SimpleRoute('1');
