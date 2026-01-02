@@ -408,6 +408,8 @@ void main() {
       await Future.delayed(Duration.zero);
       coordinator.pushOrMoveToTop(RedirectNullRoute());
       await Future.delayed(Duration.zero);
+      coordinator.replace(RedirectNullRoute());
+      await Future.delayed(Duration.zero);
 
       expect(coordinator.indexed.activeIndex, 0);
     });
