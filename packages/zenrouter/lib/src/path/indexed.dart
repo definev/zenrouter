@@ -125,10 +125,8 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T>
 
     final indexRoute = stack[index];
 
-    /// If the route is a [RouteQueryParameters], update the queries
-    if (indexRoute is RouteQueryParameters && route is RouteQueryParameters) {
-      indexRoute.queries = route.queries;
-    }
+    /// Update the existing route with new state
+    indexRoute.onUpdate(route);
 
     if (indexRoute.hashCode != route.hashCode) route.onDiscard();
     if (index == _activeIndex) return;

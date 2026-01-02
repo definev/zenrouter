@@ -89,6 +89,12 @@ mixin RouteQueryParameters on RouteUnique {
     super.onDiscard();
     queryNotifier.dispose();
   }
+
+  @override
+  void onUpdate(covariant RouteQueryParameters newRoute) {
+    super.onUpdate(newRoute);
+    queryNotifier.value = newRoute.queries;
+  }
 }
 
 class _QuerySelectorBuilder<T> extends StatefulWidget {

@@ -1,3 +1,7 @@
+## 0.4.15
+- **Feat**: Add `onUpdate` method to `RouteTarget` for handling in-place route updates when navigating to the same route with different state.
+- **Feat**: Add `bindLayout` method to `StackPath` for binding layout alternative. (See [RouteLayout Guide](doc/guides/route-layout.md))
+
 ## 0.4.14
 - **Breaking Change**: Don't allow `redirect` to return null anymore since it won't do anything.
 - **Feat**: Add `mustCallSuper` to `paths` getter (Thanks @mrgnhnt96)
