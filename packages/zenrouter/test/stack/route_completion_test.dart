@@ -598,7 +598,7 @@ void main() {
 
       expect(path.stack, isEmpty);
       expect(route.resultCompleted, isTrue);
-      // route1 is not completed because it explicitly discarded
+      // route1 is not completed because discard was set to false
       expect(route1.resultCompleted, isFalse);
       route1.onDiscard();
     });

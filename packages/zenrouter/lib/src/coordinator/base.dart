@@ -597,7 +597,7 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   }
 
   /// Pops the last route from the nearest dynamic path.
-  void pop([Object? result]) async {
+  Future<void> pop([Object? result]) async {
     // Get all dynamic paths from the active layout paths
     final dynamicPaths = activeLayoutPaths.whereType<StackMutatable>().toList();
 

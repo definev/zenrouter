@@ -1,3 +1,10 @@
+## 0.4.14
+- **Breaking Change**: Don't allow `redirect` to return null anymore since it won't do anything.
+- **Feat**: Add `mustCallSuper` to `paths` getter (Thanks @mrgnhnt96)
+- **Feat**: Add `discard` parameter to `remove` method for controlling discarding behavior.
+- **Fix**: Memory leak when pushing `RouteQueryParameters` in `IndexedStackPath`.
+- **Fix**: Memory leak when discard route in `RouteRedirect`.
+
 ## 0.4.13
 - **Fix**: Ensure `navigate` method is compatible with `RouteRedirect`.
 

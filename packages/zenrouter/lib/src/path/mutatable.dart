@@ -46,17 +46,17 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
     final index = _stack.indexOf(target);
     if (_stack.isNotEmpty && index == _stack.length - 1) {
       final last = _stack.last;
-      if (last is RouteQueryParameters && element is RouteQueryParameters) {
-        last.queries = element.queries;
+      if (last is RouteQueryParameters && target is RouteQueryParameters) {
+        last.queries = target.queries;
       }
-      element.onDiscard();
-      element.clearStackPath();
+      target.onDiscard();
+      target.clearStackPath();
       return;
     }
 
     if (index != -1) {
       final removed = _stack.removeAt(index);
-      if (element.hashCode != removed.hashCode) {
+      if (target.hashCode != removed.hashCode) {
         removed.onDiscard();
         removed.clearStackPath();
       }
@@ -67,9 +67,9 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
 
   /// Removes the top route from the navigation stack.
   ///
-  /// **Difference from [NavigationPath.remove]:**
+  /// **Difference from [remove] on concrete path implementations:**
   /// - [pop]: Respects [RouteGuard], removes only the top route, returns result
-  /// - [remove]: Bypasses guards, removes at any index, no result
+  /// - [remove]: Bypasses guards, can remove at any index, returns no result
   ///
   /// **Return values:**
   /// - `true`: Pop was successful
@@ -110,10 +110,10 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
   /// - User-initiated back navigation (use [pop] instead)
   /// - You need to respect guards
   void remove(T element, {bool discard = true}) {
-    element.clearStackPath();
     final removed = _stack.remove(element);
     if (removed) {
       if (discard) element.onDiscard();
+      element.clearStackPath();
       notifyListeners();
     }
   }

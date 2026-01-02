@@ -1,3 +1,6 @@
+## 0.4.4
+- Update `zenrouter` version
+
 ## 0.4.3 
 - Remove toast notifications
 
