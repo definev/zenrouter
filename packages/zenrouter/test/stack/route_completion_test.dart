@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zenrouter/zenrouter.dart';
@@ -112,9 +110,7 @@ class RedirectRoute extends RouteTarget
   }
 
   @override
-  FutureOr<TestRoute?> redirect() {
-    return TestRoute(redirectToId);
-  }
+  TestRoute redirect() => TestRoute(redirectToId);
 
   @override
   List<Object?> get props => [redirectToId];
@@ -147,7 +143,7 @@ class ChainedRedirectRoute extends RouteTarget
   }
 
   @override
-  FutureOr<RouteTarget?> redirect() => nextRedirect;
+  RouteTarget redirect() => nextRedirect;
 
   @override
   Uri toUri() => Uri.parse('/chained');
@@ -160,7 +156,7 @@ class ChainedRedirectRoute extends RouteTarget
 
 /// Test route that redirects to null (stays on current route)
 class NullRedirectRoute extends RouteTarget
-    with RouteUnique, RouteRedirect<TestRoute> {
+    with RouteUnique, RouteRedirect<RouteTarget> {
   NullRedirectRoute();
 
   bool resultCompleted = false;
@@ -176,7 +172,8 @@ class NullRedirectRoute extends RouteTarget
   }
 
   @override
-  FutureOr<TestRoute?> redirect() => null;
+  TestRoute? redirectWith(covariant Coordinator<RouteUnique> coordinator) =>
+      null;
 
   @override
   Uri toUri() => Uri.parse('/null-redirect');
@@ -205,7 +202,7 @@ class SelfRedirectRoute extends RouteTarget
   }
 
   @override
-  FutureOr<SelfRedirectRoute?> redirect() => this;
+  SelfRedirectRoute redirect() => this;
 
   @override
   Uri toUri() => Uri.parse('/self-redirect');
@@ -413,12 +410,12 @@ void main() {
 
       final result = await RouteRedirect.resolve<RouteTarget>(
         nullRedirect,
-        null,
+        TestCoordinator(),
       );
 
       // Should return original route
-      expect(result, same(nullRedirect));
-      expect(nullRedirect.resultCompleted, isFalse);
+      expect(result, null);
+      expect(nullRedirect.resultCompleted, isTrue);
     });
 
     test('does not complete route when redirect returns itself', () async {
@@ -586,28 +583,25 @@ void main() {
       expect((result as TestRoute).resultCompleted, isFalse);
     });
 
-    test(
-      'remove() does not complete removed route future (current behavior)',
-      () async {
-        final path = NavigationPath<TestRoute>.create(label: 'test');
-        final route = TestRoute('a');
+    test('remove() completes removed route future', () async {
+      final path = NavigationPath<TestRoute>.create(label: 'test');
+      final route = TestRoute('a');
+      final route1 = TestRoute('b');
 
-        path.push(route);
-        await Future.delayed(const Duration(milliseconds: 100));
+      path.push(route);
+      path.push(route1);
+      await Future.delayed(Duration.zero);
 
-        path.remove(route);
-        await Future.delayed(const Duration(milliseconds: 100));
+      path.remove(route);
+      await Future.delayed(Duration.zero);
+      path.remove(route1, discard: false);
 
-        expect(path.stack, isEmpty);
-        // NOTE: Current implementation of remove() does not complete the future.
-        // If this is a bug, this test expects the 'wrong' behavior to document it.
-        // If fixed, this should be expect(route.resultCompleted, isTrue).
-        expect(route.resultCompleted, isFalse);
-
-        // Cleanup to avoid hanging test
-        route.completeOnResult(null, null, true);
-      },
-    );
+      expect(path.stack, isEmpty);
+      expect(route.resultCompleted, isTrue);
+      // route1 is not completed because it explicitly discarded
+      expect(route1.resultCompleted, isFalse);
+      route1.onDiscard();
+    });
 
     test('stress test: push multiple routes and reset cleans up all', () async {
       final path = NavigationPath<TestRoute>.create(label: 'test');

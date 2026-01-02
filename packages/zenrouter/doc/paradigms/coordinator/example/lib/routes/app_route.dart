@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:zenrouter/zenrouter.dart';
 import 'coordinator.dart';
@@ -183,9 +182,7 @@ class IndexRoute extends AppRoute with RouteRedirect<AppRoute> {
   Uri toUri() => Uri.parse('/');
 
   @override
-  FutureOr<AppRoute?> redirect() {
-    return PostList();
-  }
+  AppRoute redirect() => PostList();
 
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {

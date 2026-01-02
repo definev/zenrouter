@@ -556,9 +556,7 @@ class SecondTab extends AppRoute with RouteRedirect<AppRoute> {
   Uri toUri() => Uri.parse('/tabs/second');
 
   @override
-  FutureOr<AppRoute?> redirect() {
-    return ThirdTab();
-  }
+  AppRoute redirect() => ThirdTab();
 
   @override
   Widget build(covariant TestCoordinator coordinator, BuildContext context) {

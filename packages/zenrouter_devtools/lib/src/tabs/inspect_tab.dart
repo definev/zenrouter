@@ -296,15 +296,10 @@ class _NavigationRouteItem extends StatelessWidget {
               ],
             ),
           ),
-          if (path is NavigationPath)
+          if (path case StackMutatable path)
             SmallIconButton(
               icon: CupertinoIcons.xmark,
-              onTap:
-                  path.stack.length > 1
-                      ? () {
-                        (path as NavigationPath).remove(route);
-                      }
-                      : null,
+              onTap: path.stack.length > 1 ? () => path.remove(route) : null,
               color: const Color(0xFFEF9A9A),
             ),
         ],

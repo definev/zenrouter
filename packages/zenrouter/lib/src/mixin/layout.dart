@@ -148,7 +148,7 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
   }
 
   /// Build the layout for this route.
-  Widget buildPath(Coordinator coordinator) {
+  Widget buildPath(covariant Coordinator coordinator) {
     final path = resolvePath(coordinator);
 
     if (!_layoutBuilderTable.containsKey(path.pathKey)) {

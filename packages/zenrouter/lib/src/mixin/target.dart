@@ -107,9 +107,9 @@ abstract class RouteTarget extends Equatable {
   /// This is set fresh each time the route is pushed.
   final Completer<Object?> _onResult = Completer();
 
-  @visibleForTesting
   @protected
-  /// The completer for the result of the route. For testing purposes only.
+  @visibleForTesting
+  /// The completer for the result of the route.
   /// DO NOT USE THIS MANUALLY. USE [completeOnResult] instead.
   Completer<Object?> get onResult => _onResult;
 
@@ -187,7 +187,7 @@ abstract class RouteTarget extends Equatable {
     /// Handle force pop from navigator
     if (isPopByPath == false && _path?.stack.contains(this) == true) {
       if (_path case StackMutatable path) {
-        path.remove(this);
+        path.remove(this, discard: false);
       }
     }
 

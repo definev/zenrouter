@@ -198,10 +198,11 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     String layoutRestorationId = layoutPaths
         .map((p) {
           final label = p.debugLabel;
-          if (label != null) return label;
-          final index = paths.indexOf(p);
-          if (index == -1) throw UnimplementedError();
-          return index.toString();
+          assert(
+            label != null,
+            '[StackPath] must have an unique label in order to use with Coordinator restorable',
+          );
+          return label!;
         })
         .join('_');
     layoutRestorationId = '${rootRestorationId}_$layoutRestorationId';
@@ -422,7 +423,8 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   /// Exceptions from redirect resolution or deep link handlers propagate
   /// to the caller. Handle these in your app's error boundary.
   Future<void> recover(T route) async {
-    T target = await RouteRedirect.resolve(route, this);
+    T? target = await RouteRedirect.resolve(route, this);
+    if (target == null) return;
     if (target is RouteDeepLink) {
       switch (target.deeplinkStrategy) {
         case DeeplinkStrategy.push:
@@ -466,6 +468,7 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   /// is called to sync the browser URL back to the current application state.
   Future<void> navigate(T route) async {
     final target = await RouteRedirect.resolve(route, this);
+    if (target == null) return;
 
     final layout = target.resolveLayout(this);
     final routePath = layout?.resolvePath(this) ?? root;
@@ -479,17 +482,17 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
       return;
     }
 
+    assert(
+      routePath is StackNavigatable,
+      UnimplementedError(
+        'ZenRouter: routePath (${routePath.runtimeType}) does not implement '
+        'StackNavigatable. The navigate() call for route $route will have no '
+        'effect on the navigation stack or browser history.',
+      ),
+    );
+
     if (routePath case StackNavigatable routePath) {
       await routePath.navigate(target);
-    } else {
-      assert(() {
-        debugPrint(
-          'ZenRouter: routePath (${routePath.runtimeType}) does not implement '
-          'StackNavigatable. The navigate() call for route $route will have no '
-          'effect on the navigation stack or browser history.',
-        );
-        return true;
-      }());
     }
   }
 
@@ -515,10 +518,13 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   /// Exceptions from redirect resolution propagate to the caller.
   /// Guards are NOT consulted since all routes are cleared.
   Future<void> replace(T route) async {
+    T? target = await RouteRedirect.resolve(route, this);
+    if (target == null) return;
+
     for (final path in paths) {
       path.reset();
     }
-    T target = await RouteRedirect.resolve(route, this);
+
     final layout = target.resolveLayout(this);
     final path = layout?.resolvePath(this) ?? root;
     await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.override);
@@ -555,7 +561,9 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   /// **Error Handling:**
   /// Exceptions from redirect resolution propagate to the caller.
   Future<R?> push<R extends Object>(T route) async {
-    T target = await RouteRedirect.resolve(route, this);
+    T? target = await RouteRedirect.resolve(route, this);
+    if (target == null) return null;
+
     final layout = target.resolveLayout(this);
     final path = layout?.resolvePath(this) ?? root;
     await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.pushToTop);
@@ -574,6 +582,8 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   /// Useful for tab navigation where you don't want duplicates.
   void pushOrMoveToTop(T route) async {
     final target = await RouteRedirect.resolve(route, this);
+    if (target == null) return;
+
     final layout = target.resolveLayout(this);
     final path = layout?.resolvePath(this) ?? root;
     await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.pushToTop);
@@ -587,16 +597,15 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   }
 
   /// Pops the last route from the nearest dynamic path.
-  void pop([Object? result]) {
+  void pop([Object? result]) async {
     // Get all dynamic paths from the active layout paths
-    final dynamicPaths = activeLayoutPaths.whereType<NavigationPath>().toList();
+    final dynamicPaths = activeLayoutPaths.whereType<StackMutatable>().toList();
 
     // Try to pop from the farthest element if stack length >= 2
     for (var i = dynamicPaths.length - 1; i >= 0; i--) {
       final path = dynamicPaths[i];
       if (path.stack.length >= 2) {
-        path.pop(result);
-        return;
+        await path.pop(result);
       }
     }
   }
@@ -615,7 +624,7 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   /// - `null` if the [RouteGuard] want manual control
   Future<bool?> tryPop([Object? result]) async {
     // Get all dynamic paths from the active layout paths
-    final dynamicPaths = activeLayoutPaths.whereType<NavigationPath>().toList();
+    final dynamicPaths = activeLayoutPaths.whereType<StackMutatable>().toList();
 
     // Try to pop from the farthest element if stack length >= 2
     for (var i = dynamicPaths.length - 1; i >= 0; i--) {

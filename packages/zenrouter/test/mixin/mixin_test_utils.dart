@@ -317,11 +317,11 @@ class AuthRedirectRoute extends TestAppRoute with RouteRedirect<TestAppRoute> {
   Uri toUri() => Uri.parse('/auth-redirect');
 
   @override
-  FutureOr<TestAppRoute?> redirect() {
+  TestAppRoute redirect() {
     if (!isAuthenticated) {
       return LoginRoute();
     }
-    return null; // Stay on current route
+    return this; // Stay on current route
   }
 
   @override
@@ -575,11 +575,11 @@ class RedirectGuardRoute extends TestAppRoute
   Uri toUri() => Uri.parse('/redirect-guard');
 
   @override
-  FutureOr<TestAppRoute?> redirect() {
+  TestAppRoute redirect() {
     if (shouldRedirect) {
       return SimpleRoute(id: 'redirected');
     }
-    return null;
+    return this;
   }
 
   @override
@@ -708,11 +708,11 @@ class FullMixinRoute extends TestAppRoute
   Future<bool> popGuard() async => allowPop;
 
   @override
-  FutureOr<TestAppRoute?> redirect() {
+  TestAppRoute redirect() {
     if (shouldRedirect) {
       return SimpleRoute(id: 'full-mixin-redirected');
     }
-    return null;
+    return this;
   }
 
   @override

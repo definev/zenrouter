@@ -309,7 +309,7 @@ class FeedDetail extends AppRoute
   }
 
   @override
-  FutureOr<AppRoute?> redirect() {
+  AppRoute redirect() {
     /// Redirect to other stack demonstration
     /// The redirect path resolver by the Coordinator
     if (id == 'profile') return ProfileDetail();
