@@ -107,9 +107,9 @@ abstract class RouteTarget extends Equatable {
   /// This is set fresh each time the route is pushed.
   final Completer<Object?> _onResult = Completer();
 
-  @visibleForTesting
   @protected
-  /// The completer for the result of the route. For testing purposes only.
+  @visibleForTesting
+  /// The completer for the result of the route.
   /// DO NOT USE THIS MANUALLY. USE [completeOnResult] instead.
   Completer<Object?> get onResult => _onResult;
 
