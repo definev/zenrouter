@@ -103,13 +103,13 @@ class RedirectRoute extends MutatableTestRoute
     with RouteRedirect<MutatableTestRoute> {
   RedirectRoute(this.id, this.target);
   final String id;
-  final MutatableTestRoute? target;
+  final MutatableTestRoute target;
 
   @override
   Uri toUri() => Uri.parse('/redirect/$id');
 
   @override
-  FutureOr<MutatableTestRoute?> redirect() => target;
+  MutatableTestRoute redirect() => target;
 
   @override
   Widget build(covariant Coordinator coordinator, BuildContext context) {
@@ -125,14 +125,14 @@ class AsyncRedirectRoute extends MutatableTestRoute
     with RouteRedirect<MutatableTestRoute> {
   AsyncRedirectRoute(this.id, this.target, {this.delay = 10});
   final String id;
-  final MutatableTestRoute? target;
+  final MutatableTestRoute target;
   final int delay;
 
   @override
   Uri toUri() => Uri.parse('/async-redirect/$id');
 
   @override
-  Future<MutatableTestRoute?> redirect() async {
+  Future<MutatableTestRoute> redirect() async {
     await Future.delayed(Duration(milliseconds: delay));
     return target;
   }
@@ -221,15 +221,6 @@ void main() {
 
       expect(path.stack.length, 1);
       expect(path.stack.first, target);
-    });
-
-    test('does nothing when redirect returns null', () async {
-      final path = NavigationPath<MutatableTestRoute>.create();
-      final redirect = RedirectRoute('redirect', null);
-
-      await path.push(redirect);
-
-      expect(path.stack.length, 0);
     });
 
     test('binds stack path to route', () async {
@@ -392,15 +383,6 @@ void main() {
 
       expect(path.stack.length, 1);
       expect(path.stack.first, target);
-    });
-
-    test('does nothing when redirect returns null', () async {
-      final path = NavigationPath<MutatableTestRoute>.create();
-      final redirect = RedirectRoute('redirect', null);
-
-      await path.pushOrMoveToTop(redirect);
-
-      expect(path.stack.length, 0);
     });
 
     test('notifies listeners when route is moved', () async {
@@ -835,19 +817,6 @@ void main() {
 
       expect(path.stack.length, 1);
       expect(path.stack.first, target);
-    });
-
-    test('does nothing when redirect returns null', () async {
-      final path = NavigationPath<MutatableTestRoute>.create();
-      final route1 = SimpleRoute('1');
-      final redirect = RedirectRoute('redirect', null);
-
-      path.push(route1);
-
-      await path.navigate(redirect);
-
-      expect(path.stack.length, 1);
-      expect(path.stack.first, route1);
     });
 
     test('discards incoming route when hash differs but equals', () async {

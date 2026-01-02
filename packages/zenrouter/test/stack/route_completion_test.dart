@@ -112,9 +112,7 @@ class RedirectRoute extends RouteTarget
   }
 
   @override
-  FutureOr<TestRoute?> redirect() {
-    return TestRoute(redirectToId);
-  }
+  TestRoute redirect() => TestRoute(redirectToId);
 
   @override
   List<Object?> get props => [redirectToId];
@@ -147,7 +145,7 @@ class ChainedRedirectRoute extends RouteTarget
   }
 
   @override
-  FutureOr<RouteTarget?> redirect() => nextRedirect;
+  RouteTarget redirect() => nextRedirect;
 
   @override
   Uri toUri() => Uri.parse('/chained');
@@ -160,7 +158,7 @@ class ChainedRedirectRoute extends RouteTarget
 
 /// Test route that redirects to null (stays on current route)
 class NullRedirectRoute extends RouteTarget
-    with RouteUnique, RouteRedirect<TestRoute> {
+    with RouteUnique, RouteRedirect<RouteTarget> {
   NullRedirectRoute();
 
   bool resultCompleted = false;
@@ -176,7 +174,8 @@ class NullRedirectRoute extends RouteTarget
   }
 
   @override
-  FutureOr<TestRoute?> redirect() => null;
+  TestRoute? redirectWith(covariant Coordinator<RouteUnique> coordinator) =>
+      null;
 
   @override
   Uri toUri() => Uri.parse('/null-redirect');
@@ -205,7 +204,7 @@ class SelfRedirectRoute extends RouteTarget
   }
 
   @override
-  FutureOr<SelfRedirectRoute?> redirect() => this;
+  SelfRedirectRoute redirect() => this;
 
   @override
   Uri toUri() => Uri.parse('/self-redirect');
@@ -413,7 +412,7 @@ void main() {
 
       final result = await RouteRedirect.resolve<RouteTarget>(
         nullRedirect,
-        null,
+        TestCoordinator(),
       );
 
       // Should return original route

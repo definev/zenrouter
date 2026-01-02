@@ -120,7 +120,7 @@ abstract class StackPath<T extends RouteTarget> with ChangeNotifier {
 
   @protected
   void bindStack(List<T> stack) {
-    clear();
+    _stack.clear();
     for (final route in stack) {
       route.isPopByPath = false;
       route.bindStackPath(this);

@@ -101,7 +101,7 @@ mixin RouteRedirect<T extends RouteTarget> on RouteTarget {
   /// **Async Support:**
   /// This method returns [FutureOr], allowing async operations like
   /// checking server state or loading data before determining the target.
-  FutureOr<T?> redirect() => this as T?;
+  FutureOr<T> redirect() => this as T;
   // coverage:ignore-end
 
   /// Called when the route is being resolved, providing access to the [Coordinator].

@@ -68,6 +68,26 @@ class RedirectIndexedRoute extends IndexedTestRoute
   List<Object?> get props => [target];
 }
 
+class NullRedirectIndexedRoute extends IndexedTestRoute
+    with RouteRedirect<IndexedTestRoute> {
+  NullRedirectIndexedRoute({required this.target});
+  final IndexedTestRoute target;
+
+  @override
+  Uri toUri() => Uri.parse('/redirect');
+
+  @override
+  FutureOr<IndexedTestRoute> redirect() => target;
+
+  @override
+  Widget build(covariant Coordinator coordinator, BuildContext context) {
+    return const SizedBox.shrink();
+  }
+
+  @override
+  List<Object?> get props => [target];
+}
+
 class IndexedStackLayout extends IndexedTestRoute
     with RouteLayout<IndexedTestRoute> {
   @override
@@ -105,7 +125,9 @@ class CoordinatorSecondTab extends IndexedTestRoute
   Uri toUri() => Uri.parse('/second-tab');
 
   @override
-  FutureOr<IndexedTestRoute?> redirect() => null;
+  IndexedTestRoute? redirectWith(Coordinator<RouteUnique> coordinator) {
+    return null;
+  }
 }
 
 class CoordinatorThirdTab extends IndexedTestRoute
@@ -123,7 +145,7 @@ class CoordinatorThirdTab extends IndexedTestRoute
   Uri toUri() => Uri.parse('/third-tab');
 
   @override
-  FutureOr<IndexedTestRoute?> redirect() => HomeRoute();
+  IndexedTestRoute redirect() => HomeRoute();
 }
 
 class HomeRoute extends IndexedTestRoute with RouteDeepLink {
@@ -336,5 +358,7 @@ void main() {
       expect(path.activeIndex, 0);
       expect(path.activeRoute, route1);
     });
+
+    test('handle redirect null gracefully', () async {});
   });
 }

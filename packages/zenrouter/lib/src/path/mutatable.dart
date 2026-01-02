@@ -21,6 +21,7 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
   Future<R?> push<R extends Object>(T element) async {
     T? target = await RouteRedirect.resolve(element, coordinator);
     if (target == null) return null;
+
     target.isPopByPath = false;
     target.bindStackPath(this);
     _stack.add(target);

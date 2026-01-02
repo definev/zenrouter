@@ -482,17 +482,17 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
       return;
     }
 
+    assert(
+      routePath is StackNavigatable,
+      UnimplementedError(
+        'ZenRouter: routePath (${routePath.runtimeType}) does not implement '
+        'StackNavigatable. The navigate() call for route $route will have no '
+        'effect on the navigation stack or browser history.',
+      ),
+    );
+
     if (routePath case StackNavigatable routePath) {
       await routePath.navigate(target);
-    } else {
-      assert(() {
-        debugPrint(
-          'ZenRouter: routePath (${routePath.runtimeType}) does not implement '
-          'StackNavigatable. The navigate() call for route $route will have no '
-          'effect on the navigation stack or browser history.',
-        );
-        return true;
-      }());
     }
   }
 

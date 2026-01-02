@@ -99,7 +99,11 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T>
     }
     var newRoute = stack[index];
     while (newRoute is RouteRedirect<T>) {
-      final redirectTo = await (newRoute as RouteRedirect<T>).redirect();
+      final routeRedirect = newRoute as RouteRedirect<T>;
+      final redirectTo = await switch (coordinator) {
+        null => routeRedirect.redirect(),
+        final coordinator => routeRedirect.redirectWith(coordinator),
+      };
       if (redirectTo == null) return;
       newRoute = redirectTo;
     }
@@ -114,21 +118,20 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T>
   @override
   Future<void> activateRoute(T route) async {
     final index = stack.indexOf(route);
-    final currentRoute = stack[_activeIndex];
-
-    if (currentRoute.hashCode != route.hashCode) {
+    if (index == -1) {
       route.onDiscard();
-    }
-    if (index == _activeIndex) {
-      /// If the route is a [RouteQueryParameters], update the queries
-      if (currentRoute is RouteQueryParameters &&
-          route is RouteQueryParameters) {
-        currentRoute.queries = route.queries;
-      }
-      return;
+      throw StateError('Route not found');
     }
 
-    if (index == -1) throw StateError('Route not found');
+    final indexRoute = stack[index];
+
+    /// If the route is a [RouteQueryParameters], update the queries
+    if (indexRoute is RouteQueryParameters && route is RouteQueryParameters) {
+      indexRoute.queries = route.queries;
+    }
+
+    if (indexRoute.hashCode != route.hashCode) route.onDiscard();
+    if (index == _activeIndex) return;
     await goToIndexed(index);
   }
 
