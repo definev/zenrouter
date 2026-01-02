@@ -321,7 +321,7 @@ class AuthRedirectRoute extends TestAppRoute with RouteRedirect<TestAppRoute> {
     if (!isAuthenticated) {
       return LoginRoute();
     }
-    return null; // Stay on current route
+    return this; // Stay on current route
   }
 
   @override
@@ -712,7 +712,7 @@ class FullMixinRoute extends TestAppRoute
     if (shouldRedirect) {
       return SimpleRoute(id: 'full-mixin-redirected');
     }
-    return null;
+    return this;
   }
 
   @override

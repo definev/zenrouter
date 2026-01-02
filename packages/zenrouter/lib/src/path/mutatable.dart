@@ -19,13 +19,14 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
   /// **Error Handling:**
   /// Exceptions from [RouteRedirect.resolve] propagate to the caller.
   Future<R?> push<R extends Object>(T element) async {
-    T target = await RouteRedirect.resolve(element, coordinator);
+    T? target = await RouteRedirect.resolve(element, coordinator);
+    if (target == null) return null;
     target.isPopByPath = false;
     target.bindStackPath(this);
     _stack.add(target);
     notifyListeners();
     // ignore: invalid_use_of_visible_for_testing_member
-    return target.onResult.future as Future<R?>;
+    return await target.onResult.future as R?;
   }
 
   /// Pushes a route to the top of the stack, or moves it if already present.
@@ -36,7 +37,9 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
   /// Useful for tab navigation where you want to switch to a tab
   /// without duplicating it in the stack.
   Future<void> pushOrMoveToTop(T element) async {
-    T target = await RouteRedirect.resolve(element, coordinator);
+    T? target = await RouteRedirect.resolve(element, coordinator);
+    if (target == null) return;
+
     target.isPopByPath = false;
     target.bindStackPath(this);
     final index = _stack.indexOf(target);
@@ -52,8 +55,10 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
 
     if (index != -1) {
       final removed = _stack.removeAt(index);
-      removed.onDiscard();
-      removed.clearStackPath();
+      if (element.hashCode != removed.hashCode) {
+        removed.onDiscard();
+        removed.clearStackPath();
+      }
     }
     _stack.add(target);
     notifyListeners();
@@ -103,16 +108,21 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
   /// **Avoid when:**
   /// - User-initiated back navigation (use [pop] instead)
   /// - You need to respect guards
-  void remove(T element) {
+  void remove(T element, {bool discard = true}) {
     element.clearStackPath();
     final removed = _stack.remove(element);
-    if (removed) notifyListeners();
+    if (removed) {
+      if (discard) element.onDiscard();
+      notifyListeners();
+    }
   }
 
   @override
   Future<void> navigate(T route) async {
-    final routeIndex = stack.indexOf(route);
+    T? target = await RouteRedirect.resolve(route, coordinator);
+    if (target == null) return;
 
+    final routeIndex = stack.indexOf(target);
     if (routeIndex != -1) {
       // Pop until we reach the target route
       while (stack.length > routeIndex + 1) {
@@ -126,17 +136,17 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
 
       final existingRoute = stack[routeIndex];
       if (existingRoute is RouteQueryParameters &&
-          route is RouteQueryParameters) {
-        existingRoute.queries = route.queries;
+          target is RouteQueryParameters) {
+        existingRoute.queries = target.queries;
         notifyListeners();
       }
 
       /// If routes differ by hash code, discard the incoming route
-      if (existingRoute.hashCode != route.hashCode) {
-        route.onDiscard();
+      if (existingRoute.hashCode != target.hashCode) {
+        target.onDiscard();
       }
     } else {
-      await push(route);
+      await push(target);
     }
   }
 }

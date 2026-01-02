@@ -57,7 +57,7 @@ mixin RouteRedirect<T extends RouteTarget> on RouteTarget {
   /// **Error Handling:**
   /// If any redirect throws an exception, it propagates up to the caller
   /// (typically [Coordinator.push] or [Coordinator.replace]).
-  static Future<T> resolve<T extends RouteTarget>(
+  static Future<T?> resolve<T extends RouteTarget>(
     T route,
     Coordinator? coordinator,
   ) async {
@@ -69,15 +69,20 @@ mixin RouteRedirect<T extends RouteTarget> on RouteTarget {
         final coordinator => redirect.redirectWith(coordinator),
       };
 
-      // If redirect returns null, stop redirection and return the original route
-      if (newTarget == null) return route;
+      // If redirect returns null, stop redirection and return null so the
+      // navigation is cancelled.
+      if (newTarget == null) {
+        // Discard the target route since it was not used
+        target.onDiscard();
+        return null;
+      }
 
       // If it redirects to itself, we've found our destination
       if (newTarget == target) break;
 
       if (newTarget is T) {
-        /// Complete the result future to prevent the route from being popped.
-        target.completeOnResult(null, null, true);
+        // Discard the target route since it was not used
+        target.onDiscard();
         target = newTarget;
       }
     }
@@ -96,7 +101,7 @@ mixin RouteRedirect<T extends RouteTarget> on RouteTarget {
   /// **Async Support:**
   /// This method returns [FutureOr], allowing async operations like
   /// checking server state or loading data before determining the target.
-  FutureOr<T?> redirect() => null;
+  FutureOr<T?> redirect() => this as T?;
   // coverage:ignore-end
 
   /// Called when the route is being resolved, providing access to the [Coordinator].

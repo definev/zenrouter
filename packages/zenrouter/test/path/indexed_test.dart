@@ -315,5 +315,26 @@ void main() {
         expect(find.byKey(const ValueKey('first-tab')), findsOneWidget);
       },
     );
+
+    test('navigate to non-existent route does not throw error', () async {
+      final route1 = SimpleIndexedRoute('1');
+      final route2 = SimpleIndexedRoute('2');
+      final routes = [route1, route2];
+      final path = IndexedStackPath<IndexedTestRoute>.create(routes);
+
+      // Set initial state to route1 (index 0)
+      expect(path.activeIndex, 0);
+      expect(path.activeRoute, route1);
+
+      // Try to navigate to a route that doesn't exist in the stack
+      final nonExistentRoute = SimpleIndexedRoute('999');
+
+      // This should not throw an error
+      await path.navigate(nonExistentRoute);
+
+      // Should remain on the original route
+      expect(path.activeIndex, 0);
+      expect(path.activeRoute, route1);
+    });
   });
 }

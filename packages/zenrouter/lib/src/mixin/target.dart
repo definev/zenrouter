@@ -187,7 +187,7 @@ abstract class RouteTarget extends Equatable {
     /// Handle force pop from navigator
     if (isPopByPath == false && _path?.stack.contains(this) == true) {
       if (_path case StackMutatable path) {
-        path.remove(this);
+        path.remove(this, discard: false);
       }
     }
 

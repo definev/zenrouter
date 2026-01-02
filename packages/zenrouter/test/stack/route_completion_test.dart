@@ -417,8 +417,8 @@ void main() {
       );
 
       // Should return original route
-      expect(result, same(nullRedirect));
-      expect(nullRedirect.resultCompleted, isFalse);
+      expect(result, null);
+      expect(nullRedirect.resultCompleted, isTrue);
     });
 
     test('does not complete route when redirect returns itself', () async {
@@ -586,28 +586,25 @@ void main() {
       expect((result as TestRoute).resultCompleted, isFalse);
     });
 
-    test(
-      'remove() does not complete removed route future (current behavior)',
-      () async {
-        final path = NavigationPath<TestRoute>.create(label: 'test');
-        final route = TestRoute('a');
+    test('remove() completes removed route future', () async {
+      final path = NavigationPath<TestRoute>.create(label: 'test');
+      final route = TestRoute('a');
+      final route1 = TestRoute('b');
 
-        path.push(route);
-        await Future.delayed(const Duration(milliseconds: 100));
+      path.push(route);
+      path.push(route1);
+      await Future.delayed(Duration.zero);
 
-        path.remove(route);
-        await Future.delayed(const Duration(milliseconds: 100));
+      path.remove(route);
+      await Future.delayed(Duration.zero);
+      path.remove(route1, discard: false);
 
-        expect(path.stack, isEmpty);
-        // NOTE: Current implementation of remove() does not complete the future.
-        // If this is a bug, this test expects the 'wrong' behavior to document it.
-        // If fixed, this should be expect(route.resultCompleted, isTrue).
-        expect(route.resultCompleted, isFalse);
-
-        // Cleanup to avoid hanging test
-        route.completeOnResult(null, null, true);
-      },
-    );
+      expect(path.stack, isEmpty);
+      expect(route.resultCompleted, isTrue);
+      // route1 is not completed because it explicitly discarded
+      expect(route1.resultCompleted, isFalse);
+      route1.onDiscard();
+    });
 
     test('stress test: push multiple routes and reset cleans up all', () async {
       final path = NavigationPath<TestRoute>.create(label: 'test');
