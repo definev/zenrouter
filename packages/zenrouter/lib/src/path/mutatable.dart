@@ -47,8 +47,10 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
     if (_stack.isNotEmpty && index == _stack.length - 1) {
       final last = _stack.last;
       last.onUpdate(target);
-      target.onDiscard();
-      target.clearStackPath();
+      if (target.hashCode != last.hashCode) {
+        target.onDiscard();
+        target.clearStackPath();
+      }
       return;
     }
 
