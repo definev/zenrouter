@@ -109,7 +109,18 @@ class _DocsLayoutContentState extends State<DocsLayoutBuilder> {
                       onPressed: () => Scaffold.of(context).openDrawer(),
                     ),
                   ),
-                  actions: [],
+                  actions: [
+                    Builder(
+                      builder: (context) => IconButton(
+                        style: IconButton.styleFrom(padding: EdgeInsets.zero),
+                        icon: const SizedBox.square(
+                          dimension: kToolbarHeight,
+                          child: Icon(Icons.menu_book_rounded),
+                        ),
+                        onPressed: () => Scaffold.of(context).openEndDrawer(),
+                      ),
+                    ),
+                  ],
                 ),
                 drawer: Drawer(
                   child: SafeArea(

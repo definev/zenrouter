@@ -57,7 +57,7 @@ dev_dependencies:
 
 Create a `routes` directory inside `lib`. Each file becomes a route:
 
-```bash
+```json
 lib/routes/
 ├── _coordinator.dart    # Optional: configure coordinator name
 ├── _route.dart          # Optional: custom route base class
@@ -109,7 +109,7 @@ class AboutRoute extends _\$AboutRoute {
 
 ## Generate the Code
 
-```bash
+```json
 # One-time generation
 dart run build_runner build
 

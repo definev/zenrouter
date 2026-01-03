@@ -25,6 +25,7 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:meta_seo/meta_seo.dart';
+import 'package:dynamic_path_url_strategy/dynamic_path_url_strategy.dart';
 import 'package:zenrouter_docs/routes/_coordinator.dart';
 
 import 'package:zenrouter_docs/theme/app_theme.dart';
@@ -37,6 +38,7 @@ import 'package:zenrouter_docs/theme/app_theme.dart';
 final docsCoordinator = CustomDocsCoordinator();
 
 void main() {
+  setPathUrlStrategy();
   WidgetsFlutterBinding.ensureInitialized();
   if (kIsWeb) MetaSEO().config();
   runApp(const ZenRouterDocsApp());

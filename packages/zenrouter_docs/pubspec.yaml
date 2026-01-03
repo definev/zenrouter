@@ -34,6 +34,7 @@ dependencies:
 
   # SEO for web
   meta_seo: ^3.0.9
+  dynamic_path_url_strategy: ^1.0.0
 
 dev_dependencies:
   flutter_test:

@@ -53,7 +53,7 @@ File-based routing follows a set of conventions that map file paths to URL paths
 
 A file named `index.dart` represents the route at its directory level. This lets you have both `/settings` (from `settings/index.dart`) and `/settings/account` (from `settings/account.dart`).
 
-```bash
+```json
 routes/
 ├── settings/
 │   ├── index.dart      # → /settings
@@ -66,7 +66,7 @@ routes/
 
 Folders wrapped in parentheses create "route groups". They provide shared layouts without adding to the URL path. This documentation uses route groups extensively.
 
-```bash
+```json
 routes/
 ├── (auth)/              # Route group - no URL segment
 │   ├── _layout.dart     # Shared layout for auth pages
@@ -120,7 +120,7 @@ The generator ignores these files when creating routes.
 
 You can use dots in file names to represent nesting without creating directories. This flattens your file structure for deep paths.
 
-```bash
+```json
 # These are equivalent:
 
 # Directory approach

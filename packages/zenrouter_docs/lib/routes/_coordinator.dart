@@ -32,7 +32,7 @@ mixin RouteSeo on RouteUnique {
   String get author => 'Dai Duong';
   String? get ogImage => null; // URL to social media preview image
   String get ogType => 'website';
-  String? get twitterCard => 'summary_large_image';
+  TwitterCard? get twitterCard => TwitterCard.summaryLargeImage;
   String? get twitterSite => null; // e.g., '@yourusername'
   String? get canonicalUrl => null; // Canonical URL for this page
   String get language => 'en';
@@ -71,7 +71,7 @@ mixin RouteSeo on RouteUnique {
       }
       // Twitter Card meta tags
       if (twitterCard != null) {
-        meta.twitterCard(twitterCard: TwitterCard.summaryLargeImage);
+        meta.twitterCard(twitterCard: twitterCard!);
       }
       meta.twitterTitle(twitterTitle: title);
       meta.twitterDescription(twitterDescription: description);

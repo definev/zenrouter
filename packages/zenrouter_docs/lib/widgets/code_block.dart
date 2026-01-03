@@ -162,7 +162,7 @@ class _CodeBlockState extends State<CodeBlock> {
     return switch (widget.language) {
       'dart' => Icons.flutter_dash_rounded,
       'yaml' => Icons.settings,
-      'bash' || 'shell' => Icons.terminal,
+      'shell' => Icons.terminal,
       'json' => Icons.data_object,
       _ => Icons.code,
     };

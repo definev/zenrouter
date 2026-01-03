@@ -100,7 +100,7 @@ coordinator.pushDocs(slugs: ['api', 'coordinator', 'methods']);
 
 You can have routes inside a catch-all folder, combining catch-all with additional fixed or dynamic segments:
 
-```bash
+```json
 routes/docs/
 └── [...slugs]/
     ├── index.dart      # /docs/a/b/c (catch-all)
