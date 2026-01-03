@@ -47,7 +47,7 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
     if (_stack.isNotEmpty && index == _stack.length - 1) {
       final last = _stack.last;
       last.onUpdate(target);
-      if (target.hashCode != last.hashCode) {
+      if (!last.deepEquals(target)) {
         target.onDiscard();
         target.clearStackPath();
       }
@@ -56,7 +56,7 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
 
     if (index != -1) {
       final removed = _stack.removeAt(index);
-      if (target.hashCode != removed.hashCode) {
+      if (!removed.deepEquals(target)) {
         removed.onDiscard();
         removed.clearStackPath();
       }
@@ -140,7 +140,7 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
       notifyListeners();
 
       /// If routes differ by hash code, discard the incoming route
-      if (existingRoute.hashCode != target.hashCode) {
+      if (existingRoute.deepEquals(target)) {
         target.onDiscard();
       }
     } else {

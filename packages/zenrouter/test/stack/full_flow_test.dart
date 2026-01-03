@@ -403,6 +403,90 @@ class ProfileChildRoute extends AppRoute {
   List<Object?> get props => [section];
 }
 
+class FormGroup extends AppRoute with RouteLayout<AppRoute>, RouteGuard {
+  @override
+  StackPath<AppRoute> resolvePath(TestCoordinator coordinator) =>
+      coordinator.formGroup;
+
+  @override
+  Future<bool> popGuardWith(TestCoordinator coordinator) async {
+    final allow = await showDialog<bool>(
+      context: coordinator.navigator.context,
+      builder: (context) => AlertDialog(
+        key: const ValueKey('warning-form'),
+        title: const Text('Confirm Navigation'),
+        content: const Text('Are you sure you want to navigate?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+
+    return allow ?? false;
+  }
+}
+
+class FirstForm extends AppRoute {
+  @override
+  Type? get layout => FormGroup;
+
+  @override
+  Widget build(
+    covariant Coordinator<RouteUnique> coordinator,
+    BuildContext context,
+  ) {
+    return Column(
+      key: const ValueKey('first-form'),
+      children: [
+        const Text('First Form'),
+        GestureDetector(
+          onTap: () => coordinator.navigate(SecondForm()),
+          child: Text('Go to Second'),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Uri toUri() => Uri.parse('/form/first');
+}
+
+class SecondForm extends AppRoute {
+  @override
+  Type? get layout => FormGroup;
+
+  @override
+  Widget build(
+    covariant Coordinator<RouteUnique> coordinator,
+    BuildContext context,
+  ) {
+    return Column(
+      key: const ValueKey('second-form'),
+      children: [
+        const Text('Second Form'),
+        GestureDetector(
+          onTap: () => coordinator.navigate(FirstForm()),
+          child: Text('Go to First'),
+        ),
+        GestureDetector(
+          onTap: () => coordinator.navigate(HomeRoute()),
+          child: Text('Go to Home'),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Uri toUri() => Uri.parse('/form/second');
+}
+
 /// Test coordinator
 class TestCoordinator extends Coordinator<AppRoute> {
   late final NavigationPath<AppRoute> shellStack = NavigationPath.createWith(
@@ -426,6 +510,11 @@ class TestCoordinator extends Coordinator<AppRoute> {
         label: 'advanced-tabs',
       );
 
+  late final NavigationPath<AppRoute> formGroup = NavigationPath.createWith(
+    coordinator: this,
+    label: 'form-group',
+  );
+
   @override
   void defineLayout() {
     RouteLayout.defineLayout(ShellLayout, () => ShellLayout());
@@ -434,6 +523,7 @@ class TestCoordinator extends Coordinator<AppRoute> {
       AdvancedTabLayout,
       () => AdvancedTabLayout(path: advancedTabStack),
     );
+    RouteLayout.defineLayout(FormGroup, () => FormGroup());
   }
 
   @override

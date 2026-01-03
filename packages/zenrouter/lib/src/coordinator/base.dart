@@ -6,12 +6,6 @@ import 'package:zenrouter/zenrouter.dart';
 
 /// Strategy for resolving parent layouts during navigation.
 enum _ResolveLayoutStrategy {
-  /// Pops items from the stack until the target layout is active.
-  ///
-  /// Used during browser back/forward navigation to ensure we return
-  /// to a previous state rather than creating a duplicate one.
-  popUntil,
-
   /// Pushes the layout to the top of the stack.
   ///
   /// Used when pushing new routes (e.g., [Coordinator.push]) to ensure
@@ -365,7 +359,7 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   ///
   /// [preferPush] determines whether to push the layout onto the stack
   /// or just activate it if it already exists.
-  Future<bool> _resolveLayouts(
+  Future<void> _resolveLayouts(
     RouteLayout? layout, {
     _ResolveLayoutStrategy strategy = _ResolveLayoutStrategy.override,
   }) async {
@@ -385,25 +379,10 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
         case _ResolveLayoutStrategy.pushToTop
             when layoutOfLayoutPath is StackMutatable:
           layoutOfLayoutPath.pushOrMoveToTop(layout);
-        case _ResolveLayoutStrategy.popUntil
-            when layoutOfLayoutPath is StackMutatable:
-          final layoutIndex = layoutOfLayoutPath.stack.indexOf(layout);
-
-          /// If layoutIndex does not exist (not in stack)
-          if (layoutIndex == -1) {
-            layoutOfLayoutPath.pushOrMoveToTop(layout);
-          } else {
-            /// Pop until layoutIndex is on the top
-            final popCount = layoutOfLayoutPath.stack.length - layoutIndex - 1;
-            for (int i = 0; i < popCount; i++) {
-              if (!(await layoutOfLayoutPath.pop() ?? false)) return false;
-            }
-          }
         default:
           layoutOfLayoutPath.activateRoute(layout);
       }
     }
-    return true;
   }
 
   /// Recovers navigation state from a route, respecting deep link strategies.
@@ -427,6 +406,8 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     if (target == null) return;
     if (target is RouteDeepLink) {
       switch (target.deeplinkStrategy) {
+        case DeeplinkStrategy.navigate:
+          navigate(target);
         case DeeplinkStrategy.push:
           push(target);
         case DeeplinkStrategy.replace:
@@ -472,15 +453,7 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
 
     final layout = target.resolveLayout(this);
     final routePath = layout?.resolvePath(this) ?? root;
-    final popSuccess = await _resolveLayouts(
-      layout,
-      strategy: _ResolveLayoutStrategy.popUntil,
-    );
-    if (!popSuccess) {
-      // Layout resolution failed - restore the URL to current state
-      notifyListeners();
-      return;
-    }
+    await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.pushToTop);
 
     assert(
       routePath is StackNavigatable,
