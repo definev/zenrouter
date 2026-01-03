@@ -47,7 +47,7 @@ ZenRouter's imperative paradigm preserves this simplicity while adding the struc
 
 A NavigationPath is, conceptually, a typed list of routes with built-in notification when it changes. You create one, optionally give it a default route, and then push and pop to your heart's content.
 
-\`\`\`dart
+```dart
 // Define your route base class
 sealed class AppRoute extends RouteTarget {
   Widget build(BuildContext context);
@@ -60,13 +60,13 @@ final path = NavigationPath<AppRoute>.create();
 path.push(HomeRoute());
 path.push(ProfileRoute(userId: '123'));
 path.pop();
-\`\`\`
+```
 
 ## Rendering with NavigationStack
 
 A NavigationPath holds state; a NavigationStack renders it. The stack listens to the path and rebuilds when routes change, handling transitions between them.
 
-\`\`\`dart
+```dart
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -81,7 +81,7 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-\`\`\`
+```
 
 ## When to Use Imperative
 

@@ -10,7 +10,6 @@ library;
 
 import 'package:flutter/material.dart';
 
-
 /// A navigation item within a documentation section.
 class SectionNavItem {
   const SectionNavItem({
@@ -86,17 +85,13 @@ class SectionLayout extends StatelessWidget {
               VerticalDivider(width: 1, color: theme.dividerColor),
 
               // Content area
-              Expanded(
-                child: child,
-              ),
+              Expanded(child: child),
             ],
           );
         } else {
           // On narrow screens, use a drawer or bottom sheet
           return Scaffold(
-            appBar: AppBar(
-              title: Text(sectionTitle),
-            ),
+            appBar: AppBar(title: Text(sectionTitle)),
             drawer: _buildDrawer(context, theme, selectedIndex),
             body: child,
           );
@@ -278,4 +273,3 @@ class _NavigationItem extends StatelessWidget {
     );
   }
 }
-

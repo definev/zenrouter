@@ -47,7 +47,7 @@ In declarative navigation, you do not push and pop. Instead, you maintain state 
 
 ZenRouter provides a declarative variant of NavigationStack. Instead of binding to a NavigationPath that you mutate, you provide a list of routes directly - typically derived from your widget's state.
 
-\`\`\`dart
+```dart
 class MultiStepForm extends StatefulWidget {
   @override
   State<MultiStepForm> createState() => _MultiStepFormState();
@@ -79,7 +79,7 @@ class _MultiStepFormState extends State<MultiStepForm> {
     // No push() call needed - the stack updates from state
   }
 }
-\`\`\`
+```
 
 ## The Myers Diff Algorithm
 
@@ -104,7 +104,7 @@ It struggles when:
 • You need deep linking from external sources  
 • Your navigation is primarily event-driven (user taps → push)
 
-\`\`\`dart
+```dart
 class TabExample extends StatefulWidget {
   @override
   State<TabExample> createState() => _TabExampleState();
@@ -140,7 +140,7 @@ class _TabExampleState extends State<TabExample> {
     );
   }
 }
-\`\`\`
+```
 ''',
     );
   }

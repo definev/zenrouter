@@ -47,7 +47,7 @@ The Coordinator pattern provides this capability. It sits at the center of your 
 
 A Coordinator is a class that extends `Coordinator<YourRouteType>`. At minimum, you must implement one method: `parseRouteFromUri`, which takes a URI and returns a route.
 
-\`\`\`dart
+```dart
 // First, define your route base class with RouteUnique
 abstract class AppRoute extends RouteTarget with RouteUnique {}
 
@@ -65,13 +65,13 @@ class AppCoordinator extends Coordinator<AppRoute> {
     };
   }
 }
-\`\`\`
+```
 
 ## Routes with RouteUnique
 
 Unlike routes in the imperative paradigm, Coordinator routes must know their URI. The RouteUnique mixin requires you to implement `toUri()`, allowing the Coordinator to update the URL when navigation changes.
 
-\`\`\`dart
+```dart
 class ProfileRoute extends AppRoute {
   ProfileRoute({required this.id});
   
@@ -91,13 +91,13 @@ class ProfileRoute extends AppRoute {
     return ProfileScreen(userId: id);
   }
 }
-\`\`\`
+```
 
 ## Integration with MaterialApp
 
 The Coordinator provides a `routerDelegate` and `routeInformationParser` that plug directly into Flutter's Router system via `MaterialApp.router`.
 
-\`\`\`dart
+```dart
 final coordinator = AppCoordinator();
 
 class MyApp extends StatelessWidget {
@@ -118,7 +118,7 @@ coordinator.replace(HomeRoute());
 // And handle deep links:
 // Opening myapp://profile/user-456 will automatically
 // parse and navigate to ProfileRoute(id: 'user-456')
-\`\`\`
+```
 
 > This documentation app uses the Coordinator pattern. Right now, your browser's URL bar (if you're on web) shows the path to this page. You could share that URL, and anyone opening it would arrive exactly here.
 

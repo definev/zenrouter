@@ -49,7 +49,7 @@ ZenRouter provides first-class support for query parameters, including reactive 
 
 When using zenrouter_file_generator, you enable query parameter support through the `@ZenRoute` annotation. You can enable all parameters with `['*']` or specify which parameters your route cares about.
 
-\`\`\`dart
+```dart
 // Enable specific parameters
 @ZenRoute(queries: ['q', 'sort', 'page'])
 class SearchRoute extends _\$SearchRoute {
@@ -61,13 +61,13 @@ class SearchRoute extends _\$SearchRoute {
 class FlexibleRoute extends _\$FlexibleRoute {
   // ...
 }
-\`\`\`
+```
 
 ## Reading Query Parameters
 
 Routes with query support receive a `queries` map that you can access directly. For reactive updates, use `selectorBuilder` which rebuilds only when the selected value changes.
 
-\`\`\`dart
+```dart
 @ZenRoute(queries: ['q', 'page', 'sort'])
 class SearchRoute extends _\$SearchRoute {
   @override
@@ -113,13 +113,13 @@ class SearchRoute extends _\$SearchRoute {
     );
   }
 }
-\`\`\`
+```
 
 ## Updating Query Parameters
 
 Use `updateQueries` to change query parameters without a full navigation. The URL updates, listeners are notified, and only the affected widgets rebuild.
 
-\`\`\`dart
+```dart
 // Update a single parameter
 updateQueries(
   coordinator,
@@ -142,7 +142,7 @@ updateQueries(coordinator, queries: newQueries);
 
 // Clear all parameters
 updateQueries(coordinator, queries: {});
-\`\`\`
+```
 
 > Query parameters are ideal for filter/sort/search state - values that should be shareable and bookmarkable but that don't represent fundamentally different screens. When in doubt, ask: "Should this state be lost when the user navigates away?" If yes, use widget state. If no, consider query parameters.
 ''',

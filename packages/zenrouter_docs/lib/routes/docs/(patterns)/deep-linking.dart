@@ -24,7 +24,8 @@ class DeepLinkingRoute extends _$DeepLinkingRoute with RouteSeo {
   String get description => 'Universal Links and External Navigation';
 
   @override
-  String get keywords => 'Deep Linking, Universal Links, External Navigation, Flutter';
+  String get keywords =>
+      'Deep Linking, Universal Links, External Navigation, Flutter';
 
   @override
   Widget build(covariant DocsCoordinator coordinator, BuildContext context) {
@@ -54,7 +55,7 @@ This works well for simple cases, but sometimes you need the deep link to set up
 
 The RouteDeepLink mixin lets you customize how a route handles being the target of a deep link. You can set up the navigation stack however you like - ensuring that "back" navigation makes sense.
 
-\`\`\`dart
+```dart
 class ProductRoute extends AppRoute with RouteDeepLink {
   ProductRoute({required this.productId});
   
@@ -88,7 +89,7 @@ class ProductRoute extends AppRoute with RouteDeepLink {
     // Much better UX than orphaned product page!
   }
 }
-\`\`\`
+```
 
 ## Deep Link Strategies
 
@@ -100,7 +101,7 @@ The `DeeplinkStrategy` enum provides three options:
 
 **custom** - Use the `deeplinkHandler` method for full control.
 
-\`\`\`dart
+```dart
 // Default: replaces stack
 class ArticleRoute extends AppRoute {
   @override
@@ -126,7 +127,7 @@ class CheckoutRoute extends AppRoute with RouteDeepLink {
     // Then navigate to checkout
   }
 }
-\`\`\`
+```
 
 ## Platform Setup
 

@@ -44,7 +44,7 @@ This is nested navigation, and ZenRouter handles it through the RouteLayout mixi
 
 A layout is a route that contains other routes. It wraps child routes with shared UI (like a scaffold with a bottom nav bar) and manages its own navigation path.
 
-\`\`\`dart
+```dart
 class TabsLayout extends AppRoute with RouteLayout<AppRoute> {
   // Which path does this layout manage?
   @override
@@ -74,13 +74,13 @@ class TabsLayout extends AppRoute with RouteLayout<AppRoute> {
     );
   }
 }
-\`\`\`
+```
 
 ## Declaring Path Ownership
 
 Routes declare which layout they belong to via the `layout` getter. When you push such a route, the Coordinator automatically wraps it with its layout and routes it to the correct path.
 
-\`\`\`dart
+```dart
 // In your coordinator, define the paths:
 class AppCoordinator extends Coordinator<AppRoute> {
   late final tabsPath = IndexedStackPath<AppRoute>.createWith(
@@ -113,7 +113,7 @@ class PostDetailRoute extends AppRoute {
   // Pushing this from FeedRoute adds it to homeStack,
   // not to the root navigation
 }
-\`\`\`
+```
 
 ## IndexedStackPath vs NavigationPath
 

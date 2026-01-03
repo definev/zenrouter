@@ -44,7 +44,7 @@ ZenRouter provides two mixins for this: RouteGuard and RouteRedirect.
 
 A guard controls whether navigation *away* from a route is allowed. When the user tries to pop (via back button, gesture, or programmatic pop), the guard's `popGuard` method is called. Return `true` to allow the pop, `false` to prevent it.
 
-\`\`\`dart
+```dart
 class EditPostRoute extends AppRoute with RouteGuard {
   bool hasUnsavedChanges = false;
   
@@ -74,13 +74,13 @@ class EditPostRoute extends AppRoute with RouteGuard {
     return result ?? false;
   }
 }
-\`\`\`
+```
 
 ## RouteRedirect: Controlling Entry
 
 A redirect controls whether navigation *to* a route is allowed - and where to go instead. The `redirect` method is called before the route is shown. Return `null` to proceed normally, or return a different route to redirect.
 
-\`\`\`dart
+```dart
 class CheckoutRoute extends AppRoute with RouteRedirect<AppRoute> {
   @override
   FutureOr<AppRoute?> redirect() async {
@@ -113,13 +113,13 @@ class AdminRoute extends AppRoute with RouteRedirect<AppRoute> {
     return null;  // Proceed to admin panel
   }
 }
-\`\`\`
+```
 
 ## File-Based Routing Integration
 
 When using zenrouter_file_generator, you enable guards and redirects through the @ZenRoute annotation:
 
-\`\`\`dart
+```dart
 @ZenRoute(
   guard: true,     // Enable RouteGuard mixin
   redirect: true,  // Enable RouteRedirect mixin
@@ -135,7 +135,7 @@ class CheckoutRoute extends _\$CheckoutRoute {
     // Your redirect logic
   }
 }
-\`\`\`
+```
 
 > Guards and redirects are checked before any transition animation begins. The user never sees a flash of the protected content - the redirect happens before rendering.
 ''',
