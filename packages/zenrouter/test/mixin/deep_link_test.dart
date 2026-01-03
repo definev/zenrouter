@@ -29,6 +29,34 @@ void main() {
       expect(find.byKey(const ValueKey('push-deeplink-test')), findsOneWidget);
     });
 
+    testWidgets('Navigate strategy navigates to new stack', (tester) async {
+      final coordinator = MixinTestCoordinator();
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Push some routes first
+      coordinator.push(SimpleRoute(id: 'first'));
+      await tester.pumpAndSettle();
+
+      final stackLengthBefore = coordinator.root.stack.length;
+
+      // Push deeplink
+      coordinator.recover(NavigateDeeplinkRoute(path: 'test'));
+      await tester.pumpAndSettle();
+
+      expect(coordinator.root.stack.length, greaterThan(stackLengthBefore));
+      expect(
+        find.byKey(const ValueKey('navigate-deeplink-test')),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('Replace strategy clears and replaces stack', (tester) async {
       final coordinator = MixinTestCoordinator();
 

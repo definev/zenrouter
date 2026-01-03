@@ -141,11 +141,11 @@ abstract class RouteTarget extends Equatable {
   /// the widget tree to access the result during disposal.
   Object? _resultValue;
 
-  @protected
-  void bindResultValue(Object? value) => _resultValue = value;
-
   /// The result value to be returned when this route is popped.
   Object? get resultValue => _resultValue;
+
+  @protected
+  void bindResultValue(Object? value) => _resultValue = value;
 
   /// Whether this route was popped by the path mechanism.
   ///
@@ -179,6 +179,11 @@ abstract class RouteTarget extends Equatable {
   /// ```
   @override
   List<Object?> get props => [];
+
+  /// Deep equality check for routes.
+  ///
+  /// This is used to determine if two routes are identical.
+  bool deepEquals(RouteTarget other) => hashCode == other.hashCode;
 
   @mustCallSuper
   void onDidPop(Object? result, covariant Coordinator? coordinator) {

@@ -126,13 +126,15 @@ void main() {
       tester,
     ) async {
       // Setup coordinator with the route active
-      coordinator.root.push(route);
       await tester.pumpWidget(
         MaterialApp.router(
           routerDelegate: coordinator.routerDelegate,
           routeInformationParser: coordinator.routeInformationParser,
         ),
       );
+      await tester.pumpAndSettle();
+
+      coordinator.root.push(route);
       await tester.pumpAndSettle();
 
       // Verify initial state
@@ -207,13 +209,15 @@ void main() {
 
       final routeB = TestRoute2(); // Different type or ID
 
-      coordinator.root.push(routeA);
       await tester.pumpWidget(
         MaterialApp.router(
           routerDelegate: coordinator.routerDelegate,
           routeInformationParser: coordinator.routeInformationParser,
         ),
       );
+      await tester.pumpAndSettle();
+
+      coordinator.root.push(routeA);
       await tester.pumpAndSettle();
 
       coordinator.root.push(routeB);

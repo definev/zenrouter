@@ -128,7 +128,10 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T>
     /// Update the existing route with new state
     indexRoute.onUpdate(route);
 
-    if (indexRoute.hashCode != route.hashCode) route.onDiscard();
+    if (!indexRoute.deepEquals(route)) {
+      route.onDiscard();
+    }
+
     if (index == _activeIndex) return;
     await goToIndexed(index);
   }

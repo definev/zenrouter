@@ -417,6 +417,31 @@ class PushDeeplinkRoute extends TestAppRoute with RouteDeepLink {
   List<Object?> get props => [path];
 }
 
+class NavigateDeeplinkRoute extends TestAppRoute with RouteDeepLink {
+  NavigateDeeplinkRoute({required this.path});
+  final String path;
+
+  @override
+  DeeplinkStrategy get deeplinkStrategy => DeeplinkStrategy.navigate;
+
+  @override
+  Uri toUri() => Uri.parse('/deeplink/push/$path');
+
+  @override
+  Widget build(
+    covariant MixinTestCoordinator coordinator,
+    BuildContext context,
+  ) {
+    return Scaffold(
+      key: ValueKey('navigate-deeplink-$path'),
+      body: Text('Navigate Deeplink: $path'),
+    );
+  }
+
+  @override
+  List<Object?> get props => [path];
+}
+
 /// Route with replace deep link strategy
 class ReplaceDeeplinkRoute extends TestAppRoute with RouteDeepLink {
   ReplaceDeeplinkRoute({required this.path});
