@@ -62,9 +62,9 @@ ${example.description}
 
 ## Implementation
 
-\`\`\`dart
+```dart
 ${example.code}
-\`\`\`
+```
 
 ${example.notes != null ? '## Notes\n\n${example.notes}' : ''}
 ''',
