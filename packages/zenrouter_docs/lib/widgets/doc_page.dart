@@ -122,7 +122,7 @@ class _DocPageState extends State<DocPage> {
     return SelectionArea(
       child: SingleChildScrollView(
         controller: _scrollController,
-        padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+        padding: docs.contentPadding,
         child: Center(
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: docs.proseMaxWidth),

@@ -172,7 +172,7 @@ abstract final class AppTheme {
       const DocsThemeExtension(
         codeBackground: _codeBackgroundLight,
         proseMaxWidth: 720,
-        contentPadding: EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       ),
     ],
   );
