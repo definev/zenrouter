@@ -140,7 +140,7 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
       notifyListeners();
 
       /// If routes differ by hash code, discard the incoming route
-      if (existingRoute.deepEquals(target)) {
+      if (!existingRoute.deepEquals(target)) {
         target.onDiscard();
       }
     } else {
