@@ -1,0 +1,1 @@
+void setWebTitle(String title) {}
