@@ -1,0 +1,12 @@
+# Build configuration for zenrouter_docs
+# 
+# This configuration enables deferred imports for optimal performance,
+# demonstrating the very feature we document.
+
+targets:
+  $default:
+    builders:
+      zenrouter_file_generator|zen_coordinator:
+        options:
+          deferredImport: true
+
