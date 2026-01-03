@@ -8,7 +8,7 @@ part of 'conventions.dart';
 
 /// Generated base class for ConventionsRoute.
 ///
-/// URI: /docs/conventions
+/// URI: /docs/file-routing/conventions
 /// Layout: DocsLayout
 abstract class _$ConventionsRoute extends DocsRoute {
   _$ConventionsRoute();
@@ -17,7 +17,7 @@ abstract class _$ConventionsRoute extends DocsRoute {
   Type? get layout => DocsLayout;
 
   @override
-  Uri toUri() => Uri.parse('/docs/conventions');
+  Uri toUri() => Uri.parse('/docs/file-routing/conventions');
 
   @override
   List<Object?> get props => [];

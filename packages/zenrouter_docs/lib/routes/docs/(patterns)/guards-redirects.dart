@@ -5,64 +5,46 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:zenrouter_docs/routes/_coordinator.dart';
+import 'package:zenrouter_docs/widgets/docs_layout.dart';
 import 'package:zenrouter_file_annotation/zenrouter_file_annotation.dart';
 
 import 'package:zenrouter_docs/routes/routes.zen.dart';
-import 'package:zenrouter_docs/theme/app_theme.dart';
-import 'package:zenrouter_docs/widgets/prose_section.dart';
-import 'package:zenrouter_docs/widgets/code_block.dart';
+import 'package:zenrouter_docs/widgets/doc_page.dart';
 
 part 'guards-redirects.g.dart';
 
 /// The Guards and Redirects documentation page.
 @ZenRoute()
-class GuardsRedirectsRoute extends _$GuardsRedirectsRoute {
+class GuardsRedirectsRoute extends _$GuardsRedirectsRoute with RouteSeo {
+  @override
+  String get title => 'Guards & Redirects';
+
+  @override
+  String get description => 'Controlling Navigation Flow';
+
+  @override
+  String get keywords => 'Guards, Redirects, Route Protection, Flutter';
+
   @override
   Widget build(covariant DocsCoordinator coordinator, BuildContext context) {
-    final theme = Theme.of(context);
-    final docs = theme.docs;
+    super.build(coordinator, context);
+    final tocController = DocsTocScope.of(context);
 
-    return SingleChildScrollView(
-      padding: docs.contentPadding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Guards & Redirects', style: theme.textTheme.displaySmall),
-          const SizedBox(height: 8),
-          Text(
-            'Controlling Navigation Flow',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              color: theme.colorScheme.primary,
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-          const SizedBox(height: 32),
-
-          const ProseSection(
-            content: '''
+    return DocPage(
+      title: 'Guards & Redirects',
+      subtitle: 'Controlling Navigation Flow',
+      tocController: tocController,
+      markdown: '''
 Sometimes navigation must be conditional. A checkout screen requires authentication. An editor should warn before discarding unsaved changes. A route might need to redirect to another based on application state.
 
 ZenRouter provides two mixins for this: RouteGuard and RouteRedirect.
-''',
-          ),
-          const SizedBox(height: 32),
 
-          Text(
-            'RouteGuard: Controlling Exit',
-            style: theme.textTheme.headlineMedium,
-          ),
-          const SizedBox(height: 16),
+## RouteGuard: Controlling Exit
 
-          const ProseSection(
-            content: '''
 A guard controls whether navigation *away* from a route is allowed. When the user tries to pop (via back button, gesture, or programmatic pop), the guard's `popGuard` method is called. Return `true` to allow the pop, `false` to prevent it.
-''',
-          ),
-          const SizedBox(height: 16),
 
-          const CodeBlock(
-            title: 'Unsaved Changes Guard',
-            code: '''
+\`\`\`dart
 class EditPostRoute extends AppRoute with RouteGuard {
   bool hasUnsavedChanges = false;
   
@@ -91,26 +73,14 @@ class EditPostRoute extends AppRoute with RouteGuard {
     
     return result ?? false;
   }
-}''',
-          ),
-          const SizedBox(height: 32),
+}
+\`\`\`
 
-          Text(
-            'RouteRedirect: Controlling Entry',
-            style: theme.textTheme.headlineMedium,
-          ),
-          const SizedBox(height: 16),
+## RouteRedirect: Controlling Entry
 
-          const ProseSection(
-            content: '''
 A redirect controls whether navigation *to* a route is allowed - and where to go instead. The `redirect` method is called before the route is shown. Return `null` to proceed normally, or return a different route to redirect.
-''',
-          ),
-          const SizedBox(height: 16),
 
-          const CodeBlock(
-            title: 'Authentication Redirect',
-            code: '''
+\`\`\`dart
 class CheckoutRoute extends AppRoute with RouteRedirect<AppRoute> {
   @override
   FutureOr<AppRoute?> redirect() async {
@@ -142,26 +112,14 @@ class AdminRoute extends AppRoute with RouteRedirect<AppRoute> {
     
     return null;  // Proceed to admin panel
   }
-}''',
-          ),
-          const SizedBox(height: 32),
+}
+\`\`\`
 
-          Text(
-            'File-Based Routing Integration',
-            style: theme.textTheme.headlineMedium,
-          ),
-          const SizedBox(height: 16),
+## File-Based Routing Integration
 
-          const ProseSection(
-            content: '''
 When using zenrouter_file_generator, you enable guards and redirects through the @ZenRoute annotation:
-''',
-          ),
-          const SizedBox(height: 16),
 
-          const CodeBlock(
-            title: 'Annotation-Based Guards',
-            code: '''
+\`\`\`dart
 @ZenRoute(
   guard: true,     // Enable RouteGuard mixin
   redirect: true,  // Enable RouteRedirect mixin
@@ -176,57 +134,11 @@ class CheckoutRoute extends _\$CheckoutRoute {
   FutureOr<DocsRoute?> redirect() async {
     // Your redirect logic
   }
-}''',
-          ),
-          const SizedBox(height: 32),
+}
+\`\`\`
 
-          const ProseBlockquote(
-            content:
-                'Guards and redirects are checked before any transition animation begins. The user never sees a flash of the protected content - the redirect happens before rendering.',
-          ),
-          const SizedBox(height: 48),
-
-          _buildNextPageCard(context, coordinator),
-          const SizedBox(height: 64),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNextPageCard(BuildContext context, DocsCoordinator coordinator) {
-    final theme = Theme.of(context);
-
-    return Card(
-      child: InkWell(
-        onTap: () => coordinator.pushDeepLinking(),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Next: Deep Linking',
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Handling external links and custom navigation setup',
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.arrow_forward, color: theme.colorScheme.primary),
-            ],
-          ),
-        ),
-      ),
+> Guards and redirects are checked before any transition animation begins. The user never sees a flash of the protected content - the redirect happens before rendering.
+''',
     );
   }
 }

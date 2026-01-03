@@ -96,11 +96,6 @@ class _CodeBlockState extends State<CodeBlock> {
 
         return Container(
           constraints: BoxConstraints(maxWidth: docs.proseMaxWidth + 100),
-          decoration: BoxDecoration(
-            color: docs.codeBackground,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          clipBehavior: Clip.antiAlias,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

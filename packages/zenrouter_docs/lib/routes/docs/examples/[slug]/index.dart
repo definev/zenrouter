@@ -5,12 +5,12 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:zenrouter_docs/routes/_coordinator.dart';
+import 'package:zenrouter_docs/widgets/docs_layout.dart';
 import 'package:zenrouter_file_annotation/zenrouter_file_annotation.dart';
 
 import 'package:zenrouter_docs/routes/routes.zen.dart';
-import 'package:zenrouter_docs/theme/app_theme.dart';
-import 'package:zenrouter_docs/widgets/code_block.dart';
-import 'package:zenrouter_docs/widgets/prose_section.dart';
+import 'package:zenrouter_docs/widgets/doc_page.dart';
 
 part 'index.g.dart';
 
@@ -19,85 +19,77 @@ part 'index.g.dart';
 /// This file demonstrates the [slug] dynamic parameter pattern.
 /// The slug is captured from the URL and passed to the route.
 @ZenRoute()
-class ExamplesSlugRoute extends _$ExamplesSlugRoute {
+class ExamplesSlugRoute extends _$ExamplesSlugRoute with RouteSeo {
   ExamplesSlugRoute({required super.slug});
 
   @override
-  Widget build(covariant DocsCoordinator coordinator, BuildContext context) {
-    final theme = Theme.of(context);
-    final docs = theme.docs;
+  String get title {
+    final example = examples[slug];
+    return example?.title ?? 'Example Not Found';
+  }
 
-    final example = _examples[slug];
+  @override
+  String get description {
+    final example = examples[slug];
+    return example?.subtitle ?? 'The requested example does not exist';
+  }
+
+  @override
+  String get keywords {
+    final example = examples[slug];
+    return example != null
+        ? 'Example, ${example.title}, Code Sample, Flutter'
+        : 'Example, Not Found';
+  }
+
+  @override
+  Widget build(covariant DocsCoordinator coordinator, BuildContext context) {
+    super.build(coordinator, context);
+    final tocController = DocsTocScope.of(context);
+
+    final example = examples[slug];
     if (example == null) {
-      return _buildNotFound(theme, coordinator);
+      return _buildNotFound(context, coordinator, tocController);
     }
 
-    return SingleChildScrollView(
-      padding: docs.contentPadding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(example.title, style: theme.textTheme.displaySmall),
-          const SizedBox(height: 8),
-          Text(
-            example.subtitle,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              color: theme.colorScheme.primary,
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-          const SizedBox(height: 32),
+    return DocPage(
+      title: example.title,
+      subtitle: example.subtitle,
+      tocController: tocController,
+      markdown:
+          '''
+${example.description}
 
-          ProseSection(content: example.description),
-          const SizedBox(height: 32),
+## Implementation
 
-          Text('Implementation', style: theme.textTheme.headlineMedium),
-          const SizedBox(height: 16),
+\`\`\`dart
+${example.code}
+\`\`\`
 
-          CodeBlock(title: example.codeTitle, code: example.code),
-          const SizedBox(height: 32),
-
-          if (example.notes != null) ...[
-            Text('Notes', style: theme.textTheme.headlineMedium),
-            const SizedBox(height: 16),
-            ProseSection(content: example.notes!),
-            const SizedBox(height: 32),
-          ],
-
-          const SizedBox(height: 64),
-        ],
-      ),
+${example.notes != null ? '## Notes\n\n${example.notes}' : ''}
+''',
     );
   }
 
-  Widget _buildNotFound(ThemeData theme, DocsCoordinator coordinator) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.code_off,
-              size: 64,
-              color: theme.colorScheme.primary.withValues(alpha: 0.5),
-            ),
-            const SizedBox(height: 16),
-            Text('Example Not Found', style: theme.textTheme.headlineMedium),
-            const SizedBox(height: 8),
-            Text(
-              'The example "$slug" does not exist.',
-              style: theme.textTheme.bodyLarge,
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: () =>
-                  coordinator.pushExamplesSlug(slug: 'basic-navigation'),
-              child: const Text('View Basic Navigation Example'),
-            ),
-          ],
-        ),
-      ),
+  Widget _buildNotFound(
+    BuildContext context,
+    DocsCoordinator coordinator,
+    TocController? tocController,
+  ) {
+    return DocPage(
+      title: 'Example Not Found',
+      subtitle: 'The requested example does not exist',
+      tocController: tocController,
+      markdown:
+          '''
+The example "$slug" does not exist.
+
+Available examples:
+- [Basic Navigation](examples/basic-navigation) - Push, Pop, and Replace
+- [Tab Bar Navigation](examples/tab-bar) - IndexedStackPath with Multiple Tabs
+- [Deep Linking](examples/deep-linking) - Custom Navigation Stack Setup
+- [Authentication Flow](examples/auth-flow) - Guards and Redirects
+''',
     );
   }
 }
@@ -122,7 +114,7 @@ class _Example {
 }
 
 /// Available examples, indexed by slug
-const _examples = <String, _Example>{
+const examples = <String, _Example>{
   'basic-navigation': _Example(
     title: 'Basic Navigation',
     subtitle: 'Push, Pop, and Replace',

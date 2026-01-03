@@ -248,7 +248,7 @@ class _TocListItem extends StatelessWidget {
         ),
         child: Text(
           item.title,
-          style: theme.textTheme.bodySmall?.copyWith(
+          style: theme.textTheme.titleSmall?.copyWith(
             color: isActive
                 ? theme.colorScheme.primary
                 : theme.colorScheme.onSurface.withValues(alpha: 0.7),
@@ -302,7 +302,7 @@ class _DocsTreeViewState extends State<_DocsTreeView> {
       final section = widget.navTree[i];
       for (final child in section.children) {
         if (child.path == widget.currentPath ||
-            (widget.currentPath.startsWith('/examples') &&
+            (widget.currentPath.contains('/examples') &&
                 section.label == 'Examples')) {
           expanded.add(i);
           break;

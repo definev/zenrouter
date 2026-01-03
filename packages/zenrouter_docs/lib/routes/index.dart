@@ -66,15 +66,12 @@ We shall begin with the Three Paradigms, for one cannot appreciate a solution wi
                 const SizedBox(height: 48),
 
                 // ─────────────────────────────────────────────────────────────
-                // Navigation Cards
+                // Navigation Links
                 // ─────────────────────────────────────────────────────────────
-                Text(
-                  'Begin Your Journey',
-                  style: theme.textTheme.headlineLarge,
-                ),
+                const Divider(),
                 const SizedBox(height: 24),
 
-                _buildNavigationGrid(context, coordinator),
+                buildNavigationList(context, coordinator),
 
                 const SizedBox(height: 64),
               ],
@@ -84,62 +81,60 @@ We shall begin with the Three Paradigms, for one cannot appreciate a solution wi
       ),
     );
   }
-
-  Widget _buildNavigationGrid(
-    BuildContext context,
-    DocsCoordinator coordinator,
-  ) {
-    return Wrap(
-      spacing: 16,
-      runSpacing: 16,
-      children: [
-        _NavigationCard(
-          icon: Icons.route,
-          title: 'The Three Paradigms',
-          description:
-              'Imperative, Declarative, and Coordinator - understand when to use each approach.',
-          onTap: () => coordinator.pushImperative(),
-          color: const Color(0xFF1A5F7A),
-        ),
-        _NavigationCard(
-          icon: Icons.account_tree,
-          title: 'Core Concepts',
-          description:
-              'Routes, Paths, and the Stack - the fundamental building blocks.',
-          onTap: () => coordinator.pushRoutesAndPaths(),
-          color: const Color(0xFF9B6B3D),
-        ),
-        _NavigationCard(
-          icon: Icons.pattern,
-          title: 'Patterns',
-          description:
-              'Layouts, Guards, Deep Linking - practical patterns for real applications.',
-          onTap: () => coordinator.pushLayouts(),
-          color: const Color(0xFF6B5B95),
-        ),
-        _NavigationCard(
-          icon: Icons.folder_special,
-          title: 'File-Based Routing',
-          description:
-              'Let your file structure define your routes - zero boilerplate.',
-          onTap: () => coordinator.pushGettingStarted(),
-          color: const Color(0xFF88B04B),
-        ),
-        _NavigationCard(
-          icon: Icons.play_circle_outline,
-          title: 'Live Examples',
-          description: 'Interactive demonstrations you can explore and modify.',
-          onTap: () => coordinator.pushExamplesSlug(slug: 'basic-navigation'),
-          color: const Color(0xFFDD4124),
-        ),
-      ],
-    );
-  }
 }
 
-/// A card inviting the reader to explore a section of documentation.
-class _NavigationCard extends StatelessWidget {
-  const _NavigationCard({
+Widget buildNavigationList(BuildContext context, DocsCoordinator coordinator) {
+  final items = [
+    NavigationItem(
+      icon: Icons.route,
+      title: 'The Three Paradigms',
+      description:
+          'Imperative, Declarative, and Coordinator - understand when to use each approach.',
+      onTap: () => coordinator.pushImperative(),
+      color: const Color(0xFF1A5F7A),
+    ),
+    NavigationItem(
+      icon: Icons.account_tree,
+      title: 'Core Concepts',
+      description:
+          'Routes, Paths, and the Stack - the fundamental building blocks.',
+      onTap: () => coordinator.pushRoutesAndPaths(),
+      color: const Color(0xFF9B6B3D),
+    ),
+    NavigationItem(
+      icon: Icons.pattern,
+      title: 'Patterns',
+      description:
+          'Layouts, Guards, Deep Linking - practical patterns for real applications.',
+      onTap: () => coordinator.pushLayouts(),
+      color: const Color(0xFF6B5B95),
+    ),
+    NavigationItem(
+      icon: Icons.folder_special,
+      title: 'File-Based Routing',
+      description:
+          'Let your file structure define your routes - zero boilerplate.',
+      onTap: () => coordinator.pushGettingStarted(),
+      color: const Color(0xFF88B04B),
+    ),
+    NavigationItem(
+      icon: Icons.play_circle_outline,
+      title: 'Live Examples',
+      description: 'Interactive demonstrations you can explore and modify.',
+      onTap: () => coordinator.pushExamplesSlug(slug: 'basic-navigation'),
+      color: const Color(0xFFDD4124),
+    ),
+  ];
+
+  return Column(
+    spacing: 8,
+    children: items.map((item) => NavigationLink(item: item)).toList(),
+  );
+}
+
+/// A navigation item definition
+class NavigationItem {
+  const NavigationItem({
     required this.icon,
     required this.title,
     required this.description,
@@ -152,36 +147,79 @@ class _NavigationCard extends StatelessWidget {
   final String description;
   final VoidCallback onTap;
   final Color color;
+}
+
+/// A clickable navigation link without card styling
+class NavigationLink extends StatefulWidget {
+  const NavigationLink({super.key, required this.item});
+
+  final NavigationItem item;
+
+  @override
+  State<NavigationLink> createState() => _NavigationLinkState();
+}
+
+class _NavigationLinkState extends State<NavigationLink> {
+  bool _isHovered = false;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final item = widget.item;
 
-    return SizedBox(
-      width: 280,
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icon, color: color, size: 28),
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: InkWell(
+        onTap: item.onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          decoration: BoxDecoration(
+            color: _isHovered
+                ? theme.colorScheme.primary.withValues(alpha: 0.05)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Icon
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: item.color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                const SizedBox(height: 16),
-                Text(title, style: theme.textTheme.headlineSmall),
-                const SizedBox(height: 8),
-                Text(description, style: theme.textTheme.bodyMedium),
-              ],
-            ),
+                child: Icon(item.icon, color: item.color, size: 24),
+              ),
+              const SizedBox(width: 20),
+              // Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.title,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: _isHovered ? theme.colorScheme.primary : null,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      item.description,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.7,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),

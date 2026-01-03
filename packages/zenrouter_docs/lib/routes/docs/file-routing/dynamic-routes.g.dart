@@ -1,23 +1,23 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'deferred-imports.dart';
+part of 'dynamic-routes.dart';
 
 // **************************************************************************
 // RouteGenerator
 // **************************************************************************
 
-/// Generated base class for DeferredImportsRoute.
+/// Generated base class for DynamicRoutesRoute.
 ///
-/// URI: /docs/deferred-imports
+/// URI: /docs/file-routing/dynamic-routes
 /// Layout: DocsLayout
-abstract class _$DeferredImportsRoute extends DocsRoute {
-  _$DeferredImportsRoute();
+abstract class _$DynamicRoutesRoute extends DocsRoute {
+  _$DynamicRoutesRoute();
 
   @override
   Type? get layout => DocsLayout;
 
   @override
-  Uri toUri() => Uri.parse('/docs/deferred-imports');
+  Uri toUri() => Uri.parse('/docs/file-routing/dynamic-routes');
 
   @override
   List<Object?> get props => [];

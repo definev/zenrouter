@@ -141,6 +141,8 @@ abstract final class AppTheme {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
       endShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
     ),
+    dividerTheme: DividerThemeData(thickness: 0.5, color: Colors.grey.shade300),
+    dividerColor: Colors.grey.shade300,
     scaffoldBackgroundColor: _surfaceLight,
     cardColor: _cardLight,
     textTheme: _proseTextTheme(Brightness.light),
@@ -166,7 +168,6 @@ abstract final class AppTheme {
         color: Colors.grey.shade600,
       ),
     ),
-    dividerColor: Colors.grey.shade300,
     extensions: [
       const DocsThemeExtension(
         codeBackground: _codeBackgroundLight,
@@ -191,6 +192,8 @@ abstract final class AppTheme {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
       endShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
     ),
+    dividerTheme: DividerThemeData(thickness: 0.5, color: Colors.grey.shade800),
+    dividerColor: Colors.grey.shade800,
     scaffoldBackgroundColor: _surfaceDark,
     cardColor: _cardDark,
     textTheme: _proseTextTheme(Brightness.dark),
@@ -216,7 +219,6 @@ abstract final class AppTheme {
         color: Colors.grey.shade400,
       ),
     ),
-    dividerColor: Colors.grey.shade800,
     extensions: [
       const DocsThemeExtension(
         codeBackground: _codeBackgroundDark,

@@ -6,66 +6,48 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:zenrouter_docs/routes/_coordinator.dart';
+import 'package:zenrouter_docs/widgets/docs_layout.dart';
 import 'package:zenrouter_file_annotation/zenrouter_file_annotation.dart';
 
 import 'package:zenrouter_docs/routes/routes.zen.dart';
-import 'package:zenrouter_docs/theme/app_theme.dart';
-import 'package:zenrouter_docs/widgets/prose_section.dart';
-import 'package:zenrouter_docs/widgets/code_block.dart';
+import 'package:zenrouter_docs/widgets/doc_page.dart';
 
 part 'declarative.g.dart';
 
 /// The Declarative Navigation documentation page.
 @ZenRoute()
-class DeclarativeRoute extends _$DeclarativeRoute {
+class DeclarativeRoute extends _$DeclarativeRoute with RouteSeo {
+  @override
+  String get title => 'Declarative Navigation';
+
+  @override
+  String get description => 'State-Driven Routing';
+
+  @override
+  String get keywords => 'Declarative Navigation, State-Driven, Flutter';
+
   @override
   Widget build(covariant DocsCoordinator coordinator, BuildContext context) {
-    final theme = Theme.of(context);
-    final docs = theme.docs;
+    super.build(coordinator, context);
+    final tocController = DocsTocScope.of(context);
 
-    return SingleChildScrollView(
-      padding: docs.contentPadding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Declarative Navigation', style: theme.textTheme.displaySmall),
-          const SizedBox(height: 8),
-          Text(
-            'State-Driven Routing',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              color: theme.colorScheme.primary,
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-          const SizedBox(height: 32),
-
-          const ProseSection(
-            content: '''
+    return DocPage(
+      title: 'Declarative Navigation',
+      subtitle: 'State-Driven Routing',
+      tocController: tocController,
+      markdown: '''
 Consider the philosophy that underlies Flutter itself: you do not tell widgets how to update - you describe what they should look like given the current state, and Flutter reconciles your description with reality.
 
 What if navigation worked the same way?
 
 In declarative navigation, you do not push and pop. Instead, you maintain state - a list of items, a selected tab, a series of form steps - and derive your navigation stack from that state. When state changes, the stack updates automatically.
-''',
-          ),
-          const SizedBox(height: 32),
 
-          Text(
-            'NavigationStack.declarative',
-            style: theme.textTheme.headlineMedium,
-          ),
-          const SizedBox(height: 16),
+## NavigationStack.declarative
 
-          const ProseSection(
-            content: '''
 ZenRouter provides a declarative variant of NavigationStack. Instead of binding to a NavigationPath that you mutate, you provide a list of routes directly - typically derived from your widget's state.
-''',
-          ),
-          const SizedBox(height: 16),
 
-          const CodeBlock(
-            title: 'Declarative Navigation',
-            code: '''
+\`\`\`dart
 class MultiStepForm extends StatefulWidget {
   @override
   State<MultiStepForm> createState() => _MultiStepFormState();
@@ -96,39 +78,19 @@ class _MultiStepFormState extends State<MultiStepForm> {
     });
     // No push() call needed - the stack updates from state
   }
-}''',
-          ),
-          const SizedBox(height: 32),
+}
+\`\`\`
 
-          Text(
-            'The Myers Diff Algorithm',
-            style: theme.textTheme.headlineMedium,
-          ),
-          const SizedBox(height: 16),
+## The Myers Diff Algorithm
 
-          const ProseSection(
-            content: '''
 When your route list changes, ZenRouter must determine what actually changed. Did you add a route? Remove one? Replace one? The answer matters for animations - a push should animate differently than a pop.
 
 ZenRouter uses the Myers diff algorithm (the same algorithm that powers `git diff`) to compute the minimal set of changes between the old and new route lists. Routes are compared using their `props` - the list of values that define their identity.
-''',
-          ),
-          const SizedBox(height: 16),
 
-          const ProseBlockquote(
-            content:
-                'This is why equality matters: if two routes have the same props, they are considered the same route. The diff algorithm can then determine that you added a new route rather than replaced everything.',
-          ),
-          const SizedBox(height: 32),
+> This is why equality matters: if two routes have the same props, they are considered the same route. The diff algorithm can then determine that you added a new route rather than replaced everything.
 
-          Text(
-            'When to Use Declarative',
-            style: theme.textTheme.headlineMedium,
-          ),
-          const SizedBox(height: 16),
+## When to Use Declarative
 
-          const ProseSection(
-            content: '''
 The declarative paradigm excels when:
 
 • Your navigation is state-driven - tab selection, wizard steps, filtered lists
@@ -141,13 +103,8 @@ It struggles when:
 • You need URLs to reflect navigation state
 • You need deep linking from external sources  
 • Your navigation is primarily event-driven (user taps → push)
-''',
-          ),
-          const SizedBox(height: 32),
 
-          const CodeBlock(
-            title: 'Tab Bar Example',
-            code: '''
+\`\`\`dart
 class TabExample extends StatefulWidget {
   @override
   State<TabExample> createState() => _TabExampleState();
@@ -182,53 +139,9 @@ class _TabExampleState extends State<TabExample> {
       ),
     );
   }
-}''',
-          ),
-          const SizedBox(height: 48),
-
-          // Navigation to next page
-          _buildNextPageCard(context, coordinator),
-
-          const SizedBox(height: 64),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNextPageCard(BuildContext context, DocsCoordinator coordinator) {
-    final theme = Theme.of(context);
-
-    return Card(
-      child: InkWell(
-        onTap: () => coordinator.pushCoordinator(),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Next: The Coordinator Pattern',
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Deep linking, URLs, and the synthesis of paradigms',
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.arrow_forward, color: theme.colorScheme.primary),
-            ],
-          ),
-        ),
-      ),
+}
+\`\`\`
+''',
     );
   }
 }

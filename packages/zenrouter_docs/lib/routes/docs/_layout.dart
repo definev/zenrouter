@@ -47,17 +47,29 @@ class DocsLayout extends _$DocsLayout {
           label: 'Guards & Redirects',
           path: '/docs/guards-redirects',
         ),
-        NavTreeNode(label: 'Deep Linking', path: '/deep-linking'),
+        NavTreeNode(label: 'Deep Linking', path: '/docs/deep-linking'),
         NavTreeNode(label: 'Query Parameters', path: '/docs/query-parameters'),
       ],
     ),
     NavTreeNode(
       label: 'File Routing',
       children: [
-        NavTreeNode(label: 'Getting Started', path: '/docs/getting-started'),
-        NavTreeNode(label: 'Conventions', path: '/docs/conventions'),
-        NavTreeNode(label: 'Dynamic Routes', path: '/docs/dynamic-routes'),
-        NavTreeNode(label: 'Deferred Imports', path: '/docs/deferred-imports'),
+        NavTreeNode(
+          label: 'Getting Started',
+          path: '/docs/file-routing/getting-started',
+        ),
+        NavTreeNode(
+          label: 'Conventions',
+          path: '/docs/file-routing/conventions',
+        ),
+        NavTreeNode(
+          label: 'Dynamic Routes',
+          path: '/docs/file-routing/dynamic-routes',
+        ),
+        NavTreeNode(
+          label: 'Deferred Imports',
+          path: '/docs/file-routing/deferred-imports',
+        ),
       ],
     ),
     NavTreeNode(
@@ -65,7 +77,7 @@ class DocsLayout extends _$DocsLayout {
       children: [
         NavTreeNode(
           label: 'Basic Navigation',
-          path: '/examples/basic-navigation',
+          path: '/docs/examples/basic-navigation',
         ),
         NavTreeNode(label: 'Tab Bar', path: '/docs/examples/tab-bar'),
         NavTreeNode(label: 'Deep Linking', path: '/docs/examples/deep-linking'),

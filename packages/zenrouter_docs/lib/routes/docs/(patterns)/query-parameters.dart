@@ -5,12 +5,12 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:zenrouter_docs/routes/_coordinator.dart';
+import 'package:zenrouter_docs/widgets/docs_layout.dart';
 import 'package:zenrouter_file_annotation/zenrouter_file_annotation.dart';
 
 import 'package:zenrouter_docs/routes/routes.zen.dart';
-import 'package:zenrouter_docs/theme/app_theme.dart';
-import 'package:zenrouter_docs/widgets/prose_section.dart';
-import 'package:zenrouter_docs/widgets/code_block.dart';
+import 'package:zenrouter_docs/widgets/doc_page.dart';
 
 part 'query-parameters.g.dart';
 
@@ -19,55 +19,37 @@ part 'query-parameters.g.dart';
 /// Note: We enable queries here as a workaround - the generator expects it
 /// based on the route name pattern. This demonstrates the feature in action.
 @ZenRoute(queries: ['*'])
-class QueryParametersRoute extends _$QueryParametersRoute {
+class QueryParametersRoute extends _$QueryParametersRoute with RouteSeo {
   QueryParametersRoute({super.queries = const {}});
 
   @override
+  String get title => 'Query Parameters';
+
+  @override
+  String get description => 'Reactive URL State';
+
+  @override
+  String get keywords => 'Query Parameters, URL State, Reactive, Flutter';
+
+  @override
   Widget build(covariant DocsCoordinator coordinator, BuildContext context) {
-    final theme = Theme.of(context);
-    final docs = theme.docs;
+    super.build(coordinator, context);
+    final tocController = DocsTocScope.of(context);
 
-    return SingleChildScrollView(
-      padding: docs.contentPadding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Query Parameters', style: theme.textTheme.displaySmall),
-          const SizedBox(height: 8),
-          Text(
-            'Reactive URL State',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              color: theme.colorScheme.primary,
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-          const SizedBox(height: 32),
-
-          const ProseSection(
-            content: '''
+    return DocPage(
+      title: 'Query Parameters',
+      subtitle: 'Reactive URL State',
+      tocController: tocController,
+      markdown: '''
 Query parameters are the key-value pairs after the question mark in a URL: `/search?q=flutter&sort=recent&page=2`. They're useful for state that should be shareable via URL but doesn't warrant a separate route.
 
 ZenRouter provides first-class support for query parameters, including reactive updates that rebuild only the widgets that depend on changed parameters.
-''',
-          ),
-          const SizedBox(height: 32),
 
-          Text(
-            'Enabling Query Parameters',
-            style: theme.textTheme.headlineMedium,
-          ),
-          const SizedBox(height: 16),
+## Enabling Query Parameters
 
-          const ProseSection(
-            content: '''
 When using zenrouter_file_generator, you enable query parameter support through the `@ZenRoute` annotation. You can enable all parameters with `['*']` or specify which parameters your route cares about.
-''',
-          ),
-          const SizedBox(height: 16),
 
-          const CodeBlock(
-            title: 'Enabling Queries',
-            code: '''
+\`\`\`dart
 // Enable specific parameters
 @ZenRoute(queries: ['q', 'sort', 'page'])
 class SearchRoute extends _\$SearchRoute {
@@ -78,26 +60,14 @@ class SearchRoute extends _\$SearchRoute {
 @ZenRoute(queries: ['*'])
 class FlexibleRoute extends _\$FlexibleRoute {
   // ...
-}''',
-          ),
-          const SizedBox(height: 32),
+}
+\`\`\`
 
-          Text(
-            'Reading Query Parameters',
-            style: theme.textTheme.headlineMedium,
-          ),
-          const SizedBox(height: 16),
+## Reading Query Parameters
 
-          const ProseSection(
-            content: '''
 Routes with query support receive a `queries` map that you can access directly. For reactive updates, use `selectorBuilder` which rebuilds only when the selected value changes.
-''',
-          ),
-          const SizedBox(height: 16),
 
-          const CodeBlock(
-            title: 'Reactive Query Access',
-            code: '''
+\`\`\`dart
 @ZenRoute(queries: ['q', 'page', 'sort'])
 class SearchRoute extends _\$SearchRoute {
   @override
@@ -142,26 +112,14 @@ class SearchRoute extends _\$SearchRoute {
       ),
     );
   }
-}''',
-          ),
-          const SizedBox(height: 32),
+}
+\`\`\`
 
-          Text(
-            'Updating Query Parameters',
-            style: theme.textTheme.headlineMedium,
-          ),
-          const SizedBox(height: 16),
+## Updating Query Parameters
 
-          const ProseSection(
-            content: '''
 Use `updateQueries` to change query parameters without a full navigation. The URL updates, listeners are notified, and only the affected widgets rebuild.
-''',
-          ),
-          const SizedBox(height: 16),
 
-          const CodeBlock(
-            title: 'Updating Queries',
-            code: '''
+\`\`\`dart
 // Update a single parameter
 updateQueries(
   coordinator,
@@ -183,58 +141,11 @@ final newQueries = Map.of(queries)..remove('sort');
 updateQueries(coordinator, queries: newQueries);
 
 // Clear all parameters
-updateQueries(coordinator, queries: {});''',
-          ),
-          const SizedBox(height: 32),
+updateQueries(coordinator, queries: {});
+\`\`\`
 
-          const ProseBlockquote(
-            content:
-                'Query parameters are ideal for filter/sort/search state - values that should be shareable and bookmarkable but that don\'t represent fundamentally different screens. When in doubt, ask: "Should this state be lost when the user navigates away?" If yes, use widget state. If no, consider query parameters.',
-          ),
-          const SizedBox(height: 48),
-
-          // Continue to file routing section
-          Card(
-            color: theme.colorScheme.primary.withValues(alpha: 0.1),
-            child: InkWell(
-              onTap: () => coordinator.pushGettingStarted(),
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Continue to File-Based Routing',
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              color: theme.colorScheme.primary,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Learn how zenrouter_file_generator eliminates boilerplate.',
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Icon(
-                      Icons.arrow_forward,
-                      size: 32,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 64),
-        ],
-      ),
+> Query parameters are ideal for filter/sort/search state - values that should be shareable and bookmarkable but that don't represent fundamentally different screens. When in doubt, ask: "Should this state be lost when the user navigates away?" If yes, use widget state. If no, consider query parameters.
+''',
     );
   }
 }

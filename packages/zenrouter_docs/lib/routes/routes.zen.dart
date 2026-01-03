@@ -10,13 +10,6 @@ import 'docs/(concepts)/routes-and-paths.dart'
 import 'docs/(concepts)/stack-management.dart'
     deferred as docs__concepts_stackmanagement;
 import 'docs/(concepts)/uri-parsing.dart' deferred as docs__concepts_uriparsing;
-import 'docs/(file-routing)/conventions.dart'
-    deferred as docs__filerouting_conventions;
-import 'docs/(file-routing)/deferred-imports.dart';
-import 'docs/(file-routing)/dynamic-routes.dart'
-    deferred as docs__filerouting_dynamicroutes;
-import 'docs/(file-routing)/getting-started.dart'
-    deferred as docs__filerouting_gettingstarted;
 import 'docs/(paradigms)/choosing.dart' deferred as docs__paradigms_choosing;
 import 'docs/(paradigms)/coordinator.dart'
     deferred as docs__paradigms_coordinator;
@@ -34,15 +27,22 @@ import 'docs/(patterns)/query-parameters.dart'
 import 'docs/_layout.dart';
 import 'docs/examples/[slug]/index.dart' deferred as docs_examples__slug_index;
 import 'docs/examples/_layout.dart';
+import 'docs/file-routing/conventions.dart'
+    deferred as docs_filerouting_conventions;
+import 'docs/file-routing/deferred-imports.dart';
+import 'docs/file-routing/dynamic-routes.dart'
+    deferred as docs_filerouting_dynamicroutes;
+import 'docs/file-routing/getting-started.dart'
+    deferred as docs_filerouting_gettingstarted;
 import 'docs/index.dart' deferred as docs_index;
 import 'index.dart' deferred as index;
 import 'not_found.dart';
 
 export 'package:zenrouter/zenrouter.dart';
 export '_layout.dart';
-export 'docs/(file-routing)/deferred-imports.dart';
 export 'docs/_layout.dart';
 export 'docs/examples/_layout.dart';
+export 'docs/file-routing/deferred-imports.dart';
 export 'not_found.dart';
 
 /// Base class for all routes in this application.
@@ -78,6 +78,19 @@ class DocsCoordinator extends Coordinator<DocsRoute> {
         await index.loadLibrary();
         return index.IndexRoute();
       }(),
+      ['docs', 'file-routing', 'conventions'] => await () async {
+        await docs_filerouting_conventions.loadLibrary();
+        return docs_filerouting_conventions.ConventionsRoute();
+      }(),
+      ['docs', 'file-routing', 'deferred-imports'] => DeferredImportsRoute(),
+      ['docs', 'file-routing', 'dynamic-routes'] => await () async {
+        await docs_filerouting_dynamicroutes.loadLibrary();
+        return docs_filerouting_dynamicroutes.DynamicRoutesRoute();
+      }(),
+      ['docs', 'file-routing', 'getting-started'] => await () async {
+        await docs_filerouting_gettingstarted.loadLibrary();
+        return docs_filerouting_gettingstarted.GettingStartedRoute();
+      }(),
       ['docs', 'examples', final slug] => await () async {
         await docs_examples__slug_index.loadLibrary();
         return docs_examples__slug_index.ExamplesSlugRoute(slug: slug);
@@ -93,19 +106,6 @@ class DocsCoordinator extends Coordinator<DocsRoute> {
       ['docs', 'uri-parsing'] => await () async {
         await docs__concepts_uriparsing.loadLibrary();
         return docs__concepts_uriparsing.UriParsingRoute();
-      }(),
-      ['docs', 'conventions'] => await () async {
-        await docs__filerouting_conventions.loadLibrary();
-        return docs__filerouting_conventions.ConventionsRoute();
-      }(),
-      ['docs', 'deferred-imports'] => DeferredImportsRoute(),
-      ['docs', 'dynamic-routes'] => await () async {
-        await docs__filerouting_dynamicroutes.loadLibrary();
-        return docs__filerouting_dynamicroutes.DynamicRoutesRoute();
-      }(),
-      ['docs', 'getting-started'] => await () async {
-        await docs__filerouting_gettingstarted.loadLibrary();
-        return docs__filerouting_gettingstarted.GettingStartedRoute();
       }(),
       ['docs', 'choosing'] => await () async {
         await docs__paradigms_choosing.loadLibrary();
@@ -197,48 +197,6 @@ extension DocsCoordinatorNav on DocsCoordinator {
   Future<void> recoverUriParsing() async => recover(await () async {
     await docs__concepts_uriparsing.loadLibrary();
     return docs__concepts_uriparsing.UriParsingRoute();
-  }());
-  Future<T?> pushConventions<T extends Object>() async => push(await () async {
-    await docs__filerouting_conventions.loadLibrary();
-    return docs__filerouting_conventions.ConventionsRoute();
-  }());
-  Future<void> replaceConventions() async => replace(await () async {
-    await docs__filerouting_conventions.loadLibrary();
-    return docs__filerouting_conventions.ConventionsRoute();
-  }());
-  Future<void> recoverConventions() async => recover(await () async {
-    await docs__filerouting_conventions.loadLibrary();
-    return docs__filerouting_conventions.ConventionsRoute();
-  }());
-  Future<T?> pushDeferredImports<T extends Object>() =>
-      push(DeferredImportsRoute());
-  Future<void> replaceDeferredImports() => replace(DeferredImportsRoute());
-  Future<void> recoverDeferredImports() => recover(DeferredImportsRoute());
-  Future<T?> pushDynamicRoutes<T extends Object>() async =>
-      push(await () async {
-        await docs__filerouting_dynamicroutes.loadLibrary();
-        return docs__filerouting_dynamicroutes.DynamicRoutesRoute();
-      }());
-  Future<void> replaceDynamicRoutes() async => replace(await () async {
-    await docs__filerouting_dynamicroutes.loadLibrary();
-    return docs__filerouting_dynamicroutes.DynamicRoutesRoute();
-  }());
-  Future<void> recoverDynamicRoutes() async => recover(await () async {
-    await docs__filerouting_dynamicroutes.loadLibrary();
-    return docs__filerouting_dynamicroutes.DynamicRoutesRoute();
-  }());
-  Future<T?> pushGettingStarted<T extends Object>() async =>
-      push(await () async {
-        await docs__filerouting_gettingstarted.loadLibrary();
-        return docs__filerouting_gettingstarted.GettingStartedRoute();
-      }());
-  Future<void> replaceGettingStarted() async => replace(await () async {
-    await docs__filerouting_gettingstarted.loadLibrary();
-    return docs__filerouting_gettingstarted.GettingStartedRoute();
-  }());
-  Future<void> recoverGettingStarted() async => recover(await () async {
-    await docs__filerouting_gettingstarted.loadLibrary();
-    return docs__filerouting_gettingstarted.GettingStartedRoute();
   }());
   Future<T?> pushChoosing<T extends Object>() async => push(await () async {
     await docs__paradigms_choosing.loadLibrary();
@@ -364,6 +322,48 @@ extension DocsCoordinatorNav on DocsCoordinator {
         await docs_examples__slug_index.loadLibrary();
         return docs_examples__slug_index.ExamplesSlugRoute(slug: slug);
       }());
+  Future<T?> pushConventions<T extends Object>() async => push(await () async {
+    await docs_filerouting_conventions.loadLibrary();
+    return docs_filerouting_conventions.ConventionsRoute();
+  }());
+  Future<void> replaceConventions() async => replace(await () async {
+    await docs_filerouting_conventions.loadLibrary();
+    return docs_filerouting_conventions.ConventionsRoute();
+  }());
+  Future<void> recoverConventions() async => recover(await () async {
+    await docs_filerouting_conventions.loadLibrary();
+    return docs_filerouting_conventions.ConventionsRoute();
+  }());
+  Future<T?> pushDeferredImports<T extends Object>() =>
+      push(DeferredImportsRoute());
+  Future<void> replaceDeferredImports() => replace(DeferredImportsRoute());
+  Future<void> recoverDeferredImports() => recover(DeferredImportsRoute());
+  Future<T?> pushDynamicRoutes<T extends Object>() async =>
+      push(await () async {
+        await docs_filerouting_dynamicroutes.loadLibrary();
+        return docs_filerouting_dynamicroutes.DynamicRoutesRoute();
+      }());
+  Future<void> replaceDynamicRoutes() async => replace(await () async {
+    await docs_filerouting_dynamicroutes.loadLibrary();
+    return docs_filerouting_dynamicroutes.DynamicRoutesRoute();
+  }());
+  Future<void> recoverDynamicRoutes() async => recover(await () async {
+    await docs_filerouting_dynamicroutes.loadLibrary();
+    return docs_filerouting_dynamicroutes.DynamicRoutesRoute();
+  }());
+  Future<T?> pushGettingStarted<T extends Object>() async =>
+      push(await () async {
+        await docs_filerouting_gettingstarted.loadLibrary();
+        return docs_filerouting_gettingstarted.GettingStartedRoute();
+      }());
+  Future<void> replaceGettingStarted() async => replace(await () async {
+    await docs_filerouting_gettingstarted.loadLibrary();
+    return docs_filerouting_gettingstarted.GettingStartedRoute();
+  }());
+  Future<void> recoverGettingStarted() async => recover(await () async {
+    await docs_filerouting_gettingstarted.loadLibrary();
+    return docs_filerouting_gettingstarted.GettingStartedRoute();
+  }());
   Future<T?> pushDocsIndex<T extends Object>() async => push(await () async {
     await docs_index.loadLibrary();
     return docs_index.DocsIndexRoute();
