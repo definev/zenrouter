@@ -1,11 +1,11 @@
 {
-    "name": "zenrouter_docs",
-    "short_name": "zenrouter_docs",
+    "name": "ZenRouter Documentation",
+    "short_name": "ZenRouter",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Interactive documentation for ZenRouter - teaching the Coordinator pattern and file-based routing.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

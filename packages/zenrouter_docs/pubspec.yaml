@@ -43,6 +43,9 @@ dev_dependencies:
   # Code generation
   build_runner: ^2.4.13
   zenrouter_file_generator:
+  
+  # Icon and favicon generation
+  icons_launcher: ^3.0.3
 
 flutter:
   uses-material-design: true
@@ -50,3 +53,15 @@ flutter:
   assets:
     - assets/logo_dark.png
     - assets/logo_light.png
+
+icons_launcher:
+  image_path: "assets/logo_light.png"
+  platforms:
+    android:
+      enable: true
+    ios:
+      enable: true
+    web:
+      enable: true
+      image_path: "assets/logo_light.png"
+      favicon_path: "assets/logo_light.png"
