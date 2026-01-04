@@ -7,11 +7,11 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:zenrouter_docs/widgets/mardown_section.dart';
 import 'package:zenrouter_file_annotation/zenrouter_file_annotation.dart';
 
 import 'package:zenrouter_docs/routes/routes.zen.dart';
 import 'package:zenrouter_docs/theme/app_theme.dart';
-import 'package:zenrouter_docs/widgets/prose_section.dart';
 
 part 'index.g.dart';
 
@@ -51,11 +51,11 @@ class IndexRoute extends _$IndexRoute {
                 ),
                 const SizedBox(height: 32),
 
-                const ProseSection(
-                  content: '''
+                const MarkdownSection(
+                  markdown: '''
 Hello there!,
 
-You have arrived at the documentation for ZenRouter, a navigation library that offers not one approach to routing, but three distinct paradigms - each suited to different circumstances, each with its own philosophy.
+You have arrived at the documentation for `ZenRouter`, a navigation library that solves every navigation problem in Flutter.
 
 This documentation is itself built with ZenRouter's Coordinator pattern and file-based routing. As you navigate these pages, you are experiencing the very system we document. The routes you traverse, the layouts that wrap them, the URIs in your address bar - all are demonstrations of the principles explained herein.
 
@@ -175,7 +175,12 @@ class _NavigationLinkState extends State<NavigationLink> {
         borderRadius: BorderRadius.circular(12),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          padding: const EdgeInsets.only(
+            left: 8,
+            right: 16,
+            top: 16,
+            bottom: 16,
+          ),
           decoration: BoxDecoration(
             color: _isHovered
                 ? theme.colorScheme.primary.withValues(alpha: 0.05)
@@ -184,6 +189,7 @@ class _NavigationLinkState extends State<NavigationLink> {
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: 16,
             children: [
               // Icon
               Container(
@@ -194,7 +200,6 @@ class _NavigationLinkState extends State<NavigationLink> {
                 ),
                 child: Icon(item.icon, color: item.color, size: 24),
               ),
-              const SizedBox(width: 20),
               // Content
               Expanded(
                 child: Column(

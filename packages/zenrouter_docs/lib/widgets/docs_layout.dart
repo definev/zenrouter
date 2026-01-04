@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:zenrouter_docs/widgets/doc_page.dart';
+import 'package:zenrouter_docs/widgets/mardown_section.dart';
 
 /// Tree node for navigation
 class NavTreeNode {
@@ -102,26 +102,6 @@ class _DocsLayoutContentState extends State<DocsLayoutBuilder> {
             } else {
               // Narrow: Drawer nav + Content (TOC in end drawer)
               return Scaffold(
-                appBar: AppBar(
-                  leading: Builder(
-                    builder: (context) => IconButton(
-                      icon: const Icon(Icons.menu),
-                      onPressed: () => Scaffold.of(context).openDrawer(),
-                    ),
-                  ),
-                  actions: [
-                    Builder(
-                      builder: (context) => IconButton(
-                        style: IconButton.styleFrom(padding: EdgeInsets.zero),
-                        icon: const SizedBox.square(
-                          dimension: kToolbarHeight,
-                          child: Icon(Icons.menu_book_rounded),
-                        ),
-                        onPressed: () => Scaffold.of(context).openEndDrawer(),
-                      ),
-                    ),
-                  ],
-                ),
                 drawer: Drawer(
                   child: SafeArea(
                     child: _DocsTreeView(

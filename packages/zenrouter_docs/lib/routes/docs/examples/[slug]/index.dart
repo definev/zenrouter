@@ -7,6 +7,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:zenrouter_docs/routes/_coordinator.dart';
 import 'package:zenrouter_docs/widgets/docs_layout.dart';
+import 'package:zenrouter_docs/widgets/mardown_section.dart';
 import 'package:zenrouter_file_annotation/zenrouter_file_annotation.dart';
 
 import 'package:zenrouter_docs/routes/routes.zen.dart';
@@ -129,7 +130,7 @@ These operations form the foundation of all navigation in ZenRouter, whether usi
 class HomeRoute extends AppRoute {
   @override
   Uri toUri() => Uri.parse('/');
-  
+
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
     return Scaffold(
@@ -159,7 +160,7 @@ class HomeRoute extends AppRoute {
 class ProfileRoute extends AppRoute {
   @override
   Uri toUri() => Uri.parse('/profile');
-  
+
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
     return Scaffold(
@@ -200,7 +201,7 @@ class AppCoordinator extends Coordinator<AppRoute> {
     label: 'tabs',
     [HomeTabLayout(), SearchTabLayout(), ProfileTabLayout()],
   );
-  
+
   @override
   List<StackPath> get paths => [...super.paths, tabsPath];
 }
@@ -211,11 +212,11 @@ class TabsLayout extends AppRoute with RouteLayout<AppRoute> {
   IndexedStackPath<AppRoute> resolvePath(AppCoordinator coordinator) {
     return coordinator.tabsPath;
   }
-  
+
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
     final path = resolvePath(coordinator);
-    
+
     return Scaffold(
       body: buildPath(coordinator),  // Renders active tab
       bottomNavigationBar: BottomNavigationBar(
@@ -251,36 +252,36 @@ This example shows how to implement custom deep link handling for complex flows.
     code: '''
 class ProductRoute extends AppRoute with RouteDeepLink {
   ProductRoute({required this.productId});
-  
+
   final String productId;
-  
+
   @override
   Uri toUri() => Uri.parse('/product/\$productId');
-  
+
   // Use custom handling instead of simple replace
   @override
   DeeplinkStrategy get deeplinkStrategy => DeeplinkStrategy.custom;
-  
+
   @override
   Future<void> deeplinkHandler(
     AppCoordinator coordinator,
     Uri uri,
   ) async {
     // Build a sensible navigation stack
-    
+
     // 1. Start at home
     coordinator.replace(HomeRoute());
-    
+
     // 2. Go to shop tab
     coordinator.push(ShopTabLayout());
-    
+
     // 3. Show product category
     final category = await loadProductCategory(productId);
     coordinator.push(CategoryRoute(category: category));
-    
+
     // 4. Finally, show this product
     coordinator.push(this);
-    
+
     // Now "back" goes: Product → Category → Shop → Home
     // Much better than orphaned product page!
   }
@@ -309,18 +310,18 @@ mixin AuthRequired<T extends RouteTarget> on RouteRedirect<T> {
   @override
   FutureOr<T?> redirect() async {
     final isLoggedIn = await authService.isAuthenticated();
-    
+
     if (!isLoggedIn) {
       // Redirect to login, saving intended destination
       return LoginRoute(redirectTo: toUri().toString()) as T;
     }
-    
+
     return null;  // Proceed to this route
   }
 }
 
 // Apply to protected routes
-class DashboardRoute extends AppRoute 
+class DashboardRoute extends AppRoute
     with RouteRedirect<AppRoute>, AuthRequired<AppRoute> {
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
@@ -331,9 +332,9 @@ class DashboardRoute extends AppRoute
 // Login handles the redirect back
 class LoginRoute extends AppRoute {
   LoginRoute({this.redirectTo});
-  
+
   final String? redirectTo;
-  
+
   void onLoginSuccess(AppCoordinator coordinator) {
     if (redirectTo != null) {
       // Return to intended destination

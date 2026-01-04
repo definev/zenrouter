@@ -94,7 +94,7 @@ class _CodeBlockState extends State<CodeBlock> {
         final highlighter = snapshot.data!;
         final highlightedCode = highlighter.highlight(widget.code);
 
-        return Container(
+        return ConstrainedBox(
           constraints: BoxConstraints(maxWidth: docs.proseMaxWidth + 100),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

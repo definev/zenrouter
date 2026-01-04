@@ -89,7 +89,7 @@ class DocsLayout extends _$DocsLayout {
   @override
   Widget build(covariant DocsCoordinator coordinator, BuildContext context) {
     return ListenableBuilder(
-      listenable: coordinator.activePath,
+      listenable: coordinator,
       builder: (context, _) {
         final currentPath =
             coordinator.activePath.activeRoute?.toUri().path ?? '/';
