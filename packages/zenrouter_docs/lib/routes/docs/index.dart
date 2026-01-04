@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:zenrouter_docs/routes/index.dart';
 import 'package:zenrouter_docs/routes/routes.zen.dart';
 import 'package:zenrouter_docs/theme/app_theme.dart';
+import 'package:zenrouter_docs/widgets/docs_layout.dart';
 import 'package:zenrouter_docs/widgets/mardown_section.dart';
 
 import 'package:zenrouter_file_annotation/zenrouter_file_annotation.dart';
@@ -22,8 +23,28 @@ part 'index.g.dart';
 /// and guiding them toward the knowledge they seek.
 @ZenRoute()
 class DocsIndexRoute extends _$DocsIndexRoute {
+  TocController? _controller;
+
   @override
   Widget build(covariant DocsCoordinator coordinator, BuildContext context) {
+    _controller = DocsTocScope.of(context);
+    return const DocsIndexWidget();
+  }
+
+  @override
+  void onUpdate(covariant RouteTarget newRoute) {
+    super.onUpdate(newRoute);
+    _controller?.clearItems();
+  }
+}
+
+class DocsIndexWidget extends StatelessWidget {
+  const DocsIndexWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final coordinator = context.docsCoordinator;
+
     final theme = Theme.of(context);
     final docs = theme.docs;
 

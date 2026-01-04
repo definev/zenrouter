@@ -87,16 +87,16 @@ class MyApp extends StatelessWidget {
 
 The imperative paradigm excels when:
 
-• Your navigation is event-driven - the user taps a button, you respond with a push
-• You're building a mobile-only app without deep linking requirements  
-• You're migrating from Navigator 1.0 and want a gentle transition
-• Your navigation flows are linear and predictable
+- Your navigation is event-driven - the user taps a button, you respond with a push
+- You're building a mobile-only app without deep linking requirements  
+- You're migrating from Navigator 1.0 and want a gentle transition
+- Your navigation flows are linear and predictable
 
 It struggles when:
 
-• You need deep linking or web URL support
-• Your navigation state should be derived from application state
-• You need to rebuild complex navigation stacks from a single URL
+- You need deep linking or web URL support
+- Your navigation state should be derived from application state
+- You need to rebuild complex navigation stacks from a single URL
 
 > The imperative paradigm is not inferior to the others - it is appropriate for different circumstances. Many excellent apps need nothing more.
 ''',

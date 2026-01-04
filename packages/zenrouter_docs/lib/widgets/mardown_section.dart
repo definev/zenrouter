@@ -58,6 +58,9 @@ class TocController extends ChangeNotifier {
 
   void addItem(TocItem tocItem) {
     _items.add(tocItem);
+    if (_items.length == 1) {
+      setActiveItem(tocItem);
+    }
     notifyListeners();
   }
 

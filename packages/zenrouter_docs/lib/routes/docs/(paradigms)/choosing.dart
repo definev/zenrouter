@@ -68,9 +68,9 @@ Philosophy has its place, but at some point you must ship. This guide will help 
 
 Yes, and this is often the right approach. Consider:
 
-• Use Coordinator for your app's main navigation (to enable deep linking)
-• Use Declarative within a specific screen (a wizard, a tab bar)
-• Use Imperative for simple modal flows within a screen
+- Use Coordinator for your app's main navigation (to enable deep linking)
+- Use Declarative within a specific screen (a wizard, a tab bar)
+- Use Imperative for simple modal flows within a screen
 
 The paradigms are not mutually exclusive. They solve different problems at different scales. A Coordinator can contain screens that internally use declarative navigation, and those screens might spawn imperative modal flows.
 

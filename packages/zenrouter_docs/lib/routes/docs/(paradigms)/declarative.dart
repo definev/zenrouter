@@ -93,16 +93,16 @@ ZenRouter uses the Myers diff algorithm (the same algorithm that powers `git dif
 
 The declarative paradigm excels when:
 
-• Your navigation is state-driven - tab selection, wizard steps, filtered lists
-• You want navigation to stay in sync with application state automatically
-• You're building interfaces where the "current screen" is a function of data
-• You prefer React-like patterns where UI is a pure function of state
+- Your navigation is state-driven - tab selection, wizard steps, filtered lists
+- You want navigation to stay in sync with application state automatically
+- You're building interfaces where the "current screen" is a function of data
+- You prefer React-like patterns where UI is a pure function of state
 
 It struggles when:
 
-• You need URLs to reflect navigation state
-• You need deep linking from external sources  
-• Your navigation is primarily event-driven (user taps → push)
+- You need URLs to reflect navigation state
+- You need deep linking from external sources  
+- Your navigation is primarily event-driven (user taps → push)
 
 ```dart
 class TabExample extends StatefulWidget {

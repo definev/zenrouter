@@ -28,7 +28,7 @@ class BlogSlugsRoute extends _$BlogSlugsRoute {
             const SizedBox(height: 16),
             Text('Segments: ${slugs.length}'),
             const SizedBox(height: 8),
-            ...slugs.map((s) => Text('• $s')),
+            ...slugs.map((s) => Text('- $s')),
           ],
         ),
       ),
