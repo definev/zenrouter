@@ -16,7 +16,7 @@ part 'dynamic-routes.g.dart';
 
 /// The Dynamic Routes documentation page.
 @ZenRoute()
-class DynamicRoutesRoute extends _$DynamicRoutesRoute with RouteSeo {
+class DynamicRoutesRoute extends _$DynamicRoutesRoute with RouteSeo, RouteToc {
   @override
   String get title => 'Dynamic Routes';
 
@@ -34,6 +34,7 @@ class DynamicRoutesRoute extends _$DynamicRoutesRoute with RouteSeo {
     return DocPage(
       title: 'Dynamic Routes',
       subtitle: 'Parameters and Catch-All Patterns',
+      onTocItemsReady: (items) => tocItems.value = items,
       tocController: tocController,
       markdown: '''
 Not every route is static. A user profile needs a user ID. A blog post needs a slug. Documentation might have arbitrary nested paths. Dynamic routes handle these cases with parameters.

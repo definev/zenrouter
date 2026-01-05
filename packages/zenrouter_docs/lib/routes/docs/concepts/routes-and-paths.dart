@@ -16,7 +16,8 @@ part 'routes-and-paths.g.dart';
 
 /// The Routes and Paths documentation page.
 @ZenRoute()
-class RoutesAndPathsRoute extends _$RoutesAndPathsRoute with RouteSeo {
+class RoutesAndPathsRoute extends _$RoutesAndPathsRoute
+    with RouteSeo, RouteToc {
   @override
   String get title => 'Routes & Paths';
 
@@ -34,6 +35,7 @@ class RoutesAndPathsRoute extends _$RoutesAndPathsRoute with RouteSeo {
     return DocPage(
       title: 'Routes & Paths',
       subtitle: 'The Fundamental Building Blocks',
+      onTocItemsReady: (items) => tocItems.value = items,
       tocController: tocController,
       markdown: '''
 Before we can navigate, we must understand what we are navigating *between* and what we are navigating *through*.

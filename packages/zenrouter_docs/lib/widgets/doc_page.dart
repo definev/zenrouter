@@ -19,8 +19,10 @@ class DocPage extends StatefulWidget {
     this.subtitle,
     this.tocController,
     this.bottomWidget,
+    required this.onTocItemsReady,
   });
 
+  final ValueChanged<List<TocItem>> onTocItemsReady;
   final String markdown;
   final String title;
   final String? subtitle;
@@ -39,6 +41,19 @@ class _DocPageState extends State<DocPage> {
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       _tocController.clearItems();
     });
+  }
+
+  void _updateActiveItemFromScroll() {
+    if (!_scrollController.hasClients) return;
+    if (_tocController.items.isEmpty) return;
+
+    final scrollPosition = _scrollController.position.pixels;
+    final viewportHeight = MediaQuery.of(context).size.height;
+
+    _tocController.updateActiveItemFromScrollPosition(
+      scrollPosition,
+      viewportHeight,
+    );
   }
 
   void _onScroll() {
@@ -110,7 +125,31 @@ class _DocPageState extends State<DocPage> {
     _tocController = widget.tocController ?? TocController();
     _scrollController = ScrollController();
     _scrollController.addListener(_onScroll);
-    _resetTocController();
+
+    // Set up callback to update active item when all items are ready
+    _tocController.onItemsReady = () {
+      widget.onTocItemsReady.call(_tocController.items);
+      // Wait for next frame to ensure scroll position is restored
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _scrollController.hasClients) {
+          _updateActiveItemFromScroll();
+        }
+      });
+    };
+
+    // Also check after the first frame when scroll controller might be attached
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted &&
+          _scrollController.hasClients &&
+          _tocController.items.isNotEmpty) {
+        // Wait a bit more for scroll restoration to complete
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted && _scrollController.hasClients) {
+            _updateActiveItemFromScroll();
+          }
+        });
+      }
+    });
   }
 
   @override
@@ -119,6 +158,12 @@ class _DocPageState extends State<DocPage> {
     if (oldWidget.markdown != widget.markdown) {
       _resetTocController();
     }
+    // Update active item when widget is updated (e.g., route restored)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _scrollController.hasClients) {
+        _updateActiveItemFromScroll();
+      }
+    });
   }
 
   @override
@@ -210,7 +255,7 @@ class _DocPageState extends State<DocPage> {
                   tocController: _tocController,
                 ),
 
-                ?widget.bottomWidget,
+                if (widget.bottomWidget != null) widget.bottomWidget!,
                 // Extra padding at bottom to allow last sections to scroll to top
                 SizedBox(height: MediaQuery.of(context).size.height * 0.7),
               ],

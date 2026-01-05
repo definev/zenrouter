@@ -16,7 +16,7 @@ part 'uri-parsing.g.dart';
 
 /// The URI Parsing documentation page.
 @ZenRoute()
-class UriParsingRoute extends _$UriParsingRoute with RouteSeo {
+class UriParsingRoute extends _$UriParsingRoute with RouteSeo, RouteToc {
   @override
   String get description => 'The Art of Address Translation';
 
@@ -35,6 +35,7 @@ class UriParsingRoute extends _$UriParsingRoute with RouteSeo {
       title: 'URI Parsing',
       subtitle: 'The Art of Address Translation',
       tocController: tocController,
+      onTocItemsReady: (items) => tocItems.value = items,
       markdown: '''
 A URL is an address - a string of characters that identifies a resource. A route is an object - a Dart class instance that knows how to render itself. The Coordinator must translate between these two representations in both directions.
 

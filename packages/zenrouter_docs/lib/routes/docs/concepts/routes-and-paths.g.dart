@@ -1,23 +1,23 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'deep-linking.dart';
+part of 'routes-and-paths.dart';
 
 // **************************************************************************
 // RouteGenerator
 // **************************************************************************
 
-/// Generated base class for DeepLinkingRoute.
+/// Generated base class for RoutesAndPathsRoute.
 ///
-/// URI: /docs/deep-linking
+/// URI: /docs/concepts/routes-and-paths
 /// Layout: DocsLayout
-abstract class _$DeepLinkingRoute extends DocsRoute {
-  _$DeepLinkingRoute();
+abstract class _$RoutesAndPathsRoute extends DocsRoute {
+  _$RoutesAndPathsRoute();
 
   @override
   Type? get layout => DocsLayout;
 
   @override
-  Uri toUri() => Uri.parse('/docs/deep-linking');
+  Uri toUri() => Uri.parse('/docs/concepts/routes-and-paths');
 
   @override
   List<Object?> get props => [];

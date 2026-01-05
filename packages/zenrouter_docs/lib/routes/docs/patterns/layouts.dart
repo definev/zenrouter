@@ -16,7 +16,7 @@ part 'layouts.g.dart';
 
 /// The Layouts documentation page.
 @ZenRoute()
-class LayoutsRoute extends _$LayoutsRoute with RouteSeo {
+class LayoutsRoute extends _$LayoutsRoute with RouteSeo, RouteToc {
   @override
   String get title => 'Layouts';
 
@@ -35,6 +35,7 @@ class LayoutsRoute extends _$LayoutsRoute with RouteSeo {
       title: 'Layouts',
       subtitle: 'Nested Navigation Hierarchies',
       tocController: tocController,
+      onTocItemsReady: (items) => tocItems.value = items,
       markdown: '''
 Real applications rarely have flat navigation. Consider a typical mobile app: a bottom tab bar with three tabs, each tab having its own navigation stack. When you're deep in the Feed tab and switch to Profile, then back to Feed, you expect to return to where you were.
 

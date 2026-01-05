@@ -1,23 +1,23 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'routes-and-paths.dart';
+part of 'uri-parsing.dart';
 
 // **************************************************************************
 // RouteGenerator
 // **************************************************************************
 
-/// Generated base class for RoutesAndPathsRoute.
+/// Generated base class for UriParsingRoute.
 ///
-/// URI: /docs/routes-and-paths
+/// URI: /docs/concepts/uri-parsing
 /// Layout: DocsLayout
-abstract class _$RoutesAndPathsRoute extends DocsRoute {
-  _$RoutesAndPathsRoute();
+abstract class _$UriParsingRoute extends DocsRoute {
+  _$UriParsingRoute();
 
   @override
   Type? get layout => DocsLayout;
 
   @override
-  Uri toUri() => Uri.parse('/docs/routes-and-paths');
+  Uri toUri() => Uri.parse('/docs/concepts/uri-parsing');
 
   @override
   List<Object?> get props => [];

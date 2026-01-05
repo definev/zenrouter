@@ -25,30 +25,39 @@ class DocsLayout extends _$DocsLayout {
     NavTreeNode(
       label: 'Paradigms',
       children: [
-        NavTreeNode(label: 'Imperative', path: '/docs/imperative'),
-        NavTreeNode(label: 'Declarative', path: '/docs/declarative'),
-        NavTreeNode(label: 'Coordinator', path: '/docs/coordinator'),
-        NavTreeNode(label: 'Choosing', path: '/docs/choosing'),
+        NavTreeNode(label: 'Imperative', path: '/docs/paradigms/imperative'),
+        NavTreeNode(label: 'Declarative', path: '/docs/paradigms/declarative'),
+        NavTreeNode(label: 'Coordinator', path: '/docs/paradigms/coordinator'),
+        NavTreeNode(label: 'Choosing', path: '/docs/paradigms/choosing'),
       ],
     ),
     NavTreeNode(
       label: 'Concepts',
       children: [
-        NavTreeNode(label: 'Routes & Paths', path: '/docs/routes-and-paths'),
-        NavTreeNode(label: 'URI Parsing', path: '/docs/uri-parsing'),
-        NavTreeNode(label: 'Stack Management', path: '/docs/stack-management'),
+        NavTreeNode(
+          label: 'Routes & Paths',
+          path: '/docs/concepts/routes-and-paths',
+        ),
+        NavTreeNode(label: 'URI Parsing', path: '/docs/concepts/uri-parsing'),
+        NavTreeNode(
+          label: 'Stack Management',
+          path: '/docs/concepts/stack-management',
+        ),
       ],
     ),
     NavTreeNode(
       label: 'Patterns',
       children: [
-        NavTreeNode(label: 'Layouts', path: '/docs/layouts'),
+        NavTreeNode(label: 'Layouts', path: '/docs/patterns/layouts'),
         NavTreeNode(
           label: 'Guards & Redirects',
-          path: '/docs/guards-redirects',
+          path: '/docs/patterns/guards-redirects',
         ),
-        NavTreeNode(label: 'Deep Linking', path: '/docs/deep-linking'),
-        NavTreeNode(label: 'Query Parameters', path: '/docs/query-parameters'),
+        NavTreeNode(label: 'Deep Linking', path: '/docs/patterns/deep-linking'),
+        NavTreeNode(
+          label: 'Query Parameters',
+          path: '/docs/patterns/query-parameters',
+        ),
       ],
     ),
     NavTreeNode(

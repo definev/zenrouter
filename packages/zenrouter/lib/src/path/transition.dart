@@ -259,4 +259,7 @@ class _NoTransitionRoute<T> extends PageRoute<T> {
 
   @override
   Duration get transitionDuration => Duration.zero;
+
+  @override
+  Duration get reverseTransitionDuration => Duration.zero;
 }

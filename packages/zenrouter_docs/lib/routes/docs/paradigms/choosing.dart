@@ -16,7 +16,7 @@ part 'choosing.g.dart';
 
 /// The Choosing Your Paradigm documentation page.
 @ZenRoute()
-class ChoosingRoute extends _$ChoosingRoute with RouteSeo {
+class ChoosingRoute extends _$ChoosingRoute with RouteSeo, RouteToc {
   @override
   String get title => 'Choosing Your Paradigm';
 
@@ -34,6 +34,7 @@ class ChoosingRoute extends _$ChoosingRoute with RouteSeo {
     return DocPage(
       title: 'Choosing Your Paradigm',
       subtitle: 'A Practical Decision Guide',
+      onTocItemsReady: (items) => tocItems.value = items,
       tocController: tocController,
       markdown: '''
 Philosophy has its place, but at some point you must ship. This guide will help you select the right paradigm for your specific needs.

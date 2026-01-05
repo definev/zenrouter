@@ -15,7 +15,7 @@ part 'conventions.g.dart';
 
 /// The Naming Conventions documentation page.
 @ZenRoute()
-class ConventionsRoute extends _$ConventionsRoute with RouteSeo {
+class ConventionsRoute extends _$ConventionsRoute with RouteSeo, RouteToc {
   @override
   String get title => 'Naming Conventions';
 
@@ -34,6 +34,7 @@ class ConventionsRoute extends _$ConventionsRoute with RouteSeo {
       title: 'Naming Conventions',
       subtitle: 'The Rules of the Road',
       tocController: tocController,
+      onTocItemsReady: (items) => tocItems.value = items,
       markdown: '''
 File-based routing follows a set of conventions that map file paths to URL paths. Understanding these conventions lets you design your route structure with intention.
 

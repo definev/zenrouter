@@ -19,7 +19,8 @@ part 'query-parameters.g.dart';
 /// Note: We enable queries here as a workaround - the generator expects it
 /// based on the route name pattern. This demonstrates the feature in action.
 @ZenRoute(queries: ['*'])
-class QueryParametersRoute extends _$QueryParametersRoute with RouteSeo {
+class QueryParametersRoute extends _$QueryParametersRoute
+    with RouteSeo, RouteToc {
   QueryParametersRoute({super.queries = const {}});
 
   @override
@@ -40,6 +41,7 @@ class QueryParametersRoute extends _$QueryParametersRoute with RouteSeo {
       title: 'Query Parameters',
       subtitle: 'Reactive URL State',
       tocController: tocController,
+      onTocItemsReady: (items) => tocItems.value = items,
       markdown: '''
 Query parameters are the key-value pairs after the question mark in a URL: `/search?q=flutter&sort=recent&page=2`. They're useful for state that should be shareable via URL but doesn't warrant a separate route.
 

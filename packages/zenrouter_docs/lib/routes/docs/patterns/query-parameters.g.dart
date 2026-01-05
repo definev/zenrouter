@@ -8,7 +8,7 @@ part of 'query-parameters.dart';
 
 /// Generated base class for QueryParametersRoute.
 ///
-/// URI: /docs/query-parameters
+/// URI: /docs/patterns/query-parameters
 /// Layout: DocsLayout
 abstract class _$QueryParametersRoute extends DocsRoute
     with RouteQueryParameters {
@@ -23,7 +23,7 @@ abstract class _$QueryParametersRoute extends DocsRoute
 
   @override
   Uri toUri() {
-    final uri = Uri.parse('/docs/query-parameters');
+    final uri = Uri.parse('/docs/patterns/query-parameters');
     if (queries.isEmpty) return uri;
     return uri.replace(queryParameters: queries);
   }

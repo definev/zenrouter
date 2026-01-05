@@ -16,7 +16,8 @@ part 'getting-started.g.dart';
 
 /// The Getting Started documentation page for file-based routing.
 @ZenRoute()
-class GettingStartedRoute extends _$GettingStartedRoute with RouteSeo {
+class GettingStartedRoute extends _$GettingStartedRoute
+    with RouteSeo, RouteToc {
   @override
   String get title => 'Getting Started';
 
@@ -35,6 +36,7 @@ class GettingStartedRoute extends _$GettingStartedRoute with RouteSeo {
       title: 'Getting Started',
       subtitle: 'File = Route',
       tocController: tocController,
+      onTocItemsReady: (items) => tocItems.value = items,
       markdown: '''
 The zenrouter_file_generator package brings file-based routing to Flutter - a pattern popularized by Next.js, Nuxt, and Expo Router. Instead of maintaining route lists and parsing logic manually, you create files and let the generator do the rest.
 

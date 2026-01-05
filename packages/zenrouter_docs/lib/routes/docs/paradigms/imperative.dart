@@ -17,7 +17,7 @@ part 'imperative.g.dart';
 
 /// The Imperative Navigation documentation page.
 @ZenRoute()
-class ImperativeRoute extends _$ImperativeRoute with RouteSeo {
+class ImperativeRoute extends _$ImperativeRoute with RouteSeo, RouteToc {
   @override
   String get title => 'Imperative Navigation';
 
@@ -36,6 +36,7 @@ class ImperativeRoute extends _$ImperativeRoute with RouteSeo {
       title: 'Imperative Navigation',
       subtitle: 'Direct Control Over the Stack',
       tocController: tocController,
+      onTocItemsReady: (items) => tocItems.value = items,
       markdown: '''
 In the beginning, there was the stack.
 

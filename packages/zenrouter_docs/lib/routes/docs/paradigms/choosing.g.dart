@@ -1,23 +1,23 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'layouts.dart';
+part of 'choosing.dart';
 
 // **************************************************************************
 // RouteGenerator
 // **************************************************************************
 
-/// Generated base class for LayoutsRoute.
+/// Generated base class for ChoosingRoute.
 ///
-/// URI: /docs/layouts
+/// URI: /docs/paradigms/choosing
 /// Layout: DocsLayout
-abstract class _$LayoutsRoute extends DocsRoute {
-  _$LayoutsRoute();
+abstract class _$ChoosingRoute extends DocsRoute {
+  _$ChoosingRoute();
 
   @override
   Type? get layout => DocsLayout;
 
   @override
-  Uri toUri() => Uri.parse('/docs/layouts');
+  Uri toUri() => Uri.parse('/docs/paradigms/choosing');
 
   @override
   List<Object?> get props => [];

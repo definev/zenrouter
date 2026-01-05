@@ -1,23 +1,23 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'imperative.dart';
+part of 'declarative.dart';
 
 // **************************************************************************
 // RouteGenerator
 // **************************************************************************
 
-/// Generated base class for ImperativeRoute.
+/// Generated base class for DeclarativeRoute.
 ///
-/// URI: /docs/imperative
+/// URI: /docs/paradigms/declarative
 /// Layout: DocsLayout
-abstract class _$ImperativeRoute extends DocsRoute {
-  _$ImperativeRoute();
+abstract class _$DeclarativeRoute extends DocsRoute {
+  _$DeclarativeRoute();
 
   @override
   Type? get layout => DocsLayout;
 
   @override
-  Uri toUri() => Uri.parse('/docs/imperative');
+  Uri toUri() => Uri.parse('/docs/paradigms/declarative');
 
   @override
   List<Object?> get props => [];

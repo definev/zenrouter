@@ -17,7 +17,7 @@ part 'coordinator.g.dart';
 
 /// The Coordinator Pattern documentation page.
 @ZenRoute()
-class CoordinatorRoute extends _$CoordinatorRoute with RouteSeo {
+class CoordinatorRoute extends _$CoordinatorRoute with RouteSeo, RouteToc {
   @override
   String get title => 'The Coordinator Pattern';
 
@@ -36,6 +36,7 @@ class CoordinatorRoute extends _$CoordinatorRoute with RouteSeo {
       title: 'The Coordinator Pattern',
       subtitle: 'URI-Aware Navigation for the Modern Age',
       tocController: tocController,
+      onTocItemsReady: (items) => tocItems.value = items,
       markdown: '''
 The web was built on URLs. Every resource has an address; every address can be shared, bookmarked, or deep-linked. Mobile apps, for the most part, abandoned this - and then slowly realized what they had lost.
 

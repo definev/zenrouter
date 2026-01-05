@@ -16,7 +16,8 @@ part 'deferred-imports.g.dart';
 
 /// The Deferred Imports documentation page.
 @ZenRoute()
-class DeferredImportsRoute extends _$DeferredImportsRoute with RouteSeo {
+class DeferredImportsRoute extends _$DeferredImportsRoute
+    with RouteSeo, RouteToc {
   @override
   String get title => 'Deferred Imports';
 
@@ -36,6 +37,7 @@ class DeferredImportsRoute extends _$DeferredImportsRoute with RouteSeo {
       title: 'Deferred Imports',
       subtitle: 'Lazy Loading for Performance',
       tocController: tocController,
+      onTocItemsReady: (items) => tocItems.value = items,
       markdown: '''
 Every route in your app contributes to its initial bundle size. For large applications with many routes, this can slow down startup - users wait longer before seeing anything, and on web, they download code they may never execute.
 

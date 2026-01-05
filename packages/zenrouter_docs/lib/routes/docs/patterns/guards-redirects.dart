@@ -16,7 +16,8 @@ part 'guards-redirects.g.dart';
 
 /// The Guards and Redirects documentation page.
 @ZenRoute()
-class GuardsRedirectsRoute extends _$GuardsRedirectsRoute with RouteSeo {
+class GuardsRedirectsRoute extends _$GuardsRedirectsRoute
+    with RouteSeo, RouteToc {
   @override
   String get title => 'Guards & Redirects';
 
@@ -35,6 +36,7 @@ class GuardsRedirectsRoute extends _$GuardsRedirectsRoute with RouteSeo {
       title: 'Guards & Redirects',
       subtitle: 'Controlling Navigation Flow',
       tocController: tocController,
+      onTocItemsReady: (items) => tocItems.value = items,
       markdown: '''
 Sometimes navigation must be conditional. A checkout screen requires authentication. An editor should warn before discarding unsaved changes. A route might need to redirect to another based on application state.
 

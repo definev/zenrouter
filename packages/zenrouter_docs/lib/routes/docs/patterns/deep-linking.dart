@@ -16,7 +16,7 @@ part 'deep-linking.g.dart';
 
 /// The Deep Linking documentation page.
 @ZenRoute()
-class DeepLinkingRoute extends _$DeepLinkingRoute with RouteSeo {
+class DeepLinkingRoute extends _$DeepLinkingRoute with RouteSeo, RouteToc {
   @override
   String get title => 'Deep Linking';
 
@@ -36,6 +36,7 @@ class DeepLinkingRoute extends _$DeepLinkingRoute with RouteSeo {
       title: 'Deep Linking',
       subtitle: 'Universal Links and External Navigation',
       tocController: tocController,
+      onTocItemsReady: (items) => tocItems.value = items,
       markdown: '''
 A deep link is a URL that opens your app at a specific location. When the user clicks a link like `myapp://product/abc123` or `https://myapp.com/product/abc123`, your app should open directly to that product - not to the home screen with no context.
 

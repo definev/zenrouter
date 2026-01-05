@@ -16,7 +16,8 @@ part 'stack-management.g.dart';
 
 /// The Stack Management documentation page.
 @ZenRoute()
-class StackManagementRoute extends _$StackManagementRoute with RouteSeo {
+class StackManagementRoute extends _$StackManagementRoute
+    with RouteSeo, RouteToc {
   @override
   String get description => 'Orchestrating the Navigation Stack';
 
@@ -35,6 +36,7 @@ class StackManagementRoute extends _$StackManagementRoute with RouteSeo {
       title: 'Stack Management',
       subtitle: 'Orchestrating the Navigation Stack',
       tocController: tocController,
+      onTocItemsReady: (items) => tocItems.value = items,
       markdown: '''
 Navigation, at its core, is stack manipulation. We push routes to go forward, pop them to go back, and occasionally replace the entire stack when the user's context changes fundamentally (like after logging in or out).
 

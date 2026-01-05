@@ -1,23 +1,23 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'declarative.dart';
+part of 'layouts.dart';
 
 // **************************************************************************
 // RouteGenerator
 // **************************************************************************
 
-/// Generated base class for DeclarativeRoute.
+/// Generated base class for LayoutsRoute.
 ///
-/// URI: /docs/declarative
+/// URI: /docs/patterns/layouts
 /// Layout: DocsLayout
-abstract class _$DeclarativeRoute extends DocsRoute {
-  _$DeclarativeRoute();
+abstract class _$LayoutsRoute extends DocsRoute {
+  _$LayoutsRoute();
 
   @override
   Type? get layout => DocsLayout;
 
   @override
-  Uri toUri() => Uri.parse('/docs/declarative');
+  Uri toUri() => Uri.parse('/docs/patterns/layouts');
 
   @override
   List<Object?> get props => [];

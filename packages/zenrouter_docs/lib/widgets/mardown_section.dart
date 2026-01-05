@@ -4,6 +4,8 @@
 /// and Table of Contents support.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:markdown/markdown.dart' as md;
@@ -17,6 +19,8 @@ class TocController extends ChangeNotifier {
   TocItem? _activeItem;
   bool _isUserScrolling = false;
   DateTime? _lastManualScroll;
+  DateTime? _lastItemAdded;
+  Timer? _itemsReadyTimer;
 
   List<TocItem> get items => List.unmodifiable(_items);
   TocItem? get activeItem => _activeItem;
@@ -58,15 +62,105 @@ class TocController extends ChangeNotifier {
 
   void addItem(TocItem tocItem) {
     _items.add(tocItem);
+    _lastItemAdded = DateTime.now();
     if (_items.length == 1) {
       setActiveItem(tocItem);
     }
     notifyListeners();
+
+    // Cancel existing timer and start a new one
+    // This will trigger the callback after items stop being added
+    _itemsReadyTimer?.cancel();
+    _itemsReadyTimer = Timer(const Duration(milliseconds: 200), () {
+      if (onItemsReady != null && _lastItemAdded != null) {
+        final timeSinceLastAdd = DateTime.now().difference(_lastItemAdded!);
+        if (timeSinceLastAdd.inMilliseconds >= 150) {
+          onItemsReady?.call();
+        }
+      }
+    });
   }
 
+  /// Callback to notify when items should be checked for scroll position
+  /// This is called after items stop being added for a short period
+  void Function()? onItemsReady;
+
   void clearItems() {
+    _itemsReadyTimer?.cancel();
+    _itemsReadyTimer = null;
     _items.clear();
+    _activeItem = null;
+    _lastItemAdded = null;
     notifyListeners();
+  }
+
+  /// Updates the active item based on the current scroll position
+  /// This is useful when the route is restored and scroll position is already set
+  void updateActiveItemFromScrollPosition(
+    double scrollPosition,
+    double viewportHeight,
+  ) {
+    if (_items.isEmpty) return;
+
+    // Check if scrolled to bottom
+    // Note: maxScrollExtent would need to be passed separately if needed
+    // For now, we'll just check based on item positions
+
+    TocItem? activeItem;
+    double minDistance = double.infinity;
+
+    for (final item in _items) {
+      final context = item.key.currentContext;
+      if (context == null) continue;
+
+      final renderBox = context.findRenderObject() as RenderBox?;
+      if (renderBox == null) continue;
+
+      // Get the position of the heading relative to the viewport
+      final position = renderBox.localToGlobal(Offset.zero);
+
+      // Calculate distance from top of viewport (with offset)
+      final distance = (position.dy - 100).abs();
+
+      // Only consider headings that are above or near the top of the viewport
+      if (position.dy <= 200 && distance < minDistance) {
+        minDistance = distance;
+        activeItem = item;
+      }
+    }
+
+    // If no item is near the top, use the first visible item
+    if (activeItem == null) {
+      for (final item in _items) {
+        final context = item.key.currentContext;
+        if (context == null) continue;
+
+        final renderBox = context.findRenderObject() as RenderBox?;
+        if (renderBox == null) continue;
+
+        final position = renderBox.localToGlobal(Offset.zero);
+
+        // Check if heading is visible in viewport
+        if (position.dy >= 0 && position.dy <= viewportHeight) {
+          activeItem = item;
+          break;
+        }
+      }
+    }
+
+    // If still no item found and we're at the top, use first item
+    if (activeItem == null && scrollPosition <= 50) {
+      activeItem = _items.isNotEmpty ? _items.first : null;
+    }
+
+    // If still no item found, use last item (likely at bottom)
+    if (activeItem == null && _items.isNotEmpty) {
+      activeItem = _items.last;
+    }
+
+    if (activeItem != null) {
+      setActiveItem(activeItem, fromScroll: true);
+    }
   }
 }
 
@@ -383,18 +477,22 @@ class _HeadingWidget extends StatefulWidget {
 class _HeadingWidgetState extends State<_HeadingWidget> {
   final GlobalKey _key = GlobalKey();
   late final TocItem? _item;
+  bool _itemAdded = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-      widget.tocController?.addItem(
-        _item = TocItem(
-          title: widget.element.textContent,
-          level: widget.type.index + 1,
-          key: _key,
-        ),
-      );
+      if (!_itemAdded && mounted) {
+        widget.tocController?.addItem(
+          _item = TocItem(
+            title: widget.element.textContent,
+            level: widget.type.index + 1,
+            key: _key,
+          ),
+        );
+        _itemAdded = true;
+      }
     });
   }
 

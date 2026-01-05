@@ -17,7 +17,7 @@ part 'declarative.g.dart';
 
 /// The Declarative Navigation documentation page.
 @ZenRoute()
-class DeclarativeRoute extends _$DeclarativeRoute with RouteSeo {
+class DeclarativeRoute extends _$DeclarativeRoute with RouteSeo, RouteToc {
   @override
   String get title => 'Declarative Navigation';
 
@@ -36,6 +36,7 @@ class DeclarativeRoute extends _$DeclarativeRoute with RouteSeo {
       title: 'Declarative Navigation',
       subtitle: 'State-Driven Routing',
       tocController: tocController,
+      onTocItemsReady: (items) => tocItems.value = items,
       markdown: '''
 Consider the philosophy that underlies Flutter itself: you do not tell widgets how to update - you describe what they should look like given the current state, and Flutter reconciles your description with reality.
 

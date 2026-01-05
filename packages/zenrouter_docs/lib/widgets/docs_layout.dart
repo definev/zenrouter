@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:zenrouter_docs/widgets/mardown_section.dart';
+import 'package:sliver_tools/sliver_tools.dart';
 
 /// Tree node for navigation
 class NavTreeNode {
@@ -107,10 +108,7 @@ class _DocsLayoutContentState extends State<DocsLayoutBuilder> {
                     child: _DocsTreeView(
                       navTree: widget.navTree,
                       currentPath: widget.currentPath,
-                      onNavigate: (path) {
-                        Navigator.of(context).pop();
-                        widget.onNavigate(path);
-                      },
+                      onNavigate: widget.onNavigate,
                     ),
                   ),
                 ),
@@ -170,42 +168,45 @@ class _DocsTocSidebarState extends State<_DocsTocSidebar> {
       color: theme.colorScheme.surfaceContainerLow,
       child: items.isEmpty
           ? const SizedBox.shrink()
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                Padding(
-                  padding: const EdgeInsets.only(left: 16, top: 28, right: 16),
-                  child: Text(
-                    'Table of Contents',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurface,
-                    ),
-                  ),
-                ),
-                // TOC items
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: widget.controller.items.length,
-                    itemBuilder: (context, index) {
-                      final item = widget.controller.items[index];
-                      final isActive = widget.controller.activeItem == item;
+          : CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.all(16),
+                  sliver: MultiSliver(
+                    children: [
+                      Text(
+                        'Table of Contents',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // TOC items
+                      SliverList.separated(
+                        itemCount: widget.controller.items.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 8),
+                        itemBuilder: (context, index) {
+                          final item = widget.controller.items[index];
+                          final isActive = widget.controller.activeItem == item;
 
-                      return _TocListItem(
-                        item: item,
-                        isActive: isActive,
-                        onTap: () {
-                          widget.controller.scrollToItem(item);
-                          if (widget.isInDrawer) {
-                            Navigator.of(context).pop();
-                          }
+                          return _TocListItem(
+                            item: item,
+                            isActive: isActive,
+                            onTap: () {
+                              widget.controller.scrollToItem(item);
+                              if (widget.isInDrawer) {
+                                Navigator.of(context).pop();
+                              }
+                            },
+                          );
                         },
-                      );
-                    },
+                      ),
+                    ],
                   ),
                 ),
+                // Header
               ],
             ),
     );
@@ -230,24 +231,16 @@ class _TocListItem extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.only(
-          left: 16 - 2,
-          right: 16,
-          top: 4,
-          bottom: 4,
+      child: Text(
+        '| ${item.title}',
+        style: theme.textTheme.bodySmall?.copyWith(
+          fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+          color: isActive
+              ? theme.colorScheme.primary
+              : theme.colorScheme.onSurface.withValues(alpha: 0.7),
         ),
-        child: Text(
-          item.title,
-          style: theme.textTheme.titleSmall?.copyWith(
-            color: isActive
-                ? theme.colorScheme.primary
-                : theme.colorScheme.onSurface.withValues(alpha: 0.7),
-            fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
@@ -290,15 +283,7 @@ class _DocsTreeViewState extends State<_DocsTreeView> {
   Set<int> _findExpandedSections() {
     final expanded = <int>{};
     for (var i = 0; i < widget.navTree.length; i++) {
-      final section = widget.navTree[i];
-      for (final child in section.children) {
-        if (child.path == widget.currentPath ||
-            (widget.currentPath.contains('/examples') &&
-                section.label == 'Examples')) {
-          expanded.add(i);
-          break;
-        }
-      }
+      expanded.add(i);
     }
     return expanded;
   }
@@ -320,40 +305,39 @@ class _DocsTreeViewState extends State<_DocsTreeView> {
     return Container(
       width: 260,
       color: theme.colorScheme.surfaceContainerLow,
-      padding: const EdgeInsets.only(left: 16, top: 12),
       child: CustomScrollView(
         slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.only(
-                left: 16,
-                top: 16,
-                right: 16,
-                bottom: 8,
-              ),
-              child: Text(
-                'Documentation',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurface,
+          SliverPadding(
+            padding: const EdgeInsets.all(16),
+            sliver: MultiSliver(
+              children: [
+                Text(
+                  'Documentation',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface,
+                  ),
                 ),
-              ),
-            ),
-          ),
-          SliverList.builder(
-            itemCount: widget.navTree.length,
-            itemBuilder: (context, index) {
-              final section = widget.navTree[index];
-              final isExpanded = _expandedSections.contains(index);
+                const SizedBox(height: 16),
+                SliverList.separated(
+                  itemCount: widget.navTree.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 4),
+                  itemBuilder: (context, index) {
+                    final section = widget.navTree[index];
+                    final isExpanded = _expandedSections.contains(index);
 
-              return _TreeSection(
-                section: section,
-                isExpanded: isExpanded,
-                currentPath: widget.currentPath,
-                onToggle: () => _toggleSection(index),
-                onNavigate: widget.onNavigate,
-              );
-            },
+                    return _TreeSection(
+                      section: section,
+                      isExpanded: isExpanded,
+                      currentPath: widget.currentPath,
+                      onToggle: () => _toggleSection(index),
+                      onNavigate: widget.onNavigate,
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -394,23 +378,18 @@ class _TreeSection extends StatelessWidget {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 4,
       children: [
         // Section header
         InkWell(
           onTap: onToggle,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: Text(
-              section.label,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: _hasSelectedChild
-                    ? FontWeight.w600
-                    : FontWeight.w500,
-                color: _hasSelectedChild
-                    ? sectionColor
-                    : theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                fontSize: 13,
-              ),
+          child: Text(
+            section.label,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: _hasSelectedChild ? FontWeight.w600 : FontWeight.w500,
+              color: _hasSelectedChild
+                  ? sectionColor
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
         ),
@@ -426,9 +405,8 @@ class _TreeSection extends StatelessWidget {
                   node: child,
                   isSelected:
                       child.path == currentPath ||
-                      (currentPath.startsWith(child.path ?? '') &&
-                          child.path != null &&
-                          child.path!.contains('/examples/')),
+                      (child.path != null &&
+                          currentPath.startsWith(child.path!)),
                   sectionColor: sectionColor,
                   onTap: () {
                     if (child.path != null) {
@@ -467,7 +445,6 @@ class _TreeLeaf extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: double.maxFinite,
-        margin: const EdgeInsets.only(left: 8, right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Text(
           node.label,

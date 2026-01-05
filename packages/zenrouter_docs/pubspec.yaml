@@ -36,6 +36,9 @@ dependencies:
   meta_seo: ^3.0.9
   dynamic_path_url_strategy: ^1.0.0
 
+  # Sliver tools for multi-sliver support
+  sliver_tools: ^0.2.12
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

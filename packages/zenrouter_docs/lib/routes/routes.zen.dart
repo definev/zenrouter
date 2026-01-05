@@ -5,26 +5,12 @@ import 'package:flutter/widgets.dart';
 import 'package:zenrouter/zenrouter.dart';
 
 import '_layout.dart';
-import 'docs/(concepts)/routes-and-paths.dart'
-    deferred as docs__concepts_routesandpaths;
-import 'docs/(concepts)/stack-management.dart'
-    deferred as docs__concepts_stackmanagement;
-import 'docs/(concepts)/uri-parsing.dart' deferred as docs__concepts_uriparsing;
-import 'docs/(paradigms)/choosing.dart' deferred as docs__paradigms_choosing;
-import 'docs/(paradigms)/coordinator.dart'
-    deferred as docs__paradigms_coordinator;
-import 'docs/(paradigms)/declarative.dart'
-    deferred as docs__paradigms_declarative;
-import 'docs/(paradigms)/imperative.dart'
-    deferred as docs__paradigms_imperative;
-import 'docs/(patterns)/deep-linking.dart'
-    deferred as docs__patterns_deeplinking;
-import 'docs/(patterns)/guards-redirects.dart'
-    deferred as docs__patterns_guardsredirects;
-import 'docs/(patterns)/layouts.dart' deferred as docs__patterns_layouts;
-import 'docs/(patterns)/query-parameters.dart'
-    deferred as docs__patterns_queryparameters;
 import 'docs/_layout.dart';
+import 'docs/concepts/routes-and-paths.dart'
+    deferred as docs_concepts_routesandpaths;
+import 'docs/concepts/stack-management.dart'
+    deferred as docs_concepts_stackmanagement;
+import 'docs/concepts/uri-parsing.dart' deferred as docs_concepts_uriparsing;
 import 'docs/examples/[slug]/index.dart' deferred as docs_examples__slug_index;
 import 'docs/examples/_layout.dart';
 import 'docs/file-routing/conventions.dart'
@@ -35,6 +21,16 @@ import 'docs/file-routing/dynamic-routes.dart'
 import 'docs/file-routing/getting-started.dart'
     deferred as docs_filerouting_gettingstarted;
 import 'docs/index.dart' deferred as docs_index;
+import 'docs/paradigms/choosing.dart' deferred as docs_paradigms_choosing;
+import 'docs/paradigms/coordinator.dart' deferred as docs_paradigms_coordinator;
+import 'docs/paradigms/declarative.dart' deferred as docs_paradigms_declarative;
+import 'docs/paradigms/imperative.dart' deferred as docs_paradigms_imperative;
+import 'docs/patterns/deep-linking.dart' deferred as docs_patterns_deeplinking;
+import 'docs/patterns/guards-redirects.dart'
+    deferred as docs_patterns_guardsredirects;
+import 'docs/patterns/layouts.dart' deferred as docs_patterns_layouts;
+import 'docs/patterns/query-parameters.dart'
+    deferred as docs_patterns_queryparameters;
 import 'index.dart' deferred as index;
 import 'not_found.dart';
 
@@ -78,6 +74,18 @@ class DocsCoordinator extends Coordinator<DocsRoute> {
         await index.loadLibrary();
         return index.IndexRoute();
       }(),
+      ['docs', 'concepts', 'routes-and-paths'] => await () async {
+        await docs_concepts_routesandpaths.loadLibrary();
+        return docs_concepts_routesandpaths.RoutesAndPathsRoute();
+      }(),
+      ['docs', 'concepts', 'stack-management'] => await () async {
+        await docs_concepts_stackmanagement.loadLibrary();
+        return docs_concepts_stackmanagement.StackManagementRoute();
+      }(),
+      ['docs', 'concepts', 'uri-parsing'] => await () async {
+        await docs_concepts_uriparsing.loadLibrary();
+        return docs_concepts_uriparsing.UriParsingRoute();
+      }(),
       ['docs', 'file-routing', 'conventions'] => await () async {
         await docs_filerouting_conventions.loadLibrary();
         return docs_filerouting_conventions.ConventionsRoute();
@@ -91,55 +99,43 @@ class DocsCoordinator extends Coordinator<DocsRoute> {
         await docs_filerouting_gettingstarted.loadLibrary();
         return docs_filerouting_gettingstarted.GettingStartedRoute();
       }(),
+      ['docs', 'paradigms', 'choosing'] => await () async {
+        await docs_paradigms_choosing.loadLibrary();
+        return docs_paradigms_choosing.ChoosingRoute();
+      }(),
+      ['docs', 'paradigms', 'coordinator'] => await () async {
+        await docs_paradigms_coordinator.loadLibrary();
+        return docs_paradigms_coordinator.CoordinatorRoute();
+      }(),
+      ['docs', 'paradigms', 'declarative'] => await () async {
+        await docs_paradigms_declarative.loadLibrary();
+        return docs_paradigms_declarative.DeclarativeRoute();
+      }(),
+      ['docs', 'paradigms', 'imperative'] => await () async {
+        await docs_paradigms_imperative.loadLibrary();
+        return docs_paradigms_imperative.ImperativeRoute();
+      }(),
+      ['docs', 'patterns', 'deep-linking'] => await () async {
+        await docs_patterns_deeplinking.loadLibrary();
+        return docs_patterns_deeplinking.DeepLinkingRoute();
+      }(),
+      ['docs', 'patterns', 'guards-redirects'] => await () async {
+        await docs_patterns_guardsredirects.loadLibrary();
+        return docs_patterns_guardsredirects.GuardsRedirectsRoute();
+      }(),
+      ['docs', 'patterns', 'layouts'] => await () async {
+        await docs_patterns_layouts.loadLibrary();
+        return docs_patterns_layouts.LayoutsRoute();
+      }(),
+      ['docs', 'patterns', 'query-parameters'] => await () async {
+        await docs_patterns_queryparameters.loadLibrary();
+        return docs_patterns_queryparameters.QueryParametersRoute(
+          queries: uri.queryParameters,
+        );
+      }(),
       ['docs', 'examples', final slug] => await () async {
         await docs_examples__slug_index.loadLibrary();
         return docs_examples__slug_index.ExamplesSlugRoute(slug: slug);
-      }(),
-      ['docs', 'routes-and-paths'] => await () async {
-        await docs__concepts_routesandpaths.loadLibrary();
-        return docs__concepts_routesandpaths.RoutesAndPathsRoute();
-      }(),
-      ['docs', 'stack-management'] => await () async {
-        await docs__concepts_stackmanagement.loadLibrary();
-        return docs__concepts_stackmanagement.StackManagementRoute();
-      }(),
-      ['docs', 'uri-parsing'] => await () async {
-        await docs__concepts_uriparsing.loadLibrary();
-        return docs__concepts_uriparsing.UriParsingRoute();
-      }(),
-      ['docs', 'choosing'] => await () async {
-        await docs__paradigms_choosing.loadLibrary();
-        return docs__paradigms_choosing.ChoosingRoute();
-      }(),
-      ['docs', 'coordinator'] => await () async {
-        await docs__paradigms_coordinator.loadLibrary();
-        return docs__paradigms_coordinator.CoordinatorRoute();
-      }(),
-      ['docs', 'declarative'] => await () async {
-        await docs__paradigms_declarative.loadLibrary();
-        return docs__paradigms_declarative.DeclarativeRoute();
-      }(),
-      ['docs', 'imperative'] => await () async {
-        await docs__paradigms_imperative.loadLibrary();
-        return docs__paradigms_imperative.ImperativeRoute();
-      }(),
-      ['docs', 'deep-linking'] => await () async {
-        await docs__patterns_deeplinking.loadLibrary();
-        return docs__patterns_deeplinking.DeepLinkingRoute();
-      }(),
-      ['docs', 'guards-redirects'] => await () async {
-        await docs__patterns_guardsredirects.loadLibrary();
-        return docs__patterns_guardsredirects.GuardsRedirectsRoute();
-      }(),
-      ['docs', 'layouts'] => await () async {
-        await docs__patterns_layouts.loadLibrary();
-        return docs__patterns_layouts.LayoutsRoute();
-      }(),
-      ['docs', 'query-parameters'] => await () async {
-        await docs__patterns_queryparameters.loadLibrary();
-        return docs__patterns_queryparameters.QueryParametersRoute(
-          queries: uri.queryParameters,
-        );
       }(),
       ['docs'] => await () async {
         await docs_index.loadLibrary();
@@ -162,150 +158,41 @@ class DocsCoordinator extends Coordinator<DocsRoute> {
 extension DocsCoordinatorNav on DocsCoordinator {
   Future<T?> pushRoutesAndPaths<T extends Object>() async =>
       push(await () async {
-        await docs__concepts_routesandpaths.loadLibrary();
-        return docs__concepts_routesandpaths.RoutesAndPathsRoute();
+        await docs_concepts_routesandpaths.loadLibrary();
+        return docs_concepts_routesandpaths.RoutesAndPathsRoute();
       }());
   Future<void> replaceRoutesAndPaths() async => replace(await () async {
-    await docs__concepts_routesandpaths.loadLibrary();
-    return docs__concepts_routesandpaths.RoutesAndPathsRoute();
+    await docs_concepts_routesandpaths.loadLibrary();
+    return docs_concepts_routesandpaths.RoutesAndPathsRoute();
   }());
   Future<void> recoverRoutesAndPaths() async => recover(await () async {
-    await docs__concepts_routesandpaths.loadLibrary();
-    return docs__concepts_routesandpaths.RoutesAndPathsRoute();
+    await docs_concepts_routesandpaths.loadLibrary();
+    return docs_concepts_routesandpaths.RoutesAndPathsRoute();
   }());
   Future<T?> pushStackManagement<T extends Object>() async =>
       push(await () async {
-        await docs__concepts_stackmanagement.loadLibrary();
-        return docs__concepts_stackmanagement.StackManagementRoute();
+        await docs_concepts_stackmanagement.loadLibrary();
+        return docs_concepts_stackmanagement.StackManagementRoute();
       }());
   Future<void> replaceStackManagement() async => replace(await () async {
-    await docs__concepts_stackmanagement.loadLibrary();
-    return docs__concepts_stackmanagement.StackManagementRoute();
+    await docs_concepts_stackmanagement.loadLibrary();
+    return docs_concepts_stackmanagement.StackManagementRoute();
   }());
   Future<void> recoverStackManagement() async => recover(await () async {
-    await docs__concepts_stackmanagement.loadLibrary();
-    return docs__concepts_stackmanagement.StackManagementRoute();
+    await docs_concepts_stackmanagement.loadLibrary();
+    return docs_concepts_stackmanagement.StackManagementRoute();
   }());
   Future<T?> pushUriParsing<T extends Object>() async => push(await () async {
-    await docs__concepts_uriparsing.loadLibrary();
-    return docs__concepts_uriparsing.UriParsingRoute();
+    await docs_concepts_uriparsing.loadLibrary();
+    return docs_concepts_uriparsing.UriParsingRoute();
   }());
   Future<void> replaceUriParsing() async => replace(await () async {
-    await docs__concepts_uriparsing.loadLibrary();
-    return docs__concepts_uriparsing.UriParsingRoute();
+    await docs_concepts_uriparsing.loadLibrary();
+    return docs_concepts_uriparsing.UriParsingRoute();
   }());
   Future<void> recoverUriParsing() async => recover(await () async {
-    await docs__concepts_uriparsing.loadLibrary();
-    return docs__concepts_uriparsing.UriParsingRoute();
-  }());
-  Future<T?> pushChoosing<T extends Object>() async => push(await () async {
-    await docs__paradigms_choosing.loadLibrary();
-    return docs__paradigms_choosing.ChoosingRoute();
-  }());
-  Future<void> replaceChoosing() async => replace(await () async {
-    await docs__paradigms_choosing.loadLibrary();
-    return docs__paradigms_choosing.ChoosingRoute();
-  }());
-  Future<void> recoverChoosing() async => recover(await () async {
-    await docs__paradigms_choosing.loadLibrary();
-    return docs__paradigms_choosing.ChoosingRoute();
-  }());
-  Future<T?> pushCoordinator<T extends Object>() async => push(await () async {
-    await docs__paradigms_coordinator.loadLibrary();
-    return docs__paradigms_coordinator.CoordinatorRoute();
-  }());
-  Future<void> replaceCoordinator() async => replace(await () async {
-    await docs__paradigms_coordinator.loadLibrary();
-    return docs__paradigms_coordinator.CoordinatorRoute();
-  }());
-  Future<void> recoverCoordinator() async => recover(await () async {
-    await docs__paradigms_coordinator.loadLibrary();
-    return docs__paradigms_coordinator.CoordinatorRoute();
-  }());
-  Future<T?> pushDeclarative<T extends Object>() async => push(await () async {
-    await docs__paradigms_declarative.loadLibrary();
-    return docs__paradigms_declarative.DeclarativeRoute();
-  }());
-  Future<void> replaceDeclarative() async => replace(await () async {
-    await docs__paradigms_declarative.loadLibrary();
-    return docs__paradigms_declarative.DeclarativeRoute();
-  }());
-  Future<void> recoverDeclarative() async => recover(await () async {
-    await docs__paradigms_declarative.loadLibrary();
-    return docs__paradigms_declarative.DeclarativeRoute();
-  }());
-  Future<T?> pushImperative<T extends Object>() async => push(await () async {
-    await docs__paradigms_imperative.loadLibrary();
-    return docs__paradigms_imperative.ImperativeRoute();
-  }());
-  Future<void> replaceImperative() async => replace(await () async {
-    await docs__paradigms_imperative.loadLibrary();
-    return docs__paradigms_imperative.ImperativeRoute();
-  }());
-  Future<void> recoverImperative() async => recover(await () async {
-    await docs__paradigms_imperative.loadLibrary();
-    return docs__paradigms_imperative.ImperativeRoute();
-  }());
-  Future<T?> pushDeepLinking<T extends Object>() async => push(await () async {
-    await docs__patterns_deeplinking.loadLibrary();
-    return docs__patterns_deeplinking.DeepLinkingRoute();
-  }());
-  Future<void> replaceDeepLinking() async => replace(await () async {
-    await docs__patterns_deeplinking.loadLibrary();
-    return docs__patterns_deeplinking.DeepLinkingRoute();
-  }());
-  Future<void> recoverDeepLinking() async => recover(await () async {
-    await docs__patterns_deeplinking.loadLibrary();
-    return docs__patterns_deeplinking.DeepLinkingRoute();
-  }());
-  Future<T?> pushGuardsRedirects<T extends Object>() async =>
-      push(await () async {
-        await docs__patterns_guardsredirects.loadLibrary();
-        return docs__patterns_guardsredirects.GuardsRedirectsRoute();
-      }());
-  Future<void> replaceGuardsRedirects() async => replace(await () async {
-    await docs__patterns_guardsredirects.loadLibrary();
-    return docs__patterns_guardsredirects.GuardsRedirectsRoute();
-  }());
-  Future<void> recoverGuardsRedirects() async => recover(await () async {
-    await docs__patterns_guardsredirects.loadLibrary();
-    return docs__patterns_guardsredirects.GuardsRedirectsRoute();
-  }());
-  Future<T?> pushLayouts<T extends Object>() async => push(await () async {
-    await docs__patterns_layouts.loadLibrary();
-    return docs__patterns_layouts.LayoutsRoute();
-  }());
-  Future<void> replaceLayouts() async => replace(await () async {
-    await docs__patterns_layouts.loadLibrary();
-    return docs__patterns_layouts.LayoutsRoute();
-  }());
-  Future<void> recoverLayouts() async => recover(await () async {
-    await docs__patterns_layouts.loadLibrary();
-    return docs__patterns_layouts.LayoutsRoute();
-  }());
-  Future<T?> pushQueryParameters<T extends Object>({
-    Map<String, String> queries = const {},
-  }) async => push(await () async {
-    await docs__patterns_queryparameters.loadLibrary();
-    return docs__patterns_queryparameters.QueryParametersRoute(
-      queries: queries,
-    );
-  }());
-  Future<void> replaceQueryParameters({
-    Map<String, String> queries = const {},
-  }) async => replace(await () async {
-    await docs__patterns_queryparameters.loadLibrary();
-    return docs__patterns_queryparameters.QueryParametersRoute(
-      queries: queries,
-    );
-  }());
-  Future<void> recoverQueryParameters({
-    Map<String, String> queries = const {},
-  }) async => recover(await () async {
-    await docs__patterns_queryparameters.loadLibrary();
-    return docs__patterns_queryparameters.QueryParametersRoute(
-      queries: queries,
-    );
+    await docs_concepts_uriparsing.loadLibrary();
+    return docs_concepts_uriparsing.UriParsingRoute();
   }());
   Future<T?> pushExamplesSlug<T extends Object>({required String slug}) async =>
       push(await () async {
@@ -375,6 +262,109 @@ extension DocsCoordinatorNav on DocsCoordinator {
   Future<void> recoverDocsIndex() async => recover(await () async {
     await docs_index.loadLibrary();
     return docs_index.DocsIndexRoute();
+  }());
+  Future<T?> pushChoosing<T extends Object>() async => push(await () async {
+    await docs_paradigms_choosing.loadLibrary();
+    return docs_paradigms_choosing.ChoosingRoute();
+  }());
+  Future<void> replaceChoosing() async => replace(await () async {
+    await docs_paradigms_choosing.loadLibrary();
+    return docs_paradigms_choosing.ChoosingRoute();
+  }());
+  Future<void> recoverChoosing() async => recover(await () async {
+    await docs_paradigms_choosing.loadLibrary();
+    return docs_paradigms_choosing.ChoosingRoute();
+  }());
+  Future<T?> pushCoordinator<T extends Object>() async => push(await () async {
+    await docs_paradigms_coordinator.loadLibrary();
+    return docs_paradigms_coordinator.CoordinatorRoute();
+  }());
+  Future<void> replaceCoordinator() async => replace(await () async {
+    await docs_paradigms_coordinator.loadLibrary();
+    return docs_paradigms_coordinator.CoordinatorRoute();
+  }());
+  Future<void> recoverCoordinator() async => recover(await () async {
+    await docs_paradigms_coordinator.loadLibrary();
+    return docs_paradigms_coordinator.CoordinatorRoute();
+  }());
+  Future<T?> pushDeclarative<T extends Object>() async => push(await () async {
+    await docs_paradigms_declarative.loadLibrary();
+    return docs_paradigms_declarative.DeclarativeRoute();
+  }());
+  Future<void> replaceDeclarative() async => replace(await () async {
+    await docs_paradigms_declarative.loadLibrary();
+    return docs_paradigms_declarative.DeclarativeRoute();
+  }());
+  Future<void> recoverDeclarative() async => recover(await () async {
+    await docs_paradigms_declarative.loadLibrary();
+    return docs_paradigms_declarative.DeclarativeRoute();
+  }());
+  Future<T?> pushImperative<T extends Object>() async => push(await () async {
+    await docs_paradigms_imperative.loadLibrary();
+    return docs_paradigms_imperative.ImperativeRoute();
+  }());
+  Future<void> replaceImperative() async => replace(await () async {
+    await docs_paradigms_imperative.loadLibrary();
+    return docs_paradigms_imperative.ImperativeRoute();
+  }());
+  Future<void> recoverImperative() async => recover(await () async {
+    await docs_paradigms_imperative.loadLibrary();
+    return docs_paradigms_imperative.ImperativeRoute();
+  }());
+  Future<T?> pushDeepLinking<T extends Object>() async => push(await () async {
+    await docs_patterns_deeplinking.loadLibrary();
+    return docs_patterns_deeplinking.DeepLinkingRoute();
+  }());
+  Future<void> replaceDeepLinking() async => replace(await () async {
+    await docs_patterns_deeplinking.loadLibrary();
+    return docs_patterns_deeplinking.DeepLinkingRoute();
+  }());
+  Future<void> recoverDeepLinking() async => recover(await () async {
+    await docs_patterns_deeplinking.loadLibrary();
+    return docs_patterns_deeplinking.DeepLinkingRoute();
+  }());
+  Future<T?> pushGuardsRedirects<T extends Object>() async =>
+      push(await () async {
+        await docs_patterns_guardsredirects.loadLibrary();
+        return docs_patterns_guardsredirects.GuardsRedirectsRoute();
+      }());
+  Future<void> replaceGuardsRedirects() async => replace(await () async {
+    await docs_patterns_guardsredirects.loadLibrary();
+    return docs_patterns_guardsredirects.GuardsRedirectsRoute();
+  }());
+  Future<void> recoverGuardsRedirects() async => recover(await () async {
+    await docs_patterns_guardsredirects.loadLibrary();
+    return docs_patterns_guardsredirects.GuardsRedirectsRoute();
+  }());
+  Future<T?> pushLayouts<T extends Object>() async => push(await () async {
+    await docs_patterns_layouts.loadLibrary();
+    return docs_patterns_layouts.LayoutsRoute();
+  }());
+  Future<void> replaceLayouts() async => replace(await () async {
+    await docs_patterns_layouts.loadLibrary();
+    return docs_patterns_layouts.LayoutsRoute();
+  }());
+  Future<void> recoverLayouts() async => recover(await () async {
+    await docs_patterns_layouts.loadLibrary();
+    return docs_patterns_layouts.LayoutsRoute();
+  }());
+  Future<T?> pushQueryParameters<T extends Object>({
+    Map<String, String> queries = const {},
+  }) async => push(await () async {
+    await docs_patterns_queryparameters.loadLibrary();
+    return docs_patterns_queryparameters.QueryParametersRoute(queries: queries);
+  }());
+  Future<void> replaceQueryParameters({
+    Map<String, String> queries = const {},
+  }) async => replace(await () async {
+    await docs_patterns_queryparameters.loadLibrary();
+    return docs_patterns_queryparameters.QueryParametersRoute(queries: queries);
+  }());
+  Future<void> recoverQueryParameters({
+    Map<String, String> queries = const {},
+  }) async => recover(await () async {
+    await docs_patterns_queryparameters.loadLibrary();
+    return docs_patterns_queryparameters.QueryParametersRoute(queries: queries);
   }());
   Future<T?> pushIndex<T extends Object>() async => push(await () async {
     await index.loadLibrary();

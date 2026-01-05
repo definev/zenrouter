@@ -20,7 +20,7 @@ part 'index.g.dart';
 /// This file demonstrates the [slug] dynamic parameter pattern.
 /// The slug is captured from the URL and passed to the route.
 @ZenRoute()
-class ExamplesSlugRoute extends _$ExamplesSlugRoute with RouteSeo {
+class ExamplesSlugRoute extends _$ExamplesSlugRoute with RouteSeo, RouteToc {
   ExamplesSlugRoute({required super.slug});
 
   @override
@@ -57,6 +57,7 @@ class ExamplesSlugRoute extends _$ExamplesSlugRoute with RouteSeo {
       title: example.title,
       subtitle: example.subtitle,
       tocController: tocController,
+      onTocItemsReady: (items) => tocItems.value = items,
       markdown:
           '''
 ${example.description}
@@ -81,6 +82,7 @@ ${example.notes != null ? '## Notes\n\n${example.notes}' : ''}
       title: 'Example Not Found',
       subtitle: 'The requested example does not exist',
       tocController: tocController,
+      onTocItemsReady: (items) => tocItems.value = items,
       markdown:
           '''
 The example "$slug" does not exist.
