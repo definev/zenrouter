@@ -39,7 +39,7 @@ flutter pub add zenrouter
 
 ## Quick Links
 
-- 🧭 [Documentaion Guide](doc/DOCUMENTATION_ROADMAP.md) - A roadmap for documentation
+- 🧭 [Documentation Guide](doc/DOCUMENTATION_ROADMAP.md) - A roadmap for documentation
 - 📚 [Getting Started Guide](doc/guides/getting-started.md) - Choose your paradigm
 - 🍳 [Recipes & Cookbook](doc/recipes/) - Practical solutions for common scenarios
 - 🔄 [Migration Guides](doc/migration/) - Switch from go_router, auto_route, or Navigator

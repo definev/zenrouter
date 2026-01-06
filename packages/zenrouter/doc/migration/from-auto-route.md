@@ -445,7 +445,7 @@ See [Bottom Navigation Recipe](../recipes/bottom-navigation.md) for advanced pat
 
 ```dart
 @AutoRouterConfig()
-class AppRouter extends Root StackRouter {
+class AppRouter extends RootStackRouter {
   @override
   List<AutoRoute> get routes => [
     AutoRoute(
@@ -574,7 +574,7 @@ class SearchPage extends StatelessWidget {
       valueListenable: searchRoute.queryNotifier,
       builder: (context, queries, _) {
         final q = queries['q'];
-        return Text('Searching: $query');
+        return Text('Searching: $q');
       },
     );
   }
