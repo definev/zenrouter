@@ -2,6 +2,19 @@
 
 Welcome to ZenRouter! This guide will help you choose the right paradigm and get started quickly.
 
+## Quick Navigation
+
+- [Installation](#installation)
+- [Choose Your Paradigm](#choose-your-paradigm)
+- [Imperative Quick Start](#imperative-quick-start)
+- [Declarative Quick Start](#declarative-quick-start)
+- [Coordinator Quick Start](#coordinator-quick-start)
+- [Common Recipes](#common-recipes)
+- [Migrating?](#migrating-from-another-router)
+- [Next Steps](#next-steps)
+
+---
+
 ## Installation
 
 Add zenrouter to your `pubspec.yaml`:
@@ -139,6 +152,9 @@ class MyApp extends StatelessWidget {
 ### 4. Navigate!
 
 ```dart
+// Navigate to a specific route (Pop to the route if it's already in the stack or push it otherwise)
+path.navigate(ProfileRoute());
+
 // Push a route
 path.push(ProfileRoute());
 
@@ -402,7 +418,7 @@ class ProtectedRoute extends AppRoute with RouteRedirect {
   @override
   Future<AppRoute> redirect() async {
     final isAuthed = await auth.check();
-    return isAuthed ? this : LoginRoute();
+    return isAuthed ? ProtectedRoute() : LoginRoute();
   }
 }
 ```
@@ -413,20 +429,57 @@ class ProtectedRoute extends AppRoute with RouteRedirect {
 
 ```dart
 class ProductRoute extends AppRoute with RouteDeepLink {
+  // Use custom deeplink strategy
   @override
   DeeplinkStrategy get deeplinkStrategy => DeeplinkStrategy.custom;
   
   @override
   Future<void> deeplinkHandler(Coordinator coordinator, Uri uri) async {
+    // Track analytics
+    analytics.logDeepLink(uri);
+
     // Set up navigation stack
     coordinator.replace(ShopTab());
     coordinator.push(this);
-    
-    // Track analytics
-    analytics.logDeepLink(uri);
   }
 }
 ```
+
+---
+
+## Common Recipes
+
+Once you've chosen your paradigm, explore these cookbooks for common scenarios:
+
+### Navigation Patterns
+- [404 Handling](../recipes/404-handling.md) - Custom error pages and fallback routes
+- [Bottom Navigation](../recipes/bottom-navigation.md) - Persistent tab navigation with independent stacks
+- [Route Transitions](../recipes/route-transitions.md) - Custom animations and page transitions
+
+### Advanced Features
+- [Authentication Flow](../recipes/authentication-flow.md) - Guards, protected routes, and role-based access
+- [State Management Integration](../recipes/state-management.md) - Riverpod, Bloc, Provider patterns
+- [URL Strategies](../recipes/url-strategies.md) - Web deployment and SEO
+
+**[🔗 Browse All Recipes](../recipes/)**
+
+---
+
+## Migrating from Another Router?
+
+Already using a different router? We have step-by-step migration guides:
+
+- **[From go_router](../migration/from-go-router.md)** - Most popular Flutter router
+- **[From auto_route](../migration/from-auto-route.md)** - Code generation alternative
+- **[From Navigator 1.0/2.0](../migration/from-navigator.md)** - Flutter's built-in APIs
+
+Each guide includes:
+- Feature comparison tables
+- Side-by-side code examples
+- Migration checklists
+- Common gotchas
+
+---
 
 ## Next Steps
 

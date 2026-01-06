@@ -51,7 +51,7 @@ class DocsIndexWidget extends StatelessWidget {
                   // ─────────────────────────────────────────────────────────────
                   // Title and Introduction
                   // ─────────────────────────────────────────────────────────────
-                  Text('Documentation', style: theme.textTheme.displayLarge),
+                  Text('Documentation', style: theme.textTheme.displayMedium),
                   const SizedBox(height: 8),
                   Text(
                     'A Comprehensive Guide to ZenRouter',
