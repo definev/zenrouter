@@ -19,12 +19,12 @@ abstract final class AppTheme {
   // ─────────────────────────────────────────────────────────────────────────
 
   /// Primary: Brand cyan/light blue - the essence of ZenRouter
-  static const Color _primaryLight = brandNavy; // Navy blue for light mode
-  static const Color _primaryDark = brandCyan; // Cyan for dark mode
-
-  /// Brand colors
-  static const Color brandCyan = Color(0xFF5BBFD9);
-  static const Color brandNavy = Color(0xFF315D8C);
+  static const Color _primaryLight = Color(
+    0xFF2955A3,
+  ); // Navy blue for light mode
+  static const Color _secondaryLight = Color(0xFF30B5F2);
+  static const Color _primaryDark = Color(0xFF6DD0F6); // Cyan for dark mode
+  static const Color _secondaryDark = Color(0xFF30B5F2);
 
   /// Surface colors for light mode
   static const Color _surfaceLight = Color(0xFFFAF9F6);
@@ -133,7 +133,7 @@ abstract final class AppTheme {
     colorScheme: const ColorScheme.light(
       primary: _primaryLight,
       onPrimary: Colors.white,
-      secondary: brandCyan,
+      secondary: _secondaryLight,
       surface: _surfaceLight,
       onSurface: Colors.black87,
     ),
@@ -184,7 +184,7 @@ abstract final class AppTheme {
     colorScheme: const ColorScheme.dark(
       primary: _primaryDark,
       onPrimary: Colors.black,
-      secondary: brandNavy,
+      secondary: _secondaryDark,
       surface: _surfaceDark,
       onSurface: Colors.white,
     ),

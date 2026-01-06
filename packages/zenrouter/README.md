@@ -37,6 +37,17 @@ flutter pub add zenrouter
 
 ---
 
+## Quick Links
+
+- 🧭 [Documentation Guide](doc/DOCUMENTATION_ROADMAP.md) - A roadmap for documentation
+- 📚 [Getting Started Guide](doc/guides/getting-started.md) - Choose your paradigm
+- 🍳 [Recipes & Cookbook](doc/recipes/) - Practical solutions for common scenarios
+- 🔄 [Migration Guides](doc/migration/) - Switch from go_router, auto_route, or Navigator
+- 📖 [API Reference](doc/api/) - Complete API documentation
+- 🎓 [Paradigm Guides](doc/paradigms/) - Deep dives into each pattern
+
+---
+
 ## Three Paradigms, Infinite Flexibility
 
 
@@ -63,6 +74,18 @@ Need web support, deep linking, and router devtools to handle complex scalable n
                 ✓ Full control
                 ✓ Perfect for mobile
 ```
+
+---
+
+## 🔄 Migrating from Another Router?
+
+Switching to ZenRouter is straightforward. We have comprehensive guides for:
+
+- **[From go_router](doc/migration/from-go-router.md)** - Most popular Flutter router
+- **[From auto_route](doc/migration/from-auto-route.md)** - Code generation alternative  
+- **[From Navigator 1.0/2.0](doc/migration/from-navigator.md)** - Flutter's built-in APIs
+
+Each guide includes side-by-side code comparisons and step-by-step instructions.
 
 ---
 
@@ -332,6 +355,20 @@ That's it! The navigation stack stays perfectly in sync with your state—no man
 - [Navigation Paths](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/navigation-paths.md) - Stack containers and navigation
 - [Coordinator API](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/coordinator.md) - Full coordinator reference
 - [Core Classes](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/core-classes.md) - RouteTarget and fundamentals
+
+### **🍳 Recipes & Cookbook**
+- [404 Handling](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/recipes/404-handling.md) - Custom error pages
+- [Authentication Flow](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/recipes/authentication-flow.md) - Guards and protected routes
+- [Bottom Navigation](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/recipes/bottom-navigation.md) - Persistent tab navigation
+- [Route Transitions](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/recipes/route-transitions.md) - Custom animations
+- [State Management](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/recipes/state-management.md) - Integration with Riverpod, Bloc, Provider
+- [URL Strategies](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/recipes/url-strategies.md) - Web deployment
+- [→ All Recipes](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/recipes/)
+
+### **🔄 Migration Guides**
+- [From go_router](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/migration/from-go-router.md) - Migrate from go_router
+- [From auto_route](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/migration/from-auto-route.md) - Migrate from auto_route
+- [From Navigator 1.0/2.0](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/migration/from-navigator.md) - Migrate from Navigator APIs
 
 ### **💡 Examples**
 - [Imperative Example](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/example/lib/main_imperative.dart) - Multi-step form
