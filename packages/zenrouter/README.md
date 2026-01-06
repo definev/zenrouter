@@ -39,12 +39,12 @@ flutter pub add zenrouter
 
 ## Quick Links
 
-- 🧭 [Documentation Guide](doc/DOCUMENTATION_ROADMAP.md) - A roadmap for documentation
-- 📚 [Getting Started Guide](doc/guides/getting-started.md) - Choose your paradigm
-- 🍳 [Recipes & Cookbook](doc/recipes/) - Practical solutions for common scenarios
-- 🔄 [Migration Guides](doc/migration/) - Switch from go_router, auto_route, or Navigator
-- 📖 [API Reference](doc/api/) - Complete API documentation
-- 🎓 [Paradigm Guides](doc/paradigms/) - Deep dives into each pattern
+- 🧭 [Documentation Guide](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/DOCUMENTATION_ROADMAP.md) - A roadmap for documentation
+- 📚 [Getting Started Guide](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/guides/getting-started.md) - Choose your paradigm
+- 🍳 [Recipes & Cookbook](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/recipes/) - Practical solutions for common scenarios
+- 🔄 [Migration Guides](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/migration/) - Switch from go_router, auto_route, or Navigator
+- 📖 [API Reference](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/) - Complete API documentation
+- 🎓 [Paradigm Guides](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/) - Deep dives into each pattern
 
 ---
 
@@ -376,7 +376,7 @@ That's it! The navigation stack stays perfectly in sync with your state—no man
 - [Coordinator Example](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/example/lib/main_coordinator.dart) - Deep linking & nested navigation
 - [File-based Routing Example (Coordinator + generator)](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/example/lib/file_based_routing/README.md) - Next.js-style file-based routing using `zenrouter_file_generator`
 
-To get Next.js / Nuxt.js–style file-based routing on top of the Coordinator paradigm, use the optional [`zenrouter_file_generator`](../zenrouter_file_generator/README.md) package, which provides annotations and a `build_runner`-based code generator.
+To get Next.js / Nuxt.js–style file-based routing on top of the Coordinator paradigm, use the optional [`zenrouter_file_generator`](https://pub.dev/packages/zenrouter_file_generator) package, which provides annotations and a `build_runner`-based code generator.
 
 ---
 

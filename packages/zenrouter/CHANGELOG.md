@@ -1,3 +1,9 @@
+## 0.4.17
+- ZenRouter officially achieved 100% test coverage 🚀
+- **Docs**: Added migration guides from other packages (go_router, auto_route, and Navigator 1.0/2.0)
+- **Docs**: Added recipes for common use cases
+- **Docs**: Added quick links section to make the docs easier to navigate
+
 ## 0.4.16
 - **Fix**: Future already completed bug when pushing the same route with `pushOrMoveToTop`.
 
