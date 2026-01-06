@@ -282,7 +282,7 @@ class _NavLinkState extends State<_NavLink> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
             color: _isHovered
-                ? theme.colorScheme.primary.withOpacity(0.1)
+                ? theme.colorScheme.primary.withValues(alpha: 0.1)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
           ),
@@ -337,7 +337,7 @@ class _IconNavButtonState extends State<_IconNavButton> {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: _isHovered
-                  ? theme.colorScheme.primary.withOpacity(0.1)
+                  ? theme.colorScheme.primary.withValues(alpha: 0.1)
                   : Colors.transparent,
               shape: BoxShape.circle,
             ),
@@ -346,7 +346,7 @@ class _IconNavButtonState extends State<_IconNavButton> {
               size: AppConstants.iconButtonSize,
               color: _isHovered
                   ? theme.colorScheme.primary
-                  : theme.colorScheme.onSurface.withOpacity(0.7),
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ),
