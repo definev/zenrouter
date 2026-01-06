@@ -216,14 +216,6 @@ class ProductRoute extends AppRoute {
 
 // Coordinator (replaces RouterDelegate + RouteInformationParser)
 class AppCoordinator extends Coordinator<AppRoute> {
-  late final mainPath = NavigationPath<AppRoute>.createWith(
-    coordinator: this,
-    label: 'main',
-  );
-  
-  @override
-  List<StackPath<AppRoute>> get paths => [...super.paths, mainPath];
-  
   @override
   AppRoute parseRouteFromUri(Uri uri) {
     return switch (uri.pathSegments) {
