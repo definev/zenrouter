@@ -112,6 +112,19 @@ class RedirectRoute extends AppRoute with RouteRedirect<AppRoute> {
   List<Object?> get props => [target];
 }
 
+class RedirectNullRoute extends AppRoute with RouteRedirect<AppRoute> {
+  @override
+  Uri toUri() => Uri.parse('/redirect-null');
+
+  @override
+  FutureOr<AppRoute?> redirectWith(Coordinator coordinator) => null;
+
+  @override
+  Widget build(covariant TestCoordinator coordinator, BuildContext context) {
+    return const SizedBox();
+  }
+}
+
 class GuardRoute extends AppRoute with RouteGuard {
   GuardRoute({this.allowPop = true});
   final bool allowPop;
@@ -419,5 +432,236 @@ void main() {
       expect(result, isFalse);
       expect(coordinator.root.stack.length, 1);
     });
+  });
+
+  group('Coordinator.pushReplacement', () {
+    late TestCoordinator coordinator;
+
+    setUp(() {
+      coordinator = TestCoordinator();
+    });
+
+    testWidgets('pushes to empty stack', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Push replacement on empty stack should just push
+      final route = SettingsRoute();
+      coordinator.pushReplacement(route);
+      await tester.pumpAndSettle();
+
+      expect(coordinator.root.stack.length, 1);
+      expect(coordinator.root.stack.first, route);
+    });
+
+    testWidgets('replaces single element stack and completes result', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Push first route
+      final home = coordinator.root.stack.first;
+      final homeResult = home.onResult.future;
+      await tester.pumpAndSettle();
+
+      expect(coordinator.root.stack.length, 1);
+      expect(coordinator.root.stack.first, home);
+
+      // Push replacement with result
+      final settings = SettingsRoute();
+      coordinator.pushReplacement<String, String>(settings, result: 'replaced');
+      await tester.pumpAndSettle();
+
+      // Stack should now have only settings
+      expect(coordinator.root.stack.length, 1);
+      expect(coordinator.root.stack.first, settings);
+
+      // home should have received the result
+      expect(await homeResult, 'replaced');
+      expect(home.onResult.isCompleted, true);
+    });
+
+    testWidgets(
+      'replaces top route when stack has multiple elements and completes result',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerDelegate: coordinator.routerDelegate,
+            routeInformationParser: coordinator.routeInformationParser,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Push routes
+        final settings = SettingsRoute();
+        final settingsResult = coordinator.push(settings);
+        await tester.pumpAndSettle();
+
+        expect(coordinator.root.stack.length, 2);
+
+        // Push replacement - should pop settings and push profile
+        final profile = ProfileRoute('1');
+        coordinator.pushReplacement<String, String>(profile, result: 'popped');
+        await tester.pumpAndSettle();
+
+        // Stack should have home and profile
+        expect(coordinator.root.stack.length, 2);
+        expect(coordinator.root.stack[1], profile);
+
+        // settings should have received the result
+        expect(await settingsResult, 'popped');
+        expect(settings.onResult.isCompleted, true);
+      },
+    );
+
+    testWidgets('handles redirect and replaces correctly', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Push first route
+      final home = coordinator.root.stack.first;
+      final homeResult = home.onResult.future;
+      await tester.pumpAndSettle();
+
+      // Push replacement with redirect - should redirect to target
+      final target = SettingsRoute();
+      final redirect = RedirectRoute(target);
+      coordinator.pushReplacement(redirect);
+      await tester.pumpAndSettle();
+
+      // Stack should have only the target (not the redirect)
+      expect(coordinator.root.stack.length, 1);
+      expect(coordinator.root.stack.first, isA<SettingsRoute>());
+      expect(coordinator.root.stack.first, isNot(isA<RedirectRoute>()));
+      expect(await homeResult, null);
+    });
+
+    testWidgets('respects guard that blocks pop during replacement', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Push routes
+      final home = coordinator.root.stack.first;
+      final guard = GuardRoute(allowPop: false);
+      coordinator.push(guard);
+      await tester.pumpAndSettle();
+
+      expect(coordinator.root.stack.length, 2);
+
+      // Push replacement - should be blocked by guard
+      final settings = SettingsRoute();
+      final result = await coordinator.pushReplacement(settings);
+      await tester.pumpAndSettle();
+
+      // Guard blocked pop, so replacement should fail
+      expect(result, isNull);
+      expect(coordinator.root.stack.length, 2);
+      expect(coordinator.root.stack[0], home);
+      expect(coordinator.root.stack[1], guard);
+    });
+
+    testWidgets('respects guard that allows pop during replacement', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Push routes
+      final home = coordinator.root.stack.first;
+
+      final guard = GuardRoute(allowPop: true);
+      final guardResult = coordinator.push(guard);
+      await tester.pumpAndSettle();
+
+      expect(coordinator.root.stack.length, 2);
+
+      // Push replacement - guard should allow pop
+      final settings = SettingsRoute();
+      coordinator.pushReplacement<String, String>(settings, result: 'popped');
+      await tester.pumpAndSettle();
+
+      // Guard allowed, replacement should succeed
+      expect(coordinator.root.stack.length, 2);
+      expect(coordinator.root.stack[0], home);
+      expect(coordinator.root.stack[1], settings);
+      expect(await guardResult, 'popped');
+    });
+
+    testWidgets('pushReplacement with Redirect to null should do nothing', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Push routes
+      final home = coordinator.root.stack.first;
+
+      final redirectNull = RedirectNullRoute();
+      final guardResult = await coordinator.pushReplacement(redirectNull);
+      await tester.pumpAndSettle();
+
+      expect(coordinator.root.stack.length, 1);
+      expect(coordinator.root.stack[0], home);
+      expect(guardResult, isNull);
+    });
+
+    testWidgets(
+      'pushReplacement with Redirect to null should do nothing if called in path',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerDelegate: coordinator.routerDelegate,
+            routeInformationParser: coordinator.routeInformationParser,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Push routes
+        final home = coordinator.root.stack.first;
+
+        final redirectNull = RedirectNullRoute();
+        final guardResult = await coordinator.root.pushReplacement(
+          redirectNull,
+        );
+        await tester.pumpAndSettle();
+
+        expect(coordinator.root.stack.length, 1);
+        expect(coordinator.root.stack[0], home);
+        expect(guardResult, isNull);
+      },
+    );
   });
 }
