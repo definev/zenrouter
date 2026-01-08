@@ -1,3 +1,7 @@
+## 0.4.13
+- **Docs**: Add "Customizing the Coordinator" section to README
+- **Docs**: Add Table of Contents to README
+
 ## 0.4.12
 - **Feat**: Add `super.paths` to ensure `root` always added in the `paths` getter (Thanks @mrgnhnt96)
 
