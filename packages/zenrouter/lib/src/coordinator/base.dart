@@ -619,12 +619,14 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     return null;
   }
 
-  /// Pops the last route from the nearest dynamic path.
+  /// Pops the last route from the nearest dynamic path.  /// Pops the last route from all eligible dynamic paths.
   ///
-  /// Returns:
-  /// - `true` if the route can pop
-  /// - `false` if the route can't pop
-  /// - `null` if the dynamic path is only one element or doesn't exist
+  /// This method looks up all active [StackMutatable] paths and attempts
+  /// to pop from those whose stack contains at least two elements.
+  ///
+  /// The returned [Future] completes when all eligible pops have finished.
+  /// If no dynamic paths can be popped, this method completes without
+  /// performing any action.
   Future<void> pop([Object? result]) async {
     // Get all dynamic paths from the active layout paths
     final dynamicPaths = activeLayoutPaths.whereType<StackMutatable>().toList();

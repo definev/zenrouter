@@ -64,7 +64,7 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
 
     final activeRoute = this.activeRoute;
     if (activeRoute case final activeRoute?) {
-      // Manually complete the active route since it the only one on the stack
+      // Manually complete the active route since it is the only one on the stack
       if (stack.length == 1) {
         activeRoute.completeOnResult(result, coordinator);
         reset();
@@ -80,7 +80,7 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
       return push(target);
     }
 
-    /// If the active route is null => push normal
+    // If the active route is null => push normal
     return push(target);
   }
 

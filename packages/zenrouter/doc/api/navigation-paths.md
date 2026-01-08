@@ -235,6 +235,50 @@ path.pushOrMoveToTop(FeedTab());
 
 **Follows redirects:** Just like `push()`, redirect chains are followed.
 
+#### `pushReplacement(T element, {Object? result})` → `Future<dynamic>`
+
+Pops the current route and pushes a new route in its place.
+
+**Parameters:**
+- `element`: The new route to push after popping
+- `result`: Optional value to pass to the popped route's `push()` Future
+
+**Returns:** A `Future` that completes when the new route is popped, with the pop result value. Returns `null` if redirect resolution fails or guard blocks the pop.
+
+**Behavior based on stack state:**
+- **Empty stack:** Pushes the new route normally
+- **Single element:** Completes the active route with `result`, resets the stack, then pushes the new route
+- **Multiple elements:** Pops the top route (respecting `RouteGuard`), waits for the animation, then pushes
+
+**Example:**
+```dart
+// Replace current screen without adding to history
+await path.pushReplacement(HomeRoute());
+
+// Replace with result for the popped route
+await path.pushReplacement(HomeRoute(), result: 'completed');
+
+// Common flow: Screen A waits for result, Screen B replaces with C
+// In Screen A:
+final result = await path.push(ScreenBRoute());
+print('Got: $result'); // Prints: Got: from_c
+
+// In Screen B:
+path.pushReplacement(ScreenCRoute(), result: 'from_c');
+```
+
+**With guards:**
+```dart
+// If current route has RouteGuard that returns false
+final newRoute = await path.pushReplacement(HomeRoute());
+// Returns null if guard blocks the pop
+```
+
+**Use cases:**
+- Login → Home transition (back should not return to login)
+- Splash screen → Main content
+- Wizard flows where previous steps shouldn't be revisited
+
 #### `remove(T element)` → `void`
 
 Removes a specific route from the stack at any position.

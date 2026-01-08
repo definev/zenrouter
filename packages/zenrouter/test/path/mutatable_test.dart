@@ -38,18 +38,18 @@ class RedirectPathRoute extends MutatablePathRoute
 }
 
 class GuardedPathRoute extends MutatablePathRoute with RouteGuard {
-  GuardedPathRoute(this.popable);
+  GuardedPathRoute(this.poppable);
 
-  final bool popable;
-
-  @override
-  List<Object?> get props => [popable];
+  final bool poppable;
 
   @override
-  Widget build() => Text('Guarded route: $popable');
+  List<Object?> get props => [poppable];
 
   @override
-  FutureOr<bool> popGuard() => popable;
+  Widget build() => Text('Guarded route: $poppable');
+
+  @override
+  FutureOr<bool> popGuard() => poppable;
 }
 
 abstract class MutatableTestRoute extends RouteTarget with RouteUnique {}
