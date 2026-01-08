@@ -26,6 +26,22 @@ This package is part of the [ZenRouter](https://github.com/definev/zenrouter/blo
 - 🚀 **Zero boilerplate** - Routes are generated from your file structure
 - 🕸️ **Lazy loading** - Routes can be lazy loaded using the `deferredImport` option in the `@ZenCoordinator` annotation. Improves app startup time and reduces initial bundle size.
 
+## Table of Contents
+
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [File Naming Conventions](#file-naming-conventions)
+- [Route Groups `(name)`](#route-groups-name)
+- [Deferred Imports](#deferred-imports)
+- [Route Mixins](#route-mixins)
+- [Route Query Parameters](#route-query-parameters)
+- [Layout Types](#layout-types)
+- [Generated Code Structure](#generated-code-structure)
+- [Custom Coordinator Configuration](#custom-coordinator-configuration)
+- [Customizing the Coordinator](#customizing-the-coordinator)
+- [Integration with ZenRouter](#integration-with-zenrouter)
+- [Example](#example)
+
 ## Installation
 
 Add `zenrouter_file_generator`, `zenrouter_file_annotation` and `zenrouter` to your `pubspec.yaml`:
@@ -832,6 +848,66 @@ flutter pub get
 dart run build_runner build
 flutter run
 ```
+
+## Customizing the Coordinator
+
+You can extend the generated coordinator to add custom capabilities, such as the debugging tools provided by `zenrouter_devtools`.
+
+### Usage with `zenrouter_devtools`
+
+To use the `CoordinatorDebug` mixin from `zenrouter_devtools` with your generated coordinator:
+
+1. Add `zenrouter_devtools` to your dependencies.
+2. Create a new class that extends the generated `AppCoordinator`.
+3. Mixin `CoordinatorDebug`.
+
+```dart
+// lib/routes/_coordinator_debug.dart
+import 'package:flutter/foundation.dart';
+import 'package:zenrouter_devtools/zenrouter_devtools.dart';
+import 'routes.zen.dart';
+
+class DebugAppCoordinator extends AppCoordinator with CoordinatorDebug<AppRoute> {
+  @override
+  bool get debugEnabled => kDebugMode; // Only enable in debug mode
+
+  @override
+  List<AppRoute> get debugRoutes => [
+    // Pre-populate specific routes for quick testing
+    const LoginRoute(),
+    ProfileIdRoute(id: 'test-user'),
+    const SettingsRoute(),
+  ];
+
+  @override
+  String debugLabel(StackPath path) {
+    // Optional: Customize how paths appear in the debugger
+    if (path == root) return 'Root Stack';
+    return super.debugLabel(path);
+  }
+}
+```
+
+Then use `DebugAppCoordinator` in your app entry point:
+
+```dart
+void main() {
+  final coordinator = DebugAppCoordinator();
+  
+  runApp(MaterialApp.router(
+    routerDelegate: coordinator.routerDelegate,
+    routeInformationParser: coordinator.routeInformationParser,
+  ));
+}
+```
+
+### Why isn't this built-in?
+
+We chose not to generate this boilerplate automatically for several reasons:
+
+1.  **Custom Data Requirements**: `debugRoutes` requires specific instantiation of your routes (e.g., providing dummy IDs), which the generator cannot guess using `const` constructors alone.
+2.  **Environment Logic**: You may want complex logic for `debugEnabled` (e.g., checking flavors or environment variables) that exceeds simple boolean flags.
+3.  **Dependency Management**: Keeping `zenrouter_devtools` optional ensures your production app stays lightweight if you choose not to use the devtools.
 
 ## License
 
