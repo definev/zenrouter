@@ -67,6 +67,7 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
       // Manually complete the active route since it is the only one on the stack
       if (stack.length == 1) {
         activeRoute.completeOnResult(result, coordinator);
+        activeRoute.onDiscard();
         reset();
         return push(target);
       }

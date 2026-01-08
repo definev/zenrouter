@@ -1366,5 +1366,33 @@ void main() {
       expect(path.stack.length, 1);
       expect((path.stack.first as SimpleRoute).id, '0');
     });
+
+    testWidgets('pushReplacement() should discard RouteQueryParameters', (
+      tester,
+    ) async {
+      final route1 = QueryRoute('1', {'a': '1'});
+      final route2 = QueryRoute('2', {'b': '2'});
+      final coordinator = MutatableTestCoordinator();
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      coordinator.push(route1);
+      coordinator.push(route2);
+      await tester.pumpAndSettle();
+
+      coordinator.pushReplacement(QueryRoute('2', {'b': '3'}));
+      await tester.pumpAndSettle();
+
+      expect(coordinator.root.stack.length, 3);
+      expect((coordinator.root.stack[1] as QueryRoute).queries['a'], '1');
+      expect((coordinator.root.stack[2] as QueryRoute).queries['b'], '3');
+      expect(() => route2.queryNotifier.addListener(() {}), throwsFlutterError);
+    });
   });
 }
