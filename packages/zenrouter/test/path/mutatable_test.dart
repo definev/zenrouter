@@ -8,10 +8,51 @@ import 'package:zenrouter/zenrouter.dart';
 // Test Routes
 // ============================================================================
 
-abstract class MutatableTestRoute extends RouteTarget with RouteUnique {
-  @override
-  Uri toUri();
+abstract class MutatablePathRoute extends RouteTarget {
+  Widget build();
 }
+
+class SimplePathRoute extends MutatablePathRoute {
+  SimplePathRoute(this.id);
+
+  final String id;
+
+  @override
+  List<Object?> get props => [id];
+
+  @override
+  Widget build() => Text('Simple route: $id');
+}
+
+class RedirectPathRoute extends MutatablePathRoute
+    with RouteRedirect<MutatablePathRoute> {
+  RedirectPathRoute(this.target);
+
+  final MutatablePathRoute target;
+
+  @override
+  FutureOr<MutatablePathRoute> redirect() => target;
+
+  @override
+  Widget build() => SizedBox();
+}
+
+class GuardedPathRoute extends MutatablePathRoute with RouteGuard {
+  GuardedPathRoute(this.poppable);
+
+  final bool poppable;
+
+  @override
+  List<Object?> get props => [poppable];
+
+  @override
+  Widget build() => Text('Guarded route: $poppable');
+
+  @override
+  FutureOr<bool> popGuard() => poppable;
+}
+
+abstract class MutatableTestRoute extends RouteTarget with RouteUnique {}
 
 /// Simple route for basic testing
 class SimpleRoute extends MutatableTestRoute {
@@ -293,6 +334,217 @@ void main() {
 
       expect(coordinator.root.stack.length, 1);
       expect(coordinator.root.stack.first, route);
+    });
+  });
+
+  group('StackMutatable - pushReplacement()', () {
+    testWidgets('pushes to empty stack', (tester) async {
+      final path = NavigationPath<MutatableTestRoute>.create();
+      final route = SimpleRoute('1');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: NavigationStack<MutatableTestRoute>(
+            path: path,
+            resolver: (route) => StackTransition.cupertino(
+              Builder(
+                builder: (context) =>
+                    route.build(MutatableTestCoordinator(), context),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // pushReplacement on empty stack should just push
+      final future = path.pushReplacement(route);
+      await tester.pumpAndSettle();
+
+      expect(path.stack.length, 1);
+      expect(path.stack.first, route);
+      expect(route.stackPath, path);
+
+      // Complete the route to avoid hanging future
+      route.completeOnResult(null, null);
+      await future;
+    });
+
+    testWidgets('replaces single element stack and completes result', (
+      tester,
+    ) async {
+      final path = NavigationPath<MutatablePathRoute>.create();
+      final route1 = SimplePathRoute('1');
+      final route2 = SimplePathRoute('2');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: NavigationStack<MutatablePathRoute>(
+            path: path,
+            resolver: (route) => StackTransition.none(route.build()),
+          ),
+        ),
+      );
+
+      // Push first route and capture its result
+      final route1Result = path.push(route1);
+      await tester.pumpAndSettle();
+
+      expect(path.stack.length, 1);
+      expect(path.stack.first, route1);
+
+      // Push replacement with result
+      path.pushReplacement<String, String>(route2, result: 'replaced');
+      await tester.pumpAndSettle();
+
+      // Stack should now have only route2
+      expect(path.stack.length, 1);
+      expect(path.stack.first, route2);
+
+      // route1 should have received the result
+      expect(await route1Result, 'replaced');
+      expect(route1.onResult.isCompleted, true);
+    });
+
+    testWidgets(
+      'replaces top route when stack has multiple elements and completes result',
+      (tester) async {
+        final path = NavigationPath<MutatablePathRoute>.create();
+        final route1 = SimplePathRoute('1');
+        final route2 = SimplePathRoute('2');
+        final route3 = SimplePathRoute('3');
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: NavigationStack<MutatablePathRoute>(
+              path: path,
+              resolver: (route) => StackTransition.none(route.build()),
+            ),
+          ),
+        );
+
+        // Push routes
+        path.push(route1);
+        await tester.pumpAndSettle();
+        final route2Result = path.push(route2);
+        await tester.pumpAndSettle();
+
+        expect(path.stack.length, 2);
+
+        // Push replacement - should pop route2 and push route3
+        path.pushReplacement<String, String>(route3, result: 'popped');
+        await tester.pumpAndSettle();
+
+        // Stack should have route1 and route3
+        expect(path.stack.length, 2);
+        expect(path.stack[0], route1);
+        expect(path.stack[1], route3);
+
+        // route2 should have received the result
+        expect(await route2Result, 'popped');
+        expect(route2.onResult.isCompleted, true);
+      },
+    );
+
+    testWidgets('handles redirect and replaces correctly', (tester) async {
+      final path = NavigationPath<MutatablePathRoute>.create();
+      final route1 = SimplePathRoute('1');
+      final target = SimplePathRoute('target');
+      final redirect = RedirectPathRoute(target);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: NavigationStack<MutatablePathRoute>(
+            path: path,
+            resolver: (route) => StackTransition.none(route.build()),
+          ),
+        ),
+      );
+
+      // Push first route
+      final route1Result = path.push(route1);
+      await tester.pumpAndSettle();
+
+      // Push replacement with redirect - should redirect to target
+      path.pushReplacement(redirect);
+      await tester.pumpAndSettle();
+
+      // Stack should have only the target (not the redirect)
+      expect(path.stack.length, 1);
+      expect(path.stack.first, target);
+      expect(path.stack.first, isNot(redirect));
+      expect(await route1Result, null);
+    });
+
+    testWidgets('respects guard that blocks pop during replacement', (
+      tester,
+    ) async {
+      final path = NavigationPath<MutatablePathRoute>.create();
+      final route1 = SimplePathRoute('1');
+      final guardedRoute = GuardedPathRoute(false);
+      final route3 = SimplePathRoute('3');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: NavigationStack<MutatablePathRoute>(
+            path: path,
+            resolver: (route) => StackTransition.none(route.build()),
+          ),
+        ),
+      );
+
+      // Push routes
+      path.push(route1);
+      await tester.pumpAndSettle();
+      path.push(guardedRoute);
+      await tester.pumpAndSettle();
+
+      expect(path.stack.length, 2);
+
+      // Push replacement - should be blocked by guard
+      final result = await path.pushReplacement(route3);
+      await tester.pumpAndSettle();
+
+      // Guard blocked pop, so replacement should fail
+      expect(result, isNull);
+      expect(path.stack.length, 2);
+      expect(path.stack[0], route1);
+      expect(path.stack[1], guardedRoute);
+    });
+
+    testWidgets('respects guard that allows pop during replacement', (
+      tester,
+    ) async {
+      final path = NavigationPath<MutatablePathRoute>.create();
+      final route1 = SimplePathRoute('1');
+      final guardedRoute = GuardedPathRoute(true);
+      final route3 = SimplePathRoute('3');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: NavigationStack<MutatablePathRoute>(
+            path: path,
+            resolver: (route) => StackTransition.none(route.build()),
+          ),
+        ),
+      );
+
+      // Push routes
+      path.push(route1);
+      await tester.pumpAndSettle();
+      final guardedRouteResult = path.push(guardedRoute);
+      await tester.pumpAndSettle();
+
+      expect(path.stack.length, 2);
+
+      // Push replacement - guard should allow pop
+      path.pushReplacement(route3, result: 'popped');
+      await tester.pumpAndSettle();
+
+      // Guard allowed, replacement should succeed
+      expect(path.stack.length, 2);
+      expect(path.stack[0], route1);
+      expect(path.stack[1], route3);
+      expect(await guardedRouteResult, 'popped');
     });
   });
 

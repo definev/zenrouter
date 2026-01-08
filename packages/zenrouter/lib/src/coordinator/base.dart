@@ -569,7 +569,64 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     }
   }
 
-  /// Pops the last route from the nearest dynamic path.
+  /// Pops the current route and pushes a new route in its place.
+  ///
+  /// **When to use:**
+  /// - Swap screens during a wizard/onboarding flow
+  /// - Replace a loading/splash screen with actual content
+  /// - Login → Home transition where back should not return to login
+  ///
+  /// **Avoid when:**
+  /// - You need to clear all navigation history (use [replace] instead)
+  ///
+  /// **Behavior:**
+  /// 1. Resolves any [RouteRedirect]s
+  /// 2. Ensures required [RouteLayout] hierarchy is active
+  /// 3. Delegates to [StackMutatable.pushReplacement] which:
+  ///    - On single-element stack: completes the route and pushes new one
+  ///    - On multi-element stack: pops (respecting guards), then pushes
+  ///
+  /// **Result handling:**
+  /// Pass [result] to complete the popped route's push future:
+  /// ```dart
+  /// // In screen A:
+  /// final result = await coordinator.push<String>(ScreenB());
+  /// print('Got: $result'); // Prints: Got: from_c
+  ///
+  /// // In screen B, replacing with C:
+  /// coordinator.pushReplacement<void, String>(ScreenC(), result: 'from_c');
+  /// ```
+  ///
+  /// **Error Handling:**
+  /// - Returns `null` if redirect resolution returns null
+  /// - Returns `null` if a [RouteGuard] blocks the pop operation
+  /// - Exceptions from redirect resolution propagate to the caller
+  Future<R?> pushReplacement<R extends Object, RO extends Object>(
+    T route, {
+    RO? result,
+  }) async {
+    final target = await RouteRedirect.resolve(route, this);
+    if (target == null) return null;
+
+    final layout = target.resolveLayout(this);
+    final path = layout?.resolvePath(this) ?? root;
+    await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.pushToTop);
+
+    if (path case StackMutatable()) {
+      return path.pushReplacement(target, result: result);
+    }
+
+    return null;
+  }
+
+  /// Pops the last route from the nearest dynamic path.  /// Pops the last route from all eligible dynamic paths.
+  ///
+  /// This method looks up all active [StackMutatable] paths and attempts
+  /// to pop from those whose stack contains at least two elements.
+  ///
+  /// The returned [Future] completes when all eligible pops have finished.
+  /// If no dynamic paths can be popped, this method completes without
+  /// performing any action.
   Future<void> pop([Object? result]) async {
     // Get all dynamic paths from the active layout paths
     final dynamicPaths = activeLayoutPaths.whereType<StackMutatable>().toList();

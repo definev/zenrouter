@@ -390,6 +390,61 @@ onTap: (index) => switch (index) {
 - Follows redirects (like `push()`)
 - Updates URL
 
+### `pushReplacement<R, RO>(T route, {RO? result})` → `Future<R?>`
+
+Pops the current route and pushes a new route in its place.
+
+**Parameters:**
+- `route`: The new route to push after popping
+- `result`: Optional value to pass to the popped route's `push()` Future
+
+**Returns:** A `Future` that completes when the new route is popped. Returns `null` if redirect resolution fails or guard blocks the pop.
+
+```dart
+// Replace current screen without adding to history
+await coordinator.pushReplacement(HomeRoute());
+
+// Replace with result for the popped route
+await coordinator.pushReplacement<void, String>(
+  HomeRoute(),
+  result: 'completed',
+);
+```
+
+**Result handling:**
+```dart
+// Screen A pushes B and waits for result
+final result = await coordinator.push<String>(ScreenBRoute());
+print('Got: $result'); // Prints: Got: from_c
+
+// Screen B replaces itself with C, passing result to A
+coordinator.pushReplacement<void, String>(
+  ScreenCRoute(),
+  result: 'from_c',
+);
+```
+
+**Behavior:**
+1. Resolves any `RouteRedirect`s
+2. Ensures required `RouteLayout` hierarchy is active
+3. Delegates to `StackMutatable.pushReplacement`:
+   - On single-element stack: completes the route and pushes new one
+   - On multi-element stack: pops (respecting guards), then pushes
+4. Updates the browser URL
+
+**Use cases:**
+- Login → Home transition (back should not return to login)
+- Splash/Loading → Main content transition
+- Wizard flows where previous steps shouldn't be revisited
+- Replacing temporary screens with actual content
+
+**With guards:**
+```dart
+// If current route has RouteGuard that returns false
+final result = await coordinator.pushReplacement(HomeRoute());
+// Returns null if guard blocks the pop
+```
+
 ### `recoverRouteFromUri(Uri uri)` → `Future<void>`
 
 Handles navigation from a deep link URI.

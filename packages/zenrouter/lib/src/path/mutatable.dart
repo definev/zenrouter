@@ -7,8 +7,10 @@ part of 'base.dart';
 /// Apply this mixin to [StackPath] subclasses that need push/pop navigation.
 /// This provides standard implementations for:
 /// - [push]: Add a route to the top
+/// - [pushReplacement]: Pop the top route and push a new one
 /// - [pushOrMoveToTop]: Add or promote existing route
 /// - [pop]: Remove the top route (with guard support)
+/// - [remove]: Remove a specific route from the stack
 mixin StackMutatable<T extends RouteTarget> on StackPath<T>
     implements StackNavigatable<T> {
   /// Pushes a new route onto the stack.
@@ -28,6 +30,58 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
     notifyListeners();
     // ignore: invalid_use_of_visible_for_testing_member
     return await target.onResult.future as R?;
+  }
+
+  /// Pops the current route and pushes a new route in its place.
+  ///
+  /// This is useful for replacing the current screen without adding to the
+  /// navigation history. The new route takes the place of the popped route.
+  ///
+  /// **Behavior based on stack state:**
+  /// - **Empty stack:** Pushes the new route normally
+  /// - **Single element:** Completes the active route with [result], resets
+  ///   the stack, then pushes the new route
+  /// - **Multiple elements:** Pops the top route (respecting [RouteGuard]),
+  ///   waits for the pop animation, then pushes the new route
+  ///
+  /// **Parameters:**
+  /// - [element]: The new route to push after popping
+  /// - [result]: Optional result to pass to the popped route's push future
+  ///
+  /// **Returns:**
+  /// - A [Future] that completes with the result when the new route is popped
+  /// - `null` if redirect resolution returns null or guard blocks the pop
+  ///
+  /// **Error Handling:**
+  /// Exceptions from [RouteRedirect.resolve] propagate to the caller.
+  /// If a [RouteGuard] blocks the pop, returns `null` without pushing.
+  Future<R?> pushReplacement<R extends Object, RO extends Object>(
+    T element, {
+    RO? result,
+  }) async {
+    T? target = await RouteRedirect.resolve(element, coordinator);
+    if (target == null) return null;
+
+    final activeRoute = this.activeRoute;
+    if (activeRoute case final activeRoute?) {
+      // Manually complete the active route since it is the only one on the stack
+      if (stack.length == 1) {
+        activeRoute.completeOnResult(result, coordinator);
+        reset();
+        return push(target);
+      }
+
+      final popped = await pop(result);
+      // Pop is prevented by guard
+      if (popped == null || !popped) return null;
+      // Wait the pop animation to finish
+      // ignore: invalid_use_of_visible_for_testing_member
+      await activeRoute.onResult.future;
+      return push(target);
+    }
+
+    // If the active route is null => push normal
+    return push(target);
   }
 
   /// Pushes a route to the top of the stack, or moves it if already present.

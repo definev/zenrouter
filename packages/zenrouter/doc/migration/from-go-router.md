@@ -341,6 +341,63 @@ class LoginRoute extends AppRoute {
 
 ---
 
+## Push Replacement
+
+### go_router pushReplacement
+
+```dart
+// Replace current screen without adding to history
+context.pushReplacement('/home');
+
+// With path parameters
+context.pushReplacementNamed(
+  'product',
+  pathParameters: {'id': '123'},
+);
+```
+
+### ZenRouter pushReplacement
+
+```dart
+// Replace current screen without adding to history
+coordinator.pushReplacement(HomeRoute());
+
+// With typed parameters
+coordinator.pushReplacement(ProductRoute('123'));
+
+// With result for the replaced route
+coordinator.pushReplacement<void, String>(
+  HomeRoute(),
+  result: 'completed',
+);
+```
+
+**Common use cases:**
+- Login → Home transition (back should not return to login)
+- Splash/Loading → Main screen transition
+- Wizard flows where previous steps shouldn't be revisited
+- Replacing a temporary screen with actual content
+
+**Result handling example:**
+```dart
+// Screen A pushes B and waits for result
+final result = await coordinator.push<String>(ScreenBRoute());
+print('Got: $result'); // Prints: Got: from_c
+
+// Screen B replaces itself with C, passing result to A
+coordinator.pushReplacement<void, String>(
+  ScreenCRoute(),
+  result: 'from_c',
+);
+```
+
+**Advantages:**
+- Type-safe route objects instead of string paths
+- Result passing to the replaced route's push future
+- Respects `RouteGuard` when popping the current route
+
+---
+
 ## Restorations
 
 ### go_router
@@ -521,6 +578,7 @@ See [URL Strategies Recipe](../recipes/url-strategies.md) for deployment configu
 - [ ] Create a `Coordinator` with `parseRouteFromUri` implementation
 - [ ] Update `MaterialApp` to use `coordinator.routerDelegate` and `routeInformationParser`
 - [ ] Replace `context.go()`, `context.push()` with `coordinator.push()`, `coordinator.replace()`
+- [ ] Replace `context.pushReplacement()` with `coordinator.pushReplacement()`
 - [ ] Migrate `redirect` callbacks to `RouteRedirect` mixins
 - [ ] Convert `ShellRoute` to `RouteLayout` classes
 - [ ] Update query parameter handling to use `RouteQueryParameters`
