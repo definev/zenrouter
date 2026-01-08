@@ -133,7 +133,8 @@ enum DefaultTransitionStrategy {
 /// )
 /// ```
 abstract class Coordinator<T extends RouteUnique> extends Equatable
-    with ChangeNotifier {
+    with ChangeNotifier
+    implements RouterConfig<Uri> {
   Coordinator() {
     for (final path in paths) {
       path.addListener(notifyListeners);
@@ -671,16 +672,29 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   void markNeedRebuild() => notifyListeners();
 
   /// The route information parser for [Router]
+  @override
   late final CoordinatorRouteParser routeInformationParser =
       CoordinatorRouteParser(coordinator: this);
+
+  /// The [BackButtonDispatcher] that is used to configure the [Router].
+  @override
+  BackButtonDispatcher? get backButtonDispatcher => null;
+
+  /// The [RouteInformationProvider] that is used to configure the [Router].
+  @override
+  RouteInformationProvider? get routeInformationProvider => null;
 
   CoordinatorRouterDelegate? _routerDelegate;
 
   /// The router delegate for [Router] of this coordinator
+  @override
   CoordinatorRouterDelegate get routerDelegate =>
       _routerDelegate ??= CoordinatorRouterDelegate(coordinator: this);
 
   /// Creates a new router delegate with the given initial route.
+  @Deprecated(
+    'This method is deprecated. Use `routerDelegate` property instead. Will be removed in v1.0.0',
+  )
   CoordinatorRouterDelegate routerDelegateWithInitialRoute(T initialRoute) {
     if (_routerDelegate case CoordinatorRouterDelegate delegate) {
       if (delegate.initialRoute != initialRoute) {

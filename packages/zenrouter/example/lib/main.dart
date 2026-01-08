@@ -3,7 +3,7 @@ import 'package:zenrouter/zenrouter.dart';
 import 'package:zenrouter_devtools/zenrouter_devtools.dart';
 
 void main() {
-  runApp(MainApp());
+  runApp(const MainApp());
 }
 
 class MainApp extends StatelessWidget {
@@ -11,314 +11,120 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      routerDelegate: appCoordinator.routerDelegate,
-      routeInformationParser: appCoordinator.routeInformationParser,
-    );
+    return MaterialApp.router(routerConfig: appCoordinator);
   }
 }
+
+// ============================================================================
+// Coordinator
+// ============================================================================
 
 final appCoordinator = AppCoordinator();
 
+class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug {
+  late final tabPath = IndexedStackPath.createWith(
+    coordinator: this,
+    label: 'tabs',
+    [HomeTab(), SearchTab(), ProfileTab()],
+  );
+
+  @override
+  void defineLayout() {
+    RouteLayout.defineLayout(TabLayout, TabLayout.new);
+  }
+
+  @override
+  List<StackPath> get paths => [...super.paths, tabPath];
+
+  @override
+  List<AppRoute> get debugRoutes => [HomeTab(), SearchTab(), ProfileTab()];
+
+  @override
+  AppRoute parseRouteFromUri(Uri uri) {
+    return switch (uri.pathSegments) {
+      [] || ['home'] => HomeTab(),
+      ['search'] => SearchTab(),
+      ['profile'] => ProfileTab(),
+      _ => HomeTab(),
+    };
+  }
+}
+
+// ============================================================================
+// Route Base
+// ============================================================================
+
 abstract class AppRoute extends RouteTarget with RouteUnique {}
 
-class CustomLayout extends AppRoute with RouteLayout<AppRoute> {
-  @override
-  StackPath<RouteUnique> resolvePath(AppCoordinator coordinator) =>
-      coordinator.customIndexed;
+// ============================================================================
+// Tab Layout
+// ============================================================================
 
+class TabLayout extends AppRoute with RouteLayout<AppRoute> {
   @override
-  Widget build(AppCoordinator coordinator, BuildContext context) {
-    final path = resolvePath(coordinator);
-    final size = MediaQuery.sizeOf(context);
-    return ListenableBuilder(
-      listenable: path,
-      builder: (context, child) => Scaffold(
-        body: switch (size.width) {
-          < 600 => Column(
-            children: [
-              Expanded(child: buildPath(coordinator)),
-              Container(
-                height: 60,
-                color: Colors.yellow,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    ElevatedButton(
-                      child: Text('One'),
-                      onPressed: () => coordinator.push(FirstLayout()),
-                    ),
-                    ElevatedButton(
-                      child: Text('Two'),
-                      onPressed: () => coordinator.push(SecondTab()),
-                    ),
-                    ElevatedButton(
-                      child: Text('Three'),
-                      onPressed: () => coordinator.push(ThirdTab()),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          _ => Column(
-            children: [
-              Expanded(
-                child: switch (path.activeRoute) {
-                  ThirdTab() => path.activeRoute!.build(coordinator, context),
-                  _ => Row(
-                    children: [
-                      Expanded(
-                        child: path.stack[0].build(coordinator, context),
-                      ),
-                      VerticalDivider(width: 1, color: Colors.amber),
-                      Expanded(
-                        child: path.stack[1].build(coordinator, context),
-                      ),
-                    ],
-                  ),
-                },
-              ),
-              Container(
-                height: 60,
-                color: Colors.yellow,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    ElevatedButton(
-                      child: Text('One/Two'),
-                      onPressed: () {
-                        if (path.activeRoute is FirstLayout) {
-                          coordinator.push(SecondTab());
-                        } else {
-                          coordinator.push(FirstLayout());
-                        }
-                      },
-                    ),
-                    ElevatedButton(
-                      child: Text('Three'),
-                      onPressed: () => coordinator.push(ThirdTab()),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        },
-      ),
-    );
-  }
-}
-
-class FirstLayout extends AppRoute with RouteLayout {
-  @override
-  Uri toUri() => Uri.parse('/first');
-
-  @override
-  Type get layout => CustomLayout;
-
-  @override
-  NavigationPath<AppRoute> resolvePath(AppCoordinator coordinator) =>
-      coordinator.firstStack;
+  IndexedStackPath<AppRoute> resolvePath(AppCoordinator coordinator) =>
+      coordinator.tabPath;
 
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) {
-        if (coordinator.customIndexed.activeIndex != 0) {
-          coordinator.customIndexed.goToIndexed(0);
-        }
-      },
-      child: Listener(
-        onPointerSignal: (_) {
-          if (coordinator.customIndexed.activeIndex != 0) {
-            coordinator.customIndexed.goToIndexed(0);
-          }
-        },
-        child: super.build(coordinator, context),
-      ),
-    );
-  }
-}
-
-class FirstTab extends AppRoute {
-  @override
-  Uri toUri() => Uri.parse('/first');
-
-  @override
-  Type get layout => FirstLayout;
-
-  @override
-  Widget build(AppCoordinator coordinator, BuildContext context) {
-    return ListenableBuilder(
-      listenable: coordinator.customIndexed,
-      builder: (context, child) {
-        final activeIndex = coordinator.customIndexed.activeIndex;
-        return Scaffold(
-          body: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 8,
-              children: [
-                Text(
-                  'First page ${activeIndex == 0 ? '(Focused)' : '(No focused)'}',
-                ),
-                FilledButton(
-                  onPressed: () =>
-                      coordinator.push(FirstTabChild(message: "Hello")),
-                  child: Text('Go "Hello"'),
-                ),
-                FilledButton(
-                  onPressed: () =>
-                      coordinator.push(FirstTabChild(message: "Ciao")),
-                  child: Text('Go "Ciao"'),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class FirstTabChild extends AppRoute {
-  FirstTabChild({required this.message});
-
-  final String message;
-
-  @override
-  Uri toUri() => Uri.parse('/first/$message');
-
-  @override
-  Type get layout => FirstLayout;
-
-  @override
-  Widget build(AppCoordinator coordinator, BuildContext context) {
+    final path = coordinator.tabPath;
     return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('First Message: $message'),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Go back'),
-            ),
+      body: buildPath(coordinator),
+      bottomNavigationBar: ListenableBuilder(
+        listenable: path,
+        builder: (context, _) => BottomNavigationBar(
+          currentIndex: path.activeIndex,
+          onTap: (index) => path.goToIndexed(index),
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
+            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
           ],
         ),
       ),
     );
   }
-
-  @override
-  List<Object?> get props => [message];
 }
 
-class SecondTab extends AppRoute {
+// ============================================================================
+// Tab Routes
+// ============================================================================
+
+class HomeTab extends AppRoute {
   @override
-  Uri toUri() => Uri.parse('/second');
+  Type get layout => TabLayout;
 
   @override
-  Type get layout => CustomLayout;
+  Uri toUri() => Uri.parse('/home');
 
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
-    return ListenableBuilder(
-      listenable: coordinator.customIndexed,
-      builder: (context, child) {
-        final activeIndex = coordinator.customIndexed.activeIndex;
-        return MouseRegion(
-          onEnter: (_) {
-            if (coordinator.customIndexed.activeIndex != 1) {
-              coordinator.customIndexed.goToIndexed(1);
-            }
-          },
-          child: Listener(
-            onPointerSignal: (_) {
-              if (coordinator.customIndexed.activeIndex != 1) {
-                coordinator.customIndexed.goToIndexed(1);
-              }
-            },
-            child: Scaffold(
-              backgroundColor: Colors.red.shade100,
-              body: Center(
-                child: Text(
-                  'Second tab (${activeIndex == 1 ? 'Focused' : 'No focused'})',
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
+    return const Center(child: Text('Home', style: TextStyle(fontSize: 24)));
   }
 }
 
-class ThirdTab extends AppRoute {
+class SearchTab extends AppRoute {
   @override
-  Uri toUri() => Uri.parse('/third');
+  Type get layout => TabLayout;
 
   @override
-  Type get layout => CustomLayout;
+  Uri toUri() => Uri.parse('/search');
 
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
-    final activeIndex = coordinator.customIndexed.activeIndex;
-    return Scaffold(
-      backgroundColor: Colors.blue.shade100,
-      body: Center(
-        child: Text(
-          'Third tab (${activeIndex == 2 ? 'Focused' : 'No focused'})',
-        ),
-      ),
-    );
+    return const Center(child: Text('Search', style: TextStyle(fontSize: 24)));
   }
 }
 
-class NotFound extends AppRoute {
+class ProfileTab extends AppRoute {
   @override
-  Uri toUri() => Uri.parse('/not-found');
+  Type get layout => TabLayout;
+
+  @override
+  Uri toUri() => Uri.parse('/profile');
 
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
-    return Scaffold(body: Center(child: Text('Not found')));
-  }
-}
-
-class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug {
-  late final customIndexed = IndexedStackPath<AppRoute>.createWith(
-    coordinator: this,
-    label: 'CustomIndexed',
-    [FirstLayout(), SecondTab(), ThirdTab()],
-  );
-  late final firstStack = NavigationPath<AppRoute>.createWith(
-    label: 'FirstStack',
-    coordinator: this,
-  );
-
-  @override
-  List<StackPath<RouteTarget>> get paths => [
-    ...super.paths,
-    customIndexed,
-    firstStack,
-  ];
-
-  @override
-  void defineLayout() {
-    RouteLayout.defineLayout(CustomLayout, CustomLayout.new);
-    RouteLayout.defineLayout(FirstLayout, FirstLayout.new);
-  }
-
-  @override
-  AppRoute parseRouteFromUri(Uri uri) {
-    return switch (uri.pathSegments) {
-      [] => FirstTab(),
-      ['first'] => FirstTab(),
-      ['first', final message] => FirstTabChild(message: message),
-      ['second'] => SecondTab(),
-      ['third'] => ThirdTab(),
-      _ => NotFound(),
-    };
+    return const Center(child: Text('Profile', style: TextStyle(fontSize: 24)));
   }
 }
