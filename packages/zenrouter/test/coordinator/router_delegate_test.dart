@@ -637,5 +637,12 @@ void main() {
       expect(coordinator.root.stack.length, 3);
       expect(find.text('Profile second'), findsOneWidget);
     });
+
+    test('Check backButtonDispatcher and routeInformationProvider', () {
+      final coordinator = TestCoordinator();
+      final delegate = coordinator;
+      expect(delegate.backButtonDispatcher, isNull);
+      expect(delegate.routeInformationProvider, isNull);
+    });
   });
 }

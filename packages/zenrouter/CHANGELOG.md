@@ -1,3 +1,17 @@
+## 0.4.18
+- **Feat**: Add `pushReplacement` method in `StackMutatable`.
+- **Feat**: `Coordinator` now implements `RouterConfig` so you can use it with `MaterialApp.router` more easily.
+  - ```dart
+    MaterialApp.router(
+      // New way
+      routerConfig: coordinator,
+      // Old way
+      routerDelegate: coordinator.routerDelegate,
+      routeInformationParser: coordinator.routeInformationParser,
+    );
+    ```
+- **Deprecate**: `routerDelegateWithInitialRoute` is deprecated, you can simulate the same behavior by using `RouteRedirect` in `IndexRoute`.
+
 ## 0.4.17
 - ZenRouter officially achieved 100% test coverage 🚀
 - **Docs**: Added migration guides from other packages (go_router, auto_route, and Navigator 1.0/2.0)
