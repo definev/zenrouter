@@ -143,7 +143,6 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     defineConverter();
   }
 
-  // coverage:ignore-start
   @override
   void dispose() {
     routerDelegate.dispose();
@@ -153,7 +152,6 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     root.dispose();
     super.dispose();
   }
-  // coverage:ignore-end
 
   /// The root (primary) navigation path.
   ///
