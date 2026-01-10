@@ -482,8 +482,15 @@ void main() {
   });
 
   group('Coordinator.navigate() - NavigationPath integration', () {
+    late NavigationTestCoordinator coordinator;
+
+    setUp(() async {
+      coordinator = NavigationTestCoordinator();
+      await Future.delayed(Duration.zero);
+      coordinator.root.reset();
+    });
+
     test('delegates to NavigationPath.navigate() for new route', () async {
-      final coordinator = NavigationTestCoordinator();
       final route1 = SimpleRoute('1');
       final route2 = SimpleRoute('2');
 
@@ -497,7 +504,6 @@ void main() {
     });
 
     test('delegates to NavigationPath.navigate() to pop to existing', () async {
-      final coordinator = NavigationTestCoordinator();
       final route1 = SimpleRoute('1');
       final route2 = SimpleRoute('2');
       final route3 = SimpleRoute('3');
@@ -515,7 +521,6 @@ void main() {
     });
 
     test('respects guards during navigation', () async {
-      final coordinator = NavigationTestCoordinator();
       final route1 = SimpleRoute('1');
       final guardedRoute = GuardedRoute('2', allowPop: false);
       final route3 = SimpleRoute('3');
@@ -534,8 +539,15 @@ void main() {
   });
 
   group('Coordinator.navigate() - IndexedStackPath integration', () {
+    late IndexedTestCoordinator coordinator;
+
+    setUp(() async {
+      coordinator = IndexedTestCoordinator();
+      await Future.delayed(Duration.zero);
+      coordinator.root.reset();
+    });
+
     test('handles route not found in indexed stack', () async {
-      final coordinator = IndexedTestCoordinator();
       final routeNotInStack = SimpleRoute('not-in-stack');
 
       var notifyCount = 0;
@@ -598,8 +610,15 @@ void main() {
   });
 
   group('Coordinator.navigate() - Redirects', () {
+    late NavigationTestCoordinator coordinator;
+
+    setUp(() async {
+      coordinator = NavigationTestCoordinator();
+      await Future.delayed(Duration.zero);
+      coordinator.root.reset();
+    });
+
     test('follows redirects before navigating', () async {
-      final coordinator = NavigationTestCoordinator();
       final route1 = SimpleRoute('1');
       final target = SimpleRoute('target');
       final redirect = RedirectRoute('redirect', target);

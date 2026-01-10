@@ -112,12 +112,12 @@ class GuardedRoute extends AppRoute with RouteGuard {
 /// Coordinator WITH observer mixin
 class CoordinatorWithObservers extends Coordinator<AppRoute>
     with CoordinatorNavigatorObserver {
-  CoordinatorWithObservers({this.customObservers = const []});
+  CoordinatorWithObservers({this.customObservers = kEmptyObserverList});
 
-  final List<NavigatorObserver> customObservers;
+  final NavigatorObserverListGetter customObservers;
 
   @override
-  List<NavigatorObserver> get observers => customObservers;
+  List<NavigatorObserver> get observers => customObservers();
 
   @override
   AppRoute parseRouteFromUri(Uri uri) {
@@ -160,7 +160,7 @@ void main() {
     ) async {
       final coordinatorObserver = TrackingNavigatorObserver();
       final coordinator = CoordinatorWithObservers(
-        customObservers: [coordinatorObserver],
+        customObservers: () => [coordinatorObserver],
       );
 
       await tester.pumpWidget(
@@ -183,7 +183,7 @@ void main() {
         final coordinatorObserver = TrackingNavigatorObserver();
         final stackObserver = TrackingNavigatorObserver();
         final coordinator = CoordinatorWithObservers(
-          customObservers: [coordinatorObserver],
+          customObservers: () => [coordinatorObserver],
         );
 
         // Create a custom NavigationStack with its own observer
@@ -222,7 +222,7 @@ void main() {
       final observer1 = TrackingNavigatorObserver();
       final observer2 = TrackingNavigatorObserver();
       final coordinator = CoordinatorWithObservers(
-        customObservers: [observer1, observer2],
+        customObservers: () => [observer1, observer2],
       );
 
       await tester.pumpWidget(
@@ -246,7 +246,9 @@ void main() {
 
     testWidgets('observers track push operations', (tester) async {
       final observer = TrackingNavigatorObserver();
-      final coordinator = CoordinatorWithObservers(customObservers: [observer]);
+      final coordinator = CoordinatorWithObservers(
+        customObservers: () => [observer],
+      );
 
       await tester.pumpWidget(
         MaterialApp.router(
@@ -270,7 +272,9 @@ void main() {
 
     testWidgets('observers track pop operations', (tester) async {
       final observer = TrackingNavigatorObserver();
-      final coordinator = CoordinatorWithObservers(customObservers: [observer]);
+      final coordinator = CoordinatorWithObservers(
+        customObservers: () => [observer],
+      );
 
       await tester.pumpWidget(
         MaterialApp.router(
@@ -297,7 +301,9 @@ void main() {
 
     testWidgets('observers work with RouteGuard', (tester) async {
       final observer = TrackingNavigatorObserver();
-      final coordinator = CoordinatorWithObservers(customObservers: [observer]);
+      final coordinator = CoordinatorWithObservers(
+        customObservers: () => [observer],
+      );
 
       await tester.pumpWidget(
         MaterialApp.router(
@@ -324,7 +330,7 @@ void main() {
     });
 
     testWidgets('empty observers list works correctly', (tester) async {
-      final coordinator = CoordinatorWithObservers(customObservers: []);
+      final coordinator = CoordinatorWithObservers();
 
       await tester.pumpWidget(
         MaterialApp.router(
@@ -351,7 +357,7 @@ void main() {
     ) async {
       final coordinatorObserver = TrackingNavigatorObserver();
       final coordinator = CoordinatorWithObservers(
-        customObservers: [coordinatorObserver],
+        customObservers: () => [coordinatorObserver],
       );
 
       await tester.pumpWidget(
@@ -408,7 +414,7 @@ void main() {
     testWidgets('observers update when coordinator changes', (tester) async {
       final observer1 = TrackingNavigatorObserver();
       final coordinator1 = CoordinatorWithObservers(
-        customObservers: [observer1],
+        customObservers: () => [observer1],
       );
 
       // Start with coordinator1
@@ -428,6 +434,8 @@ void main() {
         ),
       );
 
+      final initialEventsCount = observer1.events.length;
+
       coordinator1.root.push(HomeRoute());
       await tester.pumpAndSettle();
       coordinator1.root.push(SettingsRoute());
@@ -435,7 +443,7 @@ void main() {
       coordinator1.root.pop();
       await tester.pumpAndSettle();
 
-      expect(observer1.events.length, 3);
+      expect(observer1.events.length - initialEventsCount, 3);
     });
 
     testWidgets('observers update when local observers list changes', (
@@ -525,7 +533,9 @@ void main() {
   group('Observer Lifecycle with Complex Navigation', () {
     testWidgets('observers track multiple push/pop operations', (tester) async {
       final observer = TrackingNavigatorObserver();
-      final coordinator = CoordinatorWithObservers(customObservers: [observer]);
+      final coordinator = CoordinatorWithObservers(
+        customObservers: () => [observer],
+      );
 
       await tester.pumpWidget(
         MaterialApp.router(
@@ -565,7 +575,9 @@ void main() {
 
     testWidgets('observers track navigation with replace', (tester) async {
       final observer = TrackingNavigatorObserver();
-      final coordinator = CoordinatorWithObservers(customObservers: [observer]);
+      final coordinator = CoordinatorWithObservers(
+        customObservers: () => [observer],
+      );
 
       await tester.pumpWidget(
         MaterialApp.router(
@@ -591,7 +603,9 @@ void main() {
       tester,
     ) async {
       final observer = TrackingNavigatorObserver();
-      final coordinator = CoordinatorWithObservers(customObservers: [observer]);
+      final coordinator = CoordinatorWithObservers(
+        customObservers: () => [observer],
+      );
 
       await tester.pumpWidget(
         MaterialApp.router(
@@ -621,7 +635,9 @@ void main() {
   group('Observer Edge Cases', () {
     testWidgets('observers handle rapid navigation changes', (tester) async {
       final observer = TrackingNavigatorObserver();
-      final coordinator = CoordinatorWithObservers(customObservers: [observer]);
+      final coordinator = CoordinatorWithObservers(
+        customObservers: () => [observer],
+      );
 
       await tester.pumpWidget(
         MaterialApp.router(
@@ -651,7 +667,9 @@ void main() {
 
     testWidgets('observers work with nested navigation', (tester) async {
       final observer = TrackingNavigatorObserver();
-      final coordinator = CoordinatorWithObservers(customObservers: [observer]);
+      final coordinator = CoordinatorWithObservers(
+        customObservers: () => [observer],
+      );
 
       await tester.pumpWidget(
         MaterialApp.router(

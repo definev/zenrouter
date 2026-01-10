@@ -141,17 +141,20 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     }
     defineLayout();
     defineConverter();
-    routerDelegate.setInitialRoutePath(initialRoutePath);
+    scheduleMicrotask(
+      () => routerDelegate.setInitialRoutePath(initialRoutePath),
+    );
   }
 
   // coverage:ignore-start
   @override
   void dispose() {
-    super.dispose();
+    routerDelegate.dispose();
     for (final path in paths) {
       path.removeListener(notifyListeners);
     }
     root.dispose();
+    super.dispose();
   }
   // coverage:ignore-end
 

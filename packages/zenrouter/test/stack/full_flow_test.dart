@@ -615,16 +615,20 @@ class FourthTab extends AppRoute with RouteRedirect<AppRoute> {
 void main() {
   group('Full Flow Widget Tests - Coordinator', () {
     group('Basic Information', () {
+      late TestCoordinator coordinator;
+
+      setUp(() async {
+        coordinator = TestCoordinator();
+        await Future.delayed(Duration.zero);
+      });
+
       test('activeLayout returns null when no layout is active', () async {
-        final coordinator = TestCoordinator();
         await coordinator.replace(HomeRoute());
 
         expect(coordinator.activeLayout, isNull);
       });
 
       test('activeLayout returns the deepest active layout', () async {
-        final coordinator = TestCoordinator();
-
         // Push a route with ShellRoute layout
         await coordinator.replace(ShellChildRoute(id: 'test'));
 
@@ -634,8 +638,6 @@ void main() {
       });
 
       test('activeLayout returns deepest layout in nested hierarchy', () async {
-        final coordinator = TestCoordinator();
-
         // Push a route with ProfileLayout
         await coordinator.replace(ProfileChildRoute(section: 'edit'));
 
@@ -645,8 +647,6 @@ void main() {
       });
 
       test('activeLayouts returns all active layouts in hierarchy', () async {
-        final coordinator = TestCoordinator();
-
         // Simple route - no layouts
         await coordinator.replace(HomeRoute());
         expect(coordinator.activeLayouts, isEmpty);
@@ -663,15 +663,12 @@ void main() {
       });
 
       test('activePath returns root when no layouts are active', () async {
-        final coordinator = TestCoordinator();
         await coordinator.replace(HomeRoute());
 
         expect(coordinator.activePath, coordinator.root);
       });
 
       test('activePath returns the deepest active path', () async {
-        final coordinator = TestCoordinator();
-
         // Push shell child route
         await coordinator.replace(ShellChildRoute(id: 'test'));
 
@@ -679,8 +676,6 @@ void main() {
       });
 
       test('activeLayoutPaths returns correct path hierarchy', () async {
-        final coordinator = TestCoordinator();
-
         // Simple route - only root
         await coordinator.replace(HomeRoute());
         expect(coordinator.activeLayoutPaths.length, 1);

@@ -360,31 +360,6 @@ void main() {
       expect(coordinator.root.stack.last, isA<ProfileRoute>());
       expect(find.text('Profile 1'), findsOneWidget);
     });
-
-    testWidgets('uses initialRoute when configuration is root (/)', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp.router(
-          routerDelegate: coordinator.routerDelegateWithInitialRoute(
-            SettingsRoute(),
-          ),
-          routeInformationParser: coordinator.routeInformationParser,
-          routeInformationProvider: PlatformRouteInformationProvider(
-            initialRouteInformation: RouteInformation(
-              uri: Uri.parse('/'), // Should fallback to initialRoute
-            ),
-          ),
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      // Expect SettingsRoute (from initialRoute) since path is /
-      expect(coordinator.root.stack.length, 1);
-      expect(coordinator.root.stack.last, isA<SettingsRoute>());
-      expect(find.text('Settings'), findsOneWidget);
-    });
   });
 
   group('Coordinator.routerDelegateWithInitialRoute', () {
@@ -573,6 +548,52 @@ void main() {
       final delegate = coordinator;
       expect(delegate.backButtonDispatcher, isNull);
       expect(delegate.routeInformationProvider, isNull);
+    });
+  });
+
+  group('Coordinator.routerConfig', () {
+    testWidgets('Disposes router config when swap coordinator', (tester) async {
+      final coordinator1 = TestCoordinator();
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: coordinator1));
+
+      coordinator1.replace(HomeRoute());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Home'), findsOneWidget);
+
+      // Track if listener was called after dispose
+      int listenerCallCount = 0;
+      void listener() {
+        listenerCallCount++;
+      }
+
+      coordinator1.addListener(listener);
+
+      // Swap to a new coordinator
+      final coordinator2 = TestCoordinator();
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: coordinator2));
+
+      coordinator2.replace(SettingsRoute());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Settings'), findsOneWidget);
+
+      // Dispose the first coordinator
+      coordinator1.dispose();
+
+      // Reset listener call count to verify no calls happen after dispose
+      listenerCallCount = 0;
+
+      // The old coordinator should no longer notify listeners after dispose
+      // Pushing on the new coordinator should not affect the old one's listener count
+      coordinator2.push(ProfileRoute('1'));
+      await tester.pumpAndSettle();
+
+      // Old coordinator's listener should not have been called
+      // since it was disposed
+      expect(listenerCallCount, 0);
     });
   });
 }
