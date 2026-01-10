@@ -30,12 +30,11 @@ class CoordinatorRouteParser extends RouteInformationParser<Uri> {
 /// Manages the navigator stack and handles system navigation events.
 class CoordinatorRouterDelegate extends RouterDelegate<Uri>
     with ChangeNotifier, PopNavigatorRouterDelegateMixin<Uri> {
-  CoordinatorRouterDelegate({required this.coordinator, this.initialRoute}) {
+  CoordinatorRouterDelegate({required this.coordinator}) {
     coordinator.addListener(notifyListeners);
   }
 
   final Coordinator coordinator;
-  final RouteUnique? initialRoute;
 
   @override
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -57,22 +56,6 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
       restorationId: coordinatorRestorationId,
       child: coordinator.layoutBuilder(context),
     );
-  }
-
-  /// Handles the initial route path.
-  ///
-  /// This method is called by Flutter's Router when the app is first loaded.
-  ///
-  /// If the initial route is not null, it will be recovered using [Coordinator.recover].
-  /// Otherwise, the route will be parsed from the URI and recovered.
-  @override
-  Future<void> setInitialRoutePath(Uri configuration) async {
-    if (initialRoute != null &&
-        (configuration.path == '/' || configuration.path == '')) {
-      setNewRoutePath(initialRoute!.toUri());
-    } else {
-      setNewRoutePath(configuration);
-    }
   }
 
   /// Handles browser navigation events (back/forward buttons, URL changes).

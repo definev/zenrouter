@@ -135,7 +135,7 @@ enum DefaultTransitionStrategy {
 abstract class Coordinator<T extends RouteUnique> extends Equatable
     with ChangeNotifier
     implements RouterConfig<Uri> {
-  Coordinator() {
+  Coordinator({this.initialRoutePath}) {
     for (final path in paths) {
       path.addListener(notifyListeners);
     }
@@ -143,16 +143,15 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     defineConverter();
   }
 
-  // coverage:ignore-start
   @override
   void dispose() {
-    super.dispose();
+    routerDelegate.dispose();
     for (final path in paths) {
       path.removeListener(notifyListeners);
     }
     root.dispose();
+    super.dispose();
   }
-  // coverage:ignore-end
 
   /// The root (primary) navigation path.
   ///
@@ -208,7 +207,15 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     return '${layoutRestorationId}_$routeRestorationId';
   }
 
+  /// The restoration ID for the root path.
+  ///
+  /// This ID is used to restore the root path when the app is re-launched.
   String get rootRestorationId => root.debugLabel ?? 'root';
+
+  /// The initial route path for this coordinator.
+  ///
+  /// This path is used to set the initial route when the app is launched.
+  final Uri? initialRoutePath;
 
   /// The transition strategy for this coordinator.
   ///
@@ -671,6 +678,11 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   /// Marks the coordinator as needing a rebuild.
   void markNeedRebuild() => notifyListeners();
 
+  /// The router delegate for [Router] of this coordinator
+  @override
+  late final CoordinatorRouterDelegate routerDelegate =
+      CoordinatorRouterDelegate(coordinator: this);
+
   /// The route information parser for [Router]
   @override
   late final CoordinatorRouteParser routeInformationParser =
@@ -678,39 +690,23 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
 
   /// The [BackButtonDispatcher] that is used to configure the [Router].
   @override
-  BackButtonDispatcher? get backButtonDispatcher => null;
+  final BackButtonDispatcher? backButtonDispatcher = null;
 
   /// The [RouteInformationProvider] that is used to configure the [Router].
   @override
-  RouteInformationProvider? get routeInformationProvider => null;
-
-  CoordinatorRouterDelegate? _routerDelegate;
-
-  /// The router delegate for [Router] of this coordinator
-  @override
-  CoordinatorRouterDelegate get routerDelegate =>
-      _routerDelegate ??= CoordinatorRouterDelegate(coordinator: this);
+  late final RouteInformationProvider routeInformationProvider =
+      PlatformRouteInformationProvider(
+        initialRouteInformation: RouteInformation(
+          uri: initialRoutePath ?? Uri.parse('/'),
+        ),
+      );
 
   /// Creates a new router delegate with the given initial route.
   @Deprecated(
-    'This method is deprecated. Use `routerDelegate` property instead. Will be removed in v1.0.0',
+    'This method is deprecated. Use `routerDelegate` property instead. You can override `initialRoutePath` property to set initial route. Will be removed in v1.0.0',
   )
-  CoordinatorRouterDelegate routerDelegateWithInitialRoute(T initialRoute) {
-    if (_routerDelegate case CoordinatorRouterDelegate delegate) {
-      if (delegate.initialRoute != initialRoute) {
-        delegate.dispose();
-        _routerDelegate = CoordinatorRouterDelegate(
-          coordinator: this,
-          initialRoute: initialRoute,
-        );
-      }
-      return _routerDelegate!;
-    }
-    return _routerDelegate ??= CoordinatorRouterDelegate(
-      coordinator: this,
-      initialRoute: initialRoute,
-    );
-  }
+  CoordinatorRouterDelegate routerDelegateWithInitialRoute(T initialRoute) =>
+      routerDelegate;
 
   /// Access to the navigator state.
   NavigatorState get navigator => routerDelegate.navigatorKey.currentState!;

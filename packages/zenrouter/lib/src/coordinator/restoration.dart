@@ -233,6 +233,7 @@ class _CoordinatorRestorableState extends State<CoordinatorRestorable>
 
   void _restoreCoordinator() {
     final raw = _restorable.value;
+
     for (final MapEntry(:key, :value) in raw.entries) {
       final path = widget.coordinator.paths.firstWhereOrNull(
         (p) => p.debugLabel == key,

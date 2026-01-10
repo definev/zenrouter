@@ -45,6 +45,7 @@ class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug {
       [] || ['home'] => HomeTab(),
       ['search'] => SearchTab(),
       ['profile'] => ProfileTab(),
+      ['settings'] => SettingsRoute(),
       _ => HomeTab(),
     };
   }
@@ -89,6 +90,21 @@ class TabLayout extends AppRoute with RouteLayout<AppRoute> {
 // ============================================================================
 // Tab Routes
 // ============================================================================
+
+class SettingsRoute extends AppRoute {
+  @override
+  Uri toUri() => Uri.parse('/settings');
+
+  @override
+  Widget build(AppCoordinator coordinator, BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Settings')),
+      body: const Center(
+        child: Text('Settings', style: TextStyle(fontSize: 24)),
+      ),
+    );
+  }
+}
 
 class HomeTab extends AppRoute {
   @override

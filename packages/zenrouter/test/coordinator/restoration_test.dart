@@ -206,6 +206,8 @@ class SearchTab extends AppRoute {
 }
 
 class TestCoordinator extends Coordinator<AppRoute> {
+  TestCoordinator({super.initialRoutePath});
+
   late final tabStack = IndexedStackPath.createWith(
     [HomeTab(), SearchTab()],
     coordinator: this,
@@ -842,6 +844,167 @@ void main() {
       await tester.pump();
 
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('CoordinatorRestorable with asRouterConfig', () {
+    testWidgets(
+      'sets initial route path when useAsRouterConfig is true and no active route',
+      (tester) async {
+        final coordinator = TestCoordinator();
+        final config = coordinator;
+
+        await tester.pumpWidget(MaterialApp.router(routerConfig: config));
+
+        await tester.pumpAndSettle();
+
+        // Should have initial route set
+        expect(coordinator.root.stack.length, equals(1));
+        expect(coordinator.root.stack[0], isA<HomeRoute>());
+      },
+    );
+
+    testWidgets('respects custom initialRoutePath when using asRouterConfig', (
+      tester,
+    ) async {
+      final coordinator = TestCoordinator(
+        initialRoutePath: Uri.parse('/settings'),
+      );
+      final config = coordinator;
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: config));
+
+      await tester.pumpAndSettle();
+
+      // Should have custom initial route set
+      expect(coordinator.root.stack.length, equals(1));
+      expect(coordinator.root.stack[0], isA<SettingsRoute>());
+    });
+
+    testWidgets('navigation push works after asRouterConfig initialization', (
+      tester,
+    ) async {
+      final coordinator = TestCoordinator();
+      final config = coordinator;
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: config));
+      await tester.pumpAndSettle();
+
+      // Reset to known state
+      coordinator.replace(HomeRoute());
+      await tester.pumpAndSettle();
+
+      // Push a route
+      coordinator.push(SettingsRoute());
+      await tester.pumpAndSettle();
+
+      expect(coordinator.root.stack.length, equals(2));
+      expect(coordinator.root.stack[1], isA<SettingsRoute>());
+      expect(find.text('Settings'), findsOneWidget);
+    });
+
+    testWidgets('navigation pop works with asRouterConfig', (tester) async {
+      final coordinator = TestCoordinator();
+      final config = coordinator;
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: config));
+      await tester.pumpAndSettle();
+
+      // Reset to known state and push routes
+      coordinator.replace(HomeRoute());
+      coordinator.push(SettingsRoute());
+      coordinator.push(ProfileRoute('123'));
+      await tester.pumpAndSettle();
+
+      expect(coordinator.root.stack.length, equals(3));
+      expect(find.text('Profile 123'), findsOneWidget);
+
+      // Pop
+      coordinator.pop();
+      await tester.pumpAndSettle();
+
+      expect(coordinator.root.stack.length, equals(2));
+      expect(find.text('Settings'), findsOneWidget);
+    });
+
+    testWidgets('tab navigation works with asRouterConfig', (tester) async {
+      final coordinator = TestCoordinator();
+      final config = coordinator;
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: config));
+      await tester.pumpAndSettle();
+
+      // Navigate to tab layout
+      await coordinator.recover(HomeTab());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Home Tab'), findsOneWidget);
+
+      // Switch tabs
+      coordinator.tabStack.activateRoute(SearchTab());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Search Tab'), findsOneWidget);
+      expect(coordinator.tabStack.activeIndex, equals(1));
+    });
+
+    testWidgets('setNewRoutePath works with asRouterConfig', (tester) async {
+      final coordinator = TestCoordinator();
+      final config = coordinator;
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: config));
+      await tester.pumpAndSettle();
+
+      // Reset to known state
+      coordinator.replace(HomeRoute());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Home'), findsOneWidget);
+
+      // Simulate URL change
+      await coordinator.routerDelegate.setNewRoutePath(Uri.parse('/settings'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Settings'), findsOneWidget);
+      expect(coordinator.root.stack.length, equals(2));
+    });
+
+    testWidgets('URL updates correctly with asRouterConfig', (tester) async {
+      final coordinator = TestCoordinator();
+      final config = coordinator;
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: config));
+      await tester.pumpAndSettle();
+
+      expect(coordinator.currentUri.toString(), '/');
+
+      coordinator.push(ProfileRoute('user456'));
+      await tester.pumpAndSettle();
+
+      expect(coordinator.currentUri.toString(), '/profile/user456');
+    });
+
+    testWidgets('replace navigation works with asRouterConfig', (tester) async {
+      final coordinator = TestCoordinator();
+      final config = coordinator;
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: config));
+      await tester.pumpAndSettle();
+
+      // Reset to known state and push some routes
+      coordinator.replace(HomeRoute());
+      coordinator.push(SettingsRoute());
+      coordinator.push(ProfileRoute('123'));
+      await tester.pumpAndSettle();
+
+      expect(coordinator.root.stack.length, equals(3));
+
+      // Replace clears the stack
+      coordinator.replace(HomeRoute());
+      await tester.pumpAndSettle();
+
+      expect(coordinator.root.stack.length, equals(1));
+      expect(coordinator.root.stack[0], isA<HomeRoute>());
     });
   });
 }
