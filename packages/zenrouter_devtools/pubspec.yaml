@@ -17,6 +17,7 @@ topics:
 resolution: workspace
 
 dependencies:
+  cupertino_icons: ^1.0.8
   flutter:
     sdk: flutter
   zenrouter: ^0.4.14
