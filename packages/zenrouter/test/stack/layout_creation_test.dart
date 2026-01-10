@@ -223,43 +223,38 @@ class TestCoordinator extends Coordinator<TestRoute> {
   }
 }
 
-Future<TestCoordinator> createCoordinator() async {
-  final coordinator = TestCoordinator();
-  await Future.delayed(Duration(milliseconds: 100));
-  return coordinator;
-}
-
 // ============================================================================
 // Tests
 // ============================================================================
 
 void main() {
-  late TestCoordinator coordinator;
-  setUp(() async {
+  setUp(() {
     LayoutCreationTracker.reset();
-    coordinator = await createCoordinator();
   });
 
   group('Layout Creation - Initial Creation', () {
-    test('HomeLayout is created only once on first navigation', () async {
+    test('HomeLayout is created once on first navigation', () async {
+      final coordinator = TestCoordinator();
+
       // Account for any layouts created during coordinator initialization
       final initialHomeCount = LayoutCreationTracker.getCount(TestHomeLayout);
 
       // Navigate to a route that requires HomeLayout
       coordinator.push(TestProfileDetail());
-      await Future.delayed(Duration(milliseconds: 500));
+      await Future.delayed(Duration.zero);
 
       final finalHomeCount = LayoutCreationTracker.getCount(TestHomeLayout);
 
       expect(
         finalHomeCount - initialHomeCount,
-        0,
-        reason:
-            'TestHomeLayout doesn\'t get created on first navigation since it already exists in the stack',
+        1,
+        reason: 'HomeLayout should be created exactly once on first navigation',
       );
     });
 
     test('SettingsLayout is created once on first navigation', () async {
+      final coordinator = TestCoordinator();
+
       final initialCount = LayoutCreationTracker.getCount(TestSettingsLayout);
 
       coordinator.push(TestSettingsRoute());
@@ -273,6 +268,8 @@ void main() {
     });
 
     test('Nested layouts are created on navigation path setup', () async {
+      final coordinator = TestCoordinator();
+
       // FeedTabLayout is created during IndexedStackPath initialization
       final initialFeedTabCount = LayoutCreationTracker.getCount(
         TestFeedTabLayout,
@@ -312,6 +309,8 @@ void main() {
     test(
       'Layout is not recreated when pushing multiple routes within it',
       () async {
+        final coordinator = TestCoordinator();
+
         // Navigate to first feed route
         coordinator.push(TestFeedRoute(id: '1'));
         await Future.delayed(Duration.zero);
@@ -348,6 +347,8 @@ void main() {
 
   group('Layout Creation - Re-use Within Session', () {
     test('Layout is reused when navigating within tabs', () async {
+      final coordinator = TestCoordinator();
+
       // Navigate to feed
       coordinator.push(TestFeedRoute(id: '1'));
       await Future.delayed(Duration.zero);
@@ -376,6 +377,8 @@ void main() {
     });
 
     test('Layout count increases only when navigating to new layout type', () async {
+      final coordinator = TestCoordinator();
+
       final initialSettingsCount = LayoutCreationTracker.getCount(
         TestSettingsLayout,
       );
@@ -419,6 +422,8 @@ void main() {
     test(
       'Layout is recreated after being completely popped from root stack',
       () async {
+        final coordinator = TestCoordinator();
+
         // Navigate to settings
         coordinator.push(TestSettingsLayout());
         await Future.delayed(Duration.zero);
@@ -452,6 +457,8 @@ void main() {
     );
 
     test('Replace creates new layout instances', () async {
+      final coordinator = TestCoordinator();
+
       // Navigate deep into nested layouts
       coordinator.push(TestFeedRoute(id: '1'));
       await Future.delayed(Duration.zero);
@@ -490,6 +497,8 @@ void main() {
 
   group('Layout Creation - Replace Operation', () {
     test('replace() creates new layout instances', () async {
+      final coordinator = TestCoordinator();
+
       // Navigate to feed
       coordinator.push(TestFeedRoute(id: '1'));
       await Future.delayed(Duration.zero);
@@ -519,6 +528,8 @@ void main() {
     });
 
     test('replace() resets all paths', () async {
+      final coordinator = TestCoordinator();
+
       // Build up a deep stack
       coordinator.push(TestFeedRoute(id: '1'));
       await Future.delayed(Duration.zero);
@@ -540,6 +551,7 @@ void main() {
 
   group('Layout Creation - Summary', () {
     test('Complete navigation flow shows expected behavior', () async {
+      final coordinator = TestCoordinator();
       LayoutCreationTracker.printCounts();
 
       print('\n--- Initial state (after coordinator creation) ---');

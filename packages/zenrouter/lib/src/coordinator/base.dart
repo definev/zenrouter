@@ -135,7 +135,7 @@ enum DefaultTransitionStrategy {
 abstract class Coordinator<T extends RouteUnique> extends Equatable
     with ChangeNotifier
     implements RouterConfig<Uri> {
-  Coordinator() {
+  Coordinator({this.initialRoutePath}) {
     for (final path in paths) {
       path.addListener(notifyListeners);
     }
@@ -217,7 +217,7 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   /// The initial route path for this coordinator.
   ///
   /// This path is used to set the initial route when the app is launched.
-  Uri get initialRoutePath => Uri.parse('/');
+  final Uri? initialRoutePath;
 
   /// The transition strategy for this coordinator.
   ///
@@ -680,6 +680,11 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   /// Marks the coordinator as needing a rebuild.
   void markNeedRebuild() => notifyListeners();
 
+  /// The router delegate for [Router] of this coordinator
+  @override
+  late final CoordinatorRouterDelegate routerDelegate =
+      CoordinatorRouterDelegate(coordinator: this);
+
   /// The route information parser for [Router]
   @override
   late final CoordinatorRouteParser routeInformationParser =
@@ -687,16 +692,16 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
 
   /// The [BackButtonDispatcher] that is used to configure the [Router].
   @override
-  BackButtonDispatcher? get backButtonDispatcher => null;
+  final BackButtonDispatcher? backButtonDispatcher = null;
 
   /// The [RouteInformationProvider] that is used to configure the [Router].
   @override
-  RouteInformationProvider? get routeInformationProvider => null;
-
-  /// The router delegate for [Router] of this coordinator
-  @override
-  late final CoordinatorRouterDelegate routerDelegate =
-      CoordinatorRouterDelegate(coordinator: this);
+  late final RouteInformationProvider routeInformationProvider =
+      PlatformRouteInformationProvider(
+        initialRouteInformation: RouteInformation(
+          uri: initialRoutePath ?? Uri.parse('/'),
+        ),
+      );
 
   /// Creates a new router delegate with the given initial route.
   @Deprecated(

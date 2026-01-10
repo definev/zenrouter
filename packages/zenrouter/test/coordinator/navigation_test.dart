@@ -168,12 +168,8 @@ void main() {
   group('Coordinator.pushOrMoveToTop', () {
     late TestCoordinator coordinator;
 
-    setUp(() async {
+    setUp(() {
       coordinator = TestCoordinator();
-      await Future.delayed(Duration.zero);
-      for (final path in coordinator.paths) {
-        path.reset();
-      }
     });
 
     test('pushes new route to root stack', () async {
@@ -271,12 +267,8 @@ void main() {
   group('Coordinator.push', () {
     late TestCoordinator coordinator;
 
-    setUp(() async {
+    setUp(() {
       coordinator = TestCoordinator();
-      await Future.delayed(Duration.zero);
-      for (final path in coordinator.paths) {
-        path.reset();
-      }
     });
 
     test('pushes new route to stack', () async {
@@ -320,12 +312,8 @@ void main() {
   group('Coordinator.replace', () {
     late TestCoordinator coordinator;
 
-    setUp(() async {
+    setUp(() {
       coordinator = TestCoordinator();
-      await Future.delayed(Duration.zero);
-      for (final path in coordinator.paths) {
-        path.reset();
-      }
     });
 
     test('replaces entire stack with new route', () async {
@@ -368,12 +356,8 @@ void main() {
   group('Coordinator.tryPop', () {
     late TestCoordinator coordinator;
 
-    setUp(() async {
+    setUp(() {
       coordinator = TestCoordinator();
-      await Future.delayed(Duration.zero);
-      for (final path in coordinator.paths) {
-        path.reset();
-      }
     });
 
     test('pops correctly when RouteGuard allows pop', () async {

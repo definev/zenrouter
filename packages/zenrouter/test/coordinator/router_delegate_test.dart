@@ -369,17 +369,11 @@ void main() {
       coordinator = TestCoordinator();
     });
 
-    test('reuses delegate when initial route is the same', () {
-      final initialRoute = SettingsRoute();
-      final delegate1 = coordinator.routerDelegateWithInitialRoute(
-        initialRoute,
-      );
-      final delegate2 = coordinator.routerDelegateWithInitialRoute(
+    test('no effected since it is not used', () {
+      final delegate = coordinator.routerDelegateWithInitialRoute(
         SettingsRoute(),
       );
-
-      // Should return the same delegate instance
-      expect(delegate1, same(delegate2));
+      expect(delegate, same(coordinator.routerDelegate));
     });
   });
 
@@ -542,58 +536,230 @@ void main() {
       expect(coordinator.root.stack.length, 3);
       expect(find.text('Profile second'), findsOneWidget);
     });
-
-    test('Check backButtonDispatcher and routeInformationProvider', () {
-      final coordinator = TestCoordinator();
-      final delegate = coordinator;
-      expect(delegate.backButtonDispatcher, isNull);
-      expect(delegate.routeInformationProvider, isNull);
-    });
   });
 
-  group('Coordinator.routerConfig', () {
-    testWidgets('Disposes router config when swap coordinator', (tester) async {
-      final coordinator1 = TestCoordinator();
+  group('Coordinator.dispose', () {
+    late TestCoordinator coordinator;
 
-      await tester.pumpWidget(MaterialApp.router(routerConfig: coordinator1));
+    setUp(() {
+      coordinator = TestCoordinator();
+    });
 
-      coordinator1.replace(HomeRoute());
+    test('removes listeners from all paths', () async {
+      // Track coordinator notifications
+      int coordinatorNotifyCount = 0;
+      coordinator.addListener(() => coordinatorNotifyCount++);
+
+      // Trigger a notification via replace (await to ensure microtasks complete)
+      await coordinator.replace(HomeRoute());
+
+      // Coordinator should have been notified (replace triggers notifyListeners)
+      final countBefore = coordinatorNotifyCount;
+      expect(countBefore, greaterThan(0));
+
+      // Dispose coordinator
+      coordinator.dispose();
+
+      // After dispose, the root path should still exist
+      expect(coordinator.root.stack.length, greaterThan(0));
+    });
+
+    test('disposes routerDelegate', () async {
+      // Get reference to routerDelegate before dispose
+      final routerDelegate = coordinator.routerDelegate;
+
+      // Dispose coordinator (which should dispose routerDelegate)
+      coordinator.dispose();
+
+      // After dispose, routerDelegate should throw when adding listeners
+      expect(
+        () => routerDelegate.addListener(() {}),
+        throwsA(isA<FlutterError>()),
+      );
+    });
+
+    test('disposes root NavigationPath', () async {
+      // Get the root path
+      final root = coordinator.root;
+
+      // Verify root has routes
+      await coordinator.replace(HomeRoute());
+      expect(root.stack, isNotEmpty);
+
+      // Dispose coordinator
+      coordinator.dispose();
+
+      // After dispose, the root path should still exist
+      // (dispose doesn't delete the path, just removes listeners)
+      expect(root, isNotNull);
+    });
+
+    test('coordinator cannot add listeners after dispose', () {
+      coordinator.dispose();
+
+      // Attempting to add a listener after dispose should throw
+      expect(
+        () => coordinator.addListener(() {}),
+        throwsA(isA<FlutterError>()),
+      );
+    });
+
+    test('coordinator cannot notify listeners after dispose', () {
+      coordinator.dispose();
+
+      // Attempting to notify after dispose should throw
+      expect(() => coordinator.notifyListeners(), throwsA(isA<FlutterError>()));
+    });
+
+    testWidgets('disposed coordinator cleans up widget tree properly', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+
+      coordinator.replace(HomeRoute());
       await tester.pumpAndSettle();
 
       expect(find.text('Home'), findsOneWidget);
 
-      // Track if listener was called after dispose
-      int listenerCallCount = 0;
-      void listener() {
-        listenerCallCount++;
-      }
+      // Dispose coordinator
+      coordinator.dispose();
 
-      coordinator1.addListener(listener);
+      // Note: In a real app, disposing the coordinator while it's still
+      // mounted would cause issues - this test verifies the disposal itself works
+    });
 
-      // Swap to a new coordinator
-      final coordinator2 = TestCoordinator();
+    test('root path is disposed after coordinator dispose', () {
+      final root = coordinator.root;
 
-      await tester.pumpWidget(MaterialApp.router(routerConfig: coordinator2));
+      // Dispose coordinator (which should dispose root)
+      coordinator.dispose();
 
-      coordinator2.replace(SettingsRoute());
-      await tester.pumpAndSettle();
+      // Verify root path is disposed by checking if adding listeners throws
+      expect(() => root.addListener(() {}), throwsA(isA<FlutterError>()));
+    });
 
-      expect(find.text('Settings'), findsOneWidget);
+    test('all paths have listeners removed', () async {
+      // Replace to set initial route
+      await coordinator.replace(HomeRoute());
 
-      // Dispose the first coordinator
-      coordinator1.dispose();
+      // Add our own listener to coordinator
+      int coordinatorNotifyCount = 0;
+      coordinator.addListener(() => coordinatorNotifyCount++);
 
-      // Reset listener call count to verify no calls happen after dispose
-      listenerCallCount = 0;
+      final countBefore = coordinatorNotifyCount;
 
-      // The old coordinator should no longer notify listeners after dispose
-      // Pushing on the new coordinator should not affect the old one's listener count
-      coordinator2.push(ProfileRoute('1'));
-      await tester.pumpAndSettle();
+      // pushOrMoveToTop triggers synchronous notification via notifyListeners
+      await coordinator.root.pushOrMoveToTop(SettingsRoute());
 
-      // Old coordinator's listener should not have been called
-      // since it was disposed
-      expect(listenerCallCount, 0);
+      // Verify listener was called
+      expect(coordinatorNotifyCount, greaterThan(countBefore));
+    });
+
+    test('dispose removes coordinator listener from paths', () async {
+      // Before dispose, path notifications should trigger coordinator notifications
+      int coordinatorNotifyCount = 0;
+      coordinator.addListener(() => coordinatorNotifyCount++);
+
+      await coordinator.replace(HomeRoute());
+      final countAfterReplace = coordinatorNotifyCount;
+      expect(countAfterReplace, greaterThan(0));
+
+      // Dispose removes coordinators listeners from paths
+      coordinator.dispose();
+
+      // Accessing disposed coordinator should throw
+      expect(
+        () => coordinator.addListener(() {}),
+        throwsA(isA<FlutterError>()),
+      );
+    });
+  });
+
+  group('CoordinatorRouterDelegate.dispose', () {
+    late TestCoordinator coordinator;
+
+    setUp(() {
+      coordinator = TestCoordinator();
+    });
+
+    test('removes listener from coordinator', () async {
+      final routerDelegate = coordinator.routerDelegate;
+
+      // Add our own listener to coordinator to track notification count
+      int coordinatorNotifyCount = 0;
+      coordinator.addListener(() => coordinatorNotifyCount++);
+
+      // Replace to trigger notification
+      await coordinator.replace(HomeRoute());
+      final countAfterReplace = coordinatorNotifyCount;
+      expect(countAfterReplace, greaterThan(0));
+
+      // Dispose routerDelegate directly
+      routerDelegate.dispose();
+
+      // Replace again - coordinator still works
+      await coordinator.replace(SettingsRoute());
+
+      // Coordinator still notifies its other listeners
+      expect(coordinatorNotifyCount, greaterThan(countAfterReplace));
+    });
+
+    test('routerDelegate cannot add listeners after dispose', () {
+      final routerDelegate = coordinator.routerDelegate;
+      routerDelegate.dispose();
+
+      // Attempting to add a listener after dispose should throw
+      expect(
+        () => routerDelegate.addListener(() {}),
+        throwsA(isA<FlutterError>()),
+      );
+    });
+
+    test('routerDelegate cannot notify listeners after dispose', () {
+      final routerDelegate = coordinator.routerDelegate;
+      routerDelegate.dispose();
+
+      // Attempting to notify after dispose should throw
+      expect(
+        () => routerDelegate.notifyListeners(),
+        throwsA(isA<FlutterError>()),
+      );
+    });
+
+    test(
+      'disposing coordinator disposes routerDelegate (idempotent dispose)',
+      () {
+        final routerDelegate = coordinator.routerDelegate;
+
+        // Dispose coordinator (which internally disposes routerDelegate)
+        coordinator.dispose();
+
+        // Verify routerDelegate is disposed by checking if adding listeners throws
+        expect(
+          () => routerDelegate.addListener(() {}),
+          throwsA(isA<FlutterError>()),
+        );
+      },
+    );
+
+    test('routerDelegate can be disposed independently', () async {
+      final routerDelegate = coordinator.routerDelegate;
+
+      // Dispose only the routerDelegate
+      routerDelegate.dispose();
+
+      // Coordinator should still work for adding listeners
+      int count = 0;
+      coordinator.addListener(() => count++);
+
+      // Verify coordinator is still functional
+      await coordinator.replace(HomeRoute());
+      expect(count, greaterThan(0));
     });
   });
 }

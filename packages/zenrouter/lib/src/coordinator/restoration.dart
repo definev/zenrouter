@@ -199,8 +199,6 @@ class CoordinatorRestorable extends StatefulWidget {
 
 class _CoordinatorRestorableState extends State<CoordinatorRestorable>
     with RestorationMixin {
-  bool _finishInitialRouteFuture = false;
-
   late final _restorable = _CoordinatorRestorable(widget.coordinator);
   late final _activeRoute = ActiveRouteRestorable(
     initialRoute: widget.coordinator.activePath.activeRoute,
@@ -235,16 +233,6 @@ class _CoordinatorRestorableState extends State<CoordinatorRestorable>
 
   void _restoreCoordinator() async {
     final raw = _restorable.value;
-    try {
-      if (_activeRoute.value == null) {
-        await widget.coordinator.routerDelegate.setInitialRoutePath(
-          widget.coordinator.initialRoutePath,
-        );
-      }
-    } finally {
-      _finishInitialRouteFuture = true;
-      setState(() {});
-    }
 
     for (final MapEntry(:key, :value) in raw.entries) {
       final path = widget.coordinator.paths.firstWhereOrNull(
@@ -291,7 +279,6 @@ class _CoordinatorRestorableState extends State<CoordinatorRestorable>
 
   @override
   Widget build(BuildContext context) {
-    if (!_finishInitialRouteFuture) return SizedBox.shrink();
     return widget.child;
   }
 

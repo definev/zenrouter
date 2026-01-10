@@ -327,9 +327,6 @@ void main() {
 
     test('works with coordinator', () async {
       final coordinator = MutatableTestCoordinator();
-      await Future.delayed(Duration.zero);
-      coordinator.root.reset();
-      await Future.delayed(Duration.zero);
       final route = SimpleRoute('1');
 
       coordinator.push(route);
@@ -720,14 +717,6 @@ void main() {
   });
 
   group('StackMutatable - pop()', () {
-    late MutatableTestCoordinator coordinator;
-
-    setUp(() async {
-      coordinator = MutatableTestCoordinator();
-      await Future.delayed(Duration.zero);
-      coordinator.root.reset();
-    });
-
     test('pops the last route from stack', () async {
       final path = NavigationPath<MutatableTestRoute>.create();
       final route1 = SimpleRoute('1');
@@ -810,6 +799,7 @@ void main() {
     });
 
     test('calls popGuardWith when coordinator exists', () async {
+      final coordinator = MutatableTestCoordinator();
       final guardedRoute = CoordinatorGuardedRoute('1', allowPop: true);
 
       coordinator.push(guardedRoute);

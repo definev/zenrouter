@@ -206,6 +206,8 @@ class SearchTab extends AppRoute {
 }
 
 class TestCoordinator extends Coordinator<AppRoute> {
+  TestCoordinator({super.initialRoutePath});
+
   late final tabStack = IndexedStackPath.createWith(
     [HomeTab(), SearchTab()],
     coordinator: this,
@@ -247,36 +249,33 @@ class TestCoordinator extends Coordinator<AppRoute> {
   }
 }
 
-Future<TestCoordinator> createCoordinator() async {
-  final coordinator = TestCoordinator();
-  await Future.delayed(Duration.zero);
-  return coordinator;
-}
-
 // ============================================================================
 // Tests
 // ============================================================================
 
 void main() {
   group('NavigationPath Restoration', () {
+    late TestCoordinator coordinator;
+
+    setUp(() {
+      coordinator = TestCoordinator();
+    });
+
     test('serializes simple route stack correctly', () async {
-      final root = NavigationPath<AppRoute>.create(label: 'root');
       // Build initial stack
-      root.push(HomeRoute());
-      root.push(SettingsRoute());
+      coordinator.root.push(HomeRoute());
+      coordinator.root.push(SettingsRoute());
       await Future.delayed(Duration.zero); // Wait for async operations
 
       // Serialize
-      final serialized = root.serialize();
+      final serialized = coordinator.root.serialize();
 
       expect(serialized, hasLength(2));
       expect(serialized[0], equals('/'));
       expect(serialized[1], equals('/settings'));
     });
 
-    test('deserializes simple route stack correctly', () async {
-      final coordinator = await createCoordinator();
-
+    test('deserializes simple route stack correctly', () {
       // Prepare serialized data
       final serialized = ['/', '/settings'];
 
@@ -292,9 +291,8 @@ void main() {
     });
 
     test('restores navigation stack from serialized data', () async {
-      final coordinator = await createCoordinator();
-
       // Build initial stack
+      coordinator.root.push(HomeRoute());
       coordinator.root.push(SettingsRoute());
       coordinator.root.push(ProfileRoute('123'));
       await Future.delayed(Duration.zero);
@@ -322,10 +320,6 @@ void main() {
     });
 
     test('serializes routes with custom converters', () async {
-      final coordinator = await createCoordinator();
-      coordinator.root.reset();
-      await Future.delayed(Duration.zero);
-
       final bookmark = BookmarkRoute(id: '456', customData: 'test data');
       coordinator.root.push(bookmark);
       await Future.delayed(Duration.zero);
@@ -342,9 +336,7 @@ void main() {
       expect(bookmarkData['value']['customData'], equals('test data'));
     });
 
-    test('deserializes routes with custom converters', () async {
-      final coordinator = await createCoordinator();
-
+    test('deserializes routes with custom converters', () {
       final serialized = [
         {
           'strategy': 'converter',
@@ -366,9 +358,8 @@ void main() {
     });
 
     test('round-trip: serialize then deserialize maintains state', () async {
-      final coordinator = await createCoordinator();
-
       // Build complex stack
+      coordinator.root.push(HomeRoute());
       coordinator.root.push(BookmarkRoute(id: '123', customData: 'data'));
       coordinator.root.push(SettingsRoute());
       await Future.delayed(Duration.zero);
@@ -390,9 +381,7 @@ void main() {
       expect(deserialized[2], isA<SettingsRoute>());
     });
 
-    test('throws error when deserializing undefined layout', () async {
-      final coordinator = await createCoordinator();
-
+    test('throws error when deserializing undefined layout', () {
       final serialized = [
         {'type': 'layout', 'value': 'UndefinedTabLayout'},
       ];
@@ -561,12 +550,13 @@ void main() {
   group('Multi-Path Restoration Integration', () {
     late TestCoordinator coordinator;
 
-    setUp(() async {
-      coordinator = await createCoordinator();
+    setUp(() {
+      coordinator = TestCoordinator();
     });
 
     test('restores complex coordinator state with multiple paths', () async {
       // Setup complex state
+      coordinator.root.push(HomeRoute());
       coordinator.root.push(SettingsRoute());
       coordinator.tabStack.goToIndexed(1);
       await Future.delayed(Duration.zero);
@@ -630,8 +620,6 @@ void main() {
           ),
         ),
       );
-      coordinator1Notified = 0;
-      coordinator2Notified = 0;
 
       // Make a change to coordinator1 - should trigger save
       coordinator1.push(HomeRoute());
@@ -856,6 +844,167 @@ void main() {
       await tester.pump();
 
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('CoordinatorRestorable with asRouterConfig', () {
+    testWidgets(
+      'sets initial route path when useAsRouterConfig is true and no active route',
+      (tester) async {
+        final coordinator = TestCoordinator();
+        final config = coordinator;
+
+        await tester.pumpWidget(MaterialApp.router(routerConfig: config));
+
+        await tester.pumpAndSettle();
+
+        // Should have initial route set
+        expect(coordinator.root.stack.length, equals(1));
+        expect(coordinator.root.stack[0], isA<HomeRoute>());
+      },
+    );
+
+    testWidgets('respects custom initialRoutePath when using asRouterConfig', (
+      tester,
+    ) async {
+      final coordinator = TestCoordinator(
+        initialRoutePath: Uri.parse('/settings'),
+      );
+      final config = coordinator;
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: config));
+
+      await tester.pumpAndSettle();
+
+      // Should have custom initial route set
+      expect(coordinator.root.stack.length, equals(1));
+      expect(coordinator.root.stack[0], isA<SettingsRoute>());
+    });
+
+    testWidgets('navigation push works after asRouterConfig initialization', (
+      tester,
+    ) async {
+      final coordinator = TestCoordinator();
+      final config = coordinator;
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: config));
+      await tester.pumpAndSettle();
+
+      // Reset to known state
+      coordinator.replace(HomeRoute());
+      await tester.pumpAndSettle();
+
+      // Push a route
+      coordinator.push(SettingsRoute());
+      await tester.pumpAndSettle();
+
+      expect(coordinator.root.stack.length, equals(2));
+      expect(coordinator.root.stack[1], isA<SettingsRoute>());
+      expect(find.text('Settings'), findsOneWidget);
+    });
+
+    testWidgets('navigation pop works with asRouterConfig', (tester) async {
+      final coordinator = TestCoordinator();
+      final config = coordinator;
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: config));
+      await tester.pumpAndSettle();
+
+      // Reset to known state and push routes
+      coordinator.replace(HomeRoute());
+      coordinator.push(SettingsRoute());
+      coordinator.push(ProfileRoute('123'));
+      await tester.pumpAndSettle();
+
+      expect(coordinator.root.stack.length, equals(3));
+      expect(find.text('Profile 123'), findsOneWidget);
+
+      // Pop
+      coordinator.pop();
+      await tester.pumpAndSettle();
+
+      expect(coordinator.root.stack.length, equals(2));
+      expect(find.text('Settings'), findsOneWidget);
+    });
+
+    testWidgets('tab navigation works with asRouterConfig', (tester) async {
+      final coordinator = TestCoordinator();
+      final config = coordinator;
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: config));
+      await tester.pumpAndSettle();
+
+      // Navigate to tab layout
+      await coordinator.recover(HomeTab());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Home Tab'), findsOneWidget);
+
+      // Switch tabs
+      coordinator.tabStack.activateRoute(SearchTab());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Search Tab'), findsOneWidget);
+      expect(coordinator.tabStack.activeIndex, equals(1));
+    });
+
+    testWidgets('setNewRoutePath works with asRouterConfig', (tester) async {
+      final coordinator = TestCoordinator();
+      final config = coordinator;
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: config));
+      await tester.pumpAndSettle();
+
+      // Reset to known state
+      coordinator.replace(HomeRoute());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Home'), findsOneWidget);
+
+      // Simulate URL change
+      await coordinator.routerDelegate.setNewRoutePath(Uri.parse('/settings'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Settings'), findsOneWidget);
+      expect(coordinator.root.stack.length, equals(2));
+    });
+
+    testWidgets('URL updates correctly with asRouterConfig', (tester) async {
+      final coordinator = TestCoordinator();
+      final config = coordinator;
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: config));
+      await tester.pumpAndSettle();
+
+      expect(coordinator.currentUri.toString(), '/');
+
+      coordinator.push(ProfileRoute('user456'));
+      await tester.pumpAndSettle();
+
+      expect(coordinator.currentUri.toString(), '/profile/user456');
+    });
+
+    testWidgets('replace navigation works with asRouterConfig', (tester) async {
+      final coordinator = TestCoordinator();
+      final config = coordinator;
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: config));
+      await tester.pumpAndSettle();
+
+      // Reset to known state and push some routes
+      coordinator.replace(HomeRoute());
+      coordinator.push(SettingsRoute());
+      coordinator.push(ProfileRoute('123'));
+      await tester.pumpAndSettle();
+
+      expect(coordinator.root.stack.length, equals(3));
+
+      // Replace clears the stack
+      coordinator.replace(HomeRoute());
+      await tester.pumpAndSettle();
+
+      expect(coordinator.root.stack.length, equals(1));
+      expect(coordinator.root.stack[0], isA<HomeRoute>());
     });
   });
 }
