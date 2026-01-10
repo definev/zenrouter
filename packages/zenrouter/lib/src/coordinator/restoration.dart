@@ -231,7 +231,7 @@ class _CoordinatorRestorableState extends State<CoordinatorRestorable>
     _activeRoute.value = widget.coordinator.activePath.activeRoute;
   }
 
-  void _restoreCoordinator() async {
+  void _restoreCoordinator() {
     final raw = _restorable.value;
 
     for (final MapEntry(:key, :value) in raw.entries) {
@@ -278,9 +278,7 @@ class _CoordinatorRestorableState extends State<CoordinatorRestorable>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return widget.child;
-  }
+  Widget build(BuildContext context) => widget.child;
 
   @override
   String? get restorationId => widget.restorationId;
