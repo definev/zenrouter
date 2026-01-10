@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:zenrouter/zenrouter.dart';
 import 'package:zenrouter_devtools/zenrouter_devtools.dart';
@@ -12,68 +11,7 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      routerConfig: appCoordinator,
-      // routerDelegate: appCoordinator.routerDelegate,
-      // routeInformationParser: appCoordinator.routeInformationParser,
-    );
-  }
-}
-
-// Observers
-
-class DebugNavigationObserver extends NavigatorObserver {
-  @override
-  void didChangeTop(Route topRoute, Route? previousTopRoute) {
-    _log(
-      'didChangeTop',
-      previousRoute: previousTopRoute,
-      incomingRoute: topRoute,
-    );
-  }
-
-  @override
-  void didPop(Route route, Route? previousRoute) {
-    _log('didPop', previousRoute: previousRoute, incomingRoute: route);
-  }
-
-  @override
-  void didPush(Route route, Route? previousRoute) {
-    _log('didPush', previousRoute: previousRoute, incomingRoute: route);
-  }
-
-  @override
-  void didRemove(Route route, Route? previousRoute) {
-    _log('didRemove', previousRoute: previousRoute, incomingRoute: route);
-  }
-
-  @override
-  void didReplace({Route? newRoute, Route? oldRoute}) {
-    _log('didReplace', previousRoute: oldRoute, incomingRoute: newRoute);
-  }
-
-  @override
-  void didStartUserGesture(Route route, Route? previousRoute) {
-    _log(
-      'didStartUserGesture',
-      previousRoute: previousRoute,
-      incomingRoute: route,
-    );
-  }
-
-  @override
-  void didStopUserGesture() {}
-
-  void _log(
-    String action, {
-    required Route? previousRoute,
-    required Route? incomingRoute,
-  }) {
-    if (kDebugMode) {
-      print(
-        'Action: $action, Previous: ${previousRoute?.settings.name}, Incoming: ${incomingRoute?.settings.name}',
-      );
-    }
+    return MaterialApp.router(routerConfig: appCoordinator);
   }
 }
 
@@ -83,17 +21,17 @@ class DebugNavigationObserver extends NavigatorObserver {
 
 final appCoordinator = AppCoordinator();
 
-class AppCoordinator extends Coordinator<AppRoute>
-    with CoordinatorDebug, CoordinatorNavigatorObserver {
+class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug {
   late final tabPath = IndexedStackPath.createWith(
     coordinator: this,
     label: 'tabs',
-    [HomeTab(), SearchLayout(), ProfileTab()],
-  )..bindLayout(TabLayout.new);
-  late final searchPath = NavigationPath<AppRoute>.createWith(
-    coordinator: this,
-    label: 'search',
-  )..bindLayout(SearchLayout.new);
+    [HomeTab(), SearchTab(), ProfileTab()],
+  );
+
+  @override
+  void defineLayout() {
+    RouteLayout.defineLayout(TabLayout, TabLayout.new);
+  }
 
   @override
   List<StackPath> get paths => [...super.paths, tabPath];
@@ -107,13 +45,10 @@ class AppCoordinator extends Coordinator<AppRoute>
       [] || ['home'] => HomeTab(),
       ['search'] => SearchTab(),
       ['profile'] => ProfileTab(),
-      ['p', 'profile'] => ProfileRoute(),
+      ['settings'] => SettingsRoute(),
       _ => HomeTab(),
     };
   }
-
-  @override
-  List<NavigatorObserver> get observers => [DebugNavigationObserver()];
 }
 
 // ============================================================================
@@ -140,14 +75,7 @@ class TabLayout extends AppRoute with RouteLayout<AppRoute> {
         listenable: path,
         builder: (context, _) => BottomNavigationBar(
           currentIndex: path.activeIndex,
-          onTap: (index) async {
-            path.goToIndexed(index);
-            if (index == 1) {
-              if (coordinator.searchPath.stack.isEmpty) {
-                coordinator.push(SearchTab());
-              }
-            }
-          },
+          onTap: (index) => path.goToIndexed(index),
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
             BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
@@ -163,16 +91,16 @@ class TabLayout extends AppRoute with RouteLayout<AppRoute> {
 // Tab Routes
 // ============================================================================
 
-class ProfileRoute extends AppRoute {
+class SettingsRoute extends AppRoute {
   @override
-  Uri toUri() => Uri.parse('/p/profile');
+  Uri toUri() => Uri.parse('/settings');
 
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(title: const Text('Settings')),
       body: const Center(
-        child: Text('Profile', style: TextStyle(fontSize: 24)),
+        child: Text('Settings', style: TextStyle(fontSize: 24)),
       ),
     );
   }
@@ -187,60 +115,20 @@ class HomeTab extends AppRoute {
 
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
-    return Center(
-      child: GestureDetector(
-        onTap: () => coordinator.push(ProfileRoute()),
-        child: Text('Home', style: TextStyle(fontSize: 24)),
-      ),
-    );
+    return const Center(child: Text('Home', style: TextStyle(fontSize: 24)));
   }
-}
-
-class SearchLayout extends AppRoute with RouteLayout<AppRoute> {
-  @override
-  Type? get layout => TabLayout;
-
-  @override
-  NavigationPath<AppRoute> resolvePath(AppCoordinator coordinator) =>
-      coordinator.searchPath;
 }
 
 class SearchTab extends AppRoute {
   @override
-  Type get layout => SearchLayout;
+  Type get layout => TabLayout;
 
   @override
   Uri toUri() => Uri.parse('/search');
 
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text('Search', style: TextStyle(fontSize: 24)),
-          ElevatedButton(
-            onPressed: () => coordinator.push(SearchResult()),
-            child: const Text('Result'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class SearchResult extends AppRoute {
-  @override
-  Type? get layout => SearchLayout;
-
-  @override
-  Uri toUri() => Uri.parse('/search/result');
-
-  @override
-  Widget build(AppCoordinator coordinator, BuildContext context) {
-    return const Center(
-      child: Text('Search Result', style: TextStyle(fontSize: 24)),
-    );
+    return const Center(child: Text('Search', style: TextStyle(fontSize: 24)));
   }
 }
 
