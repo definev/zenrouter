@@ -1,3 +1,9 @@
+## 0.4.19
+
+* **Fix**: Blank screen when using `Coordinator` as `routerConfig` (due to unset `routerInformationProvider`).
+* **Feat**: Added `initialRoutePath` property to `Coordinator`.
+* **Feat**: Added `NavigatorObserverListGetter` typedef for passing external observers. ([View Guide](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/guides/navigator-observers.md#passing-observers-from-outside))
+
 ## 0.4.18
 - **Feat**: Add `pushReplacement` method in `StackMutatable`.
 - **Feat**: `Coordinator` now implements `RouterConfig` so you can use it with `MaterialApp.router` more easily.
