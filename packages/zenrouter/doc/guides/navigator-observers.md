@@ -32,6 +32,41 @@ class AppCoordinator extends Coordinator<AppRoute>
 }
 ```
 
+### Passing Observers from Outside
+
+Sometimes you may want to inject observers from outside the coordinator (e.g., for testing or when using dependency injection). You can key off the `NavigatorObserverListGetter` typedef to achieve this.
+
+```dart
+class AppCoordinator extends Coordinator<AppRoute>
+    with CoordinatorNavigatorObserver {
+  AppCoordinator({
+    NavigatorObserverListGetter observers = kEmptyNavigatorObserverList,
+  }) : _observersGetter = observers;
+
+  final NavigatorObserverListGetter _observersGetter;
+
+  @override
+  List<NavigatorObserver> get observers => _observersGetter();
+
+  // ...
+}
+```
+
+Then you can pass the observers when creating the coordinator:
+
+```dart
+final coordinator = AppCoordinator(
+  observers: () => [
+    FirebaseAnalyticsObserver(...),
+    SentryNavigatorObserver(),
+  ],
+);
+```
+
+> [!CAUTION]
+> **Important:** The `observers` getter is called whenever a new `NavigationPath` is attached to the Coordinator. Since a `NavigatorObserver` can only be attached to a single `Navigator` at a time, you **must return new instances** of your observers each time this getter is called. Reusing the same observer instance across multiple navigators will cause errors.
+
+
 ## Local Observers: `NavigationStack`
 
 Use this for observers that are specific to a single navigation stack. This is useful for:
