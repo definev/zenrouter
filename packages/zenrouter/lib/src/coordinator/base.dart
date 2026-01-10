@@ -703,11 +703,11 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
 
   /// Creates a new router delegate with the given initial route.
   @Deprecated(
-    'This method is deprecated. Use `routerDelegate` property instead. Will be removed in v1.0.0',
+    'This method is deprecated. Use `routerDelegate` property instead. You can override `initialRoutePath` property to set initial route. Will be removed in v1.0.0',
   )
-  RouterDelegate<Uri> routerDelegateWithInitialRoute(T initialRoute) =>
+  CoordinatorRouterDelegate routerDelegateWithInitialRoute(T initialRoute) =>
       routerDelegate;
 
   /// Access to the navigator state.
-  NavigatorState get navigator => (routerDelegate).navigatorKey.currentState!;
+  NavigatorState get navigator => routerDelegate.navigatorKey.currentState!;
 }
