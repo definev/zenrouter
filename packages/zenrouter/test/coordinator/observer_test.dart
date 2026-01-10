@@ -343,6 +343,10 @@ void main() {
       expect(coordinator.root.stack.length, 2);
       expect(find.text('Settings'), findsOneWidget);
     });
+
+    test('Check kEmptyNavigatorObserverList return empty list', () {
+      expect(kEmptyNavigatorObserverList(), []);
+    });
   });
 
   group('NavigationStack Observer Integration', () {
