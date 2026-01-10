@@ -58,17 +58,6 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
     );
   }
 
-  /// Handles the initial route path.
-  ///
-  /// This method is called by Flutter's Router when the app is first loaded.
-  ///
-  /// If the initial route is not null, it will be recovered using [Coordinator.recover].
-  /// Otherwise, the route will be parsed from the URI and recovered.
-  @override
-  Future<void> setInitialRoutePath(Uri configuration) async {
-    setNewRoutePath(configuration);
-  }
-
   /// Handles browser navigation events (back/forward buttons, URL changes).
   ///
   /// This method is called by Flutter's Router when the browser URL changes,

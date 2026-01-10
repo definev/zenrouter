@@ -141,9 +141,6 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     }
     defineLayout();
     defineConverter();
-    scheduleMicrotask(
-      () => routerDelegate.setInitialRoutePath(initialRoutePath),
-    );
   }
 
   // coverage:ignore-start
