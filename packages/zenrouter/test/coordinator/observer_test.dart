@@ -109,12 +109,14 @@ class GuardedRoute extends AppRoute with RouteGuard {
 // Test Coordinators
 // ============================================================================
 
+List<NavigatorObserver> kEmptyObserverList() => [];
+
 /// Coordinator WITH observer mixin
 class CoordinatorWithObservers extends Coordinator<AppRoute>
     with CoordinatorNavigatorObserver {
   CoordinatorWithObservers({this.customObservers = kEmptyObserverList});
 
-  final NavigatorObserverListGetter customObservers;
+  final List<NavigatorObserver> Function() customObservers;
 
   @override
   List<NavigatorObserver> get observers => customObservers();
