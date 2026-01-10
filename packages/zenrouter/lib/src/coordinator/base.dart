@@ -141,6 +141,7 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     }
     defineLayout();
     defineConverter();
+    routerDelegate.setInitialRoutePath(initialRoutePath);
   }
 
   // coverage:ignore-start
@@ -208,7 +209,15 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     return '${layoutRestorationId}_$routeRestorationId';
   }
 
+  /// The restoration ID for the root path.
+  ///
+  /// This ID is used to restore the root path when the app is re-launched.
   String get rootRestorationId => root.debugLabel ?? 'root';
+
+  /// The initial route path for this coordinator.
+  ///
+  /// This path is used to set the initial route when the app is launched.
+  Uri get initialRoutePath => Uri.parse('/');
 
   /// The transition strategy for this coordinator.
   ///
@@ -684,34 +693,18 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   @override
   RouteInformationProvider? get routeInformationProvider => null;
 
-  CoordinatorRouterDelegate? _routerDelegate;
-
   /// The router delegate for [Router] of this coordinator
   @override
-  CoordinatorRouterDelegate get routerDelegate =>
-      _routerDelegate ??= CoordinatorRouterDelegate(coordinator: this);
+  late final CoordinatorRouterDelegate routerDelegate =
+      CoordinatorRouterDelegate(coordinator: this);
 
   /// Creates a new router delegate with the given initial route.
   @Deprecated(
     'This method is deprecated. Use `routerDelegate` property instead. Will be removed in v1.0.0',
   )
-  CoordinatorRouterDelegate routerDelegateWithInitialRoute(T initialRoute) {
-    if (_routerDelegate case CoordinatorRouterDelegate delegate) {
-      if (delegate.initialRoute != initialRoute) {
-        delegate.dispose();
-        _routerDelegate = CoordinatorRouterDelegate(
-          coordinator: this,
-          initialRoute: initialRoute,
-        );
-      }
-      return _routerDelegate!;
-    }
-    return _routerDelegate ??= CoordinatorRouterDelegate(
-      coordinator: this,
-      initialRoute: initialRoute,
-    );
-  }
+  RouterDelegate<Uri> routerDelegateWithInitialRoute(T initialRoute) =>
+      routerDelegate;
 
   /// Access to the navigator state.
-  NavigatorState get navigator => routerDelegate.navigatorKey.currentState!;
+  NavigatorState get navigator => (routerDelegate).navigatorKey.currentState!;
 }

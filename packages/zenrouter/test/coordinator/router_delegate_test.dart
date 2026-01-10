@@ -394,15 +394,6 @@ void main() {
       coordinator = TestCoordinator();
     });
 
-    test('creates new delegate with initial route', () {
-      final initialRoute = SettingsRoute();
-      final delegate = coordinator.routerDelegateWithInitialRoute(initialRoute);
-
-      expect(delegate, isNotNull);
-      expect(delegate.initialRoute, initialRoute);
-      expect(delegate.coordinator, coordinator);
-    });
-
     test('reuses delegate when initial route is the same', () {
       final initialRoute = SettingsRoute();
       final delegate1 = coordinator.routerDelegateWithInitialRoute(
@@ -414,67 +405,6 @@ void main() {
 
       // Should return the same delegate instance
       expect(delegate1, same(delegate2));
-    });
-
-    test('recreates delegate when initial route changes', () {
-      final route1 = SettingsRoute();
-      final route2 = HomeRoute();
-
-      final delegate1 = coordinator.routerDelegateWithInitialRoute(route1);
-      final delegate2 = coordinator.routerDelegateWithInitialRoute(route2);
-
-      // Should create a new delegate
-      expect(delegate1, isNot(same(delegate2)));
-      expect(delegate1.initialRoute, route1);
-      expect(delegate2.initialRoute, route2);
-    });
-
-    test('disposes old delegate when recreating with different route', () {
-      final route2 = HomeRoute();
-
-      final delegate1 = coordinator.routerDelegateWithInitialRoute(
-        SettingsRoute(),
-      );
-      final delegate1Same = coordinator.routerDelegateWithInitialRoute(
-        SettingsRoute(),
-      );
-      final delegate2 = coordinator.routerDelegateWithInitialRoute(HomeRoute());
-
-      expect(delegate1, same(delegate1Same));
-
-      // Delegate2 should be different from delegate1
-      expect(delegate1, isNot(same(delegate2)));
-      expect(delegate2.initialRoute, route2);
-    });
-
-    test(
-      'lazily initializes when called without prior routerDelegate access',
-      () {
-        final freshCoordinator = TestCoordinator();
-        final initialRoute = ProfileRoute('123');
-
-        // routerDelegate has not been accessed yet
-        final delegate = freshCoordinator.routerDelegateWithInitialRoute(
-          initialRoute,
-        );
-
-        expect(delegate, isNotNull);
-        expect(delegate.initialRoute, initialRoute);
-        expect(freshCoordinator.routerDelegate, same(delegate));
-      },
-    );
-
-    test('works with different route types', () {
-      final homeDelegate = coordinator.routerDelegateWithInitialRoute(
-        HomeRoute(),
-      );
-      expect(homeDelegate.initialRoute, isA<HomeRoute>());
-
-      final profileDelegate = coordinator.routerDelegateWithInitialRoute(
-        ProfileRoute('42'),
-      );
-      expect(profileDelegate.initialRoute, isA<ProfileRoute>());
-      expect((profileDelegate.initialRoute as ProfileRoute).id, '42');
     });
   });
 
