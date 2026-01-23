@@ -1,3 +1,6 @@
+## 0.4.5
+- Add dependency on `cupertino_icons` fix blank icon in debug overlay
+
 ## 0.4.4
 - Update `zenrouter` version
 

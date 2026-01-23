@@ -1,3 +1,6 @@
+## 0.4.14
+- **Fix**: Upgrade to `analyzer` to `^9.0.0`
+
 ## 0.4.13
 - **Docs**: Add "Customizing the Coordinator" section to README
 - **Docs**: Add Table of Contents to README
