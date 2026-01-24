@@ -690,7 +690,7 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
 
   /// The [BackButtonDispatcher] that is used to configure the [Router].
   @override
-  final BackButtonDispatcher? backButtonDispatcher = null;
+  final BackButtonDispatcher backButtonDispatcher = RootBackButtonDispatcher();
 
   /// The [RouteInformationProvider] that is used to configure the [Router].
   @override
