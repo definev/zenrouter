@@ -1,3 +1,6 @@
+## 0.4.20
+* **Fix**: back gesture failed in android
+
 ## 0.4.19
 
 * **Fix**: Blank screen when using `Coordinator` as `routerConfig` (due to unset `routerInformationProvider`).
