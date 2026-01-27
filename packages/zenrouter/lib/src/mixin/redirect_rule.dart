@@ -58,14 +58,18 @@ sealed class RedirectResult<T extends RouteTarget> {
 ///
 /// Navigation will be cancelled, user stays on the current screen.
 class StopRedirect<T extends RouteTarget> extends RedirectResult<T> {
+  // coverage:ignore-start
   const StopRedirect();
+  // coverage:ignore-end
 }
 
 /// Continue result - proceed to the next rule in the chain.
 ///
 /// If this is the last rule, the original route will be displayed.
 class ContinueRedirect<T extends RouteTarget> extends RedirectResult<T> {
+  // coverage:ignore-start
   const ContinueRedirect();
+  // coverage:ignore-end
 }
 
 /// Redirect result - replace the original route with a different one.
