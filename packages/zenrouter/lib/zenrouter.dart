@@ -4,6 +4,7 @@ library;
 export 'src/coordinator/base.dart';
 export 'src/coordinator/observer.dart';
 export 'src/coordinator/router.dart';
+export 'src/coordinator/modular.dart';
 
 /// Path base
 export 'src/path/base.dart';
