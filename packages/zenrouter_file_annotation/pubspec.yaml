@@ -1,11 +1,9 @@
 name: zenrouter_file_annotation
 description: "Shared annotation and structure for zenrouter file-based routing."
-version: 0.4.10
+version: 1.0.0
 homepage: https://github.com/definev/zenrouter/tree/main/packages/zenrouter_file_annotation
 repository: https://github.com/definev/zenrouter/tree/main/packages/zenrouter_file_annotation
 resolution: workspace
 
 environment:
   sdk: ^3.7.0
-
-dependencies:

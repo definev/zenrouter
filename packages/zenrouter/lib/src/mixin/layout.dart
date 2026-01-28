@@ -6,14 +6,6 @@ import 'package:zenrouter/zenrouter.dart';
 /// A layout is a route that wraps other routes, such as a shell or a tab bar.
 /// It defines how its children are displayed and managed.
 mixin RouteLayout<T extends RouteUnique> on RouteUnique {
-  /// Identifier for the standard navigation path layout.
-  @Deprecated('Use [NavigationPath.key] instead')
-  static const navigationPath = 'NavigationPath';
-
-  /// Identifier for the indexed stack path layout.
-  @Deprecated('Use [IndexedStackPath.key] instead')
-  static const indexedStackPath = 'IndexedStackPath';
-
   /// Registers a custom layout constructor.
   ///
   /// Use this to define how a specific layout type should be instantiated.
@@ -100,34 +92,6 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
           },
         ),
   };
-
-  // coverage:ignore-start
-  @Deprecated(
-    'Do not manage [layoutBuilderTable] manually. Instead, use [RouteLayout.buildPath] to access it and [definePath] to register new builders.',
-  )
-  static Map<PathKey, RouteLayoutBuilder> get layoutBuilderTable =>
-      _layoutBuilderTable;
-
-  @Deprecated(
-    'Use [buildPath] instead. This method won\'t work in minifier mode so migrate to [buildPath]. This will be removed in the next major version.',
-  )
-  static Widget buildPrimitivePath<T extends RouteUnique>(
-    Type type,
-    Coordinator coordinator,
-    StackPath<T> path,
-    RouteLayout<T>? layout,
-  ) {
-    final typeString = type.toString().split('<').first;
-    final key = PathKey(typeString);
-
-    if (!_layoutBuilderTable.containsKey(key)) {
-      throw UnimplementedError(
-        'No layout builder provided for [$typeString]. If you extend the [StackPath] class, you must register it in [RouteLayout.definePath] to use [RouteLayout.buildPath].',
-      );
-    }
-    return _layoutBuilderTable[key]!(coordinator, path, layout);
-  }
-  // coverage:ignore-end
 
   static Widget buildRoot(Coordinator coordinator) {
     final rootPathKey = coordinator.root.pathKey;

@@ -1,3 +1,8 @@
+## 1.0.0
+- **BREAKING**: Update dependency to `zenrouter: ^1.0.0`
+- Support for new `RouteRedirectRule` feature
+- Compatible with zenrouter's modular coordinator architecture
+
 ## 0.4.5
 - Add dependency on `cupertino_icons` fix blank icon in debug overlay
 

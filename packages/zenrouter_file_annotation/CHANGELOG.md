@@ -1,3 +1,7 @@
+## 1.0.0
+- **Stable release**: Production-ready annotation package
+- Compatible with `zenrouter: ^1.0.0` and `zenrouter_file_generator: ^1.0.0`
+
 ## 0.4.10
 
 ### New Features

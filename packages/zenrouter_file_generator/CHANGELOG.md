@@ -1,3 +1,8 @@
+## 1.0.0
+- **BREAKING**: Requires `zenrouter: ^1.0.0` and `zenrouter_file_annotation: ^1.0.0`
+- **Stable release**: Production-ready file-based routing generator
+- Generates code compatible with zenrouter 1.0.0 features
+
 ## 0.4.14
 - **Fix**: Upgrade to `analyzer` to `^9.0.0`
 

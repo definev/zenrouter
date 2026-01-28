@@ -14,18 +14,6 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
     Coordinator? coordinator,
   ]) : super(stack ?? [], debugLabel: debugLabel, coordinator: coordinator);
 
-  // coverage:ignore-start
-  /// Creates a [NavigationPath] with an optional initial stack.
-  ///
-  /// This is deprecated. Use [NavigationPath.create] or [NavigationPath.createWith] instead.
-  @Deprecated('Use NavigationPath.create or NavigationPath.createWith instead')
-  factory NavigationPath([
-    String? debugLabel,
-    List<T>? stack,
-    Coordinator? coordinator,
-  ]) => NavigationPath._(debugLabel, stack, coordinator);
-  // coverage:ignore-end
-
   /// Creates a [NavigationPath] with an optional initial stack.
   ///
   /// This is the standard way to create a mutable navigation stack.

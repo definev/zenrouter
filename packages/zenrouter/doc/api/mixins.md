@@ -24,7 +24,7 @@ Each mixin adds specific capabilities:
 - **RouteTransition** - Custom page transitions
 - **RouteGuard** - Prevents unwanted navigation
 - **RouteRedirect** - Redirects to different routes
-- **RouteRedirect** - Redirects to different routes
+- **RouteRedirectRule** - Composable redirect rules (works with RouteRedirect)
 - **RouteDeepLink** - Custom deep link handling
 - **RouteQueryParameters** - Efficiently handle query parameters
 
@@ -42,7 +42,9 @@ Which mixins do I need?
 │  └─ No → Continue
 │
 ├─ Conditional routing (auth, permissions)?
-│  ├─ Yes → Add RouteRedirect ✓
+│  ├─ Need reusable/composable rules?
+│  │  ├─ Yes → Add RouteRedirect + RouteRedirectRule ✓
+│  │  └─ No → Add RouteRedirect ✓
 │  └─ No → Continue
 │
 ├─ Using Coordinator?
@@ -688,6 +690,298 @@ class RouteC extends RouteTarget {}
 coordinator.push(RouteA());
 // Internal flow: RouteA → RouteB → RouteC
 ```
+
+---
+
+### RouteRedirectRule
+
+Enables composable, reusable redirect logic by chaining multiple `RedirectRule` instances together. This mixin works with `RouteRedirect` to provide a rule-based approach to redirects, making it easy to create reusable authentication, authorization, feature flag, and logging rules.
+
+**Benefits over direct `RouteRedirect` implementation:**
+- **Reusable**: One rule can be used for multiple routes
+- **Composable**: Chain multiple rules together (auth → feature flag → logging)
+- **Testable**: Test each rule independently
+- **Maintainable**: Centralized redirect logic, easy to modify
+
+**Use when:**
+- You need the same redirect logic across multiple routes
+- You want to combine multiple checks (auth + permissions + feature flags)
+- You prefer a rule-based architecture
+- You want to test redirect logic independently
+
+**Not needed when:**
+- You have simple, route-specific redirect logic
+- You only need a single redirect check
+
+#### API
+
+```dart
+// Base class for creating redirect rules
+abstract class RedirectRule<T extends RouteTarget> {
+  FutureOr<RedirectResult<T>> redirectResult(
+    covariant Coordinator coordinator,
+    covariant T route,
+  );
+}
+
+// Result types
+sealed class RedirectResult<T extends RouteTarget> {
+  const RedirectResult.stop();              // Stop navigation
+  const RedirectResult.continueRedirect();  // Continue to next rule
+  const RedirectResult.redirectTo(T route); // Redirect to route
+}
+
+// Mixin for routes
+mixin RouteRedirectRule<T extends RouteTarget> on RouteRedirect<T> {
+  List<RedirectRule> get redirectRules;
+  
+  // Automatically implements RouteRedirect.redirectWith()
+}
+```
+
+#### Example: Authentication Rule
+
+```dart
+class AuthenticationRule extends RedirectRule<AppRoute> {
+  @override
+  FutureOr<RedirectResult<AppRoute>> redirectResult(
+    Coordinator coordinator,
+    AppRoute route,
+  ) {
+    if (!AuthService.isAuthenticated) {
+      // Not logged in → redirect to login page
+      return RedirectResult.redirectTo(LoginRoute());
+    }
+    // Logged in → continue to next rule
+    return const RedirectResult.continueRedirect();
+  }
+}
+
+class ProtectedRoute extends AppRoute
+    with RouteRedirect, RouteRedirectRule {
+  @override
+  List<RedirectRule> get redirectRules => [
+    AuthenticationRule(), // Check authentication first
+  ];
+  
+  @override
+  Uri toUri() => Uri.parse('/protected');
+  
+  @override
+  Widget build(AppCoordinator coordinator, BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Protected')),
+      body: const Center(child: Text('Protected Content')),
+    );
+  }
+}
+```
+
+#### Example: Chaining Multiple Rules
+
+```dart
+class FeatureFlagRule extends RedirectRule<AppRoute> {
+  final String feature;
+  FeatureFlagRule({required this.feature});
+
+  @override
+  FutureOr<RedirectResult<AppRoute>> redirectResult(
+    Coordinator coordinator,
+    AppRoute route,
+  ) async {
+    final isEnabled = await FeatureService.isEnabled(feature);
+    if (!isEnabled) {
+      return RedirectResult.stop(); // Stop navigation
+    }
+    return const RedirectResult.continueRedirect();
+  }
+}
+
+class PermissionRule extends RedirectRule<AppRoute> {
+  final String permission;
+  PermissionRule({required this.permission});
+
+  @override
+  FutureOr<RedirectResult<AppRoute>> redirectResult(
+    Coordinator coordinator,
+    AppRoute route,
+  ) async {
+    final user = await AuthService.getCurrentUser();
+    if (user == null) {
+      return RedirectResult.redirectTo(LoginRoute());
+    }
+    if (!user.hasPermission(permission)) {
+      return RedirectResult.redirectTo(UnauthorizedRoute());
+    }
+    return const RedirectResult.continueRedirect();
+  }
+}
+
+class LoggingRule extends RedirectRule<AppRoute> {
+  @override
+  FutureOr<RedirectResult<AppRoute>> redirectResult(
+    Coordinator coordinator,
+    AppRoute route,
+  ) async {
+    // Log navigation event (side effect)
+    Analytics.logNavigation(route.toUri());
+    return const RedirectResult.continueRedirect(); // Always continue
+  }
+}
+
+// Use all rules together
+class AdminDashboardRoute extends AppRoute
+    with RouteRedirect, RouteRedirectRule {
+  @override
+  List<RedirectRule> get redirectRules => [
+    AuthenticationRule(),                    // 1. Check login
+    PermissionRule(permission: 'admin'),     // 2. Check admin permission
+    FeatureFlagRule(feature: 'admin-panel'), // 3. Check feature flag
+    LoggingRule(),                           // 4. Log navigation
+  ];
+  
+  @override
+  Uri toUri() => Uri.parse('/admin/dashboard');
+  
+  @override
+  Widget build(AppCoordinator coordinator, BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Admin Dashboard')),
+      body: const Center(child: Text('Admin Content')),
+    );
+  }
+}
+```
+
+#### Rule Execution Flow
+
+Rules are executed in the order they appear in the `redirectRules` list:
+
+```
+Rule 1: AuthenticationRule
+  ├─ Not authenticated → RedirectResult.redirectTo(LoginRoute) → STOP ✅
+  └─ Authenticated → RedirectResult.continueRedirect() → Continue
+
+Rule 2: PermissionRule
+  ├─ No permission → RedirectResult.redirectTo(UnauthorizedRoute) → STOP ✅
+  └─ Has permission → RedirectResult.continueRedirect() → Continue
+
+Rule 3: FeatureFlagRule
+  ├─ Feature disabled → RedirectResult.stop() → STOP ❌ (cancel navigation)
+  └─ Feature enabled → RedirectResult.continueRedirect() → Continue
+
+Rule 4: LoggingRule
+  └─ Always → RedirectResult.continueRedirect() → Continue
+
+All rules passed → Display original route ✅
+```
+
+**Important:** Once a rule returns `StopRedirect` or `RedirectTo`, subsequent rules are **not executed**.
+
+#### Example: Reusing Rules Across Routes
+
+```dart
+// Define rules once
+final authRule = AuthenticationRule();
+final adminPermissionRule = PermissionRule(permission: 'admin');
+final userPermissionRule = PermissionRule(permission: 'user');
+
+// Use in multiple routes
+class AdminSettingsRoute extends AppRoute
+    with RouteRedirect, RouteRedirectRule {
+  @override
+  List<RedirectRule> get redirectRules => [
+    authRule,
+    adminPermissionRule,
+  ];
+}
+
+class UserProfileRoute extends AppRoute
+    with RouteRedirect, RouteRedirectRule {
+  @override
+  List<RedirectRule> get redirectRules => [
+    authRule,
+    userPermissionRule,
+  ];
+}
+```
+
+#### Example: Async Rules
+
+Rules can be async to fetch data, call APIs, or read from databases:
+
+```dart
+class SubscriptionRule extends RedirectRule<AppRoute> {
+  @override
+  Future<RedirectResult<AppRoute>> redirectResult(
+    Coordinator coordinator,
+    AppRoute route,
+  ) async {
+    // Fetch subscription status from API
+    final subscription = await SubscriptionService.getCurrent();
+    
+    if (subscription == null) {
+      return RedirectResult.redirectTo(SubscribeRoute());
+    }
+    
+    if (subscription.isExpired) {
+      return RedirectResult.redirectTo(RenewSubscriptionRoute());
+    }
+    
+    return const RedirectResult.continueRedirect();
+  }
+}
+```
+
+#### Example: Route-Specific Rule Logic
+
+Rules can inspect the route being navigated to:
+
+```dart
+class RateLimitRule extends RedirectRule<AppRoute> {
+  @override
+  FutureOr<RedirectResult<AppRoute>> redirectResult(
+    Coordinator coordinator,
+    AppRoute route,
+  ) async {
+    // Check if route requires premium subscription
+    if (route is PremiumRoute) {
+      final user = await AuthService.getCurrentUser();
+      if (user?.isPremium != true) {
+        return RedirectResult.redirectTo(UpgradeRoute());
+      }
+    }
+    
+    return const RedirectResult.continueRedirect();
+  }
+}
+```
+
+#### When to Use RouteRedirectRule vs RouteRedirect
+
+| Use Case | Use RouteRedirect | Use RouteRedirectRule |
+|----------|------------------|----------------------|
+| Simple, route-specific logic | ✅ Yes | ❌ No |
+| Reusable across multiple routes | ❌ No | ✅ Yes |
+| Single check (auth only) | ✅ Yes | ✅ Yes (if reusable) |
+| Multiple checks (auth + permissions + flags) | ❌ No | ✅ Yes |
+| Testable, isolated logic | ❌ No | ✅ Yes |
+| Side effects (logging, analytics) | ❌ No | ✅ Yes |
+
+#### Best Practices
+
+**✅ DO:**
+- Put critical rules first (auth, permissions)
+- Put side-effect rules last (logging, analytics)
+- Make rules reusable across routes
+- Test rules independently
+- Use `StopRedirect` to cancel navigation when appropriate
+
+**❌ DON'T:**
+- Put side-effect rules before critical checks
+- Create rules that depend on execution order unnecessarily
+- Mix route-specific logic with reusable rules
+- Return `null` from rules (use `StopRedirect` instead)
 
 ---
 

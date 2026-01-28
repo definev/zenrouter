@@ -1,3 +1,60 @@
+## 1.0.0
+
+🎉 **Major Release - Production Ready**
+
+### 🚀 New Features
+
+#### CoordinatorModular - Modular Route Management
+- Split route management across independent modules by domain/feature
+- `CoordinatorModular` mixin + `RouteModule` base class
+- Perfect for large apps with team collaboration
+- See [Guide](doc/guides/coordinator-modular.md) & `example/lib/main_modular.dart`
+
+```dart
+class AppCoordinator extends Coordinator<AppRoute>
+    with CoordinatorModular<AppRoute> {
+  @override
+  Set<RouteModule<AppRoute>> defineModules(coordinator) => {
+    AuthModule(coordinator),
+    ShopModule(coordinator),
+  };
+}
+```
+
+#### RouteRedirectRule - Composable Redirect Logic
+- Reusable, chainable redirect rules (auth → feature flags → logging)
+- `RedirectResult` sealed class with `Stop`/`Continue`/`RedirectTo` variants
+- Async support for API calls, database queries
+
+```dart
+class ProtectedRoute extends AppRoute
+    with RouteRedirect, RouteRedirectRule {
+  @override
+  List<RedirectRule> get redirectRules => [
+    AuthenticationRule(),
+    PermissionRule(permission: 'admin'),
+  ];
+}
+```
+
+### ⚠️ Breaking Changes
+
+**Removed deprecated APIs:**
+- `RouteLayout.buildPrimitivePath` → Use `RouteLayout.buildPath`
+- `RouteLayout.layoutBuilderTable` → Use `RouteLayout.buildPath`
+- `RouteLayout.navigationPath`/`indexedStackPath` → Use `NavigationPath.key`/`IndexedStackPath.key`
+- `routerDelegateWithInitialRoute` → Use `RouteRedirect` in `IndexRoute`
+
+See [Migration Guide](MIGRATION_GUIDE.md) for details.
+
+### 📦 What's Included
+
+- ✅ Stable API surface
+- ✅ Full test coverage (48 new tests: 33 modular + 15 redirect rule)
+- ✅ Comprehensive documentation with guides
+
+---
+
 ## 0.4.20
 * **Fix**: back gesture failed in android
 

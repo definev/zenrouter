@@ -293,15 +293,6 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     return layouts;
   }
 
-  // coverage:ignore-start
-  /// Returns the list of active layout paths in the navigation hierarchy.
-  ///
-  /// This starts from the [root] path and traverses down through active layouts,
-  /// collecting the [StackPath] for each level.
-  @Deprecated('Use `activeLayoutPaths` instead')
-  List<StackPath> get activeHostPaths => activeLayoutPaths;
-  // coverage:ignore-end
-
   /// Returns the list of active layout paths in the navigation hierarchy.
   ///
   /// This starts from the [root] path and traverses down through active layouts,
@@ -700,13 +691,6 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
           uri: initialRoutePath ?? Uri.parse('/'),
         ),
       );
-
-  /// Creates a new router delegate with the given initial route.
-  @Deprecated(
-    'This method is deprecated. Use `routerDelegate` property instead. You can override `initialRoutePath` property to set initial route. Will be removed in v1.0.0',
-  )
-  CoordinatorRouterDelegate routerDelegateWithInitialRoute(T initialRoute) =>
-      routerDelegate;
 
   /// Access to the navigator state.
   NavigatorState get navigator => routerDelegate.navigatorKey.currentState!;

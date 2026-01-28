@@ -329,54 +329,6 @@ void main() {
     });
   });
 
-  group('CoordinatorRouterDelegate.initialRoute', () {
-    late TestCoordinator coordinator;
-
-    setUp(() {
-      coordinator = TestCoordinator();
-    });
-
-    testWidgets('respects deep link even if initialRoute is provided', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp.router(
-          routerDelegate: coordinator.routerDelegateWithInitialRoute(
-            SettingsRoute(),
-          ),
-          routeInformationParser: coordinator.routeInformationParser,
-          routeInformationProvider: PlatformRouteInformationProvider(
-            initialRouteInformation: RouteInformation(
-              uri: Uri.parse('/profile/1'), // Should be respected now
-            ),
-          ),
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      // Expect ProfileRoute (from URL), ignoring initialRoute
-      expect(coordinator.root.stack.length, 1);
-      expect(coordinator.root.stack.last, isA<ProfileRoute>());
-      expect(find.text('Profile 1'), findsOneWidget);
-    });
-  });
-
-  group('Coordinator.routerDelegateWithInitialRoute', () {
-    late TestCoordinator coordinator;
-
-    setUp(() {
-      coordinator = TestCoordinator();
-    });
-
-    test('no effected since it is not used', () {
-      final delegate = coordinator.routerDelegateWithInitialRoute(
-        SettingsRoute(),
-      );
-      expect(delegate, same(coordinator.routerDelegate));
-    });
-  });
-
   group('Coordinator.navigator', () {
     late TestCoordinator coordinator;
 

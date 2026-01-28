@@ -13,8 +13,8 @@ dependencies:
     sdk: flutter
   
   zenrouter: 
-  zenrouter_devtools: ^0.4.0
-  zenrouter_file_annotation: ^0.4.0
+  zenrouter_devtools:
+  zenrouter_file_annotation:
 
 dev_dependencies:
   flutter_test:

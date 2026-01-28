@@ -18,24 +18,6 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T>
     }
   }
 
-  // coverage:ignore-start
-  /// Creates an [IndexedStackPath] with a fixed list of routes.
-  ///
-  /// This is deprecated. Use [IndexedStackPath.create] or [IndexedStackPath.createWith] instead.
-  @Deprecated(
-    'Use IndexedStackPath.create or IndexedStackPath.createWith instead',
-  )
-  factory IndexedStackPath(
-    List<T> stack, [
-    String? debugLabel,
-    Coordinator? coordinator,
-  ]) => IndexedStackPath._(
-    stack,
-    debugLabel: debugLabel,
-    coordinator: coordinator,
-  );
-  // coverage:ignore-end
-
   /// Creates an [IndexedStackPath] with a fixed list of routes.
   ///
   /// This is the standard way to create a fixed stack for indexed navigation.
@@ -63,12 +45,6 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T>
   PathKey get pathKey => key;
 
   int _activeIndex = 0;
-
-  // coverage:ignore-start
-  /// The index of the currently active path in the stack.
-  @Deprecated('Use `activeIndex` instead. This will be removed in 1.0.0')
-  int get activePathIndex => _activeIndex;
-  // coverage:ignore-end
 
   /// The index of the currently active path in the stack.
   int get activeIndex => _activeIndex;

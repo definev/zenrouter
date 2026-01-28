@@ -1,6 +1,6 @@
 name: zenrouter_devtools
 description: "Deeplink, Inspection, and Debugging Devtools for ZenRouter"
-version: 0.4.5
+version: 1.0.0
 homepage: https://github.com/definev/zenrouter/tree/main/packages/zenrouter_devtools
 
 environment:
@@ -20,7 +20,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter:
     sdk: flutter
-  zenrouter: ^0.4.14
+  zenrouter: ^1.0.0
 
 dev_dependencies:
   flutter_test:
@@ -32,6 +32,7 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  uses-material-design: true
 
   # To add assets to your package, add an assets section, like this:
   # assets:
