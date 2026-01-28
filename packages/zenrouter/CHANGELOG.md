@@ -56,6 +56,7 @@ See [Migration Guide](MIGRATION_GUIDE.md) for details.
 ---
 
 ## 0.4.20
+
 * **Fix**: back gesture failed in android
 
 ## 0.4.19
