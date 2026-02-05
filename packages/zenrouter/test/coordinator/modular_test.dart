@@ -443,8 +443,7 @@ void main() {
         expect(paths, contains(shopModule.shopPath));
 
         // Check that settings path exists
-        final settingsModule =
-            coordinator.getModule<SettingsModule>();
+        final settingsModule = coordinator.getModule<SettingsModule>();
         expect(paths, contains(settingsModule.settingsPath));
       });
 
@@ -540,8 +539,7 @@ void main() {
         final coordinator = AppCoordinator();
 
         final shopModule = coordinator.getModule<ShopModule>();
-        final settingsModule =
-            coordinator.getModule<SettingsModule>();
+        final settingsModule = coordinator.getModule<SettingsModule>();
 
         expect(shopModule.shopPath, isNot(equals(settingsModule.settingsPath)));
       });
