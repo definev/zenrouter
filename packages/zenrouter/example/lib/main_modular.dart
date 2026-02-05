@@ -154,7 +154,7 @@ class ShopModule extends RouteModule<AppRoute> {
 class ShopLayout extends AppRoute with RouteLayout<AppRoute> {
   @override
   NavigationPath<AppRoute> resolvePath(AppCoordinator coordinator) {
-    final shopModule = coordinator.getModule<ShopModule>() as ShopModule;
+    final shopModule = coordinator.getModule<ShopModule>();
     return shopModule.shopStack;
   }
 
@@ -381,8 +381,7 @@ class SettingsModule extends RouteModule<AppRoute> {
 class SettingsLayout extends AppRoute with RouteLayout<AppRoute> {
   @override
   NavigationPath<AppRoute> resolvePath(AppCoordinator coordinator) {
-    final settingsModule =
-        coordinator.getModule<SettingsModule>() as SettingsModule;
+    final settingsModule = coordinator.getModule<SettingsModule>();
     return settingsModule.settingsStack;
   }
 
@@ -572,12 +571,10 @@ class NotificationsSettingsRoute extends AppRoute {
 class AppCoordinator extends Coordinator<AppRoute>
     with CoordinatorModular<AppRoute>, CoordinatorDebug {
   @override
-  Set<RouteModule<AppRoute>> defineModules(
-    CoordinatorModular<AppRoute> coordinator,
-  ) => {
-    AuthModule(coordinator),
-    ShopModule(coordinator),
-    SettingsModule(coordinator),
+  Set<RouteModule<AppRoute>> defineModules() => {
+    AuthModule(this),
+    ShopModule(this),
+    SettingsModule(this),
   };
 
   @override

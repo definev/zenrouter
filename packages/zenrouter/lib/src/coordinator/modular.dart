@@ -192,7 +192,7 @@ abstract class RouteModule<T extends RouteUnique> {
 /// ```
 mixin CoordinatorModular<T extends RouteUnique> on Coordinator<T> {
   late final Map<Type, RouteModule<T>> _modules = {
-    for (final module in defineModules(this)) ...{module.runtimeType: module},
+    for (final module in defineModules()) ...{module.runtimeType: module},
   };
 
   /// Defines the set of route modules for this coordinator.
@@ -217,9 +217,7 @@ mixin CoordinatorModular<T extends RouteUnique> on Coordinator<T> {
   ///   };
   /// }
   /// ```
-  Set<RouteModule<T>> defineModules(
-    covariant CoordinatorModular<T> coordinator,
-  );
+  Set<RouteModule<T>> defineModules();
 
   /// Retrieves a module by its type.
   ///
@@ -232,7 +230,7 @@ mixin CoordinatorModular<T extends RouteUnique> on Coordinator<T> {
   /// ```
   ///
   /// **Throws:** [TypeError] if the requested module type is not registered.
-  RouteModule<T> getModule<R extends RouteModule<T>>() => _modules[R] as R;
+  R getModule<R extends RouteModule<T>>() => _modules[R] as R;
 
   @override
   List<StackPath<RouteTarget>> get paths => [

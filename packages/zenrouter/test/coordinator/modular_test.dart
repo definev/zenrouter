@@ -223,7 +223,7 @@ class ErrorModule extends RouteModule<AppRoute> {
 class ShopLayout extends AppRoute with RouteLayout<AppRoute> {
   @override
   NavigationPath<AppRoute> resolvePath(AppCoordinator coordinator) {
-    final shopModule = coordinator.getModule<ShopModule>() as ShopModule;
+    final shopModule = coordinator.getModule<ShopModule>();
     return shopModule.shopPath;
   }
 
@@ -240,15 +240,11 @@ class ShopLayout extends AppRoute with RouteLayout<AppRoute> {
 class AppCoordinator extends Coordinator<AppRoute>
     with CoordinatorModular<AppRoute> {
   @override
-  Set<RouteModule<AppRoute>> defineModules(
-    CoordinatorModular<AppRoute> coordinator,
-  ) {
-    return {
-      AuthModule(coordinator),
-      ShopModule(coordinator),
-      SettingsModule(coordinator),
-    };
-  }
+  Set<RouteModule<AppRoute>> defineModules() => {
+    AuthModule(this),
+    ShopModule(this),
+    SettingsModule(this),
+  };
 
   @override
   AppRoute notFoundRoute(Uri uri) => NotFoundRoute(uri: uri);
@@ -257,11 +253,7 @@ class AppCoordinator extends Coordinator<AppRoute>
 class SingleModuleCoordinator extends Coordinator<AppRoute>
     with CoordinatorModular<AppRoute> {
   @override
-  Set<RouteModule<AppRoute>> defineModules(
-    CoordinatorModular<AppRoute> coordinator,
-  ) {
-    return {AuthModule(coordinator)};
-  }
+  Set<RouteModule<AppRoute>> defineModules() => {AuthModule(this)};
 
   @override
   AppRoute notFoundRoute(Uri uri) => NotFoundRoute(uri: uri);
@@ -270,11 +262,7 @@ class SingleModuleCoordinator extends Coordinator<AppRoute>
 class EmptyModulesCoordinator extends Coordinator<AppRoute>
     with CoordinatorModular<AppRoute> {
   @override
-  Set<RouteModule<AppRoute>> defineModules(
-    CoordinatorModular<AppRoute> coordinator,
-  ) {
-    return {EmptyModule(coordinator)};
-  }
+  Set<RouteModule<AppRoute>> defineModules() => {EmptyModule(this)};
 
   @override
   AppRoute notFoundRoute(Uri uri) => NotFoundRoute(uri: uri);
@@ -287,11 +275,9 @@ class AsyncModulesCoordinator extends Coordinator<AppRoute>
   final Duration _delay;
 
   @override
-  Set<RouteModule<AppRoute>> defineModules(
-    CoordinatorModular<AppRoute> coordinator,
-  ) {
-    return {AsyncModule(coordinator, delay: _delay)};
-  }
+  Set<RouteModule<AppRoute>> defineModules() => {
+    AsyncModule(this, delay: _delay),
+  };
 
   @override
   AppRoute notFoundRoute(Uri uri) => NotFoundRoute(uri: uri);
@@ -300,11 +286,7 @@ class AsyncModulesCoordinator extends Coordinator<AppRoute>
 class ErrorModulesCoordinator extends Coordinator<AppRoute>
     with CoordinatorModular<AppRoute> {
   @override
-  Set<RouteModule<AppRoute>> defineModules(
-    CoordinatorModular<AppRoute> coordinator,
-  ) {
-    return {ErrorModule(coordinator)};
-  }
+  Set<RouteModule<AppRoute>> defineModules() => {ErrorModule(this)};
 
   @override
   AppRoute notFoundRoute(Uri uri) => NotFoundRoute(uri: uri);
@@ -457,12 +439,12 @@ void main() {
         expect(paths.length, greaterThan(1));
 
         // Check that shop path exists
-        final shopModule = coordinator.getModule<ShopModule>() as ShopModule;
+        final shopModule = coordinator.getModule<ShopModule>();
         expect(paths, contains(shopModule.shopPath));
 
         // Check that settings path exists
         final settingsModule =
-            coordinator.getModule<SettingsModule>() as SettingsModule;
+            coordinator.getModule<SettingsModule>();
         expect(paths, contains(settingsModule.settingsPath));
       });
 
@@ -508,7 +490,7 @@ void main() {
         final coordinator = AppCoordinator();
 
         // Shop module should have registered ShopLayout
-        final shopModule = coordinator.getModule<ShopModule>() as ShopModule;
+        final shopModule = coordinator.getModule<ShopModule>();
         expect(shopModule.shopPath, isNotNull);
       });
     });
@@ -557,9 +539,9 @@ void main() {
       test('modules maintain separate path instances', () {
         final coordinator = AppCoordinator();
 
-        final shopModule = coordinator.getModule<ShopModule>() as ShopModule;
+        final shopModule = coordinator.getModule<ShopModule>();
         final settingsModule =
-            coordinator.getModule<SettingsModule>() as SettingsModule;
+            coordinator.getModule<SettingsModule>();
 
         expect(shopModule.shopPath, isNot(equals(settingsModule.settingsPath)));
       });
@@ -629,7 +611,7 @@ void main() {
       test('module paths are accessible for navigation', () async {
         final coordinator = AppCoordinator();
 
-        final shopModule = coordinator.getModule<ShopModule>() as ShopModule;
+        final shopModule = coordinator.getModule<ShopModule>();
 
         // Module paths should be accessible and functional
         expect(shopModule.shopPath, isNotNull);
@@ -645,7 +627,7 @@ void main() {
       test('coordinator can access module-specific functionality', () {
         final coordinator = AppCoordinator();
 
-        final shopModule = coordinator.getModule<ShopModule>() as ShopModule;
+        final shopModule = coordinator.getModule<ShopModule>();
 
         // Module-specific paths should be accessible
         expect(shopModule.shopPath, isNotNull);
@@ -687,7 +669,7 @@ void main() {
 
     test('can override paths getter', () {
       final coordinator = AppCoordinator();
-      final shopModule = coordinator.getModule<ShopModule>() as ShopModule;
+      final shopModule = coordinator.getModule<ShopModule>();
 
       expect(shopModule.paths.length, equals(1));
       expect(shopModule.paths.first, equals(shopModule.shopPath));
@@ -695,7 +677,7 @@ void main() {
 
     test('can override defineLayout', () {
       final coordinator = AppCoordinator();
-      final shopModule = coordinator.getModule<ShopModule>() as ShopModule;
+      final shopModule = coordinator.getModule<ShopModule>();
 
       // Shop module defines layout, should not throw
       expect(() => shopModule.defineLayout(), returnsNormally);
@@ -720,15 +702,11 @@ class _TestLayoutCoordinator extends Coordinator<AppRoute>
   final VoidCallback onSettingsLayout;
 
   @override
-  Set<RouteModule<AppRoute>> defineModules(
-    CoordinatorModular<AppRoute> coordinator,
-  ) {
-    return {
-      _TestAuthModule(coordinator, onLayout: onAuthLayout),
-      _TestShopModule(coordinator, onLayout: onShopLayout),
-      _TestSettingsModule(coordinator, onLayout: onSettingsLayout),
-    };
-  }
+  Set<RouteModule<AppRoute>> defineModules() => {
+    _TestAuthModule(this, onLayout: onAuthLayout),
+    _TestShopModule(this, onLayout: onShopLayout),
+    _TestSettingsModule(this, onLayout: onSettingsLayout),
+  };
 
   @override
   AppRoute notFoundRoute(Uri uri) => NotFoundRoute(uri: uri);
@@ -792,18 +770,11 @@ class _TestConverterCoordinator extends Coordinator<AppRoute>
   final VoidCallback onSettingsConverter;
 
   @override
-  Set<RouteModule<AppRoute>> defineModules(
-    CoordinatorModular<AppRoute> coordinator,
-  ) {
-    return {
-      _TestAuthConverterModule(coordinator, onConverter: onAuthConverter),
-      _TestShopConverterModule(coordinator, onConverter: onShopConverter),
-      _TestSettingsConverterModule(
-        coordinator,
-        onConverter: onSettingsConverter,
-      ),
-    };
-  }
+  Set<RouteModule<AppRoute>> defineModules() => {
+    _TestAuthConverterModule(this, onConverter: onAuthConverter),
+    _TestShopConverterModule(this, onConverter: onShopConverter),
+    _TestSettingsConverterModule(this, onConverter: onSettingsConverter),
+  };
 
   @override
   AppRoute notFoundRoute(Uri uri) => NotFoundRoute(uri: uri);
