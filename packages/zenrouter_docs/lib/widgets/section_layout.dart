@@ -121,7 +121,7 @@ class SectionLayout extends StatelessWidget {
             ),
           ),
 
-          if (leading != null) leading!,
+          ?leading,
 
           // Navigation items
           Expanded(
@@ -141,7 +141,7 @@ class SectionLayout extends StatelessWidget {
             ),
           ),
 
-          if (trailing != null) trailing!,
+          ?trailing,
 
           // Back to home link
           Padding(
