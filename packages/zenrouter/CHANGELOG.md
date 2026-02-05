@@ -1,3 +1,8 @@
+## 1.1.0
+
+- BREAKING CHANGE: Remove `coordinator` from `defineModules`, use `this` getter instead.
+- Feat: Enforce `getModule` method return exact type.
+
 ## 1.0.0
 
 🎉 **Major Release - Production Ready**
