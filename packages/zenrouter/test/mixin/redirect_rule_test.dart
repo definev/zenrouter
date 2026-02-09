@@ -262,6 +262,30 @@ void main() {
       expect(find.text('Rule Route: 8'), findsNothing);
       expect(find.text('Simple: async-result'), findsOneWidget);
     });
+
+    testWidgets(
+      'Indexed stack should not redirect if redirect rule route return itself',
+      (tester) async {
+        final coordinator = RedirectRuleTestCoordinator();
+
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerDelegate: coordinator.routerDelegate,
+            routeInformationParser: coordinator.routeInformationParser,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        coordinator.push(FirstTab());
+        await tester.pumpAndSettle();
+
+        coordinator.indexedStackPath.goToIndexed(1);
+        final second = coordinator.indexedStackPath.stack[1] as SecondTab;
+
+        expect(second.redirectRules.first is RedirectCountingRule, true);
+        expect((second.redirectRules.first as RedirectCountingRule).count, 1);
+      },
+    );
   });
 }
 
@@ -384,6 +408,21 @@ class AuthRedirectRule extends RedirectRule<RedirectRuleTestRoute> {
   }
 }
 
+class RedirectCountingRule extends RedirectRule<RedirectRuleTestRoute> {
+  RedirectCountingRule();
+
+  int count = 0;
+
+  @override
+  FutureOr<RedirectResult<RedirectRuleTestRoute>> redirectResult(
+    covariant Coordinator coordinator,
+    covariant RedirectRuleTestRoute route,
+  ) {
+    count += 1;
+    return RedirectResult.continueRedirect();
+  }
+}
+
 class AsyncRedirectRule extends RedirectRule<RedirectRuleTestRoute> {
   AsyncRedirectRule({required this.targetId, required this.delay});
 
@@ -400,11 +439,57 @@ class AsyncRedirectRule extends RedirectRule<RedirectRuleTestRoute> {
   }
 }
 
+class TestIndexedStackLayout extends RedirectRuleTestRoute with RouteLayout {
+  @override
+  StackPath<RouteUnique> resolvePath(
+    covariant RedirectRuleTestCoordinator coordinator,
+  ) => coordinator.indexedStackPath;
+}
+
+class FirstTab extends RedirectRuleTestRoute {
+  @override
+  Type get layout => TestIndexedStackLayout;
+
+  @override
+  Widget build(covariant Coordinator coordinator, BuildContext context) {
+    return const Center(child: Text('First Tab'));
+  }
+
+  @override
+  Uri toUri() => Uri.parse('/first-tab');
+}
+
+class SecondTab extends RedirectRuleTestRoute
+    with RouteRedirect, RouteRedirectRule {
+  @override
+  Type get layout => TestIndexedStackLayout;
+
+  @override
+  final List<RedirectRule> redirectRules = [RedirectCountingRule()];
+
+  @override
+  Widget build(covariant Coordinator coordinator, BuildContext context) {
+    return const Center(child: Text('Second Tab'));
+  }
+
+  @override
+  Uri toUri() => Uri.parse('/second-tab');
+}
+
 // ============================================================================
 // Test Coordinator
 // ============================================================================
 
 class RedirectRuleTestCoordinator extends Coordinator<RedirectRuleTestRoute> {
+  late final indexedStackPath = IndexedStackPath.createWith(
+    [FirstTab(), SecondTab()],
+    coordinator: this,
+    label: 'IndexedStackPath',
+  )..bindLayout(TestIndexedStackLayout.new);
+
+  @override
+  List<StackPath> get paths => [...super.paths, indexedStackPath];
+
   @override
   RedirectRuleTestRoute parseRouteFromUri(Uri uri) {
     return switch (uri.pathSegments) {
