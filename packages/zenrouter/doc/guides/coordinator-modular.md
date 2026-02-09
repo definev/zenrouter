@@ -96,13 +96,11 @@ class AppCoordinator extends Coordinator<AppRoute>
     with CoordinatorModular<AppRoute> {
   
   @override
-  Set<RouteModule<AppRoute>> defineModules(
-    CoordinatorModular<AppRoute> coordinator,
-  ) {
+  Set<RouteModule<AppRoute>> defineModules() {
     return {
-      AuthModule(coordinator),
-      ShopModule(coordinator),
-      SettingsModule(coordinator),
+      AuthModule(this),
+      ShopModule(this),
+      SettingsModule(this),
     };
   }
 
@@ -308,12 +306,10 @@ class AppCoordinator extends Coordinator<AppRoute>
     with CoordinatorModular<AppRoute> {
   
   @override
-  Set<RouteModule<AppRoute>> defineModules(
-    CoordinatorModular<AppRoute> coordinator,
-  ) {
+  Set<RouteModule<AppRoute>> defineModules() {
     return {
-      AuthModule(coordinator),
-      ShopModule(coordinator),
+      AuthModule(this),
+      ShopModule(this),
     };
   }
 
@@ -439,12 +435,10 @@ Modules are checked in the order they appear in the `Set` returned by `defineMod
 
 ```dart
 @override
-Set<RouteModule<AppRoute>> defineModules(
-  CoordinatorModular<AppRoute> coordinator,
-) {
+Set<RouteModule<AppRoute>> defineModules() {
   return {
-    AdminModule(coordinator),    // Checked first
-    PublicModule(coordinator),   // Checked second
+    AdminModule(this),    // Checked first
+    PublicModule(this),   // Checked second
   };
 }
 ```
@@ -541,12 +535,10 @@ Register modules conditionally:
 
 ```dart
 @override
-Set<RouteModule<AppRoute>> defineModules(
-  CoordinatorModular<AppRoute> coordinator,
-) {
+Set<RouteModule<AppRoute>> defineModules() {
   final modules = <RouteModule<AppRoute>>{
-    AuthModule(coordinator),
-    ShopModule(coordinator),
+    AuthModule(this),
+    ShopModule(this),
   };
 
   // Add admin module only if user is admin
@@ -570,9 +562,9 @@ Set<RouteModule<AppRoute>> defineModules(
 
 ```dart
 @override
-Set<RouteModule<AppRoute>> defineModules(...) {
+Set<RouteModule<AppRoute>> defineModules() {
   return {
-    MyModule(coordinator), // ✅ Must be included
+    MyModule(this), // ✅ Must be included
   };
 }
 ```

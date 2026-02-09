@@ -19,9 +19,9 @@
 class AppCoordinator extends Coordinator<AppRoute>
     with CoordinatorModular<AppRoute> {
   @override
-  Set<RouteModule<AppRoute>> defineModules(coordinator) => {
-    AuthModule(coordinator),
-    ShopModule(coordinator),
+  Set<RouteModule<AppRoute>> defineModules() => {
+    AuthModule(this),
+    ShopModule(this),
   };
 }
 ```
