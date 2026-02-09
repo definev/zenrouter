@@ -74,14 +74,19 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T>
       if (!canPop) return;
     }
     var newRoute = stack[index];
-    while (newRoute is RouteRedirect<T>) {
-      final routeRedirect = newRoute as RouteRedirect<T>;
+    while (newRoute is RouteRedirect) {
+      final routeRedirect = newRoute as RouteRedirect;
       final redirectTo = await switch (coordinator) {
         null => routeRedirect.redirect(),
         final coordinator => routeRedirect.redirectWith(coordinator),
       };
+      assert(
+        redirectTo == null || redirectTo is T,
+        'Redirected route must be the same type as the stack route',
+      );
       if (redirectTo == null) return;
-      newRoute = redirectTo;
+      if (identical(redirectTo, newRoute)) break;
+      newRoute = redirectTo as T;
     }
 
     final newIndex = stack.indexOf(newRoute);
