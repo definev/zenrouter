@@ -65,10 +65,12 @@ abstract class RouteModule<T extends RouteUnique> {
   /// Creates a route module with a reference to its coordinator.
   RouteModule(this.coordinator);
 
+  /// {@template zenrouter.coordinator.modular.coordinator}
   /// The coordinator that owns this module.
   ///
   /// Use this to access coordinator methods or other modules via
   /// [CoordinatorModular.getModule].
+  /// {@endtemplate}
   final CoordinatorModular<T> coordinator;
 
   /// The navigation paths managed by this module.
@@ -192,7 +194,7 @@ abstract class RouteModule<T extends RouteUnique> {
 /// ```
 mixin CoordinatorModular<T extends RouteUnique> on Coordinator<T> {
   late final Map<Type, RouteModule<T>> _modules = {
-    for (final module in defineModules()) ...{module.runtimeType: module},
+    for (final module in defineModules()) module.runtimeType: module,
   };
 
   /// Defines the set of route modules for this coordinator.
@@ -270,11 +272,14 @@ mixin CoordinatorModular<T extends RouteUnique> on Coordinator<T> {
   }
 
   @override
-  FutureOr<T> parseRouteFromUri(Uri uri) async {
+  FutureOr<T?> parseRouteFromUri(Uri uri) async {
     for (final module in _modules.values) {
       final route = await module.parseRouteFromUri(uri);
       if (route != null) return route;
     }
+
+    // If this is a route module, it should not handle not found route.
+    if (isRouteModule) return null;
     return notFoundRoute(uri);
   }
 }

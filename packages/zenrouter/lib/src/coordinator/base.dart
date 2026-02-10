@@ -143,6 +143,7 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     defineConverter();
   }
 
+  /// {@macro zenrouter.coordinator.modular.coordinator}
   @override
   CoordinatorModular<T> get coordinator => throw UnimplementedError(
     'This coordinator is standalone and does not belong to any [CoordinatorModular] \n'
@@ -159,20 +160,34 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     super.dispose();
   }
 
+  /// Whether this coordinator is a part of a [CoordinatorModular].
+  ///
+  /// If it is a part of a [CoordinatorModular], it will not have a root path.
+  /// And it will not be able to use [routerDelegate] and [routeInformationParser].
+  late final bool isRouteModule = () {
+    try {
+      coordinator;
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }();
+
   /// The root (primary) navigation path.
   ///
   /// All coordinators have at least this one path.
-  late final NavigationPath<T> root = NavigationPath.createWith(
-    label: 'root',
-    coordinator: this,
-  );
+  ///
+  /// If this coordinator is a part of a [CoordinatorModular], the root path will point to the root path of the [CoordinatorModular].
+  late final NavigationPath<T> root = isRouteModule
+      ? coordinator.root
+      : NavigationPath.createWith(label: 'root', coordinator: this);
 
   /// All navigation paths managed by this coordinator.
   ///
   /// If you add custom paths, make sure to override [paths]
   @override
   @mustCallSuper
-  List<StackPath> get paths => [root];
+  List<StackPath> get paths => isRouteModule ? [] : [root];
 
   /// Defines the layout structure for this coordinator.
   ///

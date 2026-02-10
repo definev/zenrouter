@@ -61,6 +61,17 @@ Integrate routing with Riverpod, Bloc, Provider, and other state solutions.
 
 ---
 
+## 🏗️ Architecture
+
+### [Route Versioning](route-versioning.md)
+Run multiple versions of a feature side-by-side using Coordinator-as-RouteModule.
+
+**Topics**: Route versioning, Coordinator-as-RouteModule, deprecation flow, cross-version navigation  
+**Paradigm**: Coordinator  
+**Difficulty**: ⭐⭐⭐ Advanced
+
+---
+
 ## 🌐 Web
 
 ### [URL Strategies for Web](url-strategies.md)
@@ -84,6 +95,7 @@ Configure hash vs. path-based URLs, server setup, and deployment strategies.
 | Sidebar + content layout | [Nested Navigation](nested-navigation.md) |
 | Custom animations | [Route Transitions](route-transitions.md) |
 | Full-screen flows | [Modal Routing](modal-routing.md) |
+| API versioning / feature flags | [Route Versioning](route-versioning.md) |
 | Riverpod/Bloc integration | [State Management](state-management.md) |
 | Deploying to web | [URL Strategies](url-strategies.md) |
 
@@ -101,7 +113,7 @@ Configure hash vs. path-based URLs, server setup, and deployment strategies.
 |-------|---------|
 | ⭐ **Easy** | 404 Handling |
 | ⭐⭐ **Moderate** | Authentication Flow, Bottom Navigation, Route Transitions, Modal Routing, State Management, URL Strategies |
-| ⭐⭐⭐ **Advanced** | Nested Navigation |
+| ⭐⭐⭐ **Advanced** | Nested Navigation, Route Versioning |
 
 ---
 

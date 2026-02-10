@@ -189,6 +189,5 @@ abstract class StackPath<T extends RouteTarget> with ChangeNotifier {
   Future<void> activateRoute(T route);
 
   @override
-  String toString() =>
-      '${debugLabel ?? hashCode} [${runtimeType.toString().split('Path').first}]';
+  String toString() => '${debugLabel ?? hashCode} [$coordinator | $pathKey]';
 }

@@ -2,16 +2,24 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:zenrouter/zenrouter.dart';
+import 'package:zenrouter_devtools/zenrouter_devtools.dart';
 
 // ============================================================================
 // Main App Entry Point
 // ============================================================================
 //
-// This example demonstrates Coordinator-as-RouteModule with ROUTE VERSIONING.
+// This example demonstrates Coordinator-as-RouteModule with ROUTE VERSIONING
+// and NESTED CoordinatorModular.
 //
 // Since Coordinator<T> implements RouteModule<T>, each version of a feature
 // can live in its own Coordinator and be composed into the parent. This allows
 // multiple route versions to coexist in a single application.
+//
+// A CoordinatorModular can itself be used as a RouteModule of another
+// CoordinatorModular, enabling multi-level nesting. The BlogCoordinator
+// below is an example: it's a CoordinatorModular with its own sub-modules
+// (BlogPostsModule & BlogCommentsModule) registered as a child of
+// MainCoordinator.
 //
 // Architecture:
 //
@@ -28,6 +36,13 @@ import 'package:zenrouter/zenrouter.dart';
 //   │       ├── /v2/shop/products     → ProductListV2
 //   │       ├── /v2/shop/products/:id → ProductDetailV2
 //   │       └── /v2/shop/cart         → CartV2
+//   ├── BlogCoordinator          ← NESTED CoordinatorModular (/blog/...)
+//   │   └── BlogLayout (NavigationRail)
+//   │       ├── BlogPostsModule
+//   │       │   ├── /blog               → BlogHomeRoute
+//   │       │   └── /blog/posts/:slug   → BlogPostRoute
+//   │       └── BlogCommentsModule
+//   │           └── /blog/posts/:slug/comments → BlogCommentRoute
 //   └── SettingsCoordinator      ← settings (/settings/...)
 //       └── SettingsLayout (master-detail sidebar)
 //           ├── /settings          → GeneralSettingsRoute
@@ -38,7 +53,8 @@ import 'package:zenrouter/zenrouter.dart';
 //   • Route versioning — V1 & V2 shop coexist with isolated paths/layouts
 //   • Deprecation flow — V1 shows a banner linking to V2
 //   • Cross-version navigation — routes navigate across coordinator versions
-//   • Each version is a full Coordinator with its own state
+//   • Nested CoordinatorModular — BlogCoordinator delegates to sub-modules
+//   • Each version/feature is a full Coordinator with its own state
 // ============================================================================
 
 void main() {
@@ -440,6 +456,17 @@ class ShopHomeV2 extends AppRoute {
           const SizedBox(height: 8),
           Card(
             child: ListTile(
+              leading: Icon(Icons.article, color: Colors.teal[700]),
+              title: const Text('Go to Blog'),
+              subtitle: const Text(
+                'BlogCoordinator — nested CoordinatorModular',
+              ),
+              trailing: const Icon(Icons.arrow_forward),
+              onTap: () => coordinator.push(BlogHomeRoute()),
+            ),
+          ),
+          Card(
+            child: ListTile(
               leading: const Icon(Icons.settings, color: Colors.purple),
               title: const Text('Go to Settings'),
               subtitle: const Text('SettingsCoordinator module'),
@@ -613,6 +640,291 @@ class CartV2 extends AppRoute {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ============================================================================
+// Blog Coordinator — NESTED CoordinatorModular
+// ============================================================================
+//
+// BlogCoordinator is a CoordinatorModular that is itself used as a RouteModule
+// of MainCoordinator. It delegates route parsing to its own sub-modules:
+// BlogPostsModule and BlogCommentsModule.
+//
+// This demonstrates multi-level nesting:
+//   MainCoordinator → BlogCoordinator → BlogPostsModule / BlogCommentsModule
+
+class BlogCoordinator extends Coordinator<AppRoute>
+    with CoordinatorModular<AppRoute> {
+  BlogCoordinator(this._parent);
+  final MainCoordinator _parent;
+
+  @override
+  CoordinatorModular<AppRoute> get coordinator => _parent;
+
+  late final NavigationPath<AppRoute> blogStack = NavigationPath.createWith(
+    label: 'blog',
+    coordinator: _parent,
+  );
+
+  @override
+  List<StackPath> get paths => [...super.paths, blogStack];
+
+  @override
+  void defineLayout() {
+    super.defineLayout();
+    RouteLayout.defineLayout(BlogLayout, BlogLayout.new);
+  }
+
+  @override
+  Set<RouteModule<AppRoute>> defineModules() => {
+    BlogPostsModule(this),
+    BlogCommentsModule(this),
+  };
+
+  @override
+  AppRoute notFoundRoute(Uri uri) => NotFoundRoute(uri: uri);
+}
+
+// Blog sub-modules
+class BlogPostsModule extends RouteModule<AppRoute> {
+  BlogPostsModule(super.coordinator);
+
+  @override
+  FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
+    return switch (uri.pathSegments) {
+      ['blog'] => BlogHomeRoute(),
+      ['blog', 'posts', final slug] => BlogPostRoute(slug: slug),
+      _ => null,
+    };
+  }
+}
+
+class BlogCommentsModule extends RouteModule<AppRoute> {
+  BlogCommentsModule(super.coordinator);
+
+  @override
+  FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
+    return switch (uri.pathSegments) {
+      ['blog', 'posts', final slug, 'comments'] => BlogCommentRoute(
+        postSlug: slug,
+      ),
+      _ => null,
+    };
+  }
+}
+
+// Blog Layout — NavigationRail with posts sidebar
+class BlogLayout extends AppRoute with RouteLayout<AppRoute> {
+  @override
+  NavigationPath<AppRoute> resolvePath(MainCoordinator coordinator) =>
+      coordinator.getModule<BlogCoordinator>().blogStack;
+
+  @override
+  Widget build(covariant MainCoordinator coordinator, BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Blog'),
+        backgroundColor: Colors.teal[700],
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.shopping_bag),
+            tooltip: 'Shop V2',
+            onPressed: () => coordinator.push(ShopHomeV2()),
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Settings',
+            onPressed: () => coordinator.push(GeneralSettingsRoute()),
+          ),
+        ],
+      ),
+      body: ListenableBuilder(
+        listenable: resolvePath(coordinator),
+        builder: (context, _) {
+          final active = coordinator.activePath.stack.lastOrNull;
+          final selectedIndex =
+              active is BlogPostRoute || active is BlogCommentRoute ? 1 : 0;
+          return Row(
+            children: [
+              NavigationRail(
+                selectedIndex: selectedIndex,
+                labelType: NavigationRailLabelType.all,
+                onDestinationSelected: (i) => switch (i) {
+                  0 => coordinator.push(BlogHomeRoute()),
+                  1 => coordinator.push(BlogPostRoute(slug: 'latest')),
+                  _ => null,
+                },
+                destinations: const [
+                  NavigationRailDestination(
+                    icon: Icon(Icons.home_outlined),
+                    selectedIcon: Icon(Icons.home),
+                    label: Text('Home'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.article_outlined),
+                    selectedIcon: Icon(Icons.article),
+                    label: Text('Posts'),
+                  ),
+                ],
+              ),
+              const VerticalDivider(width: 1),
+              Expanded(child: buildPath(coordinator)),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+// Blog Routes
+class BlogHomeRoute extends AppRoute {
+  @override
+  Type get layout => BlogLayout;
+  @override
+  Uri toUri() => Uri.parse('/blog');
+
+  @override
+  Widget build(covariant MainCoordinator coordinator, BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        const Text(
+          'Blog Home',
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Managed by BlogCoordinator — a nested CoordinatorModular '
+          'with its own sub-modules (BlogPostsModule & BlogCommentsModule).',
+          style: TextStyle(color: Colors.grey[600], fontSize: 14),
+        ),
+        const SizedBox(height: 24),
+        for (final slug in ['hello-world', 'getting-started', 'advanced-tips'])
+          Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              leading: Icon(Icons.article, color: Colors.teal[700]),
+              title: Text(slug.replaceAll('-', ' ').toUpperCase()),
+              subtitle: Text('/blog/posts/$slug'),
+              trailing: const Icon(Icons.arrow_forward),
+              onTap: () => coordinator.push(BlogPostRoute(slug: slug)),
+            ),
+          ),
+        const Divider(height: 32),
+        const Text(
+          'Cross-coordinator Navigation',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 8),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.shopping_bag, color: Colors.green),
+            title: const Text('Go to Shop V2'),
+            trailing: const Icon(Icons.arrow_forward),
+            onTap: () => coordinator.push(ShopHomeV2()),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class BlogPostRoute extends AppRoute {
+  BlogPostRoute({required this.slug});
+  final String slug;
+
+  @override
+  Type get layout => BlogLayout;
+  @override
+  Uri toUri() => Uri.parse('/blog/posts/$slug');
+  @override
+  List<Object?> get props => [slug];
+
+  @override
+  Widget build(covariant MainCoordinator coordinator, BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        Text(
+          slug.replaceAll('-', ' ').toUpperCase(),
+          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Parsed by BlogPostsModule (sub-module of BlogCoordinator)',
+          style: TextStyle(color: Colors.grey[600]),
+        ),
+        const SizedBox(height: 24),
+        Card(
+          child: ListTile(
+            leading: Icon(Icons.comment, color: Colors.teal[700]),
+            title: const Text('View Comments'),
+            subtitle: Text('/blog/posts/$slug/comments'),
+            trailing: const Icon(Icons.arrow_forward),
+            onTap: () => coordinator.push(BlogCommentRoute(postSlug: slug)),
+          ),
+        ),
+        const SizedBox(height: 8),
+        FilledButton.icon(
+          onPressed: () => coordinator.pop(),
+          icon: const Icon(Icons.arrow_back),
+          label: const Text('Back'),
+        ),
+      ],
+    );
+  }
+}
+
+class BlogCommentRoute extends AppRoute {
+  BlogCommentRoute({required this.postSlug});
+  final String postSlug;
+
+  @override
+  Type get layout => BlogLayout;
+  @override
+  Uri toUri() => Uri.parse('/blog/posts/$postSlug/comments');
+  @override
+  List<Object?> get props => [postSlug];
+
+  @override
+  Widget build(covariant MainCoordinator coordinator, BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        Text(
+          'Comments for "$postSlug"',
+          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Parsed by BlogCommentsModule (sub-module of BlogCoordinator)',
+          style: TextStyle(color: Colors.grey[600]),
+        ),
+        const SizedBox(height: 24),
+        for (var i = 1; i <= 3; i++)
+          Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Colors.teal[100],
+                foregroundColor: Colors.teal[800],
+                child: Text('U$i'),
+              ),
+              title: Text('Comment by User $i'),
+              subtitle: Text('Great post about $postSlug!'),
+            ),
+          ),
+        const SizedBox(height: 16),
+        FilledButton.icon(
+          onPressed: () => coordinator.pop(),
+          icon: const Icon(Icons.arrow_back),
+          label: const Text('Back to Post'),
+        ),
+      ],
     );
   }
 }
@@ -828,12 +1140,13 @@ class PrivacySettingsRoute extends AppRoute {
 // ============================================================================
 
 class MainCoordinator extends Coordinator<AppRoute>
-    with CoordinatorModular<AppRoute> {
+    with CoordinatorModular<AppRoute>, CoordinatorDebug {
   @override
   Set<RouteModule<AppRoute>> defineModules() => {
     MainRouteModule(this),
     ShopCoordinatorV1(this),
     ShopCoordinatorV2(this),
+    BlogCoordinator(this),
     SettingsCoordinator(this),
   };
 

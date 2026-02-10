@@ -86,6 +86,45 @@ class StandalonePageRoute extends AppRoute {
   String toString() => 'StandalonePageRoute';
 }
 
+// --- Nested CoordinatorModular routes ---
+
+class BlogHomeRoute extends AppRoute {
+  @override
+  Type get layout => BlogLayout;
+  @override
+  Uri toUri() => Uri.parse('/blog');
+  @override
+  String toString() => 'BlogHomeRoute';
+}
+
+class BlogPostRoute extends AppRoute {
+  BlogPostRoute({required this.slug});
+  final String slug;
+
+  @override
+  Type get layout => BlogLayout;
+  @override
+  Uri toUri() => Uri.parse('/blog/posts/$slug');
+  @override
+  String toString() => 'BlogPostRoute(slug: $slug)';
+  @override
+  List<Object?> get props => [slug];
+}
+
+class BlogCommentRoute extends AppRoute {
+  BlogCommentRoute({required this.postSlug});
+  final String postSlug;
+
+  @override
+  Type get layout => BlogLayout;
+  @override
+  Uri toUri() => Uri.parse('/blog/posts/$postSlug/comments');
+  @override
+  String toString() => 'BlogCommentRoute(postSlug: $postSlug)';
+  @override
+  List<Object?> get props => [postSlug];
+}
+
 // ============================================================================
 // Test Layouts
 // ============================================================================
@@ -120,6 +159,21 @@ class SettingsLayout extends AppRoute with RouteLayout<AppRoute> {
   }
 }
 
+class BlogLayout extends AppRoute with RouteLayout<AppRoute> {
+  @override
+  NavigationPath<AppRoute> resolvePath(
+    covariant CoordinatorModular<AppRoute> coordinator,
+  ) {
+    final module = coordinator.getModule<BlogCoordinator>();
+    return module.blogStack;
+  }
+
+  @override
+  Widget build(covariant Coordinator coordinator, BuildContext context) {
+    return Scaffold(body: buildPath(coordinator));
+  }
+}
+
 // ============================================================================
 // Child Coordinators used as RouteModules
 // ============================================================================
@@ -128,7 +182,7 @@ class SettingsLayout extends AppRoute with RouteLayout<AppRoute> {
 /// CoordinatorModular. It overrides `coordinator` to point to the parent.
 class ShopCoordinator extends Coordinator<AppRoute> {
   ShopCoordinator(this._parent);
-  final TestParentCoordinator _parent;
+  final CoordinatorModular<AppRoute> _parent;
 
   @override
   CoordinatorModular<AppRoute> get coordinator => _parent;
@@ -197,6 +251,86 @@ class TestParentCoordinator extends Coordinator<AppRoute>
     TestMainRouteModule(this),
     ShopCoordinator(this),
     SettingsCoordinator(this),
+  };
+
+  @override
+  AppRoute notFoundRoute(Uri uri) => NotFoundRoute(uri: uri);
+}
+
+// ============================================================================
+// Nested CoordinatorModular — a CoordinatorModular used as RouteModule
+// ============================================================================
+
+/// A Coordinator that is itself a CoordinatorModular AND acts as a RouteModule
+/// of a grandparent CoordinatorModular. It has its own child modules.
+class BlogCoordinator extends Coordinator<AppRoute>
+    with CoordinatorModular<AppRoute> {
+  BlogCoordinator(this._grandParent);
+  final NestedGrandParentCoordinator _grandParent;
+
+  @override
+  CoordinatorModular<AppRoute> get coordinator => _grandParent;
+
+  late final NavigationPath<AppRoute> blogStack = NavigationPath.createWith(
+    label: 'blog',
+    coordinator: _grandParent,
+  );
+
+  @override
+  List<StackPath> get paths => [...super.paths, blogStack];
+
+  @override
+  void defineLayout() {
+    super.defineLayout();
+    RouteLayout.defineLayout(BlogLayout, BlogLayout.new);
+  }
+
+  @override
+  Set<RouteModule<AppRoute>> defineModules() => {
+    BlogPostsModule(this),
+    BlogCommentsModule(this),
+  };
+
+  @override
+  AppRoute notFoundRoute(Uri uri) => NotFoundRoute(uri: uri);
+}
+
+class BlogPostsModule extends RouteModule<AppRoute> {
+  BlogPostsModule(super.coordinator);
+
+  @override
+  FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
+    return switch (uri.pathSegments) {
+      ['blog'] => BlogHomeRoute(),
+      ['blog', 'posts', final slug] => BlogPostRoute(slug: slug),
+      _ => null,
+    };
+  }
+}
+
+class BlogCommentsModule extends RouteModule<AppRoute> {
+  BlogCommentsModule(super.coordinator);
+
+  @override
+  FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
+    return switch (uri.pathSegments) {
+      ['blog', 'posts', final slug, 'comments'] => BlogCommentRoute(
+        postSlug: slug,
+      ),
+      _ => null,
+    };
+  }
+}
+
+/// The top-level grandparent that contains both regular modules
+/// and a nested CoordinatorModular (BlogCoordinator).
+class NestedGrandParentCoordinator extends Coordinator<AppRoute>
+    with CoordinatorModular<AppRoute> {
+  @override
+  Set<RouteModule<AppRoute>> defineModules() => {
+    TestMainRouteModule(this),
+    ShopCoordinator(this),
+    BlogCoordinator(this),
   };
 
   @override
@@ -286,6 +420,54 @@ void main() {
 
         expect(shopCoordinator.coordinator, same(parent));
         expect(settingsCoordinator.coordinator, same(parent));
+      });
+    });
+
+    group('isRouteModule', () {
+      test('standalone coordinator returns false', () {
+        final coordinator = StandaloneCoordinator();
+
+        expect(coordinator.isRouteModule, isFalse);
+      });
+
+      test('child coordinator returns true', () {
+        final parent = TestParentCoordinator();
+        final shopCoordinator = parent.getModule<ShopCoordinator>();
+
+        expect(shopCoordinator.isRouteModule, isTrue);
+      });
+    });
+
+    group('root', () {
+      test('standalone coordinator creates its own root NavigationPath', () {
+        final coordinator = StandaloneCoordinator();
+
+        expect(coordinator.root, isA<NavigationPath<AppRoute>>());
+        expect(coordinator.root.debugLabel, equals('root'));
+      });
+
+      test('child coordinator root points to parent root (same instance)', () {
+        final parent = TestParentCoordinator();
+        final shopCoordinator = parent.getModule<ShopCoordinator>();
+        final settingsCoordinator = parent.getModule<SettingsCoordinator>();
+
+        expect(shopCoordinator.root, same(parent.root));
+        expect(settingsCoordinator.root, same(parent.root));
+      });
+
+      test('child coordinator paths does not include root', () {
+        final parent = TestParentCoordinator();
+        final shopCoordinator = parent.getModule<ShopCoordinator>();
+
+        // When isRouteModule is true, paths returns [] (no root)
+        // Only the custom shopStack is added by the child's override
+        expect(shopCoordinator.paths, isNot(contains(parent.root)));
+      });
+
+      test('standalone coordinator paths includes its own root', () {
+        final coordinator = StandaloneCoordinator();
+
+        expect(coordinator.paths, contains(coordinator.root));
       });
     });
 
@@ -590,6 +772,161 @@ void main() {
       );
     });
   });
+
+  group('Nested CoordinatorModular (CoordinatorModular as RouteModule)', () {
+    group('isRouteModule and root', () {
+      test('nested CoordinatorModular has isRouteModule == true', () {
+        final grandParent = NestedGrandParentCoordinator();
+        final blogCoordinator = grandParent.getModule<BlogCoordinator>();
+
+        expect(blogCoordinator.isRouteModule, isTrue);
+      });
+
+      test('nested CoordinatorModular root points to grandparent root', () {
+        final grandParent = NestedGrandParentCoordinator();
+        final blogCoordinator = grandParent.getModule<BlogCoordinator>();
+
+        expect(blogCoordinator.root, same(grandParent.root));
+      });
+
+      test('grandparent isRouteModule is false (it is standalone)', () {
+        final grandParent = NestedGrandParentCoordinator();
+
+        expect(grandParent.isRouteModule, isFalse);
+      });
+    });
+
+    group('Route Parsing cascading', () {
+      test(
+        'grandparent delegates to nested CoordinatorModular for route parsing',
+        () async {
+          final grandParent = NestedGrandParentCoordinator();
+
+          final blogHome = await grandParent.parseRouteFromUri(
+            Uri.parse('/blog'),
+          );
+          expect(blogHome, isA<BlogHomeRoute>());
+        },
+      );
+
+      test(
+        'grandparent cascades through nested CoordinatorModular to its child modules',
+        () async {
+          final grandParent = NestedGrandParentCoordinator();
+
+          final blogPost = await grandParent.parseRouteFromUri(
+            Uri.parse('/blog/posts/hello-world'),
+          );
+          expect(blogPost, isA<BlogPostRoute>());
+          expect((blogPost as BlogPostRoute).slug, equals('hello-world'));
+
+          final blogComment = await grandParent.parseRouteFromUri(
+            Uri.parse('/blog/posts/hello-world/comments'),
+          );
+          expect(blogComment, isA<BlogCommentRoute>());
+          expect(
+            (blogComment as BlogCommentRoute).postSlug,
+            equals('hello-world'),
+          );
+        },
+      );
+
+      test(
+        'routes from sibling modules of the grandparent still work',
+        () async {
+          final grandParent = NestedGrandParentCoordinator();
+
+          final homeRoute = await grandParent.parseRouteFromUri(Uri.parse('/'));
+          expect(homeRoute, isA<HomeRoute>());
+
+          final shopRoute = await grandParent.parseRouteFromUri(
+            Uri.parse('/shop'),
+          );
+          expect(shopRoute, isA<ShopHomeRoute>());
+        },
+      );
+
+      test(
+        'unknown URI falls through all levels to grandparent notFoundRoute',
+        () async {
+          final grandParent = NestedGrandParentCoordinator();
+
+          final route = await grandParent.parseRouteFromUri(
+            Uri.parse('/completely/unknown'),
+          );
+          expect(route, isA<NotFoundRoute>());
+        },
+      );
+    });
+
+    group('Path Aggregation across levels', () {
+      test('grandparent aggregates paths from all levels', () {
+        final grandParent = NestedGrandParentCoordinator();
+        final shopCoordinator = grandParent.getModule<ShopCoordinator>();
+        final blogCoordinator = grandParent.getModule<BlogCoordinator>();
+
+        final paths = grandParent.paths;
+        expect(paths, contains(grandParent.root));
+        expect(paths, contains(shopCoordinator.shopStack));
+        expect(paths, contains(blogCoordinator.blogStack));
+      });
+    });
+
+    group('Navigation via grandparent to nested module', () {
+      test(
+        'push route handled by nested CoordinatorModular child module',
+        () async {
+          final grandParent = NestedGrandParentCoordinator();
+
+          await grandParent.replace(BlogHomeRoute());
+
+          final blogCoordinator = grandParent.getModule<BlogCoordinator>();
+          expect(blogCoordinator.blogStack.stack.last, isA<BlogHomeRoute>());
+        },
+      );
+
+      test('push route with parameters through nested modules', () async {
+        final grandParent = NestedGrandParentCoordinator();
+
+        await grandParent.replace(BlogPostRoute(slug: 'my-post'));
+
+        final blogCoordinator = grandParent.getModule<BlogCoordinator>();
+        expect(blogCoordinator.blogStack.stack.last, isA<BlogPostRoute>());
+      });
+
+      test(
+        'cross-module navigation between sibling and nested CoordinatorModular',
+        () async {
+          final grandParent = NestedGrandParentCoordinator();
+
+          // Navigate to shop (sibling module)
+          await grandParent.replace(ShopHomeRoute());
+          final shopCoordinator = grandParent.getModule<ShopCoordinator>();
+          expect(shopCoordinator.shopStack.stack.last, isA<ShopHomeRoute>());
+
+          // Navigate to blog (nested CoordinatorModular module)
+          await grandParent.replace(BlogHomeRoute());
+          final blogCoordinator = grandParent.getModule<BlogCoordinator>();
+          expect(blogCoordinator.blogStack.stack.last, isA<BlogHomeRoute>());
+        },
+      );
+    });
+
+    group('Layout Definition in nested CoordinatorModular', () {
+      test(
+        'nested CoordinatorModular layouts are registered via grandparent',
+        () {
+          var blogLayoutCalled = false;
+
+          _NestedLayoutTrackingGrandParent(
+            onBlogLayout: () => blogLayoutCalled = true,
+          );
+
+          expect(blogLayoutCalled, isTrue);
+        },
+      );
+    });
+  });
 }
 
 // ============================================================================
@@ -696,6 +1033,45 @@ class _ConverterTrackingParent extends Coordinator<AppRoute>
       this,
       onConverter: onSettingsConverter,
     ),
+  };
+
+  @override
+  AppRoute notFoundRoute(Uri uri) => NotFoundRoute(uri: uri);
+}
+
+// --- Nested layout tracking helpers ---
+
+class _NestedLayoutTrackingBlogCoordinator extends Coordinator<AppRoute>
+    with CoordinatorModular<AppRoute> {
+  _NestedLayoutTrackingBlogCoordinator(this._parent, {required this.onLayout});
+  final _NestedLayoutTrackingGrandParent _parent;
+  final VoidCallback onLayout;
+
+  @override
+  CoordinatorModular<AppRoute> get coordinator => _parent;
+
+  @override
+  FutureOr<AppRoute?> parseRouteFromUri(Uri uri) => null;
+
+  @override
+  void defineLayout() => onLayout();
+
+  @override
+  Set<RouteModule<AppRoute>> defineModules() => {};
+
+  @override
+  AppRoute notFoundRoute(Uri uri) => NotFoundRoute(uri: uri);
+}
+
+class _NestedLayoutTrackingGrandParent extends Coordinator<AppRoute>
+    with CoordinatorModular<AppRoute> {
+  _NestedLayoutTrackingGrandParent({required this.onBlogLayout});
+
+  final VoidCallback onBlogLayout;
+
+  @override
+  Set<RouteModule<AppRoute>> defineModules() => {
+    _NestedLayoutTrackingBlogCoordinator(this, onLayout: onBlogLayout),
   };
 
   @override
