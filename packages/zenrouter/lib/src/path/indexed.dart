@@ -35,7 +35,22 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T>
     List<T> stack, {
     required Coordinator coordinator,
     required String label,
-  }) => IndexedStackPath._(stack, debugLabel: label, coordinator: coordinator);
+  }) {
+    assert(
+      !coordinator.isRouteModule,
+      'IndexedStackPath.createWith received a Coordinator that is itself a RouteModule.\n'
+      'Paths must be bound to the top-level CoordinatorModular (the one used as RouterConfig), not to a nested child.\n\n'
+      'Fix: pass `coordinator` (the parent) instead of `this` when creating the path:\n'
+      '  IndexedStackPath.createWith([...], label: "myPath", coordinator: coordinator);\n\n'
+      'If this Coordinator is nested inside a CoordinatorModular that is also a RouteModule,\n'
+      'make sure the parent passes its own `coordinator` getter in defineModules.',
+    );
+    return IndexedStackPath._(
+      stack,
+      debugLabel: label,
+      coordinator: coordinator,
+    );
+  }
 
   /// The key used to identify this type in [RouteLayout.definePath].
   static const key = PathKey('IndexedStackPath');

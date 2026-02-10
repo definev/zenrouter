@@ -304,7 +304,7 @@ class ShopCoordinatorV2 extends Coordinator<AppRoute> {
 
   late final NavigationPath<AppRoute> shopV2Stack = NavigationPath.createWith(
     label: 'shop-v2',
-    coordinator: _parent,
+    coordinator: coordinator,
   );
 
   @override
@@ -665,7 +665,7 @@ class BlogCoordinator extends Coordinator<AppRoute>
 
   late final NavigationPath<AppRoute> blogStack = NavigationPath.createWith(
     label: 'blog',
-    coordinator: _parent,
+    coordinator: coordinator,
   );
 
   @override
@@ -679,8 +679,8 @@ class BlogCoordinator extends Coordinator<AppRoute>
 
   @override
   Set<RouteModule<AppRoute>> defineModules() => {
-    BlogPostsModule(this),
-    BlogCommentsModule(this),
+    BlogPostsModule(coordinator),
+    BlogCommentsModule(coordinator),
   };
 
   @override
