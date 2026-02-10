@@ -355,21 +355,21 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
     if (uriString.isEmpty) return;
     final uri = Uri.parse(uriString);
     final route = await widget.coordinator.parseRouteFromUri(uri);
-    widget.coordinator.push(route);
+    widget.coordinator.push(route!);
   }
 
   void _replaceUri(String uriString) async {
     if (uriString.isEmpty) return;
     final uri = Uri.parse(uriString);
     final route = await widget.coordinator.parseRouteFromUri(uri);
-    widget.coordinator.replace(route);
+    widget.coordinator.replace(route!);
   }
 
   void _recoverUri(String uriString) async {
     if (uriString.isEmpty) return;
     final uri = Uri.parse(uriString);
     final route = await widget.coordinator.parseRouteFromUri(uri);
-    widget.coordinator.recover(route);
+    widget.coordinator.recover(route!);
   }
 }
 

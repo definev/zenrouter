@@ -134,7 +134,7 @@ enum DefaultTransitionStrategy {
 /// ```
 abstract class Coordinator<T extends RouteUnique> extends Equatable
     with ChangeNotifier
-    implements RouterConfig<Uri> {
+    implements RouterConfig<Uri>, RouteModule<T> {
   Coordinator({this.initialRoutePath}) {
     for (final path in paths) {
       path.addListener(notifyListeners);
@@ -142,6 +142,12 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     defineLayout();
     defineConverter();
   }
+
+  @override
+  CoordinatorModular<T> get coordinator => throw UnimplementedError(
+    'This coordinator is standalone and does not belong to any [CoordinatorModular] \n'
+    'If you want to make it a part of a [CoordinatorModular] you should override `coordinator` getter or passing it through constructor',
+  );
 
   @override
   void dispose() {
@@ -164,6 +170,7 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   /// All navigation paths managed by this coordinator.
   ///
   /// If you add custom paths, make sure to override [paths]
+  @override
   @mustCallSuper
   List<StackPath> get paths => [root];
 
@@ -171,12 +178,14 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   ///
   /// This method is called during initialization. Override this to register
   /// custom layouts using [RouteLayout.defineLayout].
+  @override
   void defineLayout() {}
 
   /// Defines the restorable converters for this coordinator.
   ///
   /// Override this method to register custom restorable converters using
   /// [RestorableConverter.defineConverter].
+  @override
   void defineConverter() {}
 
   String resolveRouteId(covariant T route) {
@@ -333,7 +342,8 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   ///   };
   /// }
   /// ```
-  FutureOr<T> parseRouteFromUri(Uri uri);
+  @override
+  FutureOr<T?> parseRouteFromUri(Uri uri);
 
   /// Parses a [Uri] into a route object synchronously.
   ///
@@ -348,7 +358,11 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   /// Otherwise, [replace] is called.
   Future<void> recoverRouteFromUri(Uri uri) async {
     final route = await parseRouteFromUri(uri);
-    return recover(route);
+    assert(
+      route != null,
+      'If you want to use coordinator deeplink feature, you must return route from [parseRouteFromUri]',
+    );
+    return recover(route!);
   }
 
   /// Resolves and activates layouts for a given [layout].
