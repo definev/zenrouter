@@ -219,9 +219,10 @@ packages:
   zenrouter_devtools:
     dependency: "direct main"
     description:
-      path: ".."
-      relative: true
-    source: path
+      name: zenrouter_devtools
+      sha256: "39b8baa1a3966115c10e4148ec008d6aabcc3c17f3044d8795879f49a7883549"
+      url: "https://pub.dev"
+    source: hosted
     version: "1.1.0"
 sdks:
   dart: ">=3.9.0-0 <4.0.0"
