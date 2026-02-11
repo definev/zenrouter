@@ -62,8 +62,12 @@ import 'package:zenrouter/zenrouter.dart';
 /// route wins. If all modules return null, [CoordinatorModular.notFoundRoute]
 /// is called.
 abstract class RouteModule<T extends RouteUnique> {
+  /// Internal constructor used by [CoordinatorModular].
+  RouteModule._(this.coordinator);
+
   /// Creates a route module with a reference to its coordinator.
-  RouteModule(this.coordinator);
+  RouteModule(CoordinatorModular<T> coordinator)
+    : this._(coordinator.rootCoordinator());
 
   /// {@template zenrouter.coordinator.modular.coordinator}
   /// The coordinator that owns this module.

@@ -150,6 +150,13 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     'If you want to make it a part of a [CoordinatorModular] you should override `coordinator` getter or passing it through constructor',
   );
 
+  /// The [rootCoordinator] coordinator return a top level coordinator which used as [routeConfig].
+  ///
+  /// If this coordinator is a part of another [CoordinatorModular], it will return the [coordinator].
+  /// Otherwise, it will return itself.
+  R rootCoordinator<R extends Coordinator<T>>() =>
+      (isRouteModule ? coordinator : this) as R;
+
   @override
   void dispose() {
     routerDelegate.dispose();
