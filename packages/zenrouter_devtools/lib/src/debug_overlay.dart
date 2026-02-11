@@ -62,46 +62,52 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
     return Align(
       alignment: Alignment.bottomRight,
       child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(DebugTheme.spacingLg),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              ListenableBuilder(
-                listenable: _uriController,
-                builder:
-                    (context, child) => Container(
-                      decoration: BoxDecoration(
-                        color: Color(0xFF000000).withValues(alpha: 0.6),
-                        borderRadius: BorderRadius.circular(
-                          DebugTheme.radiusFull,
-                        ),
-                      ),
-                      height: 40,
-                      margin: const EdgeInsets.only(
-                        right: DebugTheme.spacingXs,
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: DebugTheme.spacingMd,
-                      ),
-                      child: Center(
-                        child: Text(
-                          _uriController.text,
-                          style: const TextStyle(
-                            color: Color(0xFFFFFFFF),
-                            decoration: TextDecoration.none,
-                            fontWeight: FontWeight.normal,
-                            fontSize: DebugTheme.fontSizeMd,
+        child: IntrinsicWidth(
+          child: Padding(
+            padding: const EdgeInsets.all(DebugTheme.spacingLg),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                ListenableBuilder(
+                  listenable: _uriController,
+                  builder:
+                      (context, child) => Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Color(0xFF000000).withValues(alpha: 0.6),
+                            borderRadius: BorderRadius.circular(
+                              DebugTheme.radiusFull,
+                            ),
+                          ),
+                          height: 40,
+                          margin: const EdgeInsets.only(
+                            right: DebugTheme.spacingXs,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: DebugTheme.spacingMd,
+                          ),
+                          child: Center(
+                            child: Text(
+                              _uriController.text,
+                              style: const TextStyle(
+                                color: Color(0xFFFFFFFF),
+                                decoration: TextDecoration.none,
+                                fontWeight: FontWeight.normal,
+                                fontSize: DebugTheme.fontSizeMd,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-              ),
-              _DebugFab(
-                problems: widget.coordinator.problems,
-                onTap: widget.coordinator.toggleDebugOverlay,
-              ),
-            ],
+                ),
+                _DebugFab(
+                  problems: widget.coordinator.problems,
+                  onTap: widget.coordinator.toggleDebugOverlay,
+                ),
+              ],
+            ),
           ),
         ),
       ),

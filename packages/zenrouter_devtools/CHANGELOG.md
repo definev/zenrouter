@@ -1,3 +1,9 @@
+## 1.1.0
+- **BREAKING**: Update dependency to `zenrouter: ^1.2.0`
+- **Feat**: New sub module `Coordinator` aware in `Inspect Tab 
+- **Feat**: Add `navigate` method
+- **Fix**: Fix Increase close button size in `DebugOverlay`
+
 ## 1.0.0
 - **BREAKING**: Update dependency to `zenrouter: ^1.0.0`
 - Support for new `RouteRedirectRule` feature
