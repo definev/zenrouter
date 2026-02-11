@@ -87,12 +87,30 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
   @override
   Future<void> setNewRoutePath(Uri configuration) async {
     final route = await coordinator.parseRouteFromUri(configuration);
+    assert(
+      () {
+        try {
+          final _ = coordinator.coordinator;
+          return true;
+        } on UnimplementedError catch (err) {
+          if (err.message?.contains('This coordinator is standalone') == true) {
+            return route != null;
+          }
+          return true;
+        }
+      }(),
+      'If you want to use coordinator as [RouterConfig], you must return route from [parseRouteFromUri]',
+    );
 
     if (route is RouteDeepLink &&
         route.deeplinkStrategy == DeeplinkStrategy.custom) {
       coordinator.recover(route);
     } else {
-      coordinator.navigate(route);
+      assert(
+        route != null,
+        'You must to provide a parse route for $configuration in [parseRouteFromUri] to use deeplink to it',
+      );
+      coordinator.navigate(route!);
     }
   }
 

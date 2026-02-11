@@ -96,7 +96,12 @@ extension type const PathKey(String key) {}
 /// ```
 abstract class StackPath<T extends RouteTarget> with ChangeNotifier {
   StackPath(this._stack, {this.debugLabel, Coordinator? coordinator})
-    : _coordinator = coordinator;
+    : _proxyCoordinator = coordinator?.isRouteModule == true
+          ? coordinator
+          : null,
+      _coordinator = coordinator?.isRouteModule == true
+          ? coordinator?.coordinator
+          : coordinator;
 
   // coverage:ignore-start
   /// Creates a [NavigationPath] with an optional initial stack.
@@ -130,13 +135,26 @@ abstract class StackPath<T extends RouteTarget> with ChangeNotifier {
 
   /// The coordinator this path is bound to.
   ///
-  /// This creates a 1-1 relationship between path and coordinator,
-  /// ensuring routes are managed correctly. Always use [createWith]
-  /// factory constructors to bind paths to coordinators.
+  /// When this path is created with a route module coordinator,
+  /// this field holds the parent/root coordinator of that module.
   final Coordinator? _coordinator;
+
+  /// The proxy coordinator for this path.
+  ///
+  /// When this path is created with a route module coordinator,
+  /// this field holds the original (nested/module) coordinator,
+  /// while [_coordinator] points to its parent/root coordinator.
+  final Coordinator? _proxyCoordinator;
 
   /// The coordinator this path belongs to.
   Coordinator? get coordinator => _coordinator;
+
+  /// The proxy coordinator for this path.
+  ///
+  /// For module paths, this is the original module coordinator that
+  /// created the path (the "nested" coordinator); [coordinator]
+  /// then refers to its parent/root coordinator.
+  Coordinator? get proxyCoordinator => _proxyCoordinator;
 
   /// The currently active route in this stack.
   ///
@@ -190,5 +208,5 @@ abstract class StackPath<T extends RouteTarget> with ChangeNotifier {
 
   @override
   String toString() =>
-      '${debugLabel ?? hashCode} [${runtimeType.toString().split('Path').first}]';
+      '${debugLabel ?? hashCode} [${proxyCoordinator ?? coordinator} | $pathKey]';
 }

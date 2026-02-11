@@ -1,3 +1,28 @@
+## 1.2.0
+
+### 🐞 Fixes
+- **Fix**: Regression error when using `RouteRedirectRule` inside `IndexedStackPath` (Thanks to @obenkucuk)
+
+### 🚀 New Features
+
+#### Coordinator as RouteModule — Nested Coordinators
+- `Coordinator` now implements `RouteModule<T>`, enabling any coordinator to be nested inside a `CoordinatorModular` by overriding the `coordinator` getter.
+- Unlocks **route versioning** (V1/V2 side by side), multi-team modular architectures, and deeply nested coordinator hierarchies.
+- Auto-detected `isRouteModule` flag controls root path creation vs parent inheritance.
+- See [Guide](doc/guides/coordinator-as-module.md) & `example/lib/main_coordinator_module.dart`
+
+### ⚠️ Breaking Changes
+
+- **`Coordinator.parseRouteFromUri`** signature changed from `FutureOr<T>` to `FutureOr<T?>`. Child coordinators return `null` for unrecognized URIs; standalone coordinators are guarded by assertions.
+- **`CoordinatorModular.parseRouteFromUri`** returns `null` instead of `notFoundRoute` when the coordinator is itself a nested module.
+
+### 📖 Documentation
+
+- **New Guide**: [Coordinator as RouteModule](doc/guides/coordinator-as-module.md)
+- **New Recipe**: [Route Versioning](doc/recipes/route-versioning.md)
+
+---
+
 ## 1.1.0
 
 - BREAKING CHANGE: Remove `coordinator` from `defineModules`, use `this` getter instead.

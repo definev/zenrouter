@@ -183,13 +183,13 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
   Widget _buildHeader() {
     return Container(
       height: 40,
-      padding: const EdgeInsets.symmetric(horizontal: DebugTheme.spacingMd),
       color: DebugTheme.backgroundDark,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           const Row(
             children: [
+              SizedBox(width: DebugTheme.spacing),
               ConnectionIndicator(),
               SizedBox(width: DebugTheme.spacing),
               Text(
@@ -205,10 +205,17 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
           ),
           GestureDetector(
             onTap: widget.coordinator.toggleDebugOverlay,
-            child: const Icon(
-              CupertinoIcons.xmark,
-              color: DebugTheme.textDisabled,
-              size: 16,
+            child: Container(
+              height: 32,
+              width: 32,
+              alignment: Alignment.center,
+              color: DebugTheme.backgroundDark,
+              margin: EdgeInsets.only(right: DebugTheme.spacing),
+              child: const Icon(
+                CupertinoIcons.xmark,
+                color: DebugTheme.textDisabled,
+                size: 16,
+              ),
             ),
           ),
         ],
@@ -302,7 +309,7 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
                       horizontal: DebugTheme.spacingMd,
                       vertical: 10,
                     ),
-                    onSubmitted: _pushUri,
+                    onSubmitted: _navigateUri,
                   ),
                 ),
               ],
@@ -311,6 +318,16 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
           const SizedBox(height: DebugTheme.spacing),
           Row(
             children: [
+              Expanded(
+                child: ActionButton(
+                  label: 'Navigate',
+                  icon: CupertinoIcons.arrow_right,
+                  color: DebugTheme.textPrimary,
+                  backgroundColor: const Color(0xFF222222),
+                  onTap: () => _navigateUri(_uriController.text),
+                ),
+              ),
+              const SizedBox(width: DebugTheme.spacing),
               Expanded(
                 child: ActionButton(
                   label: 'Push',
@@ -351,25 +368,32 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
   // URI NAVIGATION METHODS
   // ===========================================================================
 
+  void _navigateUri(String uriString) async {
+    if (uriString.isEmpty) return;
+    final uri = Uri.parse(uriString);
+    final route = await widget.coordinator.parseRouteFromUri(uri);
+    widget.coordinator.navigate(route!);
+  }
+
   void _pushUri(String uriString) async {
     if (uriString.isEmpty) return;
     final uri = Uri.parse(uriString);
     final route = await widget.coordinator.parseRouteFromUri(uri);
-    widget.coordinator.push(route);
+    widget.coordinator.push(route!);
   }
 
   void _replaceUri(String uriString) async {
     if (uriString.isEmpty) return;
     final uri = Uri.parse(uriString);
     final route = await widget.coordinator.parseRouteFromUri(uri);
-    widget.coordinator.replace(route);
+    widget.coordinator.replace(route!);
   }
 
   void _recoverUri(String uriString) async {
     if (uriString.isEmpty) return;
     final uri = Uri.parse(uriString);
     final route = await widget.coordinator.parseRouteFromUri(uri);
-    widget.coordinator.recover(route);
+    widget.coordinator.recover(route!);
   }
 }
 

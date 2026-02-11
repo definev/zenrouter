@@ -62,6 +62,34 @@ class StatefulBadge extends StatelessWidget {
   }
 }
 
+/// A badge indicating a layout route.
+class LayoutBadge extends StatelessWidget {
+  const LayoutBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DebugTheme.spacingXs,
+        vertical: 2,
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFF9C27B0).withAlpha(100),
+        borderRadius: BorderRadius.circular(DebugTheme.radiusSm),
+      ),
+      child: const Text(
+        'LAYOUT',
+        style: TextStyle(
+          color: Color(0xFF9C27B0),
+          fontSize: DebugTheme.fontSizeXs,
+          fontWeight: FontWeight.bold,
+          decoration: TextDecoration.none,
+        ),
+      ),
+    );
+  }
+}
+
 /// A small indicator dot showing active status.
 class ActiveIndicator extends StatelessWidget {
   const ActiveIndicator({super.key});

@@ -134,7 +134,7 @@ enum DefaultTransitionStrategy {
 /// ```
 abstract class Coordinator<T extends RouteUnique> extends Equatable
     with ChangeNotifier
-    implements RouterConfig<Uri> {
+    implements RouterConfig<Uri>, RouteModule<T> {
   Coordinator({this.initialRoutePath}) {
     for (final path in paths) {
       path.addListener(notifyListeners);
@@ -143,40 +143,72 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     defineConverter();
   }
 
+  /// {@macro zenrouter.coordinator.modular.coordinator}
+  @override
+  CoordinatorModular<T> get coordinator => throw UnimplementedError(
+    'This coordinator is standalone and does not belong to any [CoordinatorModular] \n'
+    'If you want to make it a part of a [CoordinatorModular] you should override `coordinator` getter or passing it through constructor',
+  );
+
+  /// The [rootCoordinator] coordinator return a top level coordinator which used as [routeConfig].
+  ///
+  /// If this coordinator is a part of another [CoordinatorModular], it will return the [coordinator].
+  /// Otherwise, it will return itself.
+  late final Coordinator<T> rootCoordinator = isRouteModule
+      ? coordinator
+      : this;
+
   @override
   void dispose() {
     routerDelegate.dispose();
     for (final path in paths) {
       path.removeListener(notifyListeners);
+      path.dispose();
     }
-    root.dispose();
     super.dispose();
   }
+
+  /// Whether this coordinator is a part of a [CoordinatorModular].
+  ///
+  /// If it is a part of a [CoordinatorModular], it will not have a root path.
+  /// And it will not be able to use [routerDelegate] and [routeInformationParser].
+  late final bool isRouteModule = () {
+    try {
+      coordinator;
+      return true;
+    } on UnimplementedError {
+      return false;
+    }
+  }();
 
   /// The root (primary) navigation path.
   ///
   /// All coordinators have at least this one path.
-  late final NavigationPath<T> root = NavigationPath.createWith(
-    label: 'root',
-    coordinator: this,
-  );
+  ///
+  /// If this coordinator is a part of a [CoordinatorModular], the root path will point to the root path of the [CoordinatorModular].
+  late final NavigationPath<T> root = isRouteModule
+      ? coordinator.root
+      : NavigationPath.createWith(label: 'root', coordinator: this);
 
   /// All navigation paths managed by this coordinator.
   ///
   /// If you add custom paths, make sure to override [paths]
+  @override
   @mustCallSuper
-  List<StackPath> get paths => [root];
+  List<StackPath> get paths => isRouteModule ? [] : [root];
 
   /// Defines the layout structure for this coordinator.
   ///
   /// This method is called during initialization. Override this to register
   /// custom layouts using [RouteLayout.defineLayout].
+  @override
   void defineLayout() {}
 
   /// Defines the restorable converters for this coordinator.
   ///
   /// Override this method to register custom restorable converters using
   /// [RestorableConverter.defineConverter].
+  @override
   void defineConverter() {}
 
   String resolveRouteId(covariant T route) {
@@ -333,7 +365,8 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   ///   };
   /// }
   /// ```
-  FutureOr<T> parseRouteFromUri(Uri uri);
+  @override
+  FutureOr<T?> parseRouteFromUri(Uri uri);
 
   /// Parses a [Uri] into a route object synchronously.
   ///
@@ -348,6 +381,11 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   /// Otherwise, [replace] is called.
   Future<void> recoverRouteFromUri(Uri uri) async {
     final route = await parseRouteFromUri(uri);
+    if (route == null) {
+      throw StateError(
+        'If you want to use coordinator deeplink feature, you must return route from [parseRouteFromUri]',
+      );
+    }
     return recover(route);
   }
 

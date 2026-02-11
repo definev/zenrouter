@@ -47,7 +47,10 @@ Coming from another router? We have dedicated migration guides:
 ### Web & Deep Linking
 1. [Getting Started - Coordinator](guides/getting-started.md#coordinator-quick-start)
 2. [Coordinator Pattern Guide](paradigms/coordinator/coordinator.md)
-3. [URL Strategies Recipe](recipes/url-strategies.md)
+3. [Coordinator Modular Guide](guides/coordinator-modular.md)
+4. [Coordinator as RouteModule Guide](guides/coordinator-as-module.md)
+5. [URL Strategies Recipe](recipes/url-strategies.md)
+6. [Route Versioning Recipe](recipes/route-versioning.md)
 
 ### Authentication & Guards
 1. [Authentication Flow Recipe](recipes/authentication-flow.md)
@@ -69,6 +72,8 @@ Coming from another router? We have dedicated migration guides:
 Step-by-step tutorials for getting started:
 - [Getting Started](guides/getting-started.md) - Choose and learn your paradigm
 - [Route Layout](guides/route-layout.md) - Create custom layouts
+- [Coordinator Modular](guides/coordinator-modular.md) - Split coordinator into modules
+- [Coordinator as RouteModule](guides/coordinator-as-module.md) - Nest coordinators as modules
 - [Query Parameters](guides/query-parameters.md) - Handle URL query parameters  
 - [State Restoration](guides/state-restoration.md) - Android state preservation
 - [Navigator Observers](guides/navigator-observers.md) - Track navigation events
@@ -79,6 +84,7 @@ Practical solutions for specific scenarios:
 - [Authentication Flow](recipes/authentication-flow.md)
 - [Bottom Navigation](recipes/bottom-navigation.md)
 - [Route Transitions](recipes/route-transitions.md)
+- [Route Versioning](recipes/route-versioning.md)
 - [State Management](recipes/state-management.md)
 - [URL Strategies](recipes/url-strategies.md)
 
@@ -112,6 +118,8 @@ zenrouter/
     ├── guides/                # Step-by-step learning
     │   ├── getting-started.md
     │   ├── route-layout.md
+    │   ├── coordinator-modular.md
+    │   ├── coordinator-as-module.md
     │   ├── query-parameters.md
     │   ├── state-restoration.md
     │   └── navigator-observers.md
@@ -122,6 +130,7 @@ zenrouter/
     │   ├── authentication-flow.md
     │   ├── bottom-navigation.md
     │   ├── route-transitions.md
+    │   ├── route-versioning.md
     │   ├── state-management.md
     │   └── url-strategies.md
     │
@@ -152,6 +161,8 @@ zenrouter/
 - **RouteTarget** - Base class for all routes ([Core Classes](api/core-classes.md))
 - **NavigationPath** - Stack container ([Navigation Paths](api/navigation-paths.md))
 - **Coordinator** - Deep linking coordinator ([Coordinator API](api/coordinator.md))
+- **CoordinatorModular** - Modular route delegation ([Modular Guide](guides/coordinator-modular.md))
+- **Coordinator as RouteModule** - Nested coordinator modules ([Guide](guides/coordinator-as-module.md))
 
 ### Route Mixins
 - **RouteUnique** - URI-based equality ([Mixins](api/mixins.md#routeunique))

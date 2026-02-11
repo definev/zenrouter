@@ -97,6 +97,13 @@ class DebugRouteItem<T extends RouteUnique> extends StatelessWidget {
           ),
           const SizedBox(width: DebugTheme.spacingXs),
           SmallIconButton(
+            icon: CupertinoIcons.arrow_right,
+            onTap: () {
+              coordinator.navigate(route);
+            },
+          ),
+          const SizedBox(width: DebugTheme.spacingXs),
+          SmallIconButton(
             icon: CupertinoIcons.add,
             onTap: () {
               coordinator.push(route);
