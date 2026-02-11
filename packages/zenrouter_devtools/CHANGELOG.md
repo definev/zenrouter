@@ -1,3 +1,8 @@
+## 1.1.1
+- **Feat**: Display correct `url` for each `RouteUnique`
+- **Feat**: Display better type of `StackPath`
+- **Feat**: Display `RouteLayout` in `Inspect Tab`
+
 ## 1.1.0
 - **BREAKING**: Update dependency to `zenrouter: ^1.2.0`
 - **Feat**: New sub module `Coordinator` aware in `Inspect Tab 

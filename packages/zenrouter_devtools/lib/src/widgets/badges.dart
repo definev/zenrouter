@@ -34,34 +34,6 @@ class ActiveBadge extends StatelessWidget {
   }
 }
 
-/// A badge indicating the "stateful" status of a path (IndexedStackPath).
-class StatefulBadge extends StatelessWidget {
-  const StatefulBadge({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: DebugTheme.spacingXs,
-        vertical: 2,
-      ),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFF9800).withAlpha(100),
-        borderRadius: BorderRadius.circular(DebugTheme.radiusSm),
-      ),
-      child: const Text(
-        'FIXED',
-        style: TextStyle(
-          color: Color(0xFFFF9800),
-          fontSize: DebugTheme.fontSizeXs,
-          fontWeight: FontWeight.bold,
-          decoration: TextDecoration.none,
-        ),
-      ),
-    );
-  }
-}
-
 /// A badge indicating a layout route.
 class LayoutBadge extends StatelessWidget {
   const LayoutBadge({super.key});

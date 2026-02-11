@@ -53,7 +53,7 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   ///
   /// By default, it returns `path.toString()`. You can override this to
   /// provide more human-readable names for your paths in the debug overlay.
-  String debugLabel(StackPath path) => path.toString();
+  String debugLabel(StackPath path) => path.debugLabel ?? path.toString();
 
   // ===========================================================================
   // STATE
