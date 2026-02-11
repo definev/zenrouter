@@ -42,7 +42,7 @@ class ShopCoordinatorV1 extends Coordinator<AppRoute> {
 
   late final NavigationPath<AppRoute> shopV1Stack = NavigationPath.createWith(
     label: 'shop-v1',
-    coordinator: _parent,
+    coordinator: this,
   );
 
   @override
@@ -158,7 +158,7 @@ class ShopCoordinatorV2 extends Coordinator<AppRoute> {
 
   late final NavigationPath<AppRoute> shopV2Stack = NavigationPath.createWith(
     label: 'shop-v2',
-    coordinator: _parent,
+    coordinator: this,
   );
 
   @override
@@ -351,7 +351,7 @@ class ShopCoordinatorV1 extends Coordinator<AppRoute> {
 
   late final shopV1Stack = NavigationPath.createWith(
     label: 'shop-v1',
-    coordinator: _parent,   // ← Bind to parent, not this
+    coordinator: this,   // ← Auto-resolves to root coordinator
   );
   // ...
 }
@@ -359,7 +359,7 @@ class ShopCoordinatorV1 extends Coordinator<AppRoute> {
 
 **Key points:**
 - Override `coordinator` to return the parent
-- Bind paths to `_parent` so they're visible to the navigator
+- Pass `this` when creating paths — the framework auto-resolves the root coordinator
 - Use unique labels (`shop-v1`, `shop-v2`) to avoid conflicts
 
 ### 2. Version-specific URI prefixes
@@ -454,8 +454,8 @@ Set<RouteModule<AppRoute>> defineModules() => {
 
 ## Common Gotchas
 
-> [!IMPORTANT]
-> **Bind paths to the parent**, not to `this`. If you bind to `this`, the paths won't be visible to the parent's navigator and routes won't display.
+> [!NOTE]
+> The coordinator automatically resolves the correct root coordinator via `rootCoordinator`. You can safely pass `this` when creating paths.
 
 > [!WARNING]
 > **Use unique path labels** for each version. Duplicate labels will cause state restoration conflicts. Use prefixes like `shop-v1`, `shop-v2`.

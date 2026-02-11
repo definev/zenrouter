@@ -46,7 +46,7 @@ class ShopCoordinator extends Coordinator<AppRoute> {
   // Define paths owned by this coordinator
   late final NavigationPath<AppRoute> shopStack = NavigationPath.createWith(
     label: 'shop',
-    coordinator: _parent, // Bind to the parent, not `this`
+    coordinator: this,
   );
 
   @override
@@ -68,8 +68,8 @@ class ShopCoordinator extends Coordinator<AppRoute> {
 }
 ```
 
-> [!IMPORTANT]
-> **Bind paths to the parent coordinator**, not to `this`. The parent is the `RouterConfig` that manages the navigator, so its paths must include the child's paths.
+> [!NOTE]
+> The coordinator automatically resolves the correct root coordinator via `rootCoordinator`. You can safely pass `this` when creating paths — the framework handles the rest.
 
 ### Step 2: Create the Parent Coordinator
 
@@ -154,7 +154,7 @@ class ShopCoordinatorV1 extends Coordinator<AppRoute> {
 
   late final NavigationPath<AppRoute> shopV1Stack = NavigationPath.createWith(
     label: 'shop-v1',
-    coordinator: _parent,
+    coordinator: this,
   );
 
   @override
@@ -184,7 +184,7 @@ class ShopCoordinatorV2 extends Coordinator<AppRoute> {
 
   late final NavigationPath<AppRoute> shopV2Stack = NavigationPath.createWith(
     label: 'shop-v2',
-    coordinator: _parent,
+    coordinator: this,
   );
 
   @override
@@ -275,7 +275,7 @@ class ShopV1Layout extends AppRoute with RouteLayout<AppRoute> {
 ### ✅ Do
 
 - **Override `coordinator`** to return the parent when nesting
-- **Bind paths to the parent**, not to `this`
+- **Pass `this`** when creating paths — the framework auto-resolves the root coordinator
 - **Spread `...super.paths`** in your `paths` getter to include the root path
 - **Use unique path labels** across all child coordinators (e.g., `shop-v1`, `shop-v2`)
 - **Keep child coordinators independent** — they shouldn't know about siblings
@@ -284,7 +284,6 @@ class ShopV1Layout extends AppRoute with RouteLayout<AppRoute> {
 
 - **Don't access sibling coordinators directly** — use `coordinator.getModule<T>()` through the parent
 - **Don't forget to return `null`** for unhandled routes
-- **Don't bind paths to `this`** in a child coordinator — they won't be visible to the parent's navigator
 
 ---
 
@@ -313,25 +312,6 @@ AppRoute parseRouteFromUri(Uri uri) {
     _ => NotFoundRoute(uri: uri), // Always provide a fallback
   };
 }
-```
-
-### Paths not visible in parent
-
-**Problem:** Child coordinator paths aren't navigable from the parent.
-
-**Solution:** Bind paths to the **parent** coordinator:
-```dart
-// ❌ Wrong
-late final myPath = NavigationPath.createWith(
-  label: 'my-path',
-  coordinator: this, // Binds to child — invisible to parent's navigator
-);
-
-// ✅ Correct
-late final myPath = NavigationPath.createWith(
-  label: 'my-path',
-  coordinator: _parent, // Binds to parent — visible to navigator
-);
 ```
 
 ---
