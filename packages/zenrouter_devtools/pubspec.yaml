@@ -1,6 +1,6 @@
 name: zenrouter_devtools
 description: "Deeplink, Inspection, and Debugging Devtools for ZenRouter"
-version: 1.0.0
+version: 1.1.0
 homepage: https://github.com/definev/zenrouter/tree/main/packages/zenrouter_devtools
 
 environment:
@@ -20,7 +20,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter:
     sdk: flutter
-  zenrouter: ^1.0.0
+  zenrouter: ^1.2.0
 
 dev_dependencies:
   flutter_test:
