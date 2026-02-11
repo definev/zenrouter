@@ -212,18 +212,17 @@ packages:
     dependency: "direct main"
     description:
       name: zenrouter
-      sha256: "9dee7a1bc3dccd055ece13cee8d7a137f65b1e60875223f93bf1d4c9c9fee0e9"
+      sha256: "912641a603b28630f03a2ec5a4882cebf123d43f1d9de2ce0f3f83ea5604eb7d"
       url: "https://pub.dev"
     source: hosted
-    version: "1.1.0"
+    version: "1.2.0"
   zenrouter_devtools:
     dependency: "direct main"
     description:
-      name: zenrouter_devtools
-      sha256: dc103d42a74cd21bebe9d5582eb23770cd3468a10609a0420a82efc78c23230f
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.0"
+      path: ".."
+      relative: true
+    source: path
+    version: "1.1.0"
 sdks:
   dart: ">=3.9.0-0 <4.0.0"
   flutter: ">=3.18.0-18.0.pre.54"
