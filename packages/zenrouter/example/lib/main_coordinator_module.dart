@@ -72,8 +72,7 @@ class CoordinatorModuleApp extends StatelessWidget {
       title: 'ZenRouter Route Versioning Example',
       theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
       restorationScopeId: 'coordinator_module',
-      routerDelegate: coordinator.routerDelegate,
-      routeInformationParser: coordinator.routeInformationParser,
+      routerConfig: coordinator,
     );
   }
 }
@@ -88,13 +87,24 @@ abstract class AppRoute extends RouteTarget with RouteUnique {}
 // Shop Coordinator V1 — DEPRECATED version
 // ============================================================================
 
-class ShopCoordinatorV1 extends Coordinator<AppRoute> {
-  ShopCoordinatorV1(this._parent);
-  final MainCoordinator _parent;
+class ShopCoordinatorV1Module extends ShopCoordinatorV1 {
+  ShopCoordinatorV1Module(this.coordinator);
 
   @override
-  CoordinatorModular<AppRoute> get coordinator => _parent;
+  final CoordinatorModular<AppRoute> coordinator;
 
+  @override
+  FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
+    return switch (uri.pathSegments) {
+      ['v1', ...final pathSegments] => super.parseRouteFromUri(
+        uri.replace(pathSegments: pathSegments),
+      ),
+      _ => null,
+    };
+  }
+}
+
+class ShopCoordinatorV1 extends Coordinator<AppRoute> {
   late final NavigationPath<AppRoute> shopV1Stack = NavigationPath.createWith(
     label: 'shop-v1',
     coordinator: this,
@@ -111,12 +121,9 @@ class ShopCoordinatorV1 extends Coordinator<AppRoute> {
   @override
   FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
     return switch (uri.pathSegments) {
-      ['v1', ...final pathSegments] => switch (pathSegments) {
-        ['shop'] => ShopHomeV1(),
-        ['shop', 'products'] => ProductListV1(),
-        ['shop', 'cart'] => CartV1(),
-        _ => null,
-      },
+      ['shop'] => ShopHomeV1(),
+      ['shop', 'products'] => ProductListV1(),
+      ['shop', 'cart'] => CartV1(),
       _ => null,
     };
   }
@@ -126,7 +133,7 @@ class ShopCoordinatorV1 extends Coordinator<AppRoute> {
 class ShopV1Layout extends AppRoute with RouteLayout<AppRoute> {
   @override
   NavigationPath<AppRoute> resolvePath(MainCoordinator coordinator) =>
-      coordinator.getModule<ShopCoordinatorV1>().shopV1Stack;
+      coordinator.getModule<ShopCoordinatorV1Module>().shopV1Stack;
 
   @override
   Widget build(covariant MainCoordinator coordinator, BuildContext context) {
@@ -295,13 +302,24 @@ class CartV1 extends AppRoute {
 // Shop Coordinator V2 — CURRENT version
 // ============================================================================
 
-class ShopCoordinatorV2 extends Coordinator<AppRoute> {
-  ShopCoordinatorV2(this._parent);
-  final MainCoordinator _parent;
+class ShopCoordinatorV2Module extends ShopCoordinatorV2 {
+  ShopCoordinatorV2Module(this.coordinator);
 
   @override
-  CoordinatorModular<AppRoute> get coordinator => _parent;
+  final CoordinatorModular<AppRoute> coordinator;
 
+  @override
+  FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
+    return switch (uri.pathSegments) {
+      ['v2', ...final pathSegments] => super.parseRouteFromUri(
+        uri.replace(pathSegments: pathSegments),
+      ),
+      _ => null,
+    };
+  }
+}
+
+class ShopCoordinatorV2 extends Coordinator<AppRoute> {
   late final NavigationPath<AppRoute> shopV2Stack = NavigationPath.createWith(
     label: 'shop-v2',
     coordinator: this,
@@ -318,13 +336,10 @@ class ShopCoordinatorV2 extends Coordinator<AppRoute> {
   @override
   FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
     return switch (uri.pathSegments) {
-      ['v2', ...final pathSegments] => switch (pathSegments) {
-        ['shop'] => ShopHomeV2(),
-        ['shop', 'products'] => ProductListV2(),
-        ['shop', 'products', final id] => ProductDetailV2(id: id),
-        ['shop', 'cart'] => CartV2(),
-        _ => null,
-      },
+      ['shop'] => ShopHomeV2(),
+      ['shop', 'products'] => ProductListV2(),
+      ['shop', 'products', final id] => ProductDetailV2(id: id),
+      ['shop', 'cart'] => CartV2(),
       _ => null,
     };
   }
@@ -334,7 +349,7 @@ class ShopCoordinatorV2 extends Coordinator<AppRoute> {
 class ShopV2Layout extends AppRoute with RouteLayout<AppRoute> {
   @override
   NavigationPath<AppRoute> resolvePath(MainCoordinator coordinator) =>
-      coordinator.getModule<ShopCoordinatorV2>().shopV2Stack;
+      coordinator.getModule<ShopCoordinatorV2Module>().shopV2Stack;
 
   @override
   Widget build(covariant MainCoordinator coordinator, BuildContext context) {
@@ -1035,40 +1050,42 @@ class GeneralSettingsRoute extends AppRoute {
 
   @override
   Widget build(covariant MainCoordinator coordinator, BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Text(
-          'General Settings',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Managed by SettingsCoordinator — an independent '
-          'Coordinator used as a RouteModule.',
-          style: TextStyle(color: Colors.grey[600]),
-        ),
-        const SizedBox(height: 16),
-        const ListTile(
-          leading: Icon(Icons.language),
-          title: Text('Language'),
-          subtitle: Text('English'),
-        ),
-        const ListTile(
-          leading: Icon(Icons.dark_mode),
-          title: Text('Theme'),
-          subtitle: Text('System'),
-        ),
-        const Divider(height: 32),
-        Card(
-          child: ListTile(
-            leading: const Icon(Icons.shopping_bag, color: Colors.green),
-            title: const Text('Go to Shop V2'),
-            trailing: const Icon(Icons.arrow_forward),
-            onTap: () => coordinator.push(ShopHomeV2()),
+    return Scaffold(
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text(
+            'General Settings',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
-        ),
-      ],
+          const SizedBox(height: 8),
+          Text(
+            'Managed by SettingsCoordinator — an independent '
+            'Coordinator used as a RouteModule.',
+            style: TextStyle(color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 16),
+          const ListTile(
+            leading: Icon(Icons.language),
+            title: Text('Language'),
+            subtitle: Text('English'),
+          ),
+          const ListTile(
+            leading: Icon(Icons.dark_mode),
+            title: Text('Theme'),
+            subtitle: Text('System'),
+          ),
+          const Divider(height: 32),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.shopping_bag, color: Colors.green),
+              title: const Text('Go to Shop V2'),
+              trailing: const Icon(Icons.arrow_forward),
+              onTap: () => coordinator.push(ShopHomeV2()),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1081,25 +1098,27 @@ class AccountSettingsRoute extends AppRoute {
 
   @override
   Widget build(covariant MainCoordinator coordinator, BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Text(
-          'Account Settings',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 16),
-        const ListTile(
-          leading: Icon(Icons.email),
-          title: Text('Email'),
-          subtitle: Text('user@example.com'),
-        ),
-        const ListTile(
-          leading: Icon(Icons.password),
-          title: Text('Password'),
-          subtitle: Text('••••••••'),
-        ),
-      ],
+    return Scaffold(
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text(
+            'Account Settings',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          const ListTile(
+            leading: Icon(Icons.email),
+            title: Text('Email'),
+            subtitle: Text('user@example.com'),
+          ),
+          const ListTile(
+            leading: Icon(Icons.password),
+            title: Text('Password'),
+            subtitle: Text('••••••••'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1112,25 +1131,27 @@ class PrivacySettingsRoute extends AppRoute {
 
   @override
   Widget build(covariant MainCoordinator coordinator, BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Text(
-          'Privacy Settings',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 16),
-        const ListTile(
-          leading: Icon(Icons.security),
-          title: Text('Data Privacy'),
-          subtitle: Text('Manage how your data is used'),
-        ),
-        const ListTile(
-          leading: Icon(Icons.location_on),
-          title: Text('Location Services'),
-          subtitle: Text('Enabled'),
-        ),
-      ],
+    return Scaffold(
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text(
+            'Privacy Settings',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          const ListTile(
+            leading: Icon(Icons.security),
+            title: Text('Data Privacy'),
+            subtitle: Text('Manage how your data is used'),
+          ),
+          const ListTile(
+            leading: Icon(Icons.location_on),
+            title: Text('Location Services'),
+            subtitle: Text('Enabled'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1144,8 +1165,8 @@ class MainCoordinator extends Coordinator<AppRoute>
   @override
   Set<RouteModule<AppRoute>> defineModules() => {
     MainRouteModule(this),
-    ShopCoordinatorV1(this),
-    ShopCoordinatorV2(this),
+    ShopCoordinatorV1Module(this),
+    ShopCoordinatorV2Module(this),
     BlogCoordinator(this),
     SettingsCoordinator(this),
   };

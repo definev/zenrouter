@@ -35,11 +35,7 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T>
     List<T> stack, {
     required Coordinator coordinator,
     required String label,
-  }) => IndexedStackPath._(
-    stack,
-    debugLabel: label,
-    coordinator: coordinator.rootCoordinator,
-  );
+  }) => IndexedStackPath._(stack, debugLabel: label, coordinator: coordinator);
 
   /// The key used to identify this type in [RouteLayout.definePath].
   static const key = PathKey('IndexedStackPath');

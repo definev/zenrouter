@@ -183,13 +183,13 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
   Widget _buildHeader() {
     return Container(
       height: 40,
-      padding: const EdgeInsets.symmetric(horizontal: DebugTheme.spacingMd),
       color: DebugTheme.backgroundDark,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           const Row(
             children: [
+              SizedBox(width: DebugTheme.spacing),
               ConnectionIndicator(),
               SizedBox(width: DebugTheme.spacing),
               Text(
@@ -206,10 +206,11 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
           GestureDetector(
             onTap: widget.coordinator.toggleDebugOverlay,
             child: Container(
-              height: 40,
-              width: 40,
+              height: 32,
+              width: 32,
               alignment: Alignment.center,
-              color: const Color(0x00000000),
+              color: DebugTheme.backgroundDark,
+              margin: EdgeInsets.only(right: DebugTheme.spacing),
               child: const Icon(
                 CupertinoIcons.xmark,
                 color: DebugTheme.textDisabled,

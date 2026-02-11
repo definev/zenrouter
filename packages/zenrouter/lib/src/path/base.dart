@@ -96,7 +96,12 @@ extension type const PathKey(String key) {}
 /// ```
 abstract class StackPath<T extends RouteTarget> with ChangeNotifier {
   StackPath(this._stack, {this.debugLabel, Coordinator? coordinator})
-    : _coordinator = coordinator;
+    : _proxyCoordinator = coordinator?.isRouteModule == true
+          ? coordinator
+          : null,
+      _coordinator = coordinator?.isRouteModule == true
+          ? coordinator?.coordinator
+          : coordinator;
 
   // coverage:ignore-start
   /// Creates a [NavigationPath] with an optional initial stack.
@@ -135,8 +140,14 @@ abstract class StackPath<T extends RouteTarget> with ChangeNotifier {
   /// factory constructors to bind paths to coordinators.
   final Coordinator? _coordinator;
 
+  /// The proxy coordinator for this path, it's point to the parent coordinator.
+  final Coordinator? _proxyCoordinator;
+
   /// The coordinator this path belongs to.
   Coordinator? get coordinator => _coordinator;
+
+  /// The proxy coordinator for this path, it's point to the parent coordinator.
+  Coordinator? get proxyCoordinator => _proxyCoordinator;
 
   /// The currently active route in this stack.
   ///
@@ -189,5 +200,6 @@ abstract class StackPath<T extends RouteTarget> with ChangeNotifier {
   Future<void> activateRoute(T route);
 
   @override
-  String toString() => '${debugLabel ?? hashCode} [$coordinator | $pathKey]';
+  String toString() =>
+      '${debugLabel ?? hashCode} [${proxyCoordinator ?? coordinator} | $pathKey]';
 }

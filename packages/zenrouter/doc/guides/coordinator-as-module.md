@@ -1,48 +1,41 @@
 # Coordinator as RouteModule Guide
 
-> **Use a full Coordinator as a RouteModule inside a parent CoordinatorModular**
+> **Unlock Powerful Versioning & Parallel Development Workflows**
 
-Since `Coordinator<T>` implements `RouteModule<T>`, you can nest entire coordinators as modules within a parent. Each child coordinator brings its own paths, layouts, converters, and route parsing—enabling powerful composition patterns like **route versioning**, **micro-frontends**, and **feature-flag gated modules**.
+Since `Coordinator<T>` implements `RouteModule<T>`, you can nest entire coordinators as modules within a parent. This architecture treats each child coordinator as a self-contained application, managing its own navigation history, deep linking logic, and state.
 
-## What is Coordinator-as-RouteModule?
+This capability is particularly powerful for **scalable feature development**. It allows teams to build major features in parallel—such as developing a "Shop V2" alongside a "Shop V1"—without code conflicts or regression risks. By isolating features into their own coordinators, you gain the ability to run safe A/B tests, incrementally migrate legacy apps, and let different teams own their entire vertical stack.
 
-A regular `RouteModule` is a lightweight object that handles routes for a specific domain. But because `Coordinator` already implements `RouteModule`, you can use a **full Coordinator** in place of a module. This gives you:
+## Why Use Coordinators as Modules?
 
-- **Full coordinator capabilities** — each module has its own paths, layouts, and state
-- **Isolation** — child coordinators are self-contained and independently testable
-- **Composition** — nest coordinators to arbitrary depth
-- **Cross-coordinator navigation** — routes navigate seamlessly across coordinator boundaries
+When you nest a `Coordinator` inside another, it behaves exactly like a standard `RouteModule`. It doesn't create a separate history stack or navigation context; instead, its routes are merged seamlessly into the parent's routing tree.
+
+The true power of this pattern lies in **reusability and modularity**:
+
+*   **Reuse Existing Code**: You can take a standalone `Coordinator` from an older project (or a different part of your app) and plug it directly into a modern `CoordinatorModular` setup without rewriting it.
+*   **Seamless Versioning**: Because both V1 and V2 coordinators share the same parent history, users can navigate between them effortlessly. Pushing a V2 route from V1 feels just like a normal navigation event.
+*   **Parallel Development**: Different teams can work on different `Coordinator` classes (e.g., `ShopCoordinatorV1` vs. `ShopCoordinatorV2`) simultaneously. Each coordinator is a self-contained unit of code, but at runtime, they act as one cohesive application.
 
 ### When to Use
 
-✅ **Use when:**
-- Different parts of your app need completely independent routing logic
-- You want to version routes (e.g., `/v1/shop` vs `/v2/shop`)
-- Teams own separate features that each need a full coordinator
-- You want to reuse coordinators across different parent applications
+This pattern is ideal when you want to **integrate an existing Coordinator** into a modular app, or when you are **rewriting a feature** and want to keep the old logic (V1) available while building the new one (V2). It allows you to maintain two complete, improved versions of a feature side-by-side in the same codebase.
 
-❌ **Don't use when:**
-- A simple `RouteModule` is sufficient for your domain
-- Your modules don't need their own navigation paths or layouts
-- You prefer a flat, centralized routing structure
+If you are starting a new feature from scratch and don't need this specific kind of separation, a standard `RouteModule` is usually simpler and sufficient.
+
+
 
 ---
 
-## Quick Start
+## Technical Implementation
 
-### Step 1: Create a Child Coordinator
+The correct way to use a Coordinator as a Module is to verify the **Wrapper Pattern**. This allows you to keep your feature coordinator completely unaware of its parent or version prefix, maximizing reusability.
 
-Override the `coordinator` getter to point back to the parent:
+### 1. The Feature Coordinator
+
+First, write your feature coordinator as a standard, standalone class. It doesn't need to know about parents or versioning.
 
 ```dart
 class ShopCoordinator extends Coordinator<AppRoute> {
-  ShopCoordinator(this._parent);
-  final MainCoordinator _parent;
-
-  // Link back to the parent — required for Coordinator-as-RouteModule
-  @override
-  CoordinatorModular<AppRoute> get coordinator => _parent;
-
   // Define paths owned by this coordinator
   late final NavigationPath<AppRoute> shopStack = NavigationPath.createWith(
     label: 'shop',
@@ -59,6 +52,7 @@ class ShopCoordinator extends Coordinator<AppRoute> {
 
   @override
   FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
+    // Standard route parsing logic
     return switch (uri.pathSegments) {
       ['shop'] => ShopHomeRoute(),
       ['shop', 'products', final id] => ProductRoute(id: id),
@@ -68,12 +62,35 @@ class ShopCoordinator extends Coordinator<AppRoute> {
 }
 ```
 
-> [!NOTE]
-> The coordinator automatically resolves the correct root coordinator via `rootCoordinator`. You can safely pass `this` when creating paths — the framework handles the rest.
+### 2. The Module Wrapper
 
-### Step 2: Create the Parent Coordinator
+Next, create a wrapper class that extends your feature coordinator. This wrapper connects the feature to the parent and handles any route prefixing (e.g., `/v1/shop` vs `/shop`).
 
-Register child coordinators in `defineModules`, just like regular modules:
+```dart
+class ShopCoordinatorModule extends ShopCoordinator {
+  ShopCoordinatorModule(this.coordinator);
+
+  @override
+  final CoordinatorModular<AppRoute> coordinator;
+
+  @override
+  FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
+    // Intercept routes starting with 'v1'
+    return switch (uri.pathSegments) {
+      ['v1', ...final rest] => super.parseRouteFromUri(
+        uri.replace(pathSegments: rest), // Strip 'v1' and delegate
+      ),
+      _ => null, 
+    };
+  }
+}
+```
+
+By overriding the `coordinator` field, you link the child to the parent. By modifying `parseRouteFromUri`, you handle the versioning externally, keeping `ShopCoordinator` clean.
+
+### 3. Register in the Parent
+
+Finally, register the *wrapper* in the parent's `defineModules` method.
 
 ```dart
 class MainCoordinator extends Coordinator<AppRoute>
@@ -81,8 +98,9 @@ class MainCoordinator extends Coordinator<AppRoute>
 
   @override
   Set<RouteModule<AppRoute>> defineModules() => {
-    ShopCoordinator(this),
-    SettingsCoordinator(this),
+    // Register the wrapper, passing 'this' as the parent
+    ShopCoordinatorModule(this), 
+    SettingsModule(this),
   };
 
   @override
@@ -90,200 +108,76 @@ class MainCoordinator extends Coordinator<AppRoute>
 }
 ```
 
-**That's it!** The parent automatically:
-- Aggregates paths from all child coordinators
-- Delegates route parsing to each child
-- Calls `defineLayout` and `defineConverter` on each child
-
 ---
 
-## The `coordinator` Getter
+## Parallel Feature Development (Versioning)
 
-The `coordinator` getter is the key mechanism that distinguishes standalone coordinators from nested ones.
+The Wrapper Pattern naturally supports **Parallel Feature Development**. You can have multiple versions of the same feature coordinator running side-by-side by creating different wrappers for them.
 
-### Standalone Coordinator (default)
+### Example: V1 and V2 Coexistence
 
-By default, `Coordinator` throws `UnimplementedError`:
-
-```dart
-// In Coordinator base class:
-@override
-CoordinatorModular<T> get coordinator => throw UnimplementedError(
-  'This coordinator is standalone and does not belong to any CoordinatorModular',
-);
-```
-
-This is fine when a coordinator is used as a top-level `RouterConfig`.
-
-### Nested Coordinator
-
-When used as a `RouteModule`, override the getter to return the parent:
+You might have a legacy `ShopCoordinatorV1` and a new `ShopCoordinatorV2`. You simply wrap them with different prefixes:
 
 ```dart
-@override
-CoordinatorModular<AppRoute> get coordinator => _parent;
-```
-
-> [!CAUTION]
-> If you use a standalone coordinator as a `RouterConfig` and its `parseRouteFromUri` returns `null`, a debug assertion will fire. Standalone coordinators **must** always return a route.
-
----
-
-## Route Versioning Pattern
-
-The most compelling use case for Coordinator-as-RouteModule is **route versioning** — running multiple versions of the same feature side by side.
-
-### Architecture
-
-```
-MainCoordinator (CoordinatorModular)
-├── ShopCoordinatorV1  → /v1/shop/...  (deprecated)
-├── ShopCoordinatorV2  → /v2/shop/...  (current)
-└── SettingsCoordinator → /settings/...
-```
-
-### Implementation
-
-```dart
-class ShopCoordinatorV1 extends Coordinator<AppRoute> {
-  ShopCoordinatorV1(this._parent);
-  final MainCoordinator _parent;
-
+// Legacy Wrapper
+class ShopCoordinatorV1Module extends ShopCoordinatorV1 {
+  ShopCoordinatorV1Module(this.coordinator);
   @override
-  CoordinatorModular<AppRoute> get coordinator => _parent;
-
-  late final NavigationPath<AppRoute> shopV1Stack = NavigationPath.createWith(
-    label: 'shop-v1',
-    coordinator: this,
-  );
-
-  @override
-  List<StackPath> get paths => [...super.paths, shopV1Stack];
-
-  @override
-  void defineLayout() {
-    RouteLayout.defineLayout(ShopV1Layout, ShopV1Layout.new);
-  }
+  final CoordinatorModular<AppRoute> coordinator;
 
   @override
   FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
     return switch (uri.pathSegments) {
-      ['v1', 'shop'] => ShopHomeV1(),
-      ['v1', 'shop', 'products'] => ProductListV1(),
-      _ => null,
-    };
-  }
-}
-
-class ShopCoordinatorV2 extends Coordinator<AppRoute> {
-  ShopCoordinatorV2(this._parent);
-  final MainCoordinator _parent;
-
-  @override
-  CoordinatorModular<AppRoute> get coordinator => _parent;
-
-  late final NavigationPath<AppRoute> shopV2Stack = NavigationPath.createWith(
-    label: 'shop-v2',
-    coordinator: this,
-  );
-
-  @override
-  List<StackPath> get paths => [...super.paths, shopV2Stack];
-
-  @override
-  void defineLayout() {
-    RouteLayout.defineLayout(ShopV2Layout, ShopV2Layout.new);
-  }
-
-  @override
-  FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
-    return switch (uri.pathSegments) {
-      ['v2', 'shop'] => ShopHomeV2(),
-      ['v2', 'shop', 'products'] => ProductListV2(),
-      ['v2', 'shop', 'products', final id] => ProductDetailV2(id: id),
-      _ => null,
-    };
-  }
-}
-```
-
-### Cross-Version Navigation
-
-Navigate between versions using the parent coordinator:
-
-```dart
-// From V1 layout, offer migration to V2
-TextButton(
-  onPressed: () => coordinator.replace(ShopHomeV2()),
-  child: const Text('Switch to V2'),
-)
-
-// From V2, link back to legacy V1
-TextButton(
-  onPressed: () => coordinator.replace(ShopHomeV1()),
-  child: const Text('Open Legacy Shop'),
-)
-```
-
-### Deprecation Banner
-
-V1 layouts can show a deprecation banner:
-
-```dart
-class ShopV1Layout extends AppRoute with RouteLayout<AppRoute> {
-  @override
-  Widget build(covariant MainCoordinator coordinator, BuildContext context) {
-    return Scaffold(
-      body: Column(
-        children: [
-          MaterialBanner(
-            content: const Text('This shop version is deprecated.'),
-            actions: [
-              TextButton(
-                onPressed: () => coordinator.replace(ShopHomeV2()),
-                child: const Text('Switch to V2'),
-              ),
-            ],
-          ),
-          Expanded(child: buildPath(coordinator)),
-        ],
+      ['v1', ...final rest] => super.parseRouteFromUri(
+        uri.replace(pathSegments: rest),
       ),
-    );
+      _ => null,
+    };
+  }
+}
+
+// New Wrapper
+class ShopCoordinatorV2Module extends ShopCoordinatorV2 {
+  ShopCoordinatorV2Module(this.coordinator);
+  @override
+  final CoordinatorModular<AppRoute> coordinator;
+
+  @override
+  FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
+    return switch (uri.pathSegments) {
+      ['v2', ...final rest] => super.parseRouteFromUri(
+        uri.replace(pathSegments: rest),
+      ),
+      _ => null,
+    };
   }
 }
 ```
 
----
+Then register both in `MainCoordinator`:
 
-## Coordinator vs RouteModule — When to Use Which
+```dart
+@override
+Set<RouteModule<AppRoute>> defineModules() => {
+  ShopCoordinatorV1Module(this),
+  ShopCoordinatorV2Module(this),
+};
+```
 
-| Aspect | `RouteModule` | `Coordinator` as module |
-|--------|---------------|------------------------|
-| **Route parsing** | ✅ | ✅ |
-| **Own paths** | ✅ | ✅ |
-| **Own layouts** | ✅ | ✅ |
-| **Own converters** | ✅ | ✅ |
-| **Full coordinator lifecycle** | ❌ | ✅ |
-| **Can be used standalone** | ❌ | ✅ |
-| **Independently testable** | Partially | ✅ Fully |
-| **Use case** | Simple domain routing | Complex, self-contained features |
+### Benefits of this Approach
 
----
+1.  **Zero Regression Risk**: The legacy `ShopCoordinatorV1` remains untouched.
+2.  **Clean Code**: Coordinators focus on logic, Wrappers focus on mounting and versioning.
+3.  **Experiment Freedom**: V2 can use a completely different architecture or state management library.
+4.  **Instant Rollback**: If V2 has bugs, you can restrict access to it in the wrapper or parent without redeploying valid code.
 
-## Best Practices
 
-### ✅ Do
 
-- **Override `coordinator`** to return the parent when nesting
-- **Pass `this`** when creating paths — the framework auto-resolves the root coordinator
-- **Spread `...super.paths`** in your `paths` getter to include the root path
-- **Use unique path labels** across all child coordinators (e.g., `shop-v1`, `shop-v2`)
-- **Keep child coordinators independent** — they shouldn't know about siblings
+### Best Practices for Parallel Development
 
-### ❌ Don't
-
-- **Don't access sibling coordinators directly** — use `coordinator.getModule<T>()` through the parent
-- **Don't forget to return `null`** for unhandled routes
+*   **Namespace Everything**: Prefix V2 classes with `V2` (e.g., `ShopCoordinatorV2`, `ShopHomeV2`) to prevent naming collisions and make the code self-documenting.
+*   **Isolate Dependencies**: Avoid sharing complex ViewModels or Controllers between V1 and V2. Sharing only simple Data Transfer Objects (DTOs) ensures that changes in the new version don't accidentally break the old one.
+*   **Visible Deprecation**: In the legacy V1 layouts, consider adding UI indicators like banners or badges to inform users of the new version and encourage them to migrate.
 
 ---
 
@@ -291,9 +185,8 @@ class ShopV1Layout extends AppRoute with RouteLayout<AppRoute> {
 
 ### UnimplementedError: "This coordinator is standalone"
 
-**Problem:** You're using a Coordinator as a RouteModule but haven't overridden the `coordinator` getter.
+you will encounter this error if you use a Coordinator as a RouteModule but forget to override the `coordinator` getter. The base `Coordinator` class throws this error to prevent misuse. Ensure your child coordinator implements:
 
-**Solution:**
 ```dart
 @override
 CoordinatorModular<AppRoute> get coordinator => _parent;
@@ -301,27 +194,7 @@ CoordinatorModular<AppRoute> get coordinator => _parent;
 
 ### AssertionError: "you must return route from parseRouteFromUri"
 
-**Problem:** A standalone coordinator's `parseRouteFromUri` returned null.
-
-**Solution:** Standalone coordinators used as `RouterConfig` must always return a non-null route:
-```dart
-@override
-AppRoute parseRouteFromUri(Uri uri) {
-  return switch (uri.pathSegments) {
-    // ... your routes ...
-    _ => NotFoundRoute(uri: uri), // Always provide a fallback
-  };
-}
-```
-
----
-
-## Next Steps
-
-- **See [coordinator-modular.md](./coordinator-modular.md)** for the simpler `RouteModule` approach
-- **See [route-layout.md](./route-layout.md)** for creating custom layouts
-- **See the [Route Versioning recipe](../recipes/route-versioning.md)** for a complete working example
-- **Check example code** in `packages/zenrouter/example/lib/main_coordinator_module.dart`
+If you are using a standalone coordinator (one that isn't nested) as your main `RouterConfig`, it *must* return a route from `parseRouteFromUri`. If it returns `null`, the app doesn't know what to show. Always ensure your top-level coordinator has a fallback, typically a `NotFoundRoute`.
 
 ---
 
