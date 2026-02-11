@@ -31,7 +31,7 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
     required Coordinator coordinator,
     required String label,
     List<T>? stack,
-  }) => NavigationPath._(label, stack ?? [], coordinator.rootCoordinator());
+  }) => NavigationPath._(label, stack ?? [], coordinator.rootCoordinator);
 
   /// The key used to identify this type in [RouteLayout.definePath].
   static const key = PathKey('NavigationPath');

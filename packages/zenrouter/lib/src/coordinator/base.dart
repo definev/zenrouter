@@ -154,8 +154,9 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   ///
   /// If this coordinator is a part of another [CoordinatorModular], it will return the [coordinator].
   /// Otherwise, it will return itself.
-  R rootCoordinator<R extends Coordinator<T>>() =>
-      (isRouteModule ? coordinator : this) as R;
+  late final Coordinator<T> rootCoordinator = isRouteModule
+      ? coordinator
+      : this;
 
   @override
   void dispose() {

@@ -67,7 +67,7 @@ abstract class RouteModule<T extends RouteUnique> {
 
   /// Creates a route module with a reference to its coordinator.
   RouteModule(CoordinatorModular<T> coordinator)
-    : this._(coordinator.rootCoordinator());
+    : this._(coordinator.rootCoordinator as CoordinatorModular<T>);
 
   /// {@template zenrouter.coordinator.modular.coordinator}
   /// The coordinator that owns this module.

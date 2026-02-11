@@ -38,7 +38,7 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T>
   }) => IndexedStackPath._(
     stack,
     debugLabel: label,
-    coordinator: coordinator.rootCoordinator(),
+    coordinator: coordinator.rootCoordinator,
   );
 
   /// The key used to identify this type in [RouteLayout.definePath].
