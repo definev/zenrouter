@@ -1,5 +1,8 @@
 ## 1.2.0
 
+### 🐞 Fixes
+- **Fix**: Regression error when using `RouteRedirectRule` inside `IndexedStackPath` (Thanks to @obenkucuk)
+
 ### 🚀 New Features
 
 #### Coordinator as RouteModule — Nested Coordinators
