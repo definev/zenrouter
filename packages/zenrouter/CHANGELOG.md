@@ -8,22 +8,6 @@
 - Auto-detected `isRouteModule` flag controls root path creation vs parent inheritance.
 - See [Guide](doc/guides/coordinator-as-module.md) & `example/lib/main_coordinator_module.dart`
 
-```dart
-class ShopCoordinator extends Coordinator<AppRoute> {
-  ShopCoordinator(this._parent);
-  final MainCoordinator _parent;
-
-  @override
-  CoordinatorModular<AppRoute> get coordinator => _parent;
-
-  @override
-  FutureOr<AppRoute?> parseRouteFromUri(Uri uri) { /* ... */ }
-}
-```
-
-#### Path Binding Assertions
-- `NavigationPath.createWith` and `IndexedStackPath.createWith` now assert that the bound coordinator is **not** a `RouteModule`, preventing accidental self-binding in nested coordinators.
-
 ### ⚠️ Breaking Changes
 
 - **`Coordinator.parseRouteFromUri`** signature changed from `FutureOr<T>` to `FutureOr<T?>`. Child coordinators return `null` for unrecognized URIs; standalone coordinators are guarded by assertions.

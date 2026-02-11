@@ -672,11 +672,10 @@ class CartV2 extends AppRoute {
 
 class BlogCoordinator extends Coordinator<AppRoute>
     with CoordinatorModular<AppRoute> {
-  BlogCoordinator(this._parent);
-  final MainCoordinator _parent;
+  BlogCoordinator(this.coordinator);
 
   @override
-  CoordinatorModular<AppRoute> get coordinator => _parent;
+  final CoordinatorModular<AppRoute> coordinator;
 
   late final NavigationPath<AppRoute> blogStack = NavigationPath.createWith(
     label: 'blog',
@@ -949,11 +948,9 @@ class BlogCommentRoute extends AppRoute {
 // ============================================================================
 
 class SettingsCoordinator extends Coordinator<AppRoute> {
-  SettingsCoordinator(this._parent);
-  final MainCoordinator _parent;
-
+  SettingsCoordinator(this.coordinator);
   @override
-  CoordinatorModular<AppRoute> get coordinator => _parent;
+  final CoordinatorModular<AppRoute> coordinator;
 
   late final NavigationPath<AppRoute> settingsStack = NavigationPath.createWith(
     label: 'settings',

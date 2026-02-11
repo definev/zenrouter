@@ -176,7 +176,7 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     try {
       coordinator;
       return true;
-    } catch (_) {
+    } on UnimplementedError {
       return false;
     }
   }();
@@ -381,11 +381,12 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
   /// Otherwise, [replace] is called.
   Future<void> recoverRouteFromUri(Uri uri) async {
     final route = await parseRouteFromUri(uri);
-    assert(
-      route != null,
-      'If you want to use coordinator deeplink feature, you must return route from [parseRouteFromUri]',
-    );
-    return recover(route!);
+    if (route == null) {
+      throw StateError(
+        'If you want to use coordinator deeplink feature, you must return route from [parseRouteFromUri]',
+      );
+    }
+    return recover(route);
   }
 
   /// Resolves and activates layouts for a given [layout].

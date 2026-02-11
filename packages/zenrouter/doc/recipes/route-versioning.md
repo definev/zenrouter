@@ -454,9 +454,6 @@ Set<RouteModule<AppRoute>> defineModules() => {
 
 ## Common Gotchas
 
-> [!NOTE]
-> The coordinator automatically resolves the correct root coordinator via `rootCoordinator`. You can safely pass `this` when creating paths.
-
 > [!WARNING]
 > **Use unique path labels** for each version. Duplicate labels will cause state restoration conflicts. Use prefixes like `shop-v1`, `shop-v2`.
 

@@ -106,6 +106,10 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
         route.deeplinkStrategy == DeeplinkStrategy.custom) {
       coordinator.recover(route);
     } else {
+      assert(
+        route != null,
+        'You must to provide a parse route for $configuration in [parseRouteFromUri] to use deeplink to it',
+      );
       coordinator.navigate(route!);
     }
   }
