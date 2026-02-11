@@ -163,8 +163,8 @@ abstract class Coordinator<T extends RouteUnique> extends Equatable
     routerDelegate.dispose();
     for (final path in paths) {
       path.removeListener(notifyListeners);
+      path.dispose();
     }
-    root.dispose();
     super.dispose();
   }
 
