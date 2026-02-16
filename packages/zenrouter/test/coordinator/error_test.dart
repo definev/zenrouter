@@ -178,14 +178,11 @@ class ErrorTestCoordinator extends Coordinator<ErrorTestRoute> {
   void defineLayout() {
     // Intentionally NOT defining UndefinedLayout to test the error
     // But DO define MockUnregisteredPathLayout so we can test the path builder error
-    RouteLayout.defineLayout(
+    defineRouteLayout(
       MockUnregisteredPathLayout,
-      () => MockUnregisteredPathLayout(),
+      MockUnregisteredPathLayout.new,
     );
-    RouteLayout.defineLayout(
-      NormalIndexedStackLayout,
-      () => NormalIndexedStackLayout(),
-    );
+    defineRouteLayout(NormalIndexedStackLayout, NormalIndexedStackLayout.new);
   }
 
   @override

@@ -189,8 +189,8 @@ class LayoutTestCoordinator extends Coordinator<LayoutTestRoute> {
 
   @override
   void defineLayout() {
-    RouteLayout.defineLayout(AllowPopLayout, AllowPopLayout.new);
-    RouteLayout.defineLayout(NotAllowPopLayout, NotAllowPopLayout.new);
+    defineRouteLayout(AllowPopLayout, AllowPopLayout.new);
+    defineRouteLayout(NotAllowPopLayout, NotAllowPopLayout.new);
   }
 
   @override

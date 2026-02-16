@@ -203,6 +203,8 @@ class _CoordinatorRestorableState extends State<CoordinatorRestorable>
   late final _activeRoute = ActiveRouteRestorable(
     initialRoute: widget.coordinator.activePath.activeRoute,
     parseRouteFromUri: widget.coordinator.parseRouteFromUriSync,
+    resolveRouteLayoutParent: widget.coordinator.resolveRouteLayoutParent,
+    getLayoutKey: widget.coordinator.getLayoutKey,
   );
 
   void _saveCoordinator() {
@@ -402,6 +404,8 @@ class ActiveRouteRestorable<T extends RouteUnique> extends RestorableValue<T?> {
   ActiveRouteRestorable({
     required this.initialRoute,
     required this.parseRouteFromUri,
+    required this.resolveRouteLayoutParent,
+    required this.getLayoutKey,
   });
 
   /// The initial route to use when no restoration data is available.
@@ -416,6 +420,10 @@ class ActiveRouteRestorable<T extends RouteUnique> extends RestorableValue<T?> {
   /// used to deserialize [RouteUnique] routes that were saved as URI strings.
   /// The function should handle all possible URIs that your application can generate.
   final RouteUriParserSync<RouteUnique> parseRouteFromUri;
+
+  final RouteLayoutParentConstructor resolveRouteLayoutParent;
+
+  final GetLayoutKeyCallback getLayoutKey;
 
   @override
   T? createDefaultValue() => initialRoute;
@@ -433,6 +441,8 @@ class ActiveRouteRestorable<T extends RouteUnique> extends RestorableValue<T?> {
     // coverage:ignore-end
     return RestorableConverter.deserializeRoute(
       data,
+      getLayoutKey: getLayoutKey,
+      resolveRouteLayoutParent: resolveRouteLayoutParent,
       parseRouteFromUri: parseRouteFromUri,
     );
   }

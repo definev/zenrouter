@@ -15,59 +15,20 @@ mixin RouteUnique on RouteTarget implements RouteIdentity {
   Type? get layout => null;
 
   @override
-  Object? get parentRoutePathKey => layout;
+  Object? get parentLayoutKey => layout;
 
   /// Creates an instance of the layout for this route.
   ///
   /// This uses the registered constructor from [RouteLayout.layoutConstructorTable].
   RouteLayout? createLayout(covariant Coordinator coordinator) =>
-      createRoutePath(coordinator) as RouteLayout?;
-
-  /// Creates an instance of the layout for this route.
-  ///
-  /// This uses the registered constructor from [RouteLayout.layoutConstructorTable].
-  @override
-  RoutePath? createRoutePath(covariant CoordinatorCore coordinator) {
-    final routePathKey = parentRoutePathKey;
-    final constructor = RoutePath.routePathConstructorTable[routePathKey];
-    if (constructor == null) {
-      throw UnimplementedError(
-        '$this: Missing RouteLayout constructor for [$routePathKey] must define by calling [RouteLayout.defineLayout] in [defineLayout] function at [${coordinator.runtimeType}]',
-      );
-    }
-    return constructor();
-  }
+      createParentLayout(coordinator) as RouteLayout?;
 
   /// Resolves the active layout instance for this route.
   ///
   /// Checks if an instance of the required layout is already active in the
   /// coordinator. If so, returns it. Otherwise, creates a new one.
-  @override
-  RoutePath? resolveRoutePath(covariant CoordinatorCore coordinator) {
-    final routePathKey = parentRoutePathKey;
-    if (routePathKey == null) return null;
-    // ignore: invalid_use_of_protected_member
-    final routePathList = coordinator.activeRoutePaths;
-
-    // Find existing layout or create new one
-    RoutePath? resolvedRoutePath;
-    for (var i = routePathList.length - 1; i >= 0; i -= 1) {
-      final routePath = routePathList[i];
-      if (routePath.routePathKey == routePathKey) {
-        resolvedRoutePath = routePath;
-        break;
-      }
-    }
-
-    return resolvedRoutePath ??= createRoutePath(coordinator);
-  }
-
-  /// Resolves the active layout instance for this route.
-  ///
-  /// Checks if an instance of the required layout is already active in the
-  /// coordinator. If so, returns it. Otherwise, creates a new one.
-  RouteLayout? resolveLayout(covariant Coordinator coordinator) {
-    final resolvedPath = resolveRoutePath(coordinator);
+  RouteLayout? resolveLayout(covariant CoordinatorCore coordinator) {
+    final resolvedPath = resolveParentLayout(coordinator);
 
     // Validate that routes using IndexedStackPath are in the initial stack
     // Using assert with closure to ensure all validation logic is removed in production
@@ -97,6 +58,16 @@ mixin RouteUnique on RouteTarget implements RouteIdentity {
 
     return resolvedPath == null ? null : resolvedPath as RouteLayout;
   }
+
+  late final _proxy = RouteLayoutChild.proxy(this);
+
+  @override
+  RouteLayoutParent<RouteTarget>? createParentLayout(coordinator) =>
+      _proxy.createParentLayout(coordinator);
+
+  @override
+  RouteLayoutParent<RouteTarget>? resolveParentLayout(coordinator) =>
+      _proxy.resolveParentLayout(coordinator);
 
   /// Builds the widget for this route.
   Widget build(covariant Coordinator coordinator, BuildContext context);

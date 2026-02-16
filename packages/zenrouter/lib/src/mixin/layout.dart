@@ -1,100 +1,56 @@
 import 'package:flutter/widgets.dart';
 import 'package:zenrouter/zenrouter.dart';
 
+typedef GetLayoutKeyCallback = Object? Function(String key);
+
 /// Mixin for routes that define a layout structure.
 ///
 /// A layout is a route that wraps other routes, such as a shell or a tab bar.
 /// It defines how its children are displayed and managed.
-mixin RouteLayout<T extends RouteIdentity> on RouteUnique
-    implements RoutePath<T> {
-  /// Registers a custom layout constructor.
-  ///
-  /// Use this to define how a specific layout type should be instantiated.
+mixin RouteLayout<T extends RouteUnique> on RouteUnique
+    implements RouteLayoutParent<T> {
+  @Deprecated(
+    'Use `coordinator.defineRouteLayout` insteads\n'
+    'If you want to use this method, you must provide a [Coordinator] instance to the [RouteLayout.defineLayout] method.\n'
+    'Example: `OLD: RouteLayout.defineLayout(ShopLayout, ShopLayout.new);`\n'
+    '         `NEW: RouteLayout.defineLayout(this, ShopLayout, ShopLayout.new);`',
+  )
   static void defineLayout<T extends RouteLayout>(
-    Type layout,
+    CoordinatorCore coordinator,
+    Object layoutKey,
     T Function() constructor,
   ) {
-    RoutePath.defineRoutePath(layout, constructor);
-    final layoutInstance = constructor();
-    layoutInstance.completeOnResult(null, null, true);
-    RouteLayout._reflectionLayoutType[layoutInstance.runtimeType.toString()] =
-        layoutInstance.runtimeType;
+    coordinator.defineRouteLayoutParentConstructor(
+      layoutKey,
+      (_) => constructor(),
+    );
+    final layoutInstance = constructor()..onDiscard();
+    RouteLayout._layoutKeyTable[layoutInstance.layoutKey.toString()] =
+        layoutInstance.layoutKey;
   }
 
-  static final Map<String, Type> _reflectionLayoutType = {};
-  static RouteLayout deserialize(Map<String, dynamic> value) {
-    final type = _reflectionLayoutType[value['value'] as String];
-    if (type == null) {
+  /// Route restoration reflection table.
+  static final Map<String, Object> _layoutKeyTable = {};
+  static RouteLayout deserialize(
+    RouteLayoutParentConstructor resolveRouteLayoutParent,
+    GetLayoutKeyCallback layoutKeyLookup,
+    Map<String, dynamic> value,
+  ) {
+    final key = value['value'] as String;
+    final layoutKey = layoutKeyLookup(key);
+    if (layoutKey == null) {
       throw UnimplementedError(
-        'The [${value['value']}] layout isn\'t defined. You must define it using RouteLayout.defineLayout',
+        'The [$key] layout isn\'t defined. You must define it using RouteLayout.defineLayout',
       );
     }
-    return RoutePath.routePathConstructorTable[type]!() as RouteLayout;
+    return resolveRouteLayoutParent(layoutKey) as RouteLayout;
   }
-
-  /// Table of registered layout builders.
-  ///
-  /// This maps layout identifiers to their widget builder functions.
-  static final Map<PathKey, RouteLayoutBuilder> _layoutBuilderTable = {
-    NavigationPath.key: (coordinator, path, layout) {
-      final restorationId = switch (layout) {
-        RouteUnique route => coordinator.resolveRouteId(route),
-        _ => coordinator.rootRestorationId,
-      };
-
-      return NavigationStack(
-        path: path as NavigationPath<RouteUnique>,
-        navigatorKey: layout == null
-            ? coordinator.routerDelegate.navigatorKey
-            : null,
-        coordinator: coordinator,
-        restorationId: restorationId,
-        resolver: (route) {
-          switch (route) {
-            case RouteTransition():
-              return route.transition(coordinator);
-            default:
-              final routeRestorationId = coordinator.resolveRouteId(route);
-              final builder = Builder(
-                builder: (context) => route.build(coordinator, context),
-              );
-              return switch (coordinator.transitionStrategy) {
-                DefaultTransitionStrategy.material => StackTransition.material(
-                  builder,
-                  restorationId: routeRestorationId,
-                ),
-                DefaultTransitionStrategy.cupertino =>
-                  StackTransition.cupertino(
-                    builder,
-                    restorationId: routeRestorationId,
-                  ),
-                DefaultTransitionStrategy.none => StackTransition.none(
-                  builder,
-                  restorationId: routeRestorationId,
-                ),
-              };
-          }
-        },
-      );
-    },
-    IndexedStackPath.key: (coordinator, path, layout, [restorationId]) =>
-        ListenableBuilder(
-          listenable: path as Listenable,
-          builder: (context, child) {
-            final indexedStackPath = path as IndexedStackPath<RouteUnique>;
-            return IndexedStackPathBuilder(
-              path: indexedStackPath,
-              coordinator: coordinator,
-              restorationId: restorationId,
-            );
-          },
-        ),
-  };
 
   static Widget buildRoot(Coordinator coordinator) {
     final rootPathKey = coordinator.root.pathKey;
 
-    if (!_layoutBuilderTable.containsKey(rootPathKey)) {
+    final routeLayoutBuilder = coordinator.getLayoutBuilder(rootPathKey);
+    if (routeLayoutBuilder == null) {
       // coverage:ignore-start
       throw UnimplementedError(
         'No layout builder provided for [${rootPathKey.key}]. If you extend the [StackPath] class, you must register it via [RouteLayout.definePath] to use [RouteLayout.buildRoot].',
@@ -102,40 +58,30 @@ mixin RouteLayout<T extends RouteIdentity> on RouteUnique
       // coverage:ignore-end
     }
 
-    return _layoutBuilderTable[rootPathKey]!(
-      coordinator,
-      coordinator.root,
-      null,
-    );
+    return routeLayoutBuilder(coordinator, coordinator.root, null);
   }
 
   /// Build the layout for this route.
   Widget buildPath(covariant Coordinator coordinator) {
     final path = resolvePath(coordinator);
 
-    if (!_layoutBuilderTable.containsKey(path.pathKey)) {
+    final routeLayoutBuilder = coordinator.getLayoutBuilder(path.pathKey);
+    if (routeLayoutBuilder == null) {
       throw UnimplementedError(
         'No layout builder provided for [${path.pathKey.key}]. If you extend the [StackPath] class, you must register it via [RouteLayout.definePath] to use [RouteLayout.buildPath].',
       );
     }
-    return _layoutBuilderTable[path.pathKey]!(coordinator, path, this);
+
+    return routeLayoutBuilder(coordinator, path, this);
   }
 
-  // coverage:ignore-start
-  /// Registers a custom layout builder.
-  ///
-  /// Use this to define how a specific layout type should be built.
-  static void definePath(PathKey key, RouteLayoutBuilder builder) =>
-      _layoutBuilderTable[key] = builder;
-  // coverage:ignore-end
-
   @override
-  Widget build(covariant Coordinator coordinator, BuildContext context) =>
-      buildPath(coordinator);
+  Widget build(covariant CoordinatorCore coordinator, BuildContext context) =>
+      buildPath(coordinator as Coordinator);
 
   Map<String, dynamic> serialize() => {
     'type': 'layout',
-    'value': runtimeType.toString(),
+    'value': layoutKey.toString(),
   };
 
   /// Resolves the stack path for this layout.
@@ -145,31 +91,56 @@ mixin RouteLayout<T extends RouteIdentity> on RouteUnique
   StackPath<RouteUnique> resolvePath(covariant CoordinatorCore coordinator);
 
   @override
-  Object get routePathKey => runtimeType;
+  Object get layoutKey => runtimeType;
 
   /// RouteLayout does not use a URI.
   @override
-  Uri toUri() => Uri(pathSegments: ['__layout', routePathKey.toString()]);
+  Uri toUri() => Uri(pathSegments: ['__layout', layoutKey.toString()]);
+
+  late final _proxy = RouteLayoutParent.proxy(this);
 
   @override
   void onDidPop(Object? result, covariant CoordinatorCore? coordinator) {
     super.onDidPop(result, coordinator);
-    assert(
-      coordinator != null,
-      '[RoutePath] must be used with a [Coordinator]',
-    );
-    resolvePath(coordinator!).reset();
+    _proxy.onDidPop(result, coordinator);
   }
 
   @override
-  operator ==(Object other) =>
-      other is RoutePath && other.routePathKey == routePathKey;
+  RouteLayoutParent<RouteTarget>? createParentLayout(coordinator) =>
+      _proxy.createParentLayout(coordinator);
 
   @override
-  int get hashCode => routePathKey.hashCode;
+  RouteLayoutParent<RouteTarget>? resolveParentLayout(coordinator) =>
+      _proxy.resolveParentLayout(coordinator);
+
+  @override
+  bool matchedLayoutKey(coordinator, other) =>
+      _proxy.matchedLayoutKey(coordinator, other);
+
+  @override
+  operator ==(Object other) => _proxy.compareLayout(this, other);
+
+  @override
+  int get hashCode => _proxy.resolveHashCode(this);
 }
 
 extension RouteLayoutBinding<T extends RouteUnique> on StackPath<T> {
-  void bindLayout(RouteLayoutConstructor constructor) =>
-      bindRoutePath(constructor);
+  void bindLayout(RouteLayoutConstructor constructor) {
+    final instance = constructor()..onDiscard();
+    coordinator!.defineRouteLayoutParentConstructor(
+      instance.layoutKey,
+      (_) => constructor(),
+    );
+  }
+
+  void bindLayoutWithKey(
+    Object layoutKey,
+    RouteLayoutWithKeyConstructor constructor,
+  ) {
+    final instance = constructor(layoutKey)..onDiscard();
+    coordinator!.defineRouteLayoutParentConstructor(
+      instance.layoutKey,
+      (key) => constructor(key),
+    );
+  }
 }

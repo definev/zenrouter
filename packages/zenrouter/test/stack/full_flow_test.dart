@@ -428,9 +428,9 @@ class TestCoordinator extends Coordinator<AppRoute> {
 
   @override
   void defineLayout() {
-    RouteLayout.defineLayout(ShellLayout, () => ShellLayout());
-    RouteLayout.defineLayout(ProfileLayout, () => ProfileLayout());
-    RouteLayout.defineLayout(
+    defineRouteLayout(ShellLayout, ShellLayout.new);
+    defineRouteLayout(ProfileLayout, ProfileLayout.new);
+    defineRouteLayout(
       AdvancedTabLayout,
       () => AdvancedTabLayout(path: advancedTabStack),
     );

@@ -265,8 +265,8 @@ class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug {
 
   @override
   void defineLayout() {
-    RouteLayout.defineLayout(CustomLayout, CustomLayout.new);
-    RouteLayout.defineLayout(FirstLayout, FirstLayout.new);
+    defineRouteLayout(CustomLayout, CustomLayout.new);
+    defineRouteLayout(FirstLayout, FirstLayout.new);
   }
 
   @override

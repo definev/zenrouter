@@ -8,7 +8,7 @@ import 'package:zenrouter_core/src/internal/reactive.dart';
 import 'package:zenrouter_core/src/internal/type.dart';
 import 'package:zenrouter_core/src/mixin/deeplink.dart';
 import 'package:zenrouter_core/src/mixin/identity.dart';
-import 'package:zenrouter_core/src/mixin/path.dart';
+import 'package:zenrouter_core/src/mixin/layout.dart';
 import 'package:zenrouter_core/src/mixin/redirect.dart';
 import 'package:zenrouter_core/src/path/base.dart';
 import 'package:zenrouter_core/src/path/navigatable.dart';
@@ -187,23 +187,23 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
   /// This traverses through nested layouts to find the most deeply nested
   /// layout that is currently active. Returns `null` if the root layout is active.
   @protected
-  RoutePath? get activeRoutePath {
+  RouteLayoutParent? get activeRouteLayout {
     T? current = root.activeRoute;
-    if (current == null || current is! RoutePath) return null;
+    if (current == null || current is! RouteLayoutParent) return null;
 
-    RoutePath? deepestLayout = current;
+    RouteLayoutParent? deepestRoutePath = current as RouteLayoutParent;
 
     // Traverse through nested layouts to find the deepest one
-    while (current is RoutePath) {
-      deepestLayout = current;
-      final path = current.resolvePath(this);
+    while (current is RouteLayoutParent) {
+      deepestRoutePath = current as RouteLayoutParent;
+      final path = deepestRoutePath.resolvePath(this);
       current = path.activeRoute as T?;
 
       // If the next route is not a layout, we've found the deepest layout
-      if (current is! RoutePath) break;
+      if (current is! RouteLayoutParent) break;
     }
 
-    return deepestLayout;
+    return deepestRoutePath;
   }
 
   /// Returns all active [RouteLayout] instances in the navigation hierarchy.
@@ -211,14 +211,15 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
   /// This traverses through the active route to collect all layouts from root
   /// to the deepest layout. Returns an empty list if no layouts are active.
   @protected
-  List<RoutePath> get activeRoutePaths {
-    List<RoutePath> layouts = [];
+  List<RouteLayoutParent> get activeRouteLayoutList {
+    List<RouteLayoutParent> layouts = [];
     T? current = root.activeRoute;
 
     // Traverse through the hierarchy and collect all RouteLayout instances
-    while (current != null && current is RoutePath) {
-      layouts.add(current);
-      final path = current.resolvePath(this);
+    while (current != null && current is RouteLayoutParent) {
+      final routePath = current as RouteLayoutParent;
+      layouts.add(routePath);
+      final path = routePath.resolvePath(this);
       current = path.activeRoute as T?;
     }
 
@@ -244,8 +245,8 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
     T? current = root.stack.lastOrNull;
     if (current == null) return pathSegment;
 
-    while (current is RoutePath) {
-      final layout = current as RoutePath;
+    while (current is RouteLayoutParent) {
+      final layout = current as RouteLayoutParent;
       path = layout.resolvePath(this);
       pathSegment.add(path);
       current = path.activeRoute as T?;
@@ -300,15 +301,15 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
   /// [preferPush] determines whether to push the layout onto the stack
   /// or just activate it if it already exists.
   Future<void> _resolveLayouts(
-    RoutePath? layout, {
+    RouteLayoutParent? layout, {
     _ResolveLayoutStrategy strategy = _ResolveLayoutStrategy.override,
   }) async {
-    List<RoutePath> layouts = [];
+    List<RouteLayoutParent> layouts = [];
     List<StackPath> layoutPaths = [];
     while (layout != null) {
       layouts.add(layout);
       layoutPaths.add(layout.resolvePath(this));
-      layout = layout.resolveRoutePath(this);
+      layout = layout.resolveParentLayout(this);
     }
     layoutPaths.add(root);
 
@@ -391,7 +392,7 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
     final target = await RouteRedirect.resolve(route, this);
     if (target == null) return;
 
-    final layout = target.resolveRoutePath(this);
+    final layout = target.resolveParentLayout(this);
     final routePath = layout?.resolvePath(this) ?? root;
     await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.pushToTop);
 
@@ -438,7 +439,7 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
       path.reset();
     }
 
-    final layout = target.resolveRoutePath(this);
+    final layout = target.resolveParentLayout(this);
     final path = layout?.resolvePath(this) ?? root;
     await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.override);
 
@@ -477,7 +478,7 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
     T? target = await RouteRedirect.resolve(route, this);
     if (target == null) return null;
 
-    final layout = target.resolveRoutePath(this);
+    final layout = target.resolveParentLayout(this);
     final path = layout?.resolvePath(this) ?? root;
     await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.pushToTop);
 
@@ -497,7 +498,7 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
     final target = await RouteRedirect.resolve(route, this);
     if (target == null) return;
 
-    final layout = target.resolveRoutePath(this);
+    final layout = target.resolveParentLayout(this);
     final path = layout?.resolvePath(this) ?? root;
     await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.pushToTop);
 
@@ -548,7 +549,7 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
     final target = await RouteRedirect.resolve(route, this);
     if (target == null) return null;
 
-    final layout = target.resolveRoutePath(this);
+    final layout = target.resolveParentLayout(this);
     final path = layout?.resolvePath(this) ?? root;
     await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.pushToTop);
 
@@ -604,4 +605,11 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
 
   /// Marks the coordinator as needing a rebuild.
   void markNeedRebuild() => notifyListeners();
+
+  RouteLayoutParent? resolveRouteLayoutParent(Object layoutKey);
+
+  void defineRouteLayoutParentConstructor(
+    Object layoutKey,
+    RouteLayoutParentConstructor constructor,
+  );
 }

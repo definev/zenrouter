@@ -190,15 +190,10 @@ class ShopCoordinator extends Coordinator<AppRoute> {
   late final NavigationPath<AppRoute> shopStack = NavigationPath.createWith(
     label: 'shop',
     coordinator: _parent,
-  );
+  )..bindLayout(ShopLayout.new);
 
   @override
   List<StackPath> get paths => [...super.paths, shopStack];
-
-  @override
-  void defineLayout() {
-    RouteLayout.defineLayout(ShopLayout, ShopLayout.new);
-  }
 
   @override
   FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
@@ -227,7 +222,7 @@ class SettingsCoordinator extends Coordinator<AppRoute> {
 
   @override
   void defineLayout() {
-    RouteLayout.defineLayout(SettingsLayout, SettingsLayout.new);
+    defineRouteLayout(SettingsLayout, SettingsLayout.new);
   }
 
   @override
@@ -282,7 +277,7 @@ class BlogCoordinator extends Coordinator<AppRoute>
   @override
   void defineLayout() {
     super.defineLayout();
-    RouteLayout.defineLayout(BlogLayout, BlogLayout.new);
+    defineRouteLayout(BlogLayout, BlogLayout.new);
   }
 
   @override

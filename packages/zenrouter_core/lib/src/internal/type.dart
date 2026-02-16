@@ -1,5 +1,3 @@
-import 'package:zenrouter_core/src/mixin/identity.dart';
-import 'package:zenrouter_core/src/mixin/path.dart';
 import 'package:zenrouter_core/src/mixin/target.dart';
 
 /// Synchronous parser function that converts a [Uri] into a route instance.
@@ -24,22 +22,3 @@ import 'package:zenrouter_core/src/mixin/target.dart';
 /// };
 /// ```
 typedef RouteUriParserSync<T extends RouteTarget> = T Function(Uri uri);
-
-/// Constructor function for creating a layout instance.
-///
-/// This typedef defines a function signature for constructing [RouteLayout]
-/// instances. Layout constructors are typically used in route definitions to
-/// specify which layout should wrap the route's content.
-///
-/// **Returns:**
-/// A new [RouteLayout] instance of type [T].
-///
-/// **Example:**
-/// ```dart
-/// RouteLayoutConstructor<AppRoute> constructor = () => MainLayout();
-/// ```
-///
-/// See also:
-/// - [RouteLayoutBuilder], which builds the layout widget.
-/// - [RoutePath], the base class for layout implementations.
-typedef RoutePathConstructor<T extends RouteIdentity> = RoutePath<T> Function();

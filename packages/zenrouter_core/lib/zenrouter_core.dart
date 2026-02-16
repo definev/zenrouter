@@ -9,7 +9,7 @@ export 'src/path/navigatable.dart';
 export 'src/mixin/deeplink.dart';
 export 'src/mixin/guard.dart';
 export 'src/mixin/identity.dart';
-export 'src/mixin/path.dart';
+export 'src/mixin/layout.dart';
 export 'src/mixin/redirect.dart';
 export 'src/mixin/redirect_rule.dart';
 export 'src/mixin/target.dart';

@@ -212,19 +212,19 @@ class TestCoordinator extends Coordinator<AppRoute> {
     [HomeTab(), SearchTab()],
     coordinator: this,
     label: 'tabs',
-  );
+  )..bindLayout(TabLayout.new);
   late final undefinedTabStack = IndexedStackPath.createWith(
     [UndefinedHomeTab(), UndefinedSearchTab()],
     coordinator: this,
     label: 'undefined_tabs',
-  );
+  )..bindLayout(UndefinedTabLayout.new);
 
   @override
   List<StackPath> get paths => [...super.paths, tabStack, undefinedTabStack];
 
   @override
   void defineLayout() {
-    RouteLayout.defineLayout(TabLayout, TabLayout.new);
+    defineRouteLayout(TabLayout, TabLayout.new);
   }
 
   @override

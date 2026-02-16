@@ -115,7 +115,7 @@ class ShopCoordinatorV1 extends Coordinator<AppRoute> {
 
   @override
   void defineLayout() {
-    RouteLayout.defineLayout(ShopV1Layout, ShopV1Layout.new);
+    defineRouteLayout(ShopV1Layout, ShopV1Layout.new);
   }
 
   @override
@@ -330,7 +330,7 @@ class ShopCoordinatorV2 extends Coordinator<AppRoute> {
 
   @override
   void defineLayout() {
-    RouteLayout.defineLayout(ShopV2Layout, ShopV2Layout.new);
+    defineRouteLayout(ShopV2Layout, ShopV2Layout.new);
   }
 
   @override
@@ -688,7 +688,7 @@ class BlogCoordinator extends Coordinator<AppRoute>
   @override
   void defineLayout() {
     super.defineLayout();
-    RouteLayout.defineLayout(BlogLayout, BlogLayout.new);
+    defineRouteLayout(BlogLayout, BlogLayout.new);
   }
 
   @override
@@ -962,7 +962,7 @@ class SettingsCoordinator extends Coordinator<AppRoute> {
 
   @override
   void defineLayout() {
-    RouteLayout.defineLayout(SettingsLayout, SettingsLayout.new);
+    defineRouteLayout(SettingsLayout, SettingsLayout.new);
   }
 
   @override

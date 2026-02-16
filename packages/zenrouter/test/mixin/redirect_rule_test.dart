@@ -439,8 +439,7 @@ class AsyncRedirectRule extends RedirectRule<RedirectRuleTestRoute> {
   }
 }
 
-class TestIndexedStackLayout extends RedirectRuleTestRoute
-    with RoutePath, RouteLayout {
+class TestIndexedStackLayout extends RedirectRuleTestRoute with RouteLayout {
   @override
   StackPath<RouteUnique> resolvePath(
     covariant RedirectRuleTestCoordinator coordinator,

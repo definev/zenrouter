@@ -42,9 +42,9 @@ typedef RouteUriParserSync<T extends RouteTarget> = T Function(Uri uri);
 /// See also:
 /// - [RouteLayoutConstructor], which creates layout instances.
 /// - [RouteLayout], the base class for layout implementations.
-typedef RouteLayoutBuilder<T extends RouteIdentity> =
+typedef RouteLayoutBuilder<T extends RouteUnique> =
     Widget Function(
-      Coordinator coordinator,
+      CoordinatorCore coordinator,
       StackPath<T> path,
       RouteLayout<T>? layout,
     );
@@ -66,8 +66,28 @@ typedef RouteLayoutBuilder<T extends RouteIdentity> =
 /// See also:
 /// - [RouteLayoutBuilder], which builds the layout widget.
 /// - [RouteLayout], the base class for layout implementations.
-typedef RouteLayoutConstructor<T extends RouteIdentity> =
+typedef RouteLayoutConstructor<T extends RouteUnique> =
     RouteLayout<T> Function();
+
+/// Constructor function for creating a layout instance.
+///
+/// This typedef defines a function signature for constructing [RouteLayout]
+/// instances. Layout constructors are typically used in route definitions to
+/// specify which layout should wrap the route's content.
+///
+/// **Returns:**
+/// A new [RouteLayout] instance of type [T].
+///
+/// **Example:**
+/// ```dart
+/// RouteLayoutConstructor<AppRoute> constructor = () => MainLayout();
+/// ```
+///
+/// See also:
+/// - [RouteLayoutBuilder], which builds the layout widget.
+/// - [RouteLayout], the base class for layout implementations.
+typedef RouteLayoutWithKeyConstructor<T extends RouteUnique> =
+    RouteLayout<T> Function(Object layoutKey);
 
 /// Widget builder for query parameters.
 ///

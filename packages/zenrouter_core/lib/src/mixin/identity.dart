@@ -1,46 +1,22 @@
-import 'package:zenrouter_core/src/coordinator/base.dart';
-import 'package:zenrouter_core/src/mixin/path.dart';
-import 'package:zenrouter_core/src/mixin/target.dart';
+import 'package:zenrouter_core/zenrouter_core.dart';
 
-mixin RouteIdentity on RouteTarget {
+/// [RouteIdentity] give [RouteTarget] an [Uri] an a layout aware.
+///
+/// [RouteIdentity] useful for [CoordinatorCore] pattern
+mixin RouteIdentity on RouteTarget implements RouteLayoutChild {
+  /// Return a [Uri] that represents this route.
   Uri toUri();
 
-  Object? get parentRoutePathKey;
+  /// [RouteLayoutChild] proxy.
+  late final _proxy = RouteLayoutChild.proxy(this);
 
-  /// Creates an instance of the layout for this route.
-  ///
-  /// This uses the registered constructor from [RouteLayout.layoutConstructorTable].
-  RoutePath? createRoutePath(covariant CoordinatorCore coordinator) {
-    final routePathKey = parentRoutePathKey;
-    final constructor = RoutePath.routePathConstructorTable[routePathKey];
-    if (constructor == null) {
-      throw UnimplementedError(
-        '$this: Missing RouteLayout constructor for [$routePathKey] must define by calling [RouteLayout.defineLayout] in [defineLayout] function at [${coordinator.runtimeType}]',
-      );
-    }
-    return constructor();
-  }
+  /// {@macro zenrouter_core.RouteLayoutChild.createParentLayout}
+  @override
+  RouteLayoutParent<RouteTarget>? createParentLayout(coordinator) =>
+      _proxy.createParentLayout(coordinator);
 
-  /// Resolves the active layout instance for this route.
-  ///
-  /// Checks if an instance of the required layout is already active in the
-  /// coordinator. If so, returns it. Otherwise, creates a new one.
-  RoutePath? resolveRoutePath(covariant CoordinatorCore coordinator) {
-    final routePathKey = parentRoutePathKey;
-    if (routePathKey == null) return null;
-    // ignore: invalid_use_of_protected_member
-    final routePathList = coordinator.activeRoutePaths;
-
-    // Find existing layout or create new one
-    RoutePath? resolvedRoutePath;
-    for (var i = routePathList.length - 1; i >= 0; i -= 1) {
-      final routePath = routePathList[i];
-      if (routePath.routePathKey == routePathKey) {
-        resolvedRoutePath = routePath;
-        break;
-      }
-    }
-
-    return resolvedRoutePath ??= createRoutePath(coordinator);
-  }
+  /// {@macro zenrouter_core.RouteLayoutChild.resolveParentLayout}
+  @override
+  RouteLayoutParent<RouteTarget>? resolveParentLayout(coordinator) =>
+      _proxy.resolveParentLayout(coordinator);
 }

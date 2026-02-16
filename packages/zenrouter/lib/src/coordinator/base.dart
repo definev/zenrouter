@@ -1,10 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:zenrouter/src/coordinator/router.dart';
-import 'package:zenrouter/src/mixin/layout.dart';
-import 'package:zenrouter/src/mixin/restoration.dart';
-import 'package:zenrouter/src/mixin/unique.dart';
-import 'package:zenrouter/src/path/navigation.dart';
-import 'package:zenrouter_core/zenrouter_core.dart';
+import 'package:zenrouter/zenrouter.dart';
 
 /// Strategy for controlling page transition animations in the navigator.
 ///
@@ -120,6 +115,7 @@ enum DefaultTransitionStrategy {
 /// )
 /// ```
 abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
+    with _CoordinatorRestorationImpl<T>, _CoordinatorRouteLayoutImpl<T>
     implements RouterConfig<Uri>, RouteModule<T>, ChangeNotifier {
   Coordinator({super.initialRoutePath}) {
     for (final path in paths) {
@@ -128,6 +124,65 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
     defineLayout();
     defineConverter();
   }
+
+  static final kDefaultLayoutBuilderTable = <PathKey, RouteLayoutBuilder>{
+    NavigationPath.key: (coordinatorCore, path, layout) {
+      final coordinator = coordinatorCore as Coordinator;
+      final restorationId = switch (layout) {
+        RouteUnique route => coordinator.resolveRouteId(route),
+        _ => coordinator.rootRestorationId,
+      };
+
+      return NavigationStack(
+        path: path as NavigationPath<RouteUnique>,
+        navigatorKey: layout == null
+            ? coordinator.routerDelegate.navigatorKey
+            : null,
+        coordinator: coordinator,
+        restorationId: restorationId,
+        resolver: (route) {
+          switch (route) {
+            case RouteTransition():
+              return route.transition(coordinator);
+            default:
+              final routeRestorationId = coordinator.resolveRouteId(route);
+              final builder = Builder(
+                builder: (context) => route.build(coordinator, context),
+              );
+              return switch (coordinator.transitionStrategy) {
+                DefaultTransitionStrategy.material => StackTransition.material(
+                  builder,
+                  restorationId: routeRestorationId,
+                ),
+                DefaultTransitionStrategy.cupertino =>
+                  StackTransition.cupertino(
+                    builder,
+                    restorationId: routeRestorationId,
+                  ),
+                DefaultTransitionStrategy.none => StackTransition.none(
+                  builder,
+                  restorationId: routeRestorationId,
+                ),
+              };
+          }
+        },
+      );
+    },
+    IndexedStackPath.key: (coordinatorCore, path, layout, [restorationId]) {
+      final coordinator = coordinatorCore as Coordinator;
+      return ListenableBuilder(
+        listenable: path as Listenable,
+        builder: (context, child) {
+          final indexedStackPath = path as IndexedStackPath<RouteUnique>;
+          return IndexedStackPathBuilder(
+            path: indexedStackPath,
+            coordinator: coordinator,
+            restorationId: restorationId,
+          );
+        },
+      );
+    },
+  };
 
   /// The [rootCoordinator] coordinator return a top level coordinator which used as [routeConfig].
   ///
@@ -140,7 +195,7 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
   @override
   void dispose() {
     routerDelegate.dispose();
-    _listenable.dispose();
+    _proxy.dispose();
     super.dispose();
   }
 
@@ -225,34 +280,55 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
   ///
   /// This traverses through the active route to collect all layouts from root
   /// to the deepest layout. Returns an empty list if no layouts are active.
-  List<RouteLayout> get activeLayouts => activeRoutePaths.cast<RouteLayout>();
+  List<RouteLayout> get activeLayouts =>
+      activeRouteLayoutList.cast<RouteLayout>();
 
   /// Returns the deepest active [RouteLayout] in the navigation hierarchy.
   ///
   /// This traverses through nested layouts to find the most deeply nested
   /// layout that is currently active. Returns `null` if the root layout is active.
-  RouteLayout? get activeLayout => activeRoutePath as RouteLayout?;
+  RouteLayout? get activeLayout => activeRouteLayout as RouteLayout?;
 
-  final ChangeNotifier _listenable = ChangeNotifier();
+  final ChangeNotifier _proxy = ChangeNotifier();
   @override
-  void addListener(VoidCallback listener) => _listenable.addListener(listener);
-
-  // coverage:ignore-start
-  @override
-  bool get hasListeners => _listenable.hasListeners;
+  void addListener(VoidCallback listener) => _proxy.addListener(listener);
 
   @override
-  void notifyListeners() => _listenable.notifyListeners();
-  // coverage:ignore-end
+  void removeListener(VoidCallback listener) => _proxy.removeListener(listener);
 
   @override
-  void removeListener(VoidCallback listener) =>
-      _listenable.removeListener(listener);
+  void notifyListeners() => _proxy.notifyListeners();
+
+  @override
+  bool get hasListeners => _proxy.hasListeners;
+
+  /// Table of registered layout builders.
+  ///
+  /// This maps layout identifiers to their widget builder functions.
+  final Map<PathKey, RouteLayoutBuilder> _layoutBuilderTable =
+      kDefaultLayoutBuilderTable;
+
+  RouteLayoutBuilder? getLayoutBuilder(PathKey key) => _layoutBuilderTable[key];
+  void defineLayoutBuilder(PathKey key, RouteLayoutBuilder builder) =>
+      _layoutBuilderTable[key] = builder;
 
   /// Builds the root widget (the primary navigator).
   ///
   /// Override to customize the root navigation structure.
   Widget layoutBuilder(BuildContext context) => RouteLayout.buildRoot(this);
+
+  void defineRouteLayout(Object key, RouteLayoutConstructor constructor) {
+    defineRouteLayoutParentConstructor(key, (key) => constructor());
+    defineLayoutKey(key.toString(), key);
+  }
+
+  void defineRouteLayoutWithKey(
+    Object key,
+    RouteLayoutParentConstructor constructor,
+  ) {
+    defineRouteLayoutParentConstructor(key, (key) => constructor(key));
+    defineLayoutKey(key.toString(), key);
+  }
 
   /// The router delegate for [Router] of this coordinator
   @override
@@ -279,4 +355,62 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
 
   /// Access to the navigator state.
   NavigatorState get navigator => routerDelegate.navigatorKey.currentState!;
+}
+
+mixin CoordinatorRestoration<T extends RouteUnique> on CoordinatorCore<T> {
+  Object? getLayoutKey(String key);
+
+  void defineLayoutKey(String key, Object value);
+}
+
+mixin _CoordinatorRestorationImpl<T extends RouteUnique> on CoordinatorCore<T>
+    implements CoordinatorRestoration<T> {
+  final _layoutKeyTable = <String, Object>{};
+
+  @override
+  Object? getLayoutKey(String key) => _layoutKeyTable[key];
+
+  @override
+  void defineLayoutKey(String key, Object value) =>
+      _layoutKeyTable[key] = value;
+}
+
+mixin _CoordinatorRouteLayoutImpl<T extends RouteUnique> on CoordinatorCore<T> {
+  final Map<Object, RouteLayoutParentConstructor>
+  _layoutParentConstructorTable = {};
+
+  Map<Object, RouteLayoutParentConstructor>
+  get routeLayoutParentConstructorTable => isRouteModule
+      ? (coordinator as _CoordinatorRouteLayoutImpl)
+            .routeLayoutParentConstructorTable
+      : _layoutParentConstructorTable;
+
+  @override
+  void defineRouteLayoutParentConstructor(
+    Object layoutKey,
+    RouteLayoutParentConstructor constructor,
+  ) {
+    if (isRouteModule) {
+      return coordinator.defineRouteLayoutParentConstructor(
+        layoutKey,
+        constructor,
+      );
+    }
+
+    _layoutParentConstructorTable[layoutKey] = constructor;
+  }
+
+  @override
+  RouteLayoutParent? resolveRouteLayoutParent(Object layoutKey) {
+    if (isRouteModule) return coordinator.resolveRouteLayoutParent(layoutKey);
+
+    final constructor = _layoutParentConstructorTable[layoutKey];
+    return constructor?.call(layoutKey);
+  }
+
+  @override
+  void dispose() {
+    _layoutParentConstructorTable.clear();
+    super.dispose();
+  }
 }

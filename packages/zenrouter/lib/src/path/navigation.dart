@@ -1,11 +1,7 @@
 // ignore_for_file: invalid_use_of_protected_member
 
 import 'package:flutter/widgets.dart';
-import 'package:zenrouter/src/coordinator/base.dart';
-import 'package:zenrouter/src/internal/type.dart';
-import 'package:zenrouter/src/mixin/restoration.dart';
-import 'package:zenrouter/src/path/restoration.dart';
-import 'package:zenrouter_core/zenrouter_core.dart';
+import 'package:zenrouter/zenrouter.dart';
 
 /// A mutable stack path for standard navigation.
 ///
@@ -72,13 +68,21 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
   List<T> deserialize(
     List<dynamic> data, [
     RouteUriParserSync<RouteIdentity>? parseRouteFromUri,
+    RouteLayoutParentConstructor? resolveRouteLayoutParent,
+    GetLayoutKeyCallback? getLayoutKey,
   ]) {
+    final coordinator = this.coordinator as Coordinator?;
+
     parseRouteFromUri ??= coordinator?.parseRouteFromUriSync;
+    resolveRouteLayoutParent ??= coordinator?.resolveRouteLayoutParent;
+    getLayoutKey ??= coordinator?.getLayoutKey;
     return <T>[
       for (final routeRaw in data)
         RestorableConverter.deserializeRoute(
               routeRaw,
-              parseRouteFromUri: parseRouteFromUri!,
+              resolveRouteLayoutParent: resolveRouteLayoutParent,
+              parseRouteFromUri: parseRouteFromUri,
+              getLayoutKey: getLayoutKey,
             )
             as T,
     ];

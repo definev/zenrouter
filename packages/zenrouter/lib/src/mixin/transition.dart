@@ -4,6 +4,6 @@ import 'package:zenrouter/zenrouter.dart';
 mixin RouteTransition on RouteUnique {
   /// Returns the [StackTransition] for this route.
   StackTransition<T> transition<T extends RouteUnique>(
-    covariant Coordinator coordinator,
+    covariant CoordinatorCore coordinator,
   );
 }

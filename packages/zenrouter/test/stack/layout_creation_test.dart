@@ -202,10 +202,10 @@ class TestCoordinator extends Coordinator<TestRoute> {
 
   @override
   void defineLayout() {
-    RouteLayout.defineLayout(TestHomeLayout, TestHomeLayout.new);
-    RouteLayout.defineLayout(TestSettingsLayout, TestSettingsLayout.new);
-    RouteLayout.defineLayout(TestTabBarLayout, TestTabBarLayout.new);
-    RouteLayout.defineLayout(TestFeedTabLayout, TestFeedTabLayout.new);
+    defineRouteLayout(TestHomeLayout, TestHomeLayout.new);
+    defineRouteLayout(TestSettingsLayout, TestSettingsLayout.new);
+    defineRouteLayout(TestTabBarLayout, TestTabBarLayout.new);
+    defineRouteLayout(TestFeedTabLayout, TestFeedTabLayout.new);
   }
 
   @override
