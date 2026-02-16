@@ -24,7 +24,7 @@ A powerful debugging tool for [ZenRouter](https://pub.dev/packages/zenrouter), p
 Add `zenrouter_devtools` to your `pubspec.yaml`:
 
 ```yaml
-dev_dependencies:
+dependencies:
   zenrouter_devtools: ^latest_version
 ```
 
@@ -46,8 +46,8 @@ You can customize the devtools by overriding properties in your coordinator:
 
 ```dart
 class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug<AppRoute> {
-  
-  // Only enable in debug mode
+
+  // Only enable in debug mode (default)
   @override
   bool get debugEnabled => kDebugMode;
 
