@@ -46,6 +46,7 @@ You can customize the devtools by overriding properties in your coordinator:
 
 ```dart
 class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug<AppRoute> {
+
   // Only enable in debug mode (default)
   @override
   bool get debugEnabled => kDebugMode;
