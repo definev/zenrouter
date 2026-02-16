@@ -38,9 +38,13 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
 
   /// Toggle debug overlay visibility.
   ///
-  /// Defaults to `true`. Override this to conditionally enable/disable
+  /// Defaults to `kDebugMode`. Override this to conditionally enable/disable
   /// the debug overlay (e.g., only in debug mode).
-  bool get debugEnabled => true;
+  bool get debugEnabled =>
+      // kReleaseMode
+      !const bool.fromEnvironment('dart.vm.product') &&
+      // kProfileMode
+      !const bool.fromEnvironment('dart.vm.profile');
 
   /// Override this to provide a list of routes that can be quickly pushed
   /// from the debug overlay.
