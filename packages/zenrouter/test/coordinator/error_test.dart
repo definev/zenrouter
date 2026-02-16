@@ -498,7 +498,8 @@ void main() {
         // Should tell where to define
         expect(e.message, contains('defineLayout'));
         // Should mention how to define
-        expect(e.message, contains('RouteLayout.defineLayout'));
+        expect(e.message, contains('bindLayout'));
+        expect(e.message, contains('defineRouteLayout'));
         // Should reference your coordinator
         expect(e.message, contains('ErrorTestCoordinator'));
       }
@@ -523,7 +524,8 @@ void main() {
         expect(message, contains('UndefinedLayout'));
 
         // Where: mentions where to register
-        expect(message, contains('RouteLayout.defineLayout'));
+        expect(message, contains('bindLayout'));
+        expect(message, contains('defineRouteLayout'));
         expect(message, contains('defineLayout'));
         expect(message, contains('ErrorTestCoordinator'));
       }
