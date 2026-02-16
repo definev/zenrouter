@@ -208,7 +208,8 @@ class ErrorTestCoordinator extends Coordinator<ErrorTestRoute> {
 }
 
 // Custom StackPath that will not have a registered builder
-class UnregisteredCustomPath<T extends RouteUnique> extends StackPath<T> {
+class UnregisteredCustomPath<T extends RouteUnique> extends StackPath<T>
+    with ChangeNotifier {
   final List<T> _internalStack;
   UnregisteredCustomPath({
     required Coordinator coordinator,

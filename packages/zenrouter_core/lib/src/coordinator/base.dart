@@ -8,7 +8,7 @@ import 'package:zenrouter_core/src/internal/reactive.dart';
 import 'package:zenrouter_core/src/internal/type.dart';
 import 'package:zenrouter_core/src/mixin/deeplink.dart';
 import 'package:zenrouter_core/src/mixin/identity.dart';
-import 'package:zenrouter_core/src/mixin/layout.dart';
+import 'package:zenrouter_core/src/mixin/path.dart';
 import 'package:zenrouter_core/src/mixin/redirect.dart';
 import 'package:zenrouter_core/src/path/base.dart';
 import 'package:zenrouter_core/src/path/navigatable.dart';
@@ -26,49 +26,6 @@ enum _ResolveLayoutStrategy {
   /// This is the default strategy used for [CoordinatorCore.replace] or
   /// when recovering deep links, where the goal is to set a specific state.
   override,
-}
-
-/// Strategy for controlling page transition animations in the navigator.
-///
-/// This enum defines how routes animate when pushed or popped from the
-/// navigation stack. The strategy is used by [RouteLayout] when building
-/// pages to determine the appropriate [PageTransitionsBuilder].
-///
-/// **Platform Recommendations:**
-/// - **Android/Web/Desktop**: Use [material] for consistency with Material Design
-/// - **iOS/macOS**: Use [cupertino] for native iOS-style transitions
-/// - **Testing/Screenshots**: Use [none] to disable animations
-///
-/// Example:
-/// ```dart
-/// @override
-/// DefaultTransitionStrategy get transitionStrategy {
-///   // Use platform-appropriate transitions
-///   if (Platform.isIOS || Platform.isMacOS) {
-///     return DefaultTransitionStrategy.cupertino;
-///   }
-///   return DefaultTransitionStrategy.material;
-/// }
-/// ```
-enum DefaultTransitionStrategy {
-  /// Uses Material Design transitions.
-  ///
-  /// Provides slide-up, fade, and shared-axis transitions typical of
-  /// Android applications. This is the default strategy.
-  material,
-
-  /// Uses Cupertino (iOS-style) transitions.
-  ///
-  /// Provides horizontal slide and parallax transitions typical of
-  /// iOS applications, including the edge-swipe-to-go-back gesture.
-  cupertino,
-
-  /// Disables transition animations.
-  ///
-  /// Routes appear and disappear instantly without any animation.
-  /// Useful for testing, taking screenshots, or when you want to
-  /// implement fully custom transitions.
-  none,
 }
 
 /// The core class that manages navigation state and logic.
@@ -142,7 +99,8 @@ enum DefaultTransitionStrategy {
 /// )
 /// ```
 abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
-    with ListenableObject implements RouteModule<T> {
+    with ListenableObject
+    implements RouteModule<T> {
   CoordinatorCore({this.initialRoutePath}) {
     for (final path in paths) {
       path.addListener(notifyListeners);
@@ -221,38 +179,6 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
   /// This path is used to set the initial route when the app is launched.
   final Uri? initialRoutePath;
 
-  /// The transition strategy for this coordinator.
-  ///
-  /// Override this getter to customize how page transitions are animated
-  /// throughout your navigation stack. The strategy applies to all routes
-  /// managed by this coordinator.
-  ///
-  /// **Default Behavior:**
-  /// Returns [DefaultTransitionStrategy.material], which provides Material
-  /// Design transitions (slide-up, fade effects).
-  ///
-  /// **Common Overrides:**
-  /// ```dart
-  /// // Platform-adaptive transitions
-  /// @override
-  /// DefaultTransitionStrategy get transitionStrategy {
-  ///   return Platform.isIOS
-  ///       ? DefaultTransitionStrategy.cupertino
-  ///       : DefaultTransitionStrategy.material;
-  /// }
-  ///
-  /// // Disable all transitions
-  /// @override
-  /// DefaultTransitionStrategy get transitionStrategy =>
-  ///     DefaultTransitionStrategy.none;
-  /// ```
-  ///
-  /// **Note:** This strategy is used by [RouteLayout] when constructing
-  /// [Page] objects. If you need per-route transition control, consider
-  /// implementing custom [RouteTransition] logic on individual routes instead.
-  DefaultTransitionStrategy get transitionStrategy =>
-      DefaultTransitionStrategy.material;
-
   /// Returns the current URI based on the active route.
   Uri get currentUri => activePath.activeRoute?.toUri() ?? Uri.parse('/');
 
@@ -260,7 +186,8 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
   ///
   /// This traverses through nested layouts to find the most deeply nested
   /// layout that is currently active. Returns `null` if the root layout is active.
-  RoutePath? get activeLayout {
+  @protected
+  RoutePath? get activeRoutePath {
     T? current = root.activeRoute;
     if (current == null || current is! RoutePath) return null;
 
@@ -283,7 +210,8 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
   ///
   /// This traverses through the active route to collect all layouts from root
   /// to the deepest layout. Returns an empty list if no layouts are active.
-  List<RoutePath> get activeLayouts {
+  @protected
+  List<RoutePath> get activeRoutePaths {
     List<RoutePath> layouts = [];
     T? current = root.activeRoute;
 
@@ -297,11 +225,20 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
     return layouts;
   }
 
+  /// Returns the currently active [StackPath].
+  ///
+  /// This is the path that contains the currently active route.
+  StackPath<T> get activePath =>
+      (activePaths.lastOrNull ?? root) as StackPath<T>;
+
   /// Returns the list of active layout paths in the navigation hierarchy.
   ///
   /// This starts from the [root] path and traverses down through active layouts,
   /// collecting the [StackPath] for each level.
-  List<StackPath> get activeLayoutPaths {
+  @Deprecated('Use activeStackPaths instead')
+  List<StackPath> get activeLayoutPaths => activePaths;
+
+  List<StackPath> get activePaths {
     List<StackPath> pathSegment = [root];
     StackPath path = root;
     T? current = root.stack.lastOrNull;
@@ -316,12 +253,6 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
 
     return pathSegment;
   }
-
-  /// Returns the currently active [StackPath].
-  ///
-  /// This is the path that contains the currently active route.
-  StackPath<T> get activePath =>
-      (activeLayoutPaths.lastOrNull ?? root) as StackPath<T>;
 
   /// Parses a [Uri] into a route object.
   ///
@@ -377,7 +308,7 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
     while (layout != null) {
       layouts.add(layout);
       layoutPaths.add(layout.resolvePath(this));
-      layout = layout.resolveLayout(this);
+      layout = layout.resolveRoutePath(this);
     }
     layoutPaths.add(root);
 
@@ -460,7 +391,7 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
     final target = await RouteRedirect.resolve(route, this);
     if (target == null) return;
 
-    final layout = target.resolveLayout(this);
+    final layout = target.resolveRoutePath(this);
     final routePath = layout?.resolvePath(this) ?? root;
     await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.pushToTop);
 
@@ -507,7 +438,7 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
       path.reset();
     }
 
-    final layout = target.resolveLayout(this);
+    final layout = target.resolveRoutePath(this);
     final path = layout?.resolvePath(this) ?? root;
     await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.override);
 
@@ -546,7 +477,7 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
     T? target = await RouteRedirect.resolve(route, this);
     if (target == null) return null;
 
-    final layout = target.resolveLayout(this);
+    final layout = target.resolveRoutePath(this);
     final path = layout?.resolvePath(this) ?? root;
     await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.pushToTop);
 
@@ -566,7 +497,7 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
     final target = await RouteRedirect.resolve(route, this);
     if (target == null) return;
 
-    final layout = target.resolveLayout(this);
+    final layout = target.resolveRoutePath(this);
     final path = layout?.resolvePath(this) ?? root;
     await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.pushToTop);
 
@@ -617,7 +548,7 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
     final target = await RouteRedirect.resolve(route, this);
     if (target == null) return null;
 
-    final layout = target.resolveLayout(this);
+    final layout = target.resolveRoutePath(this);
     final path = layout?.resolvePath(this) ?? root;
     await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.pushToTop);
 
@@ -638,7 +569,7 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
   /// performing any action.
   Future<void> pop([Object? result]) async {
     // Get all dynamic paths from the active layout paths
-    final dynamicPaths = activeLayoutPaths.whereType<StackMutatable>().toList();
+    final dynamicPaths = activePaths.whereType<StackMutatable>().toList();
 
     // Try to pop from the farthest element if stack length >= 2
     for (var i = dynamicPaths.length - 1; i >= 0; i--) {
@@ -658,11 +589,11 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
   /// - `null` if the [RouteGuard] want manual control
   Future<bool?> tryPop([Object? result]) async {
     // Get all dynamic paths from the active layout paths
-    final dynamicPaths = activeLayoutPaths.whereType<StackMutatable>().toList();
+    final mutatablePaths = activePaths.whereType<StackMutatable>().toList();
 
     // Try to pop from the farthest element if stack length >= 2
-    for (var i = dynamicPaths.length - 1; i >= 0; i--) {
-      final path = dynamicPaths[i];
+    for (var i = mutatablePaths.length - 1; i >= 0; i--) {
+      final path = mutatablePaths[i];
       if (path.stack.length >= 2) {
         return await path.pop(result);
       }

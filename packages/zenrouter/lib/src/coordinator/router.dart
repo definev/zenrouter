@@ -102,16 +102,19 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
       'If you want to use coordinator as [RouterConfig], you must return route from [parseRouteFromUri]',
     );
 
-    if (route is RouteDeepLink &&
-        route.deeplinkStrategy == DeeplinkStrategy.custom) {
-      coordinator.recover(route);
-    } else {
-      assert(
-        route != null,
-        'You must to provide a parse route for $configuration in [parseRouteFromUri] to use deeplink to it',
-      );
-      coordinator.navigate(route!);
+    if (route case RouteDeepLink()) {
+      final deeplink = route as RouteDeepLink;
+      if (deeplink.deeplinkStrategy == DeeplinkStrategy.custom) {
+        coordinator.recover(route!);
+      }
+      return;
     }
+
+    assert(
+      route != null,
+      'You must to provide a parse route for $configuration in [parseRouteFromUri] to use deeplink to it',
+    );
+    coordinator.navigate(route!);
   }
 
   /// Dont need to handle restored route since it handled in [CoordinatorRestorable]

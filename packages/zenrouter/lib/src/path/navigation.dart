@@ -1,13 +1,21 @@
 // ignore_for_file: invalid_use_of_protected_member
 
-import 'package:zenrouter/zenrouter.dart';
+import 'package:flutter/widgets.dart';
+import 'package:zenrouter/src/coordinator/base.dart';
+import 'package:zenrouter/src/internal/type.dart';
+import 'package:zenrouter/src/mixin/restoration.dart';
+import 'package:zenrouter/src/path/restoration.dart';
+import 'package:zenrouter_core/zenrouter_core.dart';
 
 /// A mutable stack path for standard navigation.
 ///
 /// Supports pushing and popping routes. Used for the main navigation stack
 /// and modal flows.
 class NavigationPath<T extends RouteTarget> extends StackPath<T>
-    with StackMutatable<T>, RestorablePath<T, List<dynamic>, List<T>> {
+    with
+        ChangeNotifier,
+        StackMutatable<T>,
+        RestorablePath<T, List<dynamic>, List<T>> {
   NavigationPath._([
     String? debugLabel,
     List<T>? stack,
@@ -28,10 +36,10 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
   /// This constructor binds the path to a specific coordinator, allowing it to
   /// interact with the coordinator for navigation actions.
   factory NavigationPath.createWith({
-    required Coordinator coordinator,
+    required CoordinatorCore coordinator,
     required String label,
     List<T>? stack,
-  }) => NavigationPath._(label, stack ?? [], coordinator);
+  }) => NavigationPath._(label, stack ?? [], coordinator as Coordinator);
 
   /// The key used to identify this type in [RouteLayout.definePath].
   static const key = PathKey('NavigationPath');
@@ -57,18 +65,21 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
 
   @override
   List<dynamic> serialize() => [
-    for (final route in stack) RouteTarget.serialize(route),
+    for (final route in stack) RestorableConverter.serializeRoute(route),
   ];
 
   @override
   List<T> deserialize(
     List<dynamic> data, [
-    RouteUriParserSync<RouteUnique>? parseRouteFromUri,
+    RouteUriParserSync<RouteIdentity>? parseRouteFromUri,
   ]) {
     parseRouteFromUri ??= coordinator?.parseRouteFromUriSync;
     return <T>[
       for (final routeRaw in data)
-        RouteTarget.deserialize(routeRaw, parseRouteFromUri: parseRouteFromUri!)
+        RestorableConverter.deserializeRoute(
+              routeRaw,
+              parseRouteFromUri: parseRouteFromUri!,
+            )
             as T,
     ];
   }

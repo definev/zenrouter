@@ -103,7 +103,7 @@ class CustomLayout extends AppRoute with RouteLayout<AppRoute> {
   }
 }
 
-class FirstLayout extends AppRoute with RouteLayout {
+class FirstLayout extends AppRoute with RouteLayout<AppRoute> {
   @override
   Uri toUri() => Uri.parse('/first');
 

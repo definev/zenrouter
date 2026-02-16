@@ -1,13 +1,16 @@
 // ignore_for_file: invalid_use_of_protected_member
 
-import 'package:zenrouter/zenrouter.dart';
+import 'package:flutter/widgets.dart';
+import 'package:zenrouter/src/coordinator/base.dart';
+import 'package:zenrouter/src/path/restoration.dart';
+import 'package:zenrouter_core/zenrouter_core.dart';
 
 /// A fixed stack path for indexed navigation (like tabs).
 ///
 /// Routes are pre-defined and cannot be added or removed. Navigation switches
 /// the active index.
 class IndexedStackPath<T extends RouteTarget> extends StackPath<T>
-    with StackNavigatable<T>, RestorablePath<T, int, int> {
+    with StackNavigatable<T>, RestorablePath<T, int, int>, ChangeNotifier {
   IndexedStackPath._(super.stack, {super.debugLabel, super.coordinator})
     : assert(stack.isNotEmpty, 'Read-only path must have at least one route'),
       super() {

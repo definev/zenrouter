@@ -101,7 +101,8 @@ class RedirectRoute extends NavigatableTestRoute
 
 /// A custom stack path that does NOT implement StackNavigatable
 /// to test the debug warning fallback in Coordinator.navigate()
-class BasicStackPath<T extends RouteTarget> extends StackPath<T> {
+class BasicStackPath<T extends RouteTarget> extends StackPath<T>
+    with ChangeNotifier {
   BasicStackPath({super.debugLabel, super.coordinator}) : super([]);
 
   @override

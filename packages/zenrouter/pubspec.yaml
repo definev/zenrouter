@@ -30,6 +30,7 @@ dependencies:
   flutter:
     sdk: flutter
   collection: ^1.19.1
+  zenrouter_core: ^1.0.0
 
 dev_dependencies:
   flutter_test:

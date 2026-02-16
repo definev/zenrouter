@@ -1,6 +1,5 @@
-
 import 'package:zenrouter_core/src/mixin/identity.dart';
-import 'package:zenrouter_core/src/mixin/layout.dart';
+import 'package:zenrouter_core/src/mixin/path.dart';
 import 'package:zenrouter_core/src/mixin/target.dart';
 
 /// Synchronous parser function that converts a [Uri] into a route instance.
@@ -26,7 +25,6 @@ import 'package:zenrouter_core/src/mixin/target.dart';
 /// ```
 typedef RouteUriParserSync<T extends RouteTarget> = T Function(Uri uri);
 
-
 /// Constructor function for creating a layout instance.
 ///
 /// This typedef defines a function signature for constructing [RouteLayout]
@@ -44,6 +42,4 @@ typedef RouteUriParserSync<T extends RouteTarget> = T Function(Uri uri);
 /// See also:
 /// - [RouteLayoutBuilder], which builds the layout widget.
 /// - [RoutePath], the base class for layout implementations.
-typedef RoutePathConstructor<T extends RouteIdentity> =
-    RoutePath<T> Function();
-
+typedef RoutePathConstructor<T extends RouteIdentity> = RoutePath<T> Function();

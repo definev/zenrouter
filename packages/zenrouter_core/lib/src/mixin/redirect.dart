@@ -122,5 +122,6 @@ mixin RouteRedirect<T extends RouteTarget> on RouteTarget {
   /// ```
   ///
   /// Default implementation calls [redirect].
-  FutureOr<T?> redirectWith(covariant CoordinatorCore coordinator) => redirect();
+  FutureOr<T?> redirectWith(covariant CoordinatorCore coordinator) =>
+      redirect();
 }

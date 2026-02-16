@@ -1,7 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:zenrouter/src/coordinator/base.dart';
+import 'package:zenrouter/src/coordinator/observer.dart';
 import 'package:zenrouter/src/internal/diff.dart';
-import 'package:zenrouter/zenrouter.dart';
+import 'package:zenrouter/src/internal/type.dart';
+import 'package:zenrouter/src/mixin/unique.dart';
+import 'package:zenrouter/src/path/indexed.dart';
+import 'package:zenrouter/src/path/navigation.dart';
+import 'package:zenrouter/src/path/restoration.dart';
+import 'package:zenrouter_core/zenrouter_core.dart';
 
 /// A widget that renders a stack of pages based on a [NavigationPath].
 ///

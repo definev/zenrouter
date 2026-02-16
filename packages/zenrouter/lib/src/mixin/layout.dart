@@ -5,7 +5,8 @@ import 'package:zenrouter/zenrouter.dart';
 ///
 /// A layout is a route that wraps other routes, such as a shell or a tab bar.
 /// It defines how its children are displayed and managed.
-mixin RouteLayout<T extends RouteUnique> on RouteUnique {
+mixin RouteLayout<T extends RouteIdentity> on RouteUnique
+    implements RoutePath<T> {
   /// Registers a custom layout constructor.
   ///
   /// Use this to define how a specific layout type should be instantiated.
@@ -13,15 +14,12 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
     Type layout,
     T Function() constructor,
   ) {
-    RouteLayout.layoutConstructorTable[layout] = constructor;
+    RoutePath.defineRoutePath(layout, constructor);
     final layoutInstance = constructor();
     layoutInstance.completeOnResult(null, null, true);
     RouteLayout._reflectionLayoutType[layoutInstance.runtimeType.toString()] =
         layoutInstance.runtimeType;
   }
-
-  /// Table of registered layout constructors.
-  static Map<Type, RouteLayoutConstructor> layoutConstructorTable = {};
 
   static final Map<String, Type> _reflectionLayoutType = {};
   static RouteLayout deserialize(Map<String, dynamic> value) {
@@ -31,7 +29,7 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
         'The [${value['value']}] layout isn\'t defined. You must define it using RouteLayout.defineLayout',
       );
     }
-    return RouteLayout.layoutConstructorTable[type]!();
+    return RoutePath.routePathConstructorTable[type]!() as RouteLayout;
   }
 
   /// Table of registered layout builders.
@@ -81,7 +79,7 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
     },
     IndexedStackPath.key: (coordinator, path, layout, [restorationId]) =>
         ListenableBuilder(
-          listenable: path,
+          listenable: path as Listenable,
           builder: (context, child) {
             final indexedStackPath = path as IndexedStackPath<RouteUnique>;
             return IndexedStackPathBuilder(
@@ -131,46 +129,47 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique {
       _layoutBuilderTable[key] = builder;
   // coverage:ignore-end
 
-  /// Resolves the stack path for this layout.
-  ///
-  /// This determines which [StackPath] this layout manages.
-  StackPath<RouteUnique> resolvePath(covariant Coordinator coordinator);
-
-  // coverage:ignore-start
-  /// RouteLayout does not use a URI.
-  @override
-  Uri toUri() => Uri.parse('/__layout/$runtimeType');
-  // coverage:ignore-end
-
   @override
   Widget build(covariant Coordinator coordinator, BuildContext context) =>
       buildPath(coordinator);
-
-  @override
-  void onDidPop(Object? result, covariant Coordinator? coordinator) {
-    super.onDidPop(result, coordinator);
-    assert(
-      coordinator != null,
-      '[RouteLayout] must be used with a [Coordinator]',
-    );
-    resolvePath(coordinator!).reset();
-  }
-
-  @override
-  operator ==(Object other) => other.runtimeType == runtimeType;
-
-  @override
-  int get hashCode => runtimeType.hashCode;
 
   Map<String, dynamic> serialize() => {
     'type': 'layout',
     'value': runtimeType.toString(),
   };
+
+  /// Resolves the stack path for this layout.
+  ///
+  /// This determines which [StackPath] this layout manages.
+  @override
+  StackPath<RouteUnique> resolvePath(covariant CoordinatorCore coordinator);
+
+  @override
+  Object get routePathKey => runtimeType;
+
+  /// RouteLayout does not use a URI.
+  @override
+  Uri toUri() => Uri(pathSegments: ['__layout', routePathKey.toString()]);
+
+  @override
+  void onDidPop(Object? result, covariant CoordinatorCore? coordinator) {
+    super.onDidPop(result, coordinator);
+    assert(
+      coordinator != null,
+      '[RoutePath] must be used with a [Coordinator]',
+    );
+    resolvePath(coordinator!).reset();
+  }
+
+  @override
+  operator ==(Object other) =>
+      other is RoutePath && other.routePathKey == routePathKey;
+
+  @override
+  int get hashCode => routePathKey.hashCode;
 }
 
 extension RouteLayoutBinding<T extends RouteUnique> on StackPath<T> {
-  void bindLayout(RouteLayoutConstructor constructor) {
-    final instance = constructor()..onDiscard();
-    RouteLayout.defineLayout(instance.runtimeType, constructor);
-  }
+  void bindLayout(RouteLayoutConstructor constructor) =>
+      bindRoutePath(constructor);
 }

@@ -1,7 +1,9 @@
 name: zenrouter_core
 description: "ZenRouter Core"
-version: 0.0.1
+version: 1.0.0
 homepage:
+
+resolution: workspace
 
 environment:
   sdk: ^3.10.0
@@ -11,6 +13,8 @@ dependencies:
   collection: ^1.19.1
 
 dev_dependencies:
+  flutter_test:
+    sdk: flutter
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

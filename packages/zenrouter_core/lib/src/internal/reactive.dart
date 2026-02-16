@@ -2,6 +2,7 @@ import 'package:meta/meta.dart';
 
 typedef VoidCallback = void Function();
 
+// coverage:ignore-start
 mixin ListenableObject {
   @mustCallSuper
   void dispose() {}
@@ -13,3 +14,4 @@ mixin ListenableObject {
 
   void removeListener(VoidCallback listener);
 }
+// coverage:ignore-end

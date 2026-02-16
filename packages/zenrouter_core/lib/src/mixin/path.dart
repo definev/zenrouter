@@ -14,11 +14,7 @@ mixin RoutePath<T extends RouteIdentity> on RouteIdentity {
   static void defineRoutePath<T extends RoutePath>(
     Object routePathKey,
     T Function() constructor,
-  ) {
-    RoutePath.routePathConstructorTable[routePathKey] = constructor;
-    final layoutInstance = constructor();
-    layoutInstance.completeOnResult(null, null, true);
-  }
+  ) => RoutePath.routePathConstructorTable[routePathKey] = constructor;
 
   /// Table of registered layout constructors.
   static Map<Object, RoutePathConstructor> routePathConstructorTable = {};
@@ -28,27 +24,28 @@ mixin RoutePath<T extends RouteIdentity> on RouteIdentity {
   /// This determines which [StackPath] this layout manages.
   StackPath<RouteIdentity> resolvePath(covariant CoordinatorCore coordinator);
 
-  // coverage:ignore-start
+  Object get routePathKey;
+
   /// RouteLayout does not use a URI.
   @override
-  Uri toUri() => Uri.parse('/__layout/$runtimeType');
-  // coverage:ignore-end
+  Uri toUri();
 
   @override
   void onDidPop(Object? result, covariant CoordinatorCore? coordinator) {
     super.onDidPop(result, coordinator);
     assert(
       coordinator != null,
-      '[RouteLayout] must be used with a [Coordinator]',
+      '[RoutePath] must be used with a [Coordinator]',
     );
     resolvePath(coordinator!).reset();
   }
 
   @override
-  operator ==(Object other) => other.runtimeType == runtimeType;
+  operator ==(Object other) =>
+      other is RoutePath && other.routePathKey == routePathKey;
 
   @override
-  int get hashCode => runtimeType.hashCode;
+  int get hashCode => routePathKey.hashCode;
 }
 
 extension RoutePathBinding<T extends RouteIdentity> on StackPath<T> {

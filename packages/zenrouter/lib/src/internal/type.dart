@@ -42,7 +42,7 @@ typedef RouteUriParserSync<T extends RouteTarget> = T Function(Uri uri);
 /// See also:
 /// - [RouteLayoutConstructor], which creates layout instances.
 /// - [RouteLayout], the base class for layout implementations.
-typedef RouteLayoutBuilder<T extends RouteUnique> =
+typedef RouteLayoutBuilder<T extends RouteIdentity> =
     Widget Function(
       Coordinator coordinator,
       StackPath<T> path,
@@ -66,7 +66,7 @@ typedef RouteLayoutBuilder<T extends RouteUnique> =
 /// See also:
 /// - [RouteLayoutBuilder], which builds the layout widget.
 /// - [RouteLayout], the base class for layout implementations.
-typedef RouteLayoutConstructor<T extends RouteUnique> =
+typedef RouteLayoutConstructor<T extends RouteIdentity> =
     RouteLayout<T> Function();
 
 /// Widget builder for query parameters.

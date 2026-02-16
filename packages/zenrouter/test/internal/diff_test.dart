@@ -281,10 +281,10 @@ void main() {
 
   group('applyDiff', () {
     test('handles empty operations', () {
-      final path = StackPath.navigationStack('test', <TestRoute>[
-        TestRoute('a'),
-        TestRoute('b'),
-      ]);
+      final path = NavigationPath.create(
+        label: 'test',
+        stack: <TestRoute>[TestRoute('a'), TestRoute('b')],
+      );
 
       applyDiff(path, <DiffOp<TestRoute>>[]);
 
@@ -294,11 +294,10 @@ void main() {
     });
 
     test('applies only deletes', () {
-      final path = StackPath.navigationStack('test', <TestRoute>[
-        TestRoute('a'),
-        TestRoute('b'),
-        TestRoute('c'),
-      ]);
+      final path = NavigationPath.create(
+        label: 'test',
+        stack: <TestRoute>[TestRoute('a'), TestRoute('b'), TestRoute('c')],
+      );
 
       final ops = [
         const Keep<TestRoute>(0, 0),
@@ -314,10 +313,10 @@ void main() {
     });
 
     test('applies only inserts', () async {
-      final path = StackPath.navigationStack('test', <TestRoute>[
-        TestRoute('a'),
-        TestRoute('c'),
-      ]);
+      final path = NavigationPath.create(
+        label: 'test',
+        stack: <TestRoute>[TestRoute('a'), TestRoute('c')],
+      );
 
       final ops = [
         const Keep<TestRoute>(0, 0),
@@ -335,11 +334,10 @@ void main() {
     });
 
     test('applies mixed operations', () async {
-      final path = StackPath.navigationStack('test', <TestRoute>[
-        TestRoute('a'),
-        TestRoute('b'),
-        TestRoute('c'),
-      ]);
+      final path = NavigationPath.create(
+        label: 'test',
+        stack: <TestRoute>[TestRoute('a'), TestRoute('b'), TestRoute('c')],
+      );
 
       final ops = [
         const Keep<TestRoute>(0, 0),
@@ -358,12 +356,15 @@ void main() {
     });
 
     test('applies multiple deletes in reverse order', () {
-      final path = StackPath.navigationStack('test', <TestRoute>[
-        TestRoute('a'),
-        TestRoute('b'),
-        TestRoute('c'),
-        TestRoute('d'),
-      ]);
+      final path = NavigationPath.create(
+        label: 'test',
+        stack: <TestRoute>[
+          TestRoute('a'),
+          TestRoute('b'),
+          TestRoute('c'),
+          TestRoute('d'),
+        ],
+      );
 
       final ops = [
         const Keep<TestRoute>(0, 0),
@@ -380,10 +381,10 @@ void main() {
     });
 
     test('applies multiple inserts', () async {
-      final path = StackPath.navigationStack('test', <TestRoute>[
-        TestRoute('a'),
-        TestRoute('d'),
-      ]);
+      final path = NavigationPath.create(
+        label: 'test',
+        stack: <TestRoute>[TestRoute('a'), TestRoute('d')],
+      );
 
       final ops = [
         const Keep<TestRoute>(0, 0),
@@ -403,10 +404,10 @@ void main() {
     });
 
     test('handles complete replacement', () async {
-      final path = StackPath.navigationStack('test', <TestRoute>[
-        TestRoute('a'),
-        TestRoute('b'),
-      ]);
+      final path = NavigationPath.create(
+        label: 'test',
+        stack: <TestRoute>[TestRoute('a'), TestRoute('b')],
+      );
 
       final ops = [
         const Delete<TestRoute>(0),
@@ -426,9 +427,10 @@ void main() {
 
   group('applyDiff - Edge cases', () {
     test('handles delete with out-of-bounds index gracefully', () {
-      final path = StackPath.navigationStack('test', <TestRoute>[
-        TestRoute('a'),
-      ]);
+      final path = NavigationPath.create(
+        label: 'test',
+        stack: <TestRoute>[TestRoute('a')],
+      );
 
       final ops = [
         const Delete<TestRoute>(5), // Out of bounds
@@ -442,9 +444,10 @@ void main() {
     });
 
     test('handles insert beyond stack length', () async {
-      final path = StackPath.navigationStack('test', <TestRoute>[
-        TestRoute('a'),
-      ]);
+      final path = NavigationPath.create(
+        label: 'test',
+        stack: <TestRoute>[TestRoute('a')],
+      );
 
       final ops = [
         Insert<TestRoute>(TestRoute('b'), 10), // Beyond length
@@ -459,10 +462,10 @@ void main() {
     });
 
     test('preserves Keep operations as no-op', () {
-      final path = StackPath.navigationStack('test', <TestRoute>[
-        TestRoute('a'),
-        TestRoute('b'),
-      ]);
+      final path = NavigationPath.create(
+        label: 'test',
+        stack: <TestRoute>[TestRoute('a'), TestRoute('b')],
+      );
 
       final ops = [const Keep<TestRoute>(0, 0), const Keep<TestRoute>(1, 1)];
 
@@ -487,7 +490,10 @@ void main() {
         TestRoute('settings'),
       ];
 
-      final path = StackPath.navigationStack('test', oldRoutes.toList());
+      final path = NavigationPath.create(
+        label: 'test',
+        stack: oldRoutes.toList(),
+      );
 
       final ops = myersDiff<TestRoute>(oldRoutes, newRoutes);
       applyDiff(path, ops);
@@ -514,7 +520,10 @@ void main() {
         TestRoute('z'),
       ];
 
-      final path = StackPath.navigationStack('test', oldRoutes.toList());
+      final path = NavigationPath.create(
+        label: 'test',
+        stack: oldRoutes.toList(),
+      );
 
       final ops = myersDiff<TestRoute>(oldRoutes, newRoutes);
       applyDiff(path, ops);
@@ -529,7 +538,7 @@ void main() {
     });
 
     test('handles empty to populated', () async {
-      final path = StackPath.navigationStack('test', <TestRoute>[]);
+      final path = NavigationPath.create(label: 'test', stack: <TestRoute>[]);
 
       final newRoutes = <TestRoute>[TestRoute('a'), TestRoute('b')];
 
@@ -543,10 +552,10 @@ void main() {
     });
 
     test('handles populated to empty', () {
-      final path = StackPath.navigationStack('test', <TestRoute>[
-        TestRoute('a'),
-        TestRoute('b'),
-      ]);
+      final path = NavigationPath.create(
+        label: 'test',
+        stack: <TestRoute>[TestRoute('a'), TestRoute('b')],
+      );
 
       final ops = myersDiff<TestRoute>([TestRoute('a'), TestRoute('b')], []);
       applyDiff(path, ops);
@@ -555,9 +564,10 @@ void main() {
     });
 
     test('notifications are triggered', () async {
-      final path = StackPath.navigationStack('test', <TestRoute>[
-        TestRoute('a'),
-      ]);
+      final path = NavigationPath.create(
+        label: 'test',
+        stack: <TestRoute>[TestRoute('a')],
+      );
 
       var notified = false;
       path.addListener(() {

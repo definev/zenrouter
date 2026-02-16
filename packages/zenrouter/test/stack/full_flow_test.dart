@@ -683,14 +683,14 @@ void main() {
 
         // Simple route - only root
         await coordinator.replace(HomeRoute());
-        expect(coordinator.activeLayoutPaths.length, 1);
-        expect(coordinator.activeLayoutPaths.first, coordinator.root);
+        expect(coordinator.activePaths.length, 1);
+        expect(coordinator.activePaths.first, coordinator.root);
 
         // Route with shell layout
         await coordinator.replace(ShellChildRoute(id: 'test'));
-        expect(coordinator.activeLayoutPaths.length, 2);
-        expect(coordinator.activeLayoutPaths[0], coordinator.root);
-        expect(coordinator.activeLayoutPaths[1], coordinator.shellStack);
+        expect(coordinator.activePaths.length, 2);
+        expect(coordinator.activePaths[0], coordinator.root);
+        expect(coordinator.activePaths[1], coordinator.shellStack);
       });
 
       test('currentUri returns correct URI for active route', () async {

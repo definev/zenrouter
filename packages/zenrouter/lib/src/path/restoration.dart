@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
-import 'package:zenrouter/zenrouter.dart';
+import 'package:zenrouter/src/mixin/restoration.dart';
+import 'package:zenrouter_core/zenrouter_core.dart';
 
 /// A mixin that adds state restoration capabilities to navigation paths.
 ///
@@ -205,7 +206,11 @@ class NavigationPathRestorable<T extends RouteTarget>
   @override
   List<T> fromPrimitives(Object? data) => [
     for (final route in data as List)
-      RouteTarget.deserialize(route, parseRouteFromUri: parseRouteFromUri) as T,
+      RestorableConverter.deserializeRoute(
+            route,
+            parseRouteFromUri: parseRouteFromUri,
+          )
+          as T,
   ];
 
   /// Converts the current route stack into primitive types for persistence.
@@ -222,6 +227,6 @@ class NavigationPathRestorable<T extends RouteTarget>
   /// or [RouteRestorable], as there's no way to serialize it.
   @override
   Object? toPrimitives() => [
-    for (final route in value) RouteTarget.serialize(route),
+    for (final route in value) RestorableConverter.serializeRoute(route),
   ];
 }
