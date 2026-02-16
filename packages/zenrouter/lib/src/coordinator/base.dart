@@ -126,8 +126,7 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
   }
 
   static final kDefaultLayoutBuilderTable = <PathKey, RouteLayoutBuilder>{
-    NavigationPath.key: (coordinatorCore, path, layout) {
-      final coordinator = coordinatorCore as Coordinator;
+    NavigationPath.key: (coordinator, path, layout) {
       final restorationId = switch (layout) {
         RouteUnique route => coordinator.resolveRouteId(route),
         _ => coordinator.rootRestorationId,
@@ -168,8 +167,7 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
         },
       );
     },
-    IndexedStackPath.key: (coordinatorCore, path, layout, [restorationId]) {
-      final coordinator = coordinatorCore as Coordinator;
+    IndexedStackPath.key: (coordinator, path, layout, [restorationId]) {
       return ListenableBuilder(
         listenable: path as Listenable,
         builder: (context, child) {
@@ -296,21 +294,13 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
   @override
   void removeListener(VoidCallback listener) => _proxy.removeListener(listener);
 
+  // coverage:ignore-start
   @override
   void notifyListeners() => _proxy.notifyListeners();
 
   @override
   bool get hasListeners => _proxy.hasListeners;
-
-  /// Table of registered layout builders.
-  ///
-  /// This maps layout identifiers to their widget builder functions.
-  final Map<PathKey, RouteLayoutBuilder> _layoutBuilderTable =
-      kDefaultLayoutBuilderTable;
-
-  RouteLayoutBuilder? getLayoutBuilder(PathKey key) => _layoutBuilderTable[key];
-  void defineLayoutBuilder(PathKey key, RouteLayoutBuilder builder) =>
-      _layoutBuilderTable[key] = builder;
+  // coverage:ignore-end
 
   /// Builds the root widget (the primary navigator).
   ///
@@ -318,15 +308,7 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
   Widget layoutBuilder(BuildContext context) => RouteLayout.buildRoot(this);
 
   void defineRouteLayout(Object key, RouteLayoutConstructor constructor) {
-    defineRouteLayoutParentConstructor(key, (key) => constructor());
-    defineLayoutKey(key.toString(), key);
-  }
-
-  void defineRouteLayoutWithKey(
-    Object key,
-    RouteLayoutParentConstructor constructor,
-  ) {
-    defineRouteLayoutParentConstructor(key, (key) => constructor(key));
+    defineRouteLayoutParent(key, (key) => constructor());
     defineLayoutKey(key.toString(), key);
   }
 
@@ -386,15 +368,12 @@ mixin _CoordinatorRouteLayoutImpl<T extends RouteUnique> on CoordinatorCore<T> {
       : _layoutParentConstructorTable;
 
   @override
-  void defineRouteLayoutParentConstructor(
+  void defineRouteLayoutParent(
     Object layoutKey,
     RouteLayoutParentConstructor constructor,
   ) {
     if (isRouteModule) {
-      return coordinator.defineRouteLayoutParentConstructor(
-        layoutKey,
-        constructor,
-      );
+      return coordinator.defineRouteLayoutParent(layoutKey, constructor);
     }
 
     _layoutParentConstructorTable[layoutKey] = constructor;
@@ -408,9 +387,19 @@ mixin _CoordinatorRouteLayoutImpl<T extends RouteUnique> on CoordinatorCore<T> {
     return constructor?.call(layoutKey);
   }
 
+  final Map<PathKey, RouteLayoutBuilder> _layoutBuilderTable = {
+    ...Coordinator.kDefaultLayoutBuilderTable,
+  };
+
+  RouteLayoutBuilder? getLayoutBuilder(PathKey key) => _layoutBuilderTable[key];
+
+  void defineLayoutBuilder(PathKey key, RouteLayoutBuilder builder) =>
+      _layoutBuilderTable[key] = builder;
+
   @override
   void dispose() {
     _layoutParentConstructorTable.clear();
+    _layoutBuilderTable.clear();
     super.dispose();
   }
 }

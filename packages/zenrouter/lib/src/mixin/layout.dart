@@ -9,6 +9,7 @@ typedef GetLayoutKeyCallback = Object? Function(String key);
 /// It defines how its children are displayed and managed.
 mixin RouteLayout<T extends RouteUnique> on RouteUnique
     implements RouteLayoutParent<T> {
+  // coverage:ignore-start
   @Deprecated(
     'Use `coordinator.defineRouteLayout` insteads\n'
     'If you want to use this method, you must provide a [Coordinator] instance to the [RouteLayout.defineLayout] method.\n'
@@ -16,21 +17,13 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique
     '         `NEW: RouteLayout.defineLayout(this, ShopLayout, ShopLayout.new);`',
   )
   static void defineLayout<T extends RouteLayout>(
-    CoordinatorCore coordinator,
+    Coordinator coordinator,
     Object layoutKey,
     T Function() constructor,
-  ) {
-    coordinator.defineRouteLayoutParentConstructor(
-      layoutKey,
-      (_) => constructor(),
-    );
-    final layoutInstance = constructor()..onDiscard();
-    RouteLayout._layoutKeyTable[layoutInstance.layoutKey.toString()] =
-        layoutInstance.layoutKey;
-  }
+  ) => coordinator.defineRouteLayout(layoutKey, () => constructor());
+  // coverage:ignore-end
 
   /// Route restoration reflection table.
-  static final Map<String, Object> _layoutKeyTable = {};
   static RouteLayout deserialize(
     RouteLayoutParentConstructor resolveRouteLayoutParent,
     GetLayoutKeyCallback layoutKeyLookup,
@@ -50,13 +43,13 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique
     final rootPathKey = coordinator.root.pathKey;
 
     final routeLayoutBuilder = coordinator.getLayoutBuilder(rootPathKey);
+    // coverage:ignore-start
     if (routeLayoutBuilder == null) {
-      // coverage:ignore-start
       throw UnimplementedError(
         'No layout builder provided for [${rootPathKey.key}]. If you extend the [StackPath] class, you must register it via [RouteLayout.definePath] to use [RouteLayout.buildRoot].',
       );
-      // coverage:ignore-end
     }
+    // coverage:ignore-end
 
     return routeLayoutBuilder(coordinator, coordinator.root, null);
   }
@@ -127,20 +120,9 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique
 extension RouteLayoutBinding<T extends RouteUnique> on StackPath<T> {
   void bindLayout(RouteLayoutConstructor constructor) {
     final instance = constructor()..onDiscard();
-    coordinator!.defineRouteLayoutParentConstructor(
+    (coordinator as Coordinator).defineRouteLayout(
       instance.layoutKey,
-      (_) => constructor(),
-    );
-  }
-
-  void bindLayoutWithKey(
-    Object layoutKey,
-    RouteLayoutWithKeyConstructor constructor,
-  ) {
-    final instance = constructor(layoutKey)..onDiscard();
-    coordinator!.defineRouteLayoutParentConstructor(
-      instance.layoutKey,
-      (key) => constructor(key),
+      () => constructor(),
     );
   }
 }

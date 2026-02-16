@@ -217,15 +217,10 @@ class TestCoordinator extends Coordinator<AppRoute> {
     [UndefinedHomeTab(), UndefinedSearchTab()],
     coordinator: this,
     label: 'undefined_tabs',
-  )..bindLayout(UndefinedTabLayout.new);
+  );
 
   @override
   List<StackPath> get paths => [...super.paths, tabStack, undefinedTabStack];
-
-  @override
-  void defineLayout() {
-    defineRouteLayout(TabLayout, TabLayout.new);
-  }
 
   @override
   void defineConverter() {
@@ -387,10 +382,7 @@ void main() {
       ];
 
       expect(
-        () => coordinator.root.deserialize(
-          serialized,
-          coordinator.parseRouteFromUriSync,
-        ),
+        () => coordinator.root.deserialize(serialized),
         throwsA(
           isA<UnimplementedError>().having(
             (e) => e.message,

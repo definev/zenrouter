@@ -608,7 +608,7 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
 
   RouteLayoutParent? resolveRouteLayoutParent(Object layoutKey);
 
-  void defineRouteLayoutParentConstructor(
+  void defineRouteLayoutParent(
     Object layoutKey,
     RouteLayoutParentConstructor constructor,
   );

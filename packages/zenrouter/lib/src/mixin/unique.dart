@@ -20,8 +20,18 @@ mixin RouteUnique on RouteTarget implements RouteIdentity {
   /// Creates an instance of the layout for this route.
   ///
   /// This uses the registered constructor from [RouteLayout.layoutConstructorTable].
-  RouteLayout? createLayout(covariant Coordinator coordinator) =>
-      createParentLayout(coordinator) as RouteLayout?;
+  RouteLayout createLayout(covariant Coordinator coordinator) {
+    final constructor = createParentLayout(coordinator);
+    if (constructor == null) {
+      throw UnimplementedError(
+        'Missing constructor for the [$parentLayoutKey] layout. '
+        'You can define a constructor by calling `bindLayout` in the corresponding [StackPath].\n'
+        'Alternatively, you can define a constructor for this layout by calling [defineRouteLayout] '
+        'in the [defineLayout] function of [${coordinator.runtimeType}].',
+      );
+    }
+    return constructor as RouteLayout;
+  }
 
   /// Resolves the active layout instance for this route.
   ///

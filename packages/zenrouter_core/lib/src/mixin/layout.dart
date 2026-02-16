@@ -99,14 +99,7 @@ mixin RouteLayoutChild on RouteTarget {
     if (parentLayoutKey == null) return null;
 
     final constructor = coordinator.resolveRouteLayoutParent(parentLayoutKey!);
-    if (constructor == null) {
-      throw UnimplementedError(
-        'Missing constructor for [${this.runtimeType}] layout.'
-        'You must define constructor for this layout by calling [RouteLayout.defineLayout] or if you use custom `layoutKey` '
-        'you must call [RouteLayout.defineLayoutWithKey] to define constructor for this layout.'
-        'by calling [RouteLayout.defineLayout] in [defineLayout] function at [${coordinator.runtimeType}]',
-      );
-    }
+
     return constructor;
   }
 
