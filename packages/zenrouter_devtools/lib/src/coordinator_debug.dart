@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:zenrouter/zenrouter.dart';
 
@@ -40,11 +41,7 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   ///
   /// Defaults to `kDebugMode`. Override this to conditionally enable/disable
   /// the debug overlay (e.g., only in debug mode).
-  bool get debugEnabled =>
-      // kReleaseMode
-      !const bool.fromEnvironment('dart.vm.product') &&
-      // kProfileMode
-      !const bool.fromEnvironment('dart.vm.profile');
+  bool get debugEnabled => kDebugMode;
 
   /// Override this to provide a list of routes that can be quickly pushed
   /// from the debug overlay.
