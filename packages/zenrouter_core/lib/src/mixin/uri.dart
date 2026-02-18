@@ -16,6 +16,11 @@ import 'package:zenrouter_core/zenrouter_core.dart';
 /// Most routes should use [RouteUnique] which implements this class.
 abstract class RouteUri extends RouteTarget
     with RouteIdentity<Uri>, RouteLayoutChild {
+  @override
+  Uri get identifier => toUri();
+
   /// Converts this route to a [Uri] for URL representation.
   Uri toUri();
+
+  Object? get parentLayoutKey => null;
 }
