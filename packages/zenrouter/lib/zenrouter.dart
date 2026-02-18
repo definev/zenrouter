@@ -6,8 +6,11 @@ export 'package:zenrouter_core/zenrouter_core.dart';
 export 'src/coordinator/base.dart';
 export 'src/coordinator/observer.dart';
 export 'src/coordinator/router.dart';
+export 'src/coordinator/transition.dart';
+export 'src/coordinator/restoration/_public.dart';
 
 /// Path base
+export 'src/path/layout.dart';
 export 'src/path/navigation.dart';
 export 'src/path/restoration.dart';
 export 'src/path/indexed.dart';

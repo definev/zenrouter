@@ -30,7 +30,7 @@ class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug {
 
   @override
   void defineLayout() {
-    defineRouteLayout(TabLayout, TabLayout.new);
+    defineLayoutParent(TabLayout.new);
   }
 
   @override

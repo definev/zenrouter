@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:zenrouter/zenrouter.dart';
 
-typedef GetLayoutKeyCallback = Object? Function(String key);
+typedef DecodeLayoutKeyCallback = Object Function(String key);
 
 /// Mixin for routes that define a layout structure.
 ///
@@ -19,24 +19,19 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique
   static void defineLayout<T extends RouteLayout>(
     Coordinator coordinator,
     Object layoutKey,
-    T Function() constructor,
-  ) => coordinator.defineRouteLayout(layoutKey, () => constructor());
+    RouteLayoutConstructor constructor,
+  ) => coordinator.defineLayoutParent(constructor);
   // coverage:ignore-end
 
   /// Route restoration reflection table.
   static RouteLayout deserialize(
-    RouteLayoutParentConstructor resolveRouteLayoutParent,
-    GetLayoutKeyCallback layoutKeyLookup,
-    Map<String, dynamic> value,
-  ) {
+    Map<String, dynamic> value, {
+    required RouteLayoutParentConstructor createLayoutParent,
+    required DecodeLayoutKeyCallback decodeLayoutKey,
+  }) {
     final key = value['value'] as String;
-    final layoutKey = layoutKeyLookup(key);
-    if (layoutKey == null) {
-      throw UnimplementedError(
-        'The [$key] layout isn\'t defined. You must define it using RouteLayout.defineLayout',
-      );
-    }
-    return resolveRouteLayoutParent(layoutKey) as RouteLayout;
+    final layoutKey = decodeLayoutKey(key);
+    return createLayoutParent(layoutKey) as RouteLayout;
   }
 
   static Widget buildRoot(Coordinator coordinator) {
@@ -99,30 +94,8 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique
   }
 
   @override
-  RouteLayoutParent<RouteTarget>? createParentLayout(coordinator) =>
-      _proxy.createParentLayout(coordinator);
+  operator ==(Object other) => _proxy == other;
 
   @override
-  RouteLayoutParent<RouteTarget>? resolveParentLayout(coordinator) =>
-      _proxy.resolveParentLayout(coordinator);
-
-  @override
-  bool matchedLayoutKey(coordinator, other) =>
-      _proxy.matchedLayoutKey(coordinator, other);
-
-  @override
-  operator ==(Object other) => _proxy.compareLayout(this, other);
-
-  @override
-  int get hashCode => _proxy.resolveHashCode(this);
-}
-
-extension RouteLayoutBinding<T extends RouteUnique> on StackPath<T> {
-  void bindLayout(RouteLayoutConstructor constructor) {
-    final instance = constructor()..onDiscard();
-    (coordinator as Coordinator).defineRouteLayout(
-      instance.layoutKey,
-      () => constructor(),
-    );
-  }
+  int get hashCode => _proxy.hashCode;
 }

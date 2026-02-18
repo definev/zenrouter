@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:zenrouter_core/src/coordinator/base.dart';
-import 'package:zenrouter_core/src/mixin/identity.dart';
+import 'package:zenrouter_core/src/mixin/uri.dart';
 
 /// Strategy for handling deep links.
 ///
@@ -11,7 +11,7 @@ import 'package:zenrouter_core/src/mixin/identity.dart';
 /// - [custom]: Custom strategy for handling deep links
 enum DeeplinkStrategy { replace, navigate, push, custom }
 
-mixin RouteDeepLink on RouteIdentity {
+mixin RouteDeepLink on RouteUri {
   /// The strategy to use when handling this deep link.
   DeeplinkStrategy get deeplinkStrategy;
 
@@ -19,7 +19,9 @@ mixin RouteDeepLink on RouteIdentity {
   /// Custom handler for deep links.
   ///
   /// This is called when [deeplinkStrategy] is [DeeplinkStrategy.custom].
-  FutureOr<void> deeplinkHandler(covariant CoordinatorCore coordinator, Uri uri) =>
-      null;
+  FutureOr<void> deeplinkHandler(
+    covariant CoordinatorCore coordinator,
+    Uri uri,
+  ) => null;
   // coverage:ignore-end
 }

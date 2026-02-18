@@ -1,4 +1,6 @@
-part of 'router.dart';
+import 'package:collection/collection.dart';
+import 'package:flutter/widgets.dart';
+import 'package:zenrouter/zenrouter.dart';
 
 /// A widget that enables state restoration for a [Coordinator] and its navigation hierarchy.
 ///
@@ -203,8 +205,8 @@ class _CoordinatorRestorableState extends State<CoordinatorRestorable>
   late final _activeRoute = ActiveRouteRestorable(
     initialRoute: widget.coordinator.activePath.activeRoute,
     parseRouteFromUri: widget.coordinator.parseRouteFromUriSync,
-    resolveRouteLayoutParent: widget.coordinator.resolveRouteLayoutParent,
-    getLayoutKey: widget.coordinator.getLayoutKey,
+    createLayoutParent: widget.coordinator.createLayoutParent,
+    decodeLayoutKey: widget.coordinator.decodeLayoutKey,
   );
 
   void _saveCoordinator() {
@@ -404,8 +406,8 @@ class ActiveRouteRestorable<T extends RouteUnique> extends RestorableValue<T?> {
   ActiveRouteRestorable({
     required this.initialRoute,
     required this.parseRouteFromUri,
-    required this.resolveRouteLayoutParent,
-    required this.getLayoutKey,
+    required this.createLayoutParent,
+    required this.decodeLayoutKey,
   });
 
   /// The initial route to use when no restoration data is available.
@@ -421,9 +423,9 @@ class ActiveRouteRestorable<T extends RouteUnique> extends RestorableValue<T?> {
   /// The function should handle all possible URIs that your application can generate.
   final RouteUriParserSync<RouteUnique> parseRouteFromUri;
 
-  final RouteLayoutParentConstructor resolveRouteLayoutParent;
+  final RouteLayoutParentConstructor createLayoutParent;
 
-  final GetLayoutKeyCallback getLayoutKey;
+  final DecodeLayoutKeyCallback decodeLayoutKey;
 
   @override
   T? createDefaultValue() => initialRoute;
@@ -441,8 +443,8 @@ class ActiveRouteRestorable<T extends RouteUnique> extends RestorableValue<T?> {
     // coverage:ignore-end
     return RestorableConverter.deserializeRoute(
       data,
-      getLayoutKey: getLayoutKey,
-      resolveRouteLayoutParent: resolveRouteLayoutParent,
+      decodeLayoutKey: decodeLayoutKey,
+      createLayoutParent: createLayoutParent,
       parseRouteFromUri: parseRouteFromUri,
     );
   }

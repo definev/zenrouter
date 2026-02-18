@@ -5,11 +5,10 @@ import 'package:zenrouter_core/src/coordinator/modular.dart';
 
 import 'package:zenrouter_core/src/internal/equatable.dart';
 import 'package:zenrouter_core/src/internal/reactive.dart';
-import 'package:zenrouter_core/src/internal/type.dart';
 import 'package:zenrouter_core/src/mixin/deeplink.dart';
-import 'package:zenrouter_core/src/mixin/identity.dart';
 import 'package:zenrouter_core/src/mixin/layout.dart';
 import 'package:zenrouter_core/src/mixin/redirect.dart';
+import 'package:zenrouter_core/src/mixin/uri.dart';
 import 'package:zenrouter_core/src/path/base.dart';
 import 'package:zenrouter_core/src/path/navigatable.dart';
 
@@ -98,27 +97,26 @@ enum _ResolveLayoutStrategy {
 ///   routeInformationParser: coordinator.routeInformationParser,
 /// )
 /// ```
-abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
+abstract class CoordinatorCore<T extends RouteUri> extends Equatable
     with ListenableObject
     implements RouteModule<T> {
   CoordinatorCore({this.initialRoutePath}) {
     for (final path in paths) {
       path.addListener(notifyListeners);
     }
-    defineLayout();
-    defineConverter();
+    init();
   }
 
   /// {@macro zenrouter.coordinator.modular.coordinator}
   @override
   CoordinatorModular<T> get coordinator => throw UnimplementedError(
-    'This coordinator is standalone and does not belong to any [CoordinatorCoreModular] \n'
-    'If you want to make it a part of a [CoordinatorCoreModular] you should override `coordinator` getter or passing it through constructor',
+    'This coordinator is standalone and does not belong to any [CoordinatorModular] \n'
+    'If you want to make it a part of a [CoordinatorModular] you should override `coordinator` getter or passing it through constructor',
   );
 
   /// The [rootCoordinator] coordinator return a top level coordinator which used as [routeConfig].
   ///
-  /// If this coordinator is a part of another [CoordinatorCoreModular], it will return the [coordinator].
+  /// If this coordinator is a part of another [CoordinatorModular], it will return the [coordinator].
   /// Otherwise, it will return itself.
   late final CoordinatorCore<T> rootCoordinator = isRouteModule
       ? coordinator
@@ -133,9 +131,9 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
     super.dispose();
   }
 
-  /// Whether this coordinator is a part of a [CoordinatorCoreModular].
+  /// Whether this coordinator is a part of a [CoordinatorModular].
   ///
-  /// If it is a part of a [CoordinatorCoreModular], it will not have a root path.
+  /// If it is a part of a [CoordinatorModular], it will not have a root path.
   /// And it will not be able to use [routerDelegate] and [routeInformationParser].
   late final bool isRouteModule = () {
     try {
@@ -150,7 +148,7 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
   ///
   /// All coordinators have at least this one path.
   ///
-  /// If this coordinator is a part of a [CoordinatorCoreModular], the root path will point to the root path of the [CoordinatorCoreModular].
+  /// If this coordinator is a part of a [CoordinatorModular], the root path will point to the root path of the [CoordinatorModular].
   StackPath<T> get root;
 
   /// All navigation paths managed by this coordinator.
@@ -163,7 +161,7 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
   /// Defines the layout structure for this coordinator.
   ///
   /// This method is called during initialization. Override this to register
-  /// custom layouts using [RouteLayout.defineLayout].
+  /// custom layouts using [Coordinator.defineRouteLayout].
   @override
   void defineLayout() {}
 
@@ -174,20 +172,26 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
   @override
   void defineConverter() {}
 
+  @mustCallSuper
+  void init() {
+    defineLayout();
+    defineConverter();
+  }
+
   /// The initial route path for this coordinator.
   ///
   /// This path is used to set the initial route when the app is launched.
   final Uri? initialRoutePath;
 
   /// Returns the current URI based on the active route.
-  Uri get currentUri => activePath.activeRoute?.toUri() ?? Uri.parse('/');
+  Uri get currentUri => activePath.activeRoute?.identifier ?? Uri.parse('/');
 
   /// Returns the deepest active [RouteLayout] in the navigation hierarchy.
   ///
   /// This traverses through nested layouts to find the most deeply nested
   /// layout that is currently active. Returns `null` if the root layout is active.
   @protected
-  RouteLayoutParent? get activeRouteLayout {
+  RouteLayoutParent? get activeLayoutParent {
     T? current = root.activeRoute;
     if (current == null || current is! RouteLayoutParent) return null;
 
@@ -211,7 +215,7 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
   /// This traverses through the active route to collect all layouts from root
   /// to the deepest layout. Returns an empty list if no layouts are active.
   @protected
-  List<RouteLayoutParent> get activeRouteLayoutList {
+  List<RouteLayoutParent> get activeLayoutParentList {
     List<RouteLayoutParent> layouts = [];
     T? current = root.activeRoute;
 
@@ -231,13 +235,6 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
   /// This is the path that contains the currently active route.
   StackPath<T> get activePath =>
       (activePaths.lastOrNull ?? root) as StackPath<T>;
-
-  /// Returns the list of active layout paths in the navigation hierarchy.
-  ///
-  /// This starts from the [root] path and traverses down through active layouts,
-  /// collecting the [StackPath] for each level.
-  @Deprecated('Use activeStackPaths instead')
-  List<StackPath> get activeLayoutPaths => activePaths;
 
   List<StackPath> get activePaths {
     List<StackPath> pathSegment = [root];
@@ -272,13 +269,6 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
   @override
   FutureOr<T?> parseRouteFromUri(Uri uri);
 
-  /// Parses a [Uri] into a route object synchronously.
-  ///
-  /// If you have an asynchronous [parseRouteFromUri] and still want [restoration] working,
-  /// you have to provide a synchronous version of it.
-  RouteUriParserSync<T> get parseRouteFromUriSync =>
-      (uri) => parseRouteFromUri(uri) as T;
-
   /// Handles navigation from a deep link URI.
   ///
   /// If the route has [RouteDeepLink], its custom handler is called.
@@ -293,35 +283,36 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
     return recover(route);
   }
 
-  /// Resolves and activates layouts for a given [layout].
+  /// Prepares layout hierachy for a given [layout].
   ///
   /// This ensures that all parent layouts in the hierarchy are properly
   /// activated or pushed onto their respective paths.
   ///
-  /// [preferPush] determines whether to push the layout onto the stack
+  /// [strategy] determines whether to push the layout onto the stack
   /// or just activate it if it already exists.
-  Future<void> _resolveLayouts(
-    RouteLayoutParent? layout, {
+  Future<void> _prepareParentLayoutList(
+    RouteLayoutParent layout, {
     _ResolveLayoutStrategy strategy = _ResolveLayoutStrategy.override,
   }) async {
-    List<RouteLayoutParent> layouts = [];
-    List<StackPath> layoutPaths = [];
-    while (layout != null) {
-      layouts.add(layout);
-      layoutPaths.add(layout.resolvePath(this));
-      layout = layout.resolveParentLayout(this);
+    RouteLayoutParent? current = layout;
+    List<RouteLayoutParent> parentLayoutList = [];
+    List<StackPath> parentLayoutPathList = [];
+    while (current != null) {
+      parentLayoutList.add(current);
+      parentLayoutPathList.add(current.resolvePath(this));
+      current = current.resolveParentLayout(this);
     }
-    layoutPaths.add(root);
+    parentLayoutPathList.add(root);
 
-    for (var i = layoutPaths.length - 1; i >= 1; i--) {
-      final layoutOfLayoutPath = layoutPaths[i];
-      final layout = layouts[i - 1];
+    for (var i = parentLayoutPathList.length - 1; i >= 1; i--) {
+      final grandParentLayout = parentLayoutPathList[i];
+      final parentLayout = parentLayoutList[i - 1];
       switch (strategy) {
         case _ResolveLayoutStrategy.pushToTop
-            when layoutOfLayoutPath is StackMutatable:
-          layoutOfLayoutPath.pushOrMoveToTop(layout);
+            when grandParentLayout is StackMutatable:
+          grandParentLayout.pushOrMoveToTop(parentLayout);
         default:
-          layoutOfLayoutPath.activateRoute(layout);
+          grandParentLayout.activateRoute(parentLayout);
       }
     }
   }
@@ -345,6 +336,7 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
   Future<void> recover(T route) async {
     T? target = await RouteRedirect.resolve(route, this);
     if (target == null) return;
+
     if (target is RouteDeepLink) {
       switch (target.deeplinkStrategy) {
         case DeeplinkStrategy.navigate:
@@ -354,7 +346,7 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
         case DeeplinkStrategy.replace:
           replace(target);
         case DeeplinkStrategy.custom:
-          await target.deeplinkHandler(this, target.toUri());
+          await target.deeplinkHandler(this, target.identifier);
       }
     } else {
       replace(target);
@@ -392,61 +384,53 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
     final target = await RouteRedirect.resolve(route, this);
     if (target == null) return;
 
-    final layout = target.resolveParentLayout(this);
-    final routePath = layout?.resolvePath(this) ?? root;
-    await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.pushToTop);
+    final parentLayout = target.resolveParentLayout(this);
+    if (parentLayout != null) {
+      await _prepareParentLayoutList(
+        parentLayout,
+        strategy: _ResolveLayoutStrategy.pushToTop,
+      );
+    }
+
+    final parentPath = parentLayout?.resolvePath(this) ?? root;
 
     assert(
-      routePath is StackNavigatable,
+      parentPath is StackNavigatable,
       UnimplementedError(
-        'ZenRouter: routePath (${routePath.runtimeType}) does not implement '
+        'ZenRouter: parentPath (${parentPath.pathKey.key}) does not implement '
         'StackNavigatable. The navigate() call for route $route will have no '
         'effect on the navigation stack or browser history.',
       ),
     );
 
-    if (routePath case StackNavigatable routePath) {
-      await routePath.navigate(target);
+    if (parentPath case StackNavigatable parentPath) {
+      await parentPath.navigate(target);
     }
   }
 
-  /// Clears all navigation stacks and navigates to a single route.
+  /// Clears all [StackPath]s and push the [route] target.
   ///
-  /// **When to use:**
-  /// - App startup/initialization
-  /// - After logout (clear all navigation history)
-  /// - Deep link recovery (default strategy)
-  /// - Resetting to a known state
-  ///
-  /// **Avoid when:**
-  /// - User is navigating forward (use [push] instead)
-  /// - You want to preserve back navigation history
-  ///
-  /// **Behavior:**
-  /// 1. Calls [reset] on ALL paths (clears entire navigation history)
-  /// 2. Resolves any [RouteRedirect]s
-  /// 3. Activates required layouts
-  /// 4. Places the final route on its appropriate path
-  ///
-  /// **Error Handling:**
-  /// Exceptions from redirect resolution propagate to the caller.
-  /// Guards are NOT consulted since all routes are cleared.
+  /// This method is useful for make sure wiping out whole [paths] states
+  /// and produce deterministic output for the given [route].
   Future<void> replace(T route) async {
     T? target = await RouteRedirect.resolve(route, this);
     if (target == null) return;
 
-    for (final path in paths) {
-      path.reset();
+    for (final path in paths) path.reset();
+
+    final parentLayout = target.resolveParentLayout(this);
+    if (parentLayout != null) {
+      await _prepareParentLayoutList(
+        parentLayout,
+        strategy: _ResolveLayoutStrategy.override,
+      );
     }
 
-    final layout = target.resolveParentLayout(this);
-    final path = layout?.resolvePath(this) ?? root;
-    await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.override);
-
-    await path.activateRoute(target);
+    final parentPath = parentLayout?.resolvePath(this) ?? root;
+    await parentPath.activateRoute(target);
   }
 
-  /// Pushes a new route onto the navigation stack.
+  /// Pushes a new route onto the nearest [StackMutatable] path.
   ///
   /// **When to use:**
   /// - Standard forward navigation (user taps a button/link)
@@ -478,15 +462,20 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
     T? target = await RouteRedirect.resolve(route, this);
     if (target == null) return null;
 
-    final layout = target.resolveParentLayout(this);
-    final path = layout?.resolvePath(this) ?? root;
-    await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.pushToTop);
+    final parentLayout = target.resolveParentLayout(this);
+    if (parentLayout != null) {
+      await _prepareParentLayoutList(
+        parentLayout,
+        strategy: _ResolveLayoutStrategy.pushToTop,
+      );
+    }
 
-    switch (path) {
+    final parentPath = parentLayout?.resolvePath(this) ?? root;
+    switch (parentPath) {
       case StackMutatable():
-        return path.push(target);
+        return parentPath.push(target);
       default:
-        path.activateRoute(target);
+        parentPath.activateRoute(target);
         return null;
     }
   }
@@ -498,15 +487,21 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
     final target = await RouteRedirect.resolve(route, this);
     if (target == null) return;
 
-    final layout = target.resolveParentLayout(this);
-    final path = layout?.resolvePath(this) ?? root;
-    await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.pushToTop);
+    final parentLayout = target.resolveParentLayout(this);
+    if (parentLayout != null) {
+      await _prepareParentLayoutList(
+        parentLayout,
+        strategy: _ResolveLayoutStrategy.pushToTop,
+      );
+    }
 
-    switch (path) {
+    final parentPath = parentLayout?.resolvePath(this) ?? root;
+
+    switch (parentPath) {
       case StackMutatable():
-        path.pushOrMoveToTop(target);
+        parentPath.pushOrMoveToTop(target);
       default:
-        path.activateRoute(target);
+        parentPath.activateRoute(target);
     }
   }
 
@@ -549,12 +544,17 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
     final target = await RouteRedirect.resolve(route, this);
     if (target == null) return null;
 
-    final layout = target.resolveParentLayout(this);
-    final path = layout?.resolvePath(this) ?? root;
-    await _resolveLayouts(layout, strategy: _ResolveLayoutStrategy.pushToTop);
+    final parentLayout = target.resolveParentLayout(this);
+    if (parentLayout != null) {
+      await _prepareParentLayoutList(
+        parentLayout,
+        strategy: _ResolveLayoutStrategy.pushToTop,
+      );
+    }
 
-    if (path case StackMutatable()) {
-      return path.pushReplacement(target, result: result);
+    final parentPath = parentLayout?.resolvePath(this) ?? root;
+    if (parentPath case StackMutatable parentPath) {
+      return parentPath.pushReplacement(target, result: result);
     }
 
     return null;
@@ -606,10 +606,12 @@ abstract class CoordinatorCore<T extends RouteIdentity> extends Equatable
   /// Marks the coordinator as needing a rebuild.
   void markNeedRebuild() => notifyListeners();
 
-  RouteLayoutParent? resolveRouteLayoutParent(Object layoutKey);
-
-  void defineRouteLayoutParent(
+  /// Defines a constructor for a specific layout key.
+  void defineLayoutParentConstructor(
     Object layoutKey,
     RouteLayoutParentConstructor constructor,
   );
+
+  /// Creates a layout parent instance from constructor
+  RouteLayoutParent? createLayoutParent(Object layoutKey);
 }

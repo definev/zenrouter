@@ -153,7 +153,7 @@ class TestCoordinator extends Coordinator<AppRoute> {
 
   @override
   void defineLayout() {
-    defineRouteLayout(TabLayout, TabLayout.new);
+    defineLayoutParent(TabLayout.new);
   }
 
   @override

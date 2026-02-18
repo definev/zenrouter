@@ -1,12 +1,11 @@
-import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
 import 'package:zenrouter/zenrouter.dart';
 
-part 'restoration.dart';
-
+/// {@template zenrouter.CoordinatorRouteParser}
 /// Parses [RouteInformation] to and from [Uri].
 ///
 /// This is used by Flutter's Router widget to handle URL changes.
+/// {@endtemplate}
 class CoordinatorRouteParser extends RouteInformationParser<Uri> {
   CoordinatorRouteParser({required this.coordinator});
 
@@ -25,9 +24,11 @@ class CoordinatorRouteParser extends RouteInformationParser<Uri> {
   }
 }
 
+/// {@template zenrouter.CoordinatorRouterDelegate}
 /// Router delegate that connects the [Coordinator] to Flutter's Router.
 ///
 /// Manages the navigator stack and handles system navigation events.
+/// {@endtemplate}
 class CoordinatorRouterDelegate extends RouterDelegate<Uri>
     with ChangeNotifier, PopNavigatorRouterDelegateMixin<Uri> {
   CoordinatorRouterDelegate({required this.coordinator}) {
@@ -45,13 +46,9 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
   String get coordinatorRestorationId =>
       '_${coordinator.rootRestorationId}_coordinator_restorable';
 
-  final GlobalKey<_CoordinatorRestorableState> _coordinatorRestorableKey =
-      GlobalKey();
-
   @override
   Widget build(BuildContext context) {
     return CoordinatorRestorable(
-      key: _coordinatorRestorableKey,
       coordinator: coordinator,
       restorationId: coordinatorRestorationId,
       child: coordinator.layoutBuilder(context),

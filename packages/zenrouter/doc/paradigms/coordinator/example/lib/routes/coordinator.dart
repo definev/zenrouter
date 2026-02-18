@@ -26,9 +26,9 @@ class AppCoordinator extends Coordinator<AppRoute> {
 
   @override
   void defineLayout() {
-    defineRouteLayout(HomeLayout, HomeLayout.new);
-    defineRouteLayout(FeedLayout, FeedLayout.new);
-    defineRouteLayout(ProfileLayout, ProfileLayout.new);
+    defineLayoutParent(HomeLayout.new);
+    defineLayoutParent(FeedLayout.new);
+    defineLayoutParent(ProfileLayout.new);
   }
 
   @override

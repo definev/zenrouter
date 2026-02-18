@@ -5,21 +5,18 @@ typedef RouteLayoutParentConstructor<T extends RouteTarget> =
 
 mixin RouteLayoutParent<T extends RouteTarget> on RouteLayoutChild {
   static _ProxyRouteLayoutParent proxy(RouteLayoutParent host) =>
-      _ProxyRouteLayoutParent(host)..onDiscard();
+      _ProxyRouteLayoutParent(host);
 
   /// Resolves the stack path for this layout.
   ///
   /// This determines which [StackPath] this layout manages.
-  StackPath<RouteIdentity> resolvePath(covariant CoordinatorCore coordinator);
+  StackPath resolvePath(covariant CoordinatorCore coordinator);
 
   /// The lookup key for this layout.
   ///
   /// It's used to help [CoordinatorCore] find the correct [RouteLayoutParent] constructor
   /// to create a new [RouteLayoutParent] instance.
   Object get layoutKey;
-
-  bool matchedLayoutKey(covariant CoordinatorCore coordinator, Object other) =>
-      layoutKey == other;
 
   @override
   void onDidPop(Object? result, covariant CoordinatorCore? coordinator) {
@@ -33,15 +30,19 @@ mixin RouteLayoutParent<T extends RouteTarget> on RouteLayoutChild {
 
   @override
   operator ==(Object other) =>
-      other is RouteLayoutParent && other.layoutKey == layoutKey;
+      other is RouteLayoutParent &&
+      other.layoutKey == layoutKey &&
+      other.parentLayoutKey == parentLayoutKey;
 
   @override
-  int get hashCode => layoutKey.hashCode;
+  int get hashCode => layoutKey.hashCode ^ parentLayoutKey.hashCode;
 }
 
 class _ProxyRouteLayoutParent extends RouteTarget
     with RouteLayoutChild, RouteLayoutParent<RouteTarget> {
-  _ProxyRouteLayoutParent(this.host);
+  _ProxyRouteLayoutParent(this.host) {
+    onDiscard();
+  }
 
   final RouteLayoutParent host;
 
@@ -52,35 +53,14 @@ class _ProxyRouteLayoutParent extends RouteTarget
   Object? get parentLayoutKey => host.parentLayoutKey;
 
   @override
-  StackPath<RouteIdentity> resolvePath(coordinator) =>
-      host.resolvePath(coordinator);
+  StackPath resolvePath(coordinator) => host.resolvePath(coordinator);
 
-  @override
-  // ignore: must_call_super
-  void onDidPop(
-    Object? result,
-    covariant CoordinatorCore<RouteIdentity>? coordinator,
-  ) {
-    assert(
-      coordinator != null,
-      '[RoutePath] must be used with a [CoordinatorCore]',
-    );
-    resolvePath(coordinator!).reset();
-  }
-
-  bool compareLayout(RouteLayoutParent self, Object other) =>
-      identical(self, other) ||
-      (other is RouteLayoutParent && other.layoutKey == self.layoutKey);
-
-  int resolveHashCode(RouteLayoutParent self) => self.layoutKey.hashCode;
-
-  @override
-  Type get runtimeType => host.runtimeType;
+  operator ==(Object other) => identical(host, other) || super == other;
 }
 
 mixin RouteLayoutChild on RouteTarget {
   static _ProxyRouteLayoutChild proxy(RouteLayoutChild host) =>
-      _ProxyRouteLayoutChild(host)..onDiscard();
+      _ProxyRouteLayoutChild(host);
 
   Object? get parentLayoutKey;
 
@@ -97,14 +77,11 @@ mixin RouteLayoutChild on RouteTarget {
   /// {@endtemplate}
   RouteLayoutParent? createParentLayout(covariant CoordinatorCore coordinator) {
     if (parentLayoutKey == null) return null;
-
-    final constructor = coordinator.resolveRouteLayoutParent(parentLayoutKey!);
-
-    return constructor;
+    return coordinator.createLayoutParent(parentLayoutKey!);
   }
 
   /// {@template zenrouter_core.RouteLayoutChild.resolveParentLayout}
-  /// Resolve a [RouteLayoutParent] instance in [CoordinatorCore] of this [RouteLayoutChild].
+  /// Resolve [RouteLayoutParent] for this [RouteLayoutChild] in [coordinator].
   ///
   /// If the [parentLayoutKey] is null, it will return null.
   ///
@@ -118,13 +95,13 @@ mixin RouteLayoutChild on RouteTarget {
     if (parentLayoutKey == null) return null;
 
     // ignore: invalid_use_of_protected_member
-    final parentLayoutList = coordinator.activeRouteLayoutList;
+    final routeParentLayoutList = coordinator.activeLayoutParentList;
 
     // Find existing layout or create new one
     RouteLayoutParent? resolvedParentLayout;
-    for (var i = parentLayoutList.length - 1; i >= 0; i -= 1) {
-      final parentLayout = parentLayoutList[i];
-      if (parentLayout.matchedLayoutKey(coordinator, parentLayoutKey!)) {
+    for (var index = routeParentLayoutList.length - 1; index >= 0; index -= 1) {
+      final parentLayout = routeParentLayoutList[index];
+      if (parentLayout.layoutKey == parentLayoutKey) {
         resolvedParentLayout = parentLayout;
         break;
       }
@@ -135,13 +112,12 @@ mixin RouteLayoutChild on RouteTarget {
 }
 
 class _ProxyRouteLayoutChild extends RouteTarget with RouteLayoutChild {
-  _ProxyRouteLayoutChild(this.host);
+  _ProxyRouteLayoutChild(this.host) {
+    onDiscard();
+  }
 
   final RouteLayoutChild host;
 
   @override
   Object? get parentLayoutKey => host.parentLayoutKey;
-
-  @override
-  Type get runtimeType => host.runtimeType;
 }

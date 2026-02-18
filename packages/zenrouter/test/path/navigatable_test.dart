@@ -213,7 +213,7 @@ class BasicPathCoordinator extends Coordinator<NavigatableTestRoute> {
 
   @override
   void defineLayout() {
-    defineRouteLayout(BasicLayout, BasicLayout.new);
+    defineLayoutParent(BasicLayout.new);
   }
 
   @override

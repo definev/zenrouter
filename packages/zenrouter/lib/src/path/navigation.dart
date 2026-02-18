@@ -67,22 +67,22 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
   @override
   List<T> deserialize(
     List<dynamic> data, [
-    RouteUriParserSync<RouteIdentity>? parseRouteFromUri,
-    RouteLayoutParentConstructor? resolveRouteLayoutParent,
-    GetLayoutKeyCallback? getLayoutKey,
+    RouteUriParserSync<RouteUri>? parseRouteFromUri,
+    RouteLayoutParentConstructor? createLayoutParent,
+    DecodeLayoutKeyCallback? decodeLayoutKey,
   ]) {
     final coordinator = this.coordinator as Coordinator?;
 
     parseRouteFromUri ??= coordinator?.parseRouteFromUriSync;
-    resolveRouteLayoutParent ??= coordinator?.resolveRouteLayoutParent;
-    getLayoutKey ??= coordinator?.getLayoutKey;
+    createLayoutParent ??= coordinator?.createLayoutParent;
+    decodeLayoutKey ??= coordinator?.decodeLayoutKey;
     return <T>[
       for (final routeRaw in data)
         RestorableConverter.deserializeRoute(
               routeRaw,
-              resolveRouteLayoutParent: resolveRouteLayoutParent,
               parseRouteFromUri: parseRouteFromUri,
-              getLayoutKey: getLayoutKey,
+              createLayoutParent: createLayoutParent,
+              decodeLayoutKey: decodeLayoutKey,
             )
             as T,
     ];

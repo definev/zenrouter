@@ -79,7 +79,7 @@ class TestCoordinator extends Coordinator<RouteUnique> {
 
   @override
   void defineLayout() {
-    defineRouteLayout(TabLayout, TabLayout.new);
+    defineLayoutParent(TabLayout.new);
   }
 
   @override

@@ -204,7 +204,7 @@ class IndexedTestCoordinator extends Coordinator<IndexedTestRoute> {
 
   @override
   void defineLayout() {
-    defineRouteLayout(IndexedStackLayout, IndexedStackLayout.new);
+    defineLayoutParent(IndexedStackLayout.new);
   }
 
   @override

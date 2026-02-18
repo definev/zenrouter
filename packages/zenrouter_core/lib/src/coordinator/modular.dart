@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:zenrouter_core/src/coordinator/base.dart';
-import 'package:zenrouter_core/src/mixin/identity.dart';
 import 'package:zenrouter_core/src/mixin/target.dart';
+import 'package:zenrouter_core/src/mixin/uri.dart';
 import 'package:zenrouter_core/src/path/base.dart';
 
 /// Base class for route modules that handle a subset of application routes.
@@ -33,6 +33,11 @@ import 'package:zenrouter_core/src/path/base.dart';
 /// class AuthModule extends RouteModule<AppRoute> {
 ///   AuthModule(super.coordinator);
 ///
+///   late final authStack = NavigationPath.createWith(
+///     label: 'auth',
+///     coordinator: coordinator,
+///   )..bindLayout(AuthLayout.new);
+///
 ///   @override
 ///   FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
 ///     return switch (uri.pathSegments) {
@@ -45,7 +50,7 @@ import 'package:zenrouter_core/src/path/base.dart';
 ///   @override
 ///   void defineLayout() {
 ///     // Register layouts specific to auth module
-///     RouteLayout.defineLayout(AuthLayout, AuthLayout.new);
+///     defineRouteLayout(AuthLayout, AuthLayout.new);
 ///   }
 /// }
 /// ```
@@ -64,7 +69,7 @@ import 'package:zenrouter_core/src/path/base.dart';
 /// all registered modules in order. The first module that returns a non-null
 /// route wins. If all modules return null, [CoordinatorModular.notFoundRoute]
 /// is called.
-abstract class RouteModule<T extends RouteIdentity> {
+abstract class RouteModule<T extends RouteUri> {
   /// Internal constructor used by [CoordinatorModular].
   RouteModule._(this.coordinator);
 
@@ -113,14 +118,14 @@ abstract class RouteModule<T extends RouteIdentity> {
   /// Defines layouts for this module.
   ///
   /// Override this to register layout constructors using
-  /// [RouteLayout.defineLayout]. This is called automatically during
+  /// [Coordinator.defineRouteLayout]. This is called automatically during
   /// coordinator initialization.
   ///
   /// **Example:**
   /// ```dart
   /// @override
   /// void defineLayout() {
-  ///   RouteLayout.defineLayout(ShopLayout, ShopLayout.new);
+  ///   defineRouteLayout(ShopLayout, ShopLayout.new);
   /// }
   /// ```
   void defineLayout() {}
@@ -199,7 +204,7 @@ abstract class RouteModule<T extends RouteIdentity> {
 /// final shopModule = coordinator.getModule<ShopModule>();
 /// shopModule.shopPath.push(ProductRoute(id: '123'));
 /// ```
-mixin CoordinatorModular<T extends RouteIdentity> on CoordinatorCore<T> {
+mixin CoordinatorModular<T extends RouteUri> on CoordinatorCore<T> {
   late final Map<Type, RouteModule<T>> _modules = {
     for (final module in defineModules()) module.runtimeType: module,
   };

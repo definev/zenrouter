@@ -434,19 +434,19 @@ abstract class RestorableConverter<T extends Object> {
   /// and reconstructs the route stack.
   static RT? deserializeRoute<RT extends RouteTarget>(
     Object value, {
-    required RouteLayoutParentConstructor? resolveRouteLayoutParent,
-    required GetLayoutKeyCallback? getLayoutKey,
+    required RouteLayoutParentConstructor? createLayoutParent,
+    required DecodeLayoutKeyCallback? decodeLayoutKey,
     required RouteUriParserSync? parseRouteFromUri,
   }) => switch (value) {
     String() => parseRouteFromUri!(Uri.parse(value)) as RT,
     Map()
         when value['type'] == 'layout' &&
-            resolveRouteLayoutParent != null &&
-            getLayoutKey != null =>
+            createLayoutParent != null &&
+            decodeLayoutKey != null =>
       RouteLayout.deserialize(
-            resolveRouteLayoutParent,
-            getLayoutKey,
             value.cast(),
+            createLayoutParent: createLayoutParent,
+            decodeLayoutKey: decodeLayoutKey,
           )
           as RT,
     Map() =>

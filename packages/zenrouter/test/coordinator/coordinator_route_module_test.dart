@@ -222,7 +222,7 @@ class SettingsCoordinator extends Coordinator<AppRoute> {
 
   @override
   void defineLayout() {
-    defineRouteLayout(SettingsLayout, SettingsLayout.new);
+    defineLayoutParent(SettingsLayout.new);
   }
 
   @override
@@ -269,16 +269,10 @@ class BlogCoordinator extends Coordinator<AppRoute>
   late final NavigationPath<AppRoute> blogStack = NavigationPath.createWith(
     label: 'blog',
     coordinator: _grandParent,
-  );
+  )..bindLayout(BlogLayout.new);
 
   @override
   List<StackPath> get paths => [...super.paths, blogStack];
-
-  @override
-  void defineLayout() {
-    super.defineLayout();
-    defineRouteLayout(BlogLayout, BlogLayout.new);
-  }
 
   @override
   Set<RouteModule<AppRoute>> defineModules() => {

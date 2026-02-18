@@ -1,48 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:zenrouter/src/coordinator/layout.dart';
 import 'package:zenrouter/zenrouter.dart';
-
-/// Strategy for controlling page transition animations in the navigator.
-///
-/// This enum defines how routes animate when pushed or popped from the
-/// navigation stack. The strategy is used by [RouteLayout] when building
-/// pages to determine the appropriate [PageTransitionsBuilder].
-///
-/// **Platform Recommendations:**
-/// - **Android/Web/Desktop**: Use [material] for consistency with Material Design
-/// - **iOS/macOS**: Use [cupertino] for native iOS-style transitions
-/// - **Testing/Screenshots**: Use [none] to disable animations
-///
-/// Example:
-/// ```dart
-/// @override
-/// DefaultTransitionStrategy get transitionStrategy {
-///   // Use platform-appropriate transitions
-///   if (Platform.isIOS || Platform.isMacOS) {
-///     return DefaultTransitionStrategy.cupertino;
-///   }
-///   return DefaultTransitionStrategy.material;
-/// }
-/// ```
-enum DefaultTransitionStrategy {
-  /// Uses Material Design transitions.
-  ///
-  /// Provides slide-up, fade, and shared-axis transitions typical of
-  /// Android applications. This is the default strategy.
-  material,
-
-  /// Uses Cupertino (iOS-style) transitions.
-  ///
-  /// Provides horizontal slide and parallax transitions typical of
-  /// iOS applications, including the edge-swipe-to-go-back gesture.
-  cupertino,
-
-  /// Disables transition animations.
-  ///
-  /// Routes appear and disappear instantly without any animation.
-  /// Useful for testing, taking screenshots, or when you want to
-  /// implement fully custom transitions.
-  none,
-}
 
 /// The core class that manages navigation state and logic.
 ///
@@ -115,80 +73,12 @@ enum DefaultTransitionStrategy {
 /// )
 /// ```
 abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
-    with _CoordinatorRestorationImpl<T>, _CoordinatorRouteLayoutImpl<T>
+    with
+        CoordinatorLayout<T>,
+        CoordinatorRestoration<T>,
+        CoordinatorTransitionStrategy<T>
     implements RouterConfig<Uri>, RouteModule<T>, ChangeNotifier {
-  Coordinator({super.initialRoutePath}) {
-    for (final path in paths) {
-      path.addListener(notifyListeners);
-    }
-    defineLayout();
-    defineConverter();
-  }
-
-  static final kDefaultLayoutBuilderTable = <PathKey, RouteLayoutBuilder>{
-    NavigationPath.key: (coordinator, path, layout) {
-      final restorationId = switch (layout) {
-        RouteUnique route => coordinator.resolveRouteId(route),
-        _ => coordinator.rootRestorationId,
-      };
-
-      return NavigationStack(
-        path: path as NavigationPath<RouteUnique>,
-        navigatorKey: layout == null
-            ? coordinator.routerDelegate.navigatorKey
-            : null,
-        coordinator: coordinator,
-        restorationId: restorationId,
-        resolver: (route) {
-          switch (route) {
-            case RouteTransition():
-              return route.transition(coordinator);
-            default:
-              final routeRestorationId = coordinator.resolveRouteId(route);
-              final builder = Builder(
-                builder: (context) => route.build(coordinator, context),
-              );
-              return switch (coordinator.transitionStrategy) {
-                DefaultTransitionStrategy.material => StackTransition.material(
-                  builder,
-                  restorationId: routeRestorationId,
-                ),
-                DefaultTransitionStrategy.cupertino =>
-                  StackTransition.cupertino(
-                    builder,
-                    restorationId: routeRestorationId,
-                  ),
-                DefaultTransitionStrategy.none => StackTransition.none(
-                  builder,
-                  restorationId: routeRestorationId,
-                ),
-              };
-          }
-        },
-      );
-    },
-    IndexedStackPath.key: (coordinator, path, layout, [restorationId]) {
-      return ListenableBuilder(
-        listenable: path as Listenable,
-        builder: (context, child) {
-          final indexedStackPath = path as IndexedStackPath<RouteUnique>;
-          return IndexedStackPathBuilder(
-            path: indexedStackPath,
-            coordinator: coordinator,
-            restorationId: restorationId,
-          );
-        },
-      );
-    },
-  };
-
-  /// The [rootCoordinator] coordinator return a top level coordinator which used as [routeConfig].
-  ///
-  /// If this coordinator is a part of another [CoordinatorModular], it will return the [coordinator].
-  /// Otherwise, it will return itself.
-  @override
-  Coordinator<T> get rootCoordinator =>
-      isRouteModule ? (coordinator as Coordinator<T>) : this;
+  Coordinator({super.initialRoutePath});
 
   @override
   void dispose() {
@@ -209,92 +99,43 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
   @override
   NavigationPath<T> get root => _root;
 
-  /// The restoration ID for the root path.
+  /// Parses a [Uri] into a route object synchronously.
   ///
-  /// This ID is used to restore the root path when the app is re-launched.
-  String get rootRestorationId => root.debugLabel ?? 'root';
-
-  String resolveRouteId(covariant T route) {
-    RouteLayout? layout = route.resolveLayout(this);
-    List<RouteLayout> layouts = [];
-    List<StackPath> layoutPaths = [];
-    while (layout != null) {
-      layouts.add(layout);
-      layoutPaths.add(layout.resolvePath(this));
-      layout = (layout as RouteUnique).resolveLayout(this);
-    }
-
-    String layoutRestorationId = layoutPaths
-        .map((p) {
-          final label = p.debugLabel;
-          assert(
-            label != null,
-            '[StackPath] must have an unique label in order to use with Coordinator restorable',
-          );
-          return label!;
-        })
-        .join('_');
-    layoutRestorationId = '${rootRestorationId}_$layoutRestorationId';
-    final routeRestorationId = route is RouteRestorable
-        ? (route as RouteRestorable).restorationId
-        : route.toUri().toString();
-
-    return '${layoutRestorationId}_$routeRestorationId';
-  }
-
-  /// The transition strategy for this coordinator.
-  ///
-  /// Override this getter to customize how page transitions are animated
-  /// throughout your navigation stack. The strategy applies to all routes
-  /// managed by this coordinator.
-  ///
-  /// **Default Behavior:**
-  /// Returns [DefaultTransitionStrategy.material], which provides Material
-  /// Design transitions (slide-up, fade effects).
-  ///
-  /// **Common Overrides:**
-  /// ```dart
-  /// // Platform-adaptive transitions
-  /// @override
-  /// DefaultTransitionStrategy get transitionStrategy {
-  ///   return Platform.isIOS
-  ///       ? DefaultTransitionStrategy.cupertino
-  ///       : DefaultTransitionStrategy.material;
-  /// }
-  ///
-  /// // Disable all transitions
-  /// @override
-  /// DefaultTransitionStrategy get transitionStrategy =>
-  ///     DefaultTransitionStrategy.none;
-  /// ```
-  ///
-  /// **Note:** This strategy is used by [RouteLayout] when constructing
-  /// [Page] objects. If you need per-route transition control, consider
-  /// implementing custom [RouteTransition] logic on individual routes instead.
-  DefaultTransitionStrategy get transitionStrategy =>
-      DefaultTransitionStrategy.material;
+  /// If you have an asynchronous [parseRouteFromUri] and still want [restoration] working,
+  /// you have to provide a synchronous version of it.
+  RouteUriParserSync<T> get parseRouteFromUriSync =>
+      (uri) => parseRouteFromUri(uri) as T;
 
   /// Returns all active [RouteLayout] instances in the navigation hierarchy.
   ///
   /// This traverses through the active route to collect all layouts from root
   /// to the deepest layout. Returns an empty list if no layouts are active.
-  List<RouteLayout> get activeLayouts =>
-      activeRouteLayoutList.cast<RouteLayout>();
+  List<RouteLayout> get activeLayouts => activeLayoutParentList;
+
+  @override
+  List<RouteLayout> get activeLayoutParentList =>
+      super.activeLayoutParentList.cast();
 
   /// Returns the deepest active [RouteLayout] in the navigation hierarchy.
   ///
   /// This traverses through nested layouts to find the most deeply nested
   /// layout that is currently active. Returns `null` if the root layout is active.
-  RouteLayout? get activeLayout => activeRouteLayout as RouteLayout?;
+  RouteLayout? get activeLayout => activeLayoutParent;
 
-  final ChangeNotifier _proxy = ChangeNotifier();
+  @override
+  RouteLayout? get activeLayoutParent =>
+      super.activeLayoutParent as RouteLayout?;
+
+  /// [ChangeNotifier] compatibility implementation for [Coordinator]
+  // coverage:ignore-start
+  final _proxy = ChangeNotifier();
+
   @override
   void addListener(VoidCallback listener) => _proxy.addListener(listener);
 
   @override
   void removeListener(VoidCallback listener) => _proxy.removeListener(listener);
 
-  // coverage:ignore-start
   @override
   void notifyListeners() => _proxy.notifyListeners();
 
@@ -307,22 +148,43 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
   /// Override to customize the root navigation structure.
   Widget layoutBuilder(BuildContext context) => RouteLayout.buildRoot(this);
 
-  void defineRouteLayout(Object key, RouteLayoutConstructor constructor) {
-    defineRouteLayoutParent(key, (key) => constructor());
-    defineLayoutKey(key.toString(), key);
+  /// Defines new layout parent constructor so [RouteLayoutChild] can look it up via
+  /// [RouteLayoutChild.parentLayoutKey] and create new instance of layout parent.
+  ///
+  /// Normally, in [Coordinator] context, the [RouteLayoutChild.parentLayoutKey] is the [runtimeType] the [RouteLayout].
+  ///
+  /// You can override this behavior by defining your own [RouteLayoutChild.parentLayoutKey] in your [RouteLayout].
+  void defineLayoutParent(RouteLayoutConstructor constructor) {
+    final instance = constructor()..onDiscard();
+    defineLayoutParentConstructor(instance.layoutKey, (_) => constructor());
+    encodeLayoutKey(instance.layoutKey);
   }
 
-  /// The router delegate for [Router] of this coordinator
+  /// {@macro zenrouter.CoordinatorRouterDelegate}
   @override
   late final CoordinatorRouterDelegate routerDelegate =
       CoordinatorRouterDelegate(coordinator: this);
 
-  /// The route information parser for [Router]
+  /// {@macro zenrouter.CoordinatorRouteParser}
   @override
   late final CoordinatorRouteParser routeInformationParser =
       CoordinatorRouteParser(coordinator: this);
 
-  /// The [BackButtonDispatcher] that is used to configure the [Router].
+  /// Report to a [Router] when the user taps the back button on platforms that
+  /// support back buttons (such as Android).
+  ///
+  /// When [Router] widgets are nested, consider using a
+  /// [ChildBackButtonDispatcher], passing it the parent [BackButtonDispatcher],
+  /// so that the back button requests get dispatched to the appropriate [Router].
+  /// To make this work properly, it's important that whenever a [Router] thinks
+  /// it should get the back button messages (e.g. after the user taps inside it),
+  /// it calls [takePriority] on its [BackButtonDispatcher] (or
+  /// [ChildBackButtonDispatcher]) instance.
+  ///
+  /// The class takes a single callback, which must return a [Future<bool>]. The
+  /// callback's semantics match [WidgetsBindingObserver.didPopRoute]'s, namely,
+  /// the callback should return a future that completes to true if it can handle
+  /// the pop request, and a future that completes to false otherwise.
   @override
   final BackButtonDispatcher backButtonDispatcher = RootBackButtonDispatcher();
 
@@ -337,69 +199,4 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
 
   /// Access to the navigator state.
   NavigatorState get navigator => routerDelegate.navigatorKey.currentState!;
-}
-
-mixin CoordinatorRestoration<T extends RouteUnique> on CoordinatorCore<T> {
-  Object? getLayoutKey(String key);
-
-  void defineLayoutKey(String key, Object value);
-}
-
-mixin _CoordinatorRestorationImpl<T extends RouteUnique> on CoordinatorCore<T>
-    implements CoordinatorRestoration<T> {
-  final _layoutKeyTable = <String, Object>{};
-
-  @override
-  Object? getLayoutKey(String key) => _layoutKeyTable[key];
-
-  @override
-  void defineLayoutKey(String key, Object value) =>
-      _layoutKeyTable[key] = value;
-}
-
-mixin _CoordinatorRouteLayoutImpl<T extends RouteUnique> on CoordinatorCore<T> {
-  final Map<Object, RouteLayoutParentConstructor>
-  _layoutParentConstructorTable = {};
-
-  Map<Object, RouteLayoutParentConstructor>
-  get routeLayoutParentConstructorTable => isRouteModule
-      ? (coordinator as _CoordinatorRouteLayoutImpl)
-            .routeLayoutParentConstructorTable
-      : _layoutParentConstructorTable;
-
-  @override
-  void defineRouteLayoutParent(
-    Object layoutKey,
-    RouteLayoutParentConstructor constructor,
-  ) {
-    if (isRouteModule) {
-      return coordinator.defineRouteLayoutParent(layoutKey, constructor);
-    }
-
-    _layoutParentConstructorTable[layoutKey] = constructor;
-  }
-
-  @override
-  RouteLayoutParent? resolveRouteLayoutParent(Object layoutKey) {
-    if (isRouteModule) return coordinator.resolveRouteLayoutParent(layoutKey);
-
-    final constructor = _layoutParentConstructorTable[layoutKey];
-    return constructor?.call(layoutKey);
-  }
-
-  final Map<PathKey, RouteLayoutBuilder> _layoutBuilderTable = {
-    ...Coordinator.kDefaultLayoutBuilderTable,
-  };
-
-  RouteLayoutBuilder? getLayoutBuilder(PathKey key) => _layoutBuilderTable[key];
-
-  void defineLayoutBuilder(PathKey key, RouteLayoutBuilder builder) =>
-      _layoutBuilderTable[key] = builder;
-
-  @override
-  void dispose() {
-    _layoutParentConstructorTable.clear();
-    _layoutBuilderTable.clear();
-    super.dispose();
-  }
 }

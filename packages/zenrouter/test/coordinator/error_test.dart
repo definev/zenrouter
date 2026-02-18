@@ -178,11 +178,8 @@ class ErrorTestCoordinator extends Coordinator<ErrorTestRoute> {
   void defineLayout() {
     // Intentionally NOT defining UndefinedLayout to test the error
     // But DO define MockUnregisteredPathLayout so we can test the path builder error
-    defineRouteLayout(
-      MockUnregisteredPathLayout,
-      MockUnregisteredPathLayout.new,
-    );
-    defineRouteLayout(NormalIndexedStackLayout, NormalIndexedStackLayout.new);
+    defineLayoutParent(MockUnregisteredPathLayout.new);
+    defineLayoutParent(NormalIndexedStackLayout.new);
   }
 
   @override
@@ -728,7 +725,7 @@ void main() {
         // Attempting to resolve layout for a route that's not in the IndexedStackPath
         // should trigger an assertion error
         expect(
-          () => missingRoute.resolveLayout(coordinator),
+          () => missingRoute.resolveParentLayout(coordinator),
           throwsA(
             isA<AssertionError>().having(
               (e) => e.message.toString(),
@@ -816,7 +813,7 @@ void main() {
       final missingRoute = MissingTabRoute();
 
       try {
-        missingRoute.resolveLayout(coordinator);
+        missingRoute.resolveParentLayout(coordinator);
         fail('Should have thrown AssertionError');
       } on AssertionError catch (e) {
         final message = e.message.toString();
