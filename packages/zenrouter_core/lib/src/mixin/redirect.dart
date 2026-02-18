@@ -3,61 +3,30 @@ import 'dart:async';
 import 'package:zenrouter_core/src/coordinator/base.dart';
 import 'package:zenrouter_core/src/mixin/target.dart';
 
-/// A mixin that provides redirection logic for routes.
+/// Mixin that allows routes to redirect to different destinations.
 ///
-/// `RouteRedirect` allows a route to specify another route to navigate to
-/// instead of itself. This is commonly used for:
-/// - **Authentication**: Redirecting unauthenticated users to a login page.
-/// - **Permissions**: Redirecting users to an "Access Denied" page.
-/// - **Aliases**: Mapping old route definitions to new ones.
+/// When a route with this mixin is navigated to, the coordinator calls
+/// [redirectWith] (or [redirect]) to determine the final destination.
+/// This enables authentication checks, permission validation, route aliases,
+/// and other conditional navigation logic.
 ///
-/// When a route with this mixin is resolved by the [CoordinatorCore], it calls
-/// [redirect] (or [redirectWith]) to determine the final target. If multiple
-/// redirects are chained, they are followed sequentially until a non-redirecting
-/// route is reached.
+/// ## Role in Navigation Flow
 ///
-/// **Example - Authentication Redirect:**
-/// ```dart
-/// class ProfileRoute extends RouteTarget with RouteUnique, RouteRedirect<AppRoute> {
-///   @override
-///   FutureOr<AppRoute?> redirectWith(AppCoordinator coordinator) {
-///     // Check authentication state
-///     if (!coordinator.authService.isLoggedIn) {
-///       return LoginRoute(returnTo: this);
-///     }
-///     // Return self to stop redirection and navigate here
-///     return this;
-///   }
-/// }
-/// ```
+/// Before any route is displayed:
 ///
-/// **Example - Chained Redirects:**
-/// ```dart
-/// class OldDashboardRoute extends RouteTarget with RouteUnique, RouteRedirect<AppRoute> {
-///   @override
-///   FutureOr<AppRoute?> redirect() => NewDashboardRoute();
-/// }
+/// 1. [CoordinatorCore.resolve] calls [redirectWith] with the coordinator
+/// 2. If the result is `null`: Navigation is cancelled
+/// 3. If the result is `this`: Navigation proceeds to this route
+/// 4. If the result is another route: Resolution repeats with the new target
 ///
-/// class NewDashboardRoute extends RouteTarget with RouteUnique, RouteRedirect<AppRoute> {
-///   @override
-///   FutureOr<AppRoute?> redirect() => this; // Stop here
-/// }
-/// ```
-///
-/// **Redirect Resolution Order:**
-/// 1. Framework calls [redirectWith] (or [redirect] if no coordinator)
-/// 2. If result is `null`, redirection is cancelled (user handled navigation manually)
-/// 3. If result is `this`, navigation proceeds to this route
-/// 4. If result is another route, process repeats with the new route
+/// This chain continues until a route returns itself or navigation is cancelled.
 mixin RouteRedirect<T extends RouteTarget> on RouteTarget {
-  /// Resolves the final destination route by following any redirects.
+  /// Resolves the final destination by following the redirect chain.
   ///
-  /// This method is used internally by the framework to find the ultimate [RouteTarget].
-  /// It follows the [redirect] chain until it reaches a route that doesn't redirect.
-  ///
-  /// **Error Handling:**
-  /// If any redirect throws an exception, it propagates up to the caller
-  /// (typically [Coordinator.push] or [Coordinator.replace]).
+  /// This static method handles the full redirect resolution process:
+  /// - Iteratively follows redirects until a non-redirecting route is found
+  /// - Calls [redirectWith] if coordinator is available, otherwise [redirect]
+  /// - Handles route discarding for redirected-away routes
   static Future<T?> resolve<T extends RouteTarget>(
     T route,
     CoordinatorCore? coordinator,
@@ -70,19 +39,14 @@ mixin RouteRedirect<T extends RouteTarget> on RouteTarget {
         final coordinator => redirect.redirectWith(coordinator),
       };
 
-      // If redirect returns null, stop redirection and return null so the
-      // navigation is cancelled.
       if (newTarget == null) {
-        // Discard the target route since it was not used
         target.onDiscard();
         return null;
       }
 
-      // If it redirects to itself, we've found our destination
       if (newTarget == target) break;
 
       if (newTarget is T) {
-        // Discard the target route since it was not used
         target.onDiscard();
         target = newTarget;
       }
@@ -91,37 +55,20 @@ mixin RouteRedirect<T extends RouteTarget> on RouteTarget {
   }
 
   // coverage:ignore-start
-  /// Defines the redirection target for this route.
+  /// Returns the redirect destination for this route.
   ///
-  /// Implement this method to return:
-  /// - `null`: Redirect was handled manually by user code (e.g., you called
-  ///   [Coordinator.push] yourself). Framework stops and uses original route.
-  /// - `this`: Stop here and navigate to this route.
-  /// - `anotherRoute`: Continue redirection with the new target.
-  ///
-  /// **Async Support:**
-  /// This method returns [FutureOr], allowing async operations like
-  /// checking server state or loading data before determining the target.
+  /// Return `this` to proceed with navigation to this route.
+  /// Return a different route to redirect to that route instead.
+  /// Return `null` to cancel the navigation entirely.
   FutureOr<T> redirect() => this as T;
   // coverage:ignore-end
 
-  /// Called when the route is being resolved, providing access to the [Coordinator].
+  /// Returns the redirect destination with coordinator access.
   ///
-  /// This variant is preferred when redirection logic depends on application state
-  /// or services accessible via the coordinator.
+  /// This variant provides access to the coordinator for checking app state,
+  /// services, or other dependencies during redirect resolution.
   ///
-  /// **Example:**
-  /// ```dart
-  /// @override
-  /// FutureOr<AppRoute?> redirectWith(AppCoordinator coordinator) async {
-  ///   final user = await coordinator.userService.getCurrentUser();
-  ///   if (user == null) return LoginRoute();
-  ///   if (!user.hasPermission('admin')) return AccessDeniedRoute();
-  ///   return this;
-  /// }
-  /// ```
-  ///
-  /// Default implementation calls [redirect].
+  /// Default implementation delegates to [redirect].
   FutureOr<T?> redirectWith(covariant CoordinatorCore coordinator) =>
       redirect();
 }

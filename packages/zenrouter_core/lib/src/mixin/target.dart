@@ -2,157 +2,92 @@ import 'dart:async';
 
 import 'package:meta/meta.dart';
 import 'package:zenrouter_core/src/coordinator/base.dart';
+import 'package:zenrouter_core/src/mixin/guard.dart';
 import 'package:zenrouter_core/src/path/base.dart';
 
 import '../internal/equatable.dart';
 
-/// The base class for all navigation targets (routes).
+/// The base class for all navigation destinations in the application.
 ///
-/// A [RouteTarget] represents a destination in the app. It can hold state
-/// and parameters. Every screen, dialog, or navigable destination should
-/// extend this class.
+/// Every screen, dialog, or navigable component extends this class.
+/// It provides the fundamental infrastructure for the routing system.
 ///
-/// ## Route Lifecycle
+/// ## Role in Navigation Flow
 ///
-/// Routes go through distinct phases during their lifetime:
+/// Routes go through the following lifecycle:
 ///
-/// ```
-/// ┌─────────────────────────────────────────────────────────────────────┐
-/// │                        ROUTE LIFECYCLE                              │
-/// ├─────────────────────────────────────────────────────────────────────┤
-/// │  1. CREATION        → Route instance created (constructor called)   │
-/// │  2. REDIRECT CHECK  → RouteRedirect.redirect() called if applicable │
-/// │  3. PATH BINDING    → Route assigned to a StackPath (_path set)     │
-/// │  4. BUILD           → build() called to create the widget           │
-/// │  5. ACTIVE          → Route is visible and receiving interactions   │
-/// │  6. POP REQUEST     → User/system requests pop (guard consulted)    │
-/// │  7. POP COMPLETION  → onDidPop() + completeOnResult() called        │
-/// │  8. CLEANUP         → Route removed from path, _path set to null    │
-/// └─────────────────────────────────────────────────────────────────────┘
-/// ```
-///
-/// ## Internal State
-///
-/// Routes maintain internal state managed by the framework:
-/// - **`_path`**: The [StackPath] containing this route. Set during push.
-/// - **`_onResult`**: A [Completer] that resolves when the route is popped.
-/// - **`_resultValue`**: The result passed to [pop] before [onDidPop] is called.
-/// - **`isPopByPath`**: Whether the pop was initiated by [StackPath.pop].
-///
-/// ## Result Handling
-///
-/// Routes can return a result when popped:
-/// ```dart
-/// // Pushing with result
-/// final result = await coordinator.push<String>(SelectColorRoute());
-/// print('Selected: $result');
-///
-/// // Popping with result (in route or widget)
-/// coordinator.pop('blue');
-/// ```
-///
-/// ## Equality
-///
-/// Override [props] to include route parameters in equality checks:
-/// ```dart
-/// class ProductRoute extends RouteTarget with RouteUnique {
-///   final String productId;
-///   ProductRoute(this.productId);
-///
-///   @override
-///   List<Object?> get props => [productId];
-/// }
-/// ```
+/// 1. **Creation**: Route instance is constructed with parameters
+/// 2. **Redirect Resolution**: [RouteRedirect.resolve] is called if applicable
+/// 3. **Path Binding**: Route is assigned to a [StackPath]
+/// 4. **Build**: The route's interface is created (e.g. widget for widget-based routers or web page for web routers)
+/// 5. **Active**: Route is visible and handling interactions
+/// 6. **Pop Request**: User or system requests navigation away
+/// 7. **Guard Check**: [RouteGuard.popGuard] is consulted - if it returns false, pop is aborted
+/// 8. **Pop Completion**: [onDidPop] is called, result is delivered
+/// 9. **Cleanup**: Route is removed from path, state is cleared
 abstract class RouteTarget extends Equatable {
-  /// Completer that resolves when this route is popped.
-  ///
-  /// The future completes with the result passed to [completeOnResult].
-  /// This is set fresh each time the route is pushed.
   final Completer<Object?> _onResult = Completer();
 
   @protected
   @visibleForTesting
-  /// The completer for the result of the route.
-  /// DO NOT USE THIS MANUALLY. USE [completeOnResult] instead.
   Completer<Object?> get onResult => _onResult;
 
-  /// The [StackPath] that currently contains this route.
+  /// The [StackPath] containing this route.
   ///
-  /// This is set when the route is pushed onto a path and cleared when popped.
-  /// Used internally to ensure routes are managed by the correct path.
+  /// Set when the route is pushed, cleared when popped.
+  /// Used internally to verify correct path management.
   StackPath? _path;
 
-  /// The [StackPath] that currently contains this route.
+  /// The [StackPath] that contains this route.
   StackPath? get stackPath => _path;
 
   /// Binds the route to a path.
   ///
-  /// This is called internally when the route is pushed onto a path.
-  /// Useful when you want to create your custom [StackPath].
+  /// Called internally when the route is pushed onto a path.
   @protected
   void bindStackPath(StackPath path) => _path = path;
 
   /// Clears the path binding.
   ///
-  /// This is called internally when the route is removed from a path.
+  /// Called internally when the route is removed from a path.
   @protected
   void clearStackPath() => _path = null;
 
-  /// The result value to be returned when this route is popped.
-  ///
-  /// This is set by [StackPath.pop] before [onDidPop] is called, allowing
-  /// the widget tree to access the result during disposal.
   Object? _resultValue;
 
-  /// The result value to be returned when this route is popped.
+  /// The result value passed when this route was popped.
   Object? get resultValue => _resultValue;
 
   @protected
   void bindResultValue(Object? value) => _resultValue = value;
 
-  /// Whether this route was popped by the path mechanism.
+  /// Whether the pop was initiated by the path mechanism.
   ///
-  /// When `true`, the pop was initiated by [NavigationPath.pop] or similar.
-  /// When `false`, the pop was initiated by the system (e.g., back button).
-  ///
-  /// This is used internally to prevent double removal from the stack.
+  /// When `true`, pop was called programmatically.
+  /// When `false`, pop was initiated externally (back button, system).
   bool isPopByPath = false;
 
-  /// Internal properties that are hardcoded and cannot be ignored.
-  ///
-  /// These are used for identity checks within the framework. Do not override.
-  /// See [props] for user-defined equality properties.
   @override
   List<Object?> get internalProps => [runtimeType, _path, _onResult];
 
-  /// The list of properties used for equality comparison.
+  /// Properties used for equality comparison.
   ///
-  /// Override this to include route parameters in equality checks.
-  /// Two routes are equal if they have the same type and equal [props].
-  ///
-  /// **Example:**
-  /// ```dart
-  /// class UserRoute extends RouteTarget with RouteUnique {
-  ///   final int userId;
-  ///   UserRoute(this.userId);
-  ///
-  ///   @override
-  ///   List<Object?> get props => [userId];
-  /// }
-  /// ```
+  /// Override to include route parameters. Two routes are equal
+  /// if they have the same type and equal [props].
   @override
   List<Object?> get props => [];
 
-  /// Deep equality check for routes.
-  ///
-  /// This is used to determine if two routes are identical.
+  /// Checks deep equality with another route.
   bool deepEquals(RouteTarget other) => hashCode == other.hashCode;
 
+  /// Called when the route is popped from the navigation stack.
+  ///
+  /// This is invoked during navigation cleanup. The route is removed
+  /// from its path and its result is completed.
   @mustCallSuper
   void onDidPop(Object? result, covariant CoordinatorCore? coordinator) {
     onDiscard();
 
-    /// Handle force pop from navigator
     if (isPopByPath == false && _path?.stack.contains(this) == true) {
       if (_path case StackMutatable path) {
         path.remove(this, discard: false);
@@ -164,7 +99,7 @@ abstract class RouteTarget extends Equatable {
 
   /// Completes the route's result future.
   ///
-  /// This is called when the route is popped with a result.
+  /// Called when the route is popped with a result value.
   void completeOnResult(
     Object? result,
     covariant CoordinatorCore? coordinator, [
@@ -175,10 +110,10 @@ abstract class RouteTarget extends Equatable {
     _resultValue = result;
   }
 
-  /// Call when the route is discarded.
+  /// Called when the route is discarded without being displayed.
   ///
-  /// That is difference with [onDidPop], [onDidPop] called when route is removed from stack.
-  /// [onDiscard] called when route isn't in any path yet but it is in the process of being removed.
+  /// This occurs when a route is redirected away or navigation is cancelled.
+  /// Differs from [onDidPop] which is called when the route is removed from stack.
   @mustCallSuper
   void onDiscard() {
     completeOnResult(null, null, true);
@@ -186,40 +121,10 @@ abstract class RouteTarget extends Equatable {
 
   /// Called when this route is updated with state from a new route instance.
   ///
-  /// When navigation occurs and a route with the same identity already exists
-  /// in the stack, instead of pushing a duplicate, the existing route's
-  /// [onUpdate] method is called with the new route instance as a parameter.
-  /// This allows you to transfer state from the new route to the existing one.
-  ///
-  /// **Common use cases:**
-  /// - Updating query parameters without rebuilding the route
-  /// - Refreshing route data when navigating to the same screen
-  /// - Syncing state between duplicate route instances
-  ///
-  /// **Example:**
-  /// ```dart
-  /// class ProductRoute extends RouteTarget with RouteUnique {
-  ///   ProductRoute(this.id, {this.highlightReview});
-  ///
-  ///   final String id;
-  ///   String? highlightReview;
-  ///
-  ///   @override
-  ///   void onUpdate(covariant ProductRoute newRoute) {
-  ///     super.onUpdate(newRoute);
-  ///     // Transfer the new highlight state to this existing route
-  ///     highlightReview = newRoute.highlightReview;
-  ///   }
-  ///
-  ///   @override
-  ///   List<Object?> get props => [id]; // highlightReview not in props
-  /// }
-  /// ```
-  ///
-  /// **Parameters:**
-  /// - [newRoute]: The new route instance being navigated to with potentially updated state.
-  ///
-  /// **Important:** Always call `super.onUpdate(newRoute)` if you override this.
+  /// When navigating to a route that already exists in the stack, instead of
+  /// pushing a duplicate, this method is called to transfer state from the
+  /// new route to the existing one. This enables scenarios like updating
+  /// query parameters or refreshing data without rebuilding the widget.
   @mustCallSuper
   void onUpdate(covariant RouteTarget newRoute) {}
 }

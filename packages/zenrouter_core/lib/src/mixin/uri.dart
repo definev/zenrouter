@@ -1,19 +1,24 @@
 import 'package:zenrouter_core/zenrouter_core.dart';
 
-/// Abstract base class for routes that can be represented as URIs.
+/// Abstract base class for routes with URI representation.
 ///
-/// [RouteUri] combines [RouteIdentity] and [RouteLayoutChild] to provide:
-/// - [identifier]: URI-based route identification
-/// - [toUri()]: Convert route to URI representation
-/// - Layout resolution via [RouteLayoutChild] methods
+/// [RouteUri] combines [RouteIdentity] with [RouteLayoutChild] to provide
+/// URI-based route identification and layout resolution capabilities.
 ///
-/// Most routes should use the [RouteUnique] mixin instead of implementing
-/// this directly. [RouteUnique] extends [RouteTarget] and implements [RouteUri],
-/// providing the full routing functionality.
+/// ## Role in Navigation Flow
+///
+/// Routes extending this class:
+///
+/// - Have a URI identifier used for URL synchronization and deep linking
+/// - Support parent layout resolution for nested navigation
+/// - Can be converted to/from URIs for web routing
+///
+/// Most routes should use [RouteUnique] which implements this class.
 abstract class RouteUri extends RouteTarget
     with RouteIdentity<Uri>, RouteLayoutChild {
   @override
   Uri get identifier => toUri();
 
+  /// Converts this route to a [Uri] for URL representation.
   Uri toUri();
 }

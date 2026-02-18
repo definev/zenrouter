@@ -12,92 +12,30 @@ import 'package:zenrouter_core/src/mixin/uri.dart';
 import 'package:zenrouter_core/src/path/base.dart';
 import 'package:zenrouter_core/src/path/navigatable.dart';
 
-/// Strategy for resolving parent layouts during navigation.
-enum _ResolveLayoutStrategy {
-  /// Pushes the layout to the top of the stack.
-  ///
-  /// Used when pushing new routes (e.g., [CoordinatorCore.push]) to ensure
-  /// the new route's layout is added on top of the current stack.
-  pushToTop,
+enum _ResolveLayoutStrategy { pushToTop, override }
 
-  /// Directly activates the layout, potentially resetting the stack.
-  ///
-  /// This is the default strategy used for [CoordinatorCore.replace] or
-  /// when recovering deep links, where the goal is to set a specific state.
-  override,
-}
-
-/// The core class that manages navigation state and logic.
+/// The central hub for navigation state and operations in ZenRouter.
 ///
-/// ## Architecture Overview
+/// [CoordinatorCore] manages navigation state, coordinates between paths,
+/// handles deep links, and integrates all routing components.
 ///
-/// ZenRouter uses a coordinator-based architecture where the [CoordinatorCore]
-/// is the central hub for all navigation operations.
+/// ## Role in Navigation Flow
 ///
-/// ## Core Components
+/// When a navigation operation occurs:
 ///
-/// - **[CoordinatorCore]**: Manages navigation state, handles deep links, and
-///   coordinates between stack paths. Your app typically has one coordinator.
-///
-/// - **[StackPath]**: A container holding a stack of routes. Two variants:
-///   - [NavigationPath]: Mutable stack (push/pop) for standard navigation
-///   - [IndexedStackPath]: Fixed stack for indexed navigation (tabs)
-///
-/// - **[RouteTarget]**: Base class for all navigable destinations. Mix in:
-///   - [RouteUri]: Abstract base for routes with URI representation (implement this)
-///     - [RouteUnique]: The most common mixin - extends [RouteTarget] and implements [RouteUri]
-///   - [RouteGuard]: Intercept and conditionally prevent pops
-///   - [RouteRedirect]: Redirect to different routes
-///   - [RouteLayout]: Define shell/wrapper with nested [StackPath]
-///   - [RouteTransition]: Custom page transitions
-///
-/// ## Navigation Flow
-///
-/// When you call a navigation method:
-///
-/// 1. **Route Resolution**: [RouteRedirect.resolve] follows any redirects
-/// 2. **Layout Resolution**: Find/create required [RouteLayout] hierarchy
-/// 3. **Stack Update**: Push/pop/activate routes on appropriate [StackPath]
-/// 4. **Widget Rebuild**: [NavigationStack] rebuilds with new pages
-/// 5. **URL Update**: Browser URL synced via [CoordinatorCoreRouterDelegate]
+/// 1. [push], [replace], or [navigate] is called with a route
+/// 2. [RouteRedirect.resolve] processes any redirects
+/// 3. Layout hierarchy is resolved via [RouteLayoutParent.resolveParentLayout]
+/// 4. Route is pushed/popped on the appropriate [StackPath]
+/// 5. Listeners are notified, triggering UI rebuilds
 ///
 /// ## Navigation Methods
 ///
-/// Choose the right navigation method for your use case:
-///
-/// | Method        | Use Case                                              |
-/// |---------------|-------------------------------------------------------|
-/// | [push]        | Standard forward navigation (adds to stack)           |
-/// | [pop]         | Go back (removes from stack)                          |
-/// | [replace]     | Reset navigation to a single route (clears stack)     |
-/// | [navigate]    | Browser back/forward (smart stack manipulation)       |
-/// | [recover]     | Deep link handling (respects [RouteDeepLink] strategy)|
-///
-/// See each method's documentation for detailed behavior and examples.
-///
-/// ## Quick Start
-///
-/// ```dart
-/// // 1. Define your route type
-/// abstract class AppRoute extends RouteTarget with RouteUnique {}
-///
-/// // 2. Create a coordinator
-/// class AppCoordinatorCore extends CoordinatorCore<AppRoute> {
-///   @override
-///   FutureOr<AppRoute> parseRouteFromUri(Uri uri) {
-///     return switch (uri.pathSegments) {
-///       ['product', final id] => ProductRoute(id),
-///       _ => HomeRoute(),
-///     };
-///   }
-/// }
-///
-/// // 3. Use in MaterialApp.router
-/// MaterialApp.router(
-///   routerDelegate: coordinator.routerDelegate,
-///   routeInformationParser: coordinator.routeInformationParser,
-/// )
-/// ```
+/// - [push]: Adds route to stack - standard forward navigation
+/// - [pop]: Removes top route - back navigation
+/// - [replace]: Clears stack, sets single route - reset state
+/// - [navigate]: Smart navigation - pops to existing or pushes new
+/// - [recover]: Deep link handling respecting [RouteDeepLink] strategy
 abstract class CoordinatorCore<T extends RouteUri> extends Equatable
     with ListenableObject
     implements RouteModule<T> {
@@ -255,25 +193,11 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
 
   /// Parses a [Uri] into a route object.
   ///
-  /// **Required override.** This is how deep links and web URLs become routes.
-  ///
-  /// Example:
-  /// ```dart
-  /// @override
-  /// AppRoute parseRouteFromUri(Uri uri) {
-  ///   return switch (uri.pathSegments) {
-  ///     ['product', final id] => ProductRoute(id),
-  ///     _ => HomeRoute(),
-  ///   };
-  /// }
-  /// ```
+  /// Required override - this is how deep links and web URLs become routes.
   @override
   FutureOr<T?> parseRouteFromUri(Uri uri);
 
-  /// Handles navigation from a deep link URI.
-  ///
-  /// If the route has [RouteDeepLink], its custom handler is called.
-  /// Otherwise, [replace] is called.
+  /// Handles deep link navigation by parsing URI and calling [recover].
   Future<void> recoverRouteFromUri(Uri uri) async {
     final route = await parseRouteFromUri(uri);
     if (route == null) {
@@ -284,13 +208,7 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
     return recover(route);
   }
 
-  /// Prepares layout hierachy for a given [layout].
-  ///
-  /// This ensures that all parent layouts in the hierarchy are properly
-  /// activated or pushed onto their respective paths.
-  ///
-  /// [strategy] determines whether to push the layout onto the stack
-  /// or just activate it if it already exists.
+  /// Ensures the layout hierarchy is properly activated for navigation.
   Future<void> _prepareParentLayoutList(
     RouteLayoutParent layout, {
     _ResolveLayoutStrategy strategy = _ResolveLayoutStrategy.override,
@@ -318,22 +236,7 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
     }
   }
 
-  /// Recovers navigation state from a route, respecting deep link strategies.
-  ///
-  /// **When to use:**
-  /// Use this when handling deep links or restoring navigation state.
-  /// Prefer [push] for regular navigation and [replace] for resetting state.
-  ///
-  /// **Behavior:**
-  /// - If the route implements [RouteDeepLink], uses its [DeeplinkStrategy]:
-  ///   - [DeeplinkStrategy.push]: Calls [push] to add route to stack
-  ///   - [DeeplinkStrategy.replace]: Calls [replace] to reset stack
-  ///   - [DeeplinkStrategy.custom]: Calls the route's [deeplinkHandler]
-  /// - Otherwise, defaults to [replace]
-  ///
-  /// **Error Handling:**
-  /// Exceptions from redirect resolution or deep link handlers propagate
-  /// to the caller. Handle these in your app's error boundary.
+  /// Recovers navigation state from a route, respecting [RouteDeepLink] strategy.
   Future<void> recover(T route) async {
     T? target = await RouteRedirect.resolve(route, this);
     if (target == null) return;
@@ -354,33 +257,10 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
     }
   }
 
-  /// Navigates to a specific route, handling history restoration and stack management.
+  /// Navigates to a route with smart history handling.
   ///
-  /// **Why this exists:**
-  /// Standard [push] always adds a new route to the stack, which can lead to
-  /// duplicate entries and confusing browser history (e.g., A -> B -> A -> B).
-  /// [navigate] is smarter: it checks if the target route already exists in the
-  /// stack (e.g., in a browser "Back" scenario) and pops back to it instead of
-  /// pushing a new instance. This ensures the navigation stack mirrors the
-  /// user's expected history state.
-  ///
-  /// This method is primarily used by [CoordinatorCoreRouterDelegate.setNewRoutePath]
-  /// to handle browser back/forward navigation or direct URL updates.
-  ///
-  /// **Behavior:**
-  /// 1. Resolves the layout and path for the target [route].
-  /// 2. If the active path is a [NavigationPath]:
-  ///    - **Existing Route:** If the route is already in the stack (back navigation),
-  ///      it progressively pops the stack until the target route is reached.
-  ///      - Respects [RouteGuard]s during popping.
-  ///      - If a guard blocks popping, navigation is aborted and the URL is restored.
-  ///    - **New Route:** If the route is not in the stack, it calls [push] to add it.
-  /// 3. If the active path is an [IndexedStackPath]:
-  ///    - Resolves parent layouts and activates the target route (switching tabs).
-  ///
-  /// **Failure Handling:**
-  /// If layout resolution fails or a guard blocks the navigation, [notifyListeners]
-  /// is called to sync the browser URL back to the current application state.
+  /// If route exists in stack, pops back to it. Otherwise pushes new route.
+  /// Used for browser back/forward navigation.
   Future<void> navigate(T route) async {
     final target = await RouteRedirect.resolve(route, this);
     if (target == null) return;
@@ -409,10 +289,7 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
     }
   }
 
-  /// Clears all [StackPath]s and push the [route] target.
-  ///
-  /// This method is useful for make sure wiping out whole [paths] states
-  /// and produce deterministic output for the given [route].
+  /// Clears all paths and sets a single route as the new state.
   Future<void> replace(T route) async {
     T? target = await RouteRedirect.resolve(route, this);
     if (target == null) return;
@@ -431,34 +308,10 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
     await parentPath.activateRoute(target);
   }
 
-  /// Pushes a new route onto the nearest [StackMutatable] path.
+  /// Adds a route to the navigation stack.
   ///
-  /// **When to use:**
-  /// - Standard forward navigation (user taps a button/link)
-  /// - Opening details, forms, or modals
-  /// - Any navigation where back should return to current screen
-  ///
-  /// **Avoid when:**
-  /// - Handling deep links (use [recover] instead)
-  /// - Resetting navigation state (use [replace] instead)
-  /// - Browser back/forward navigation (use [navigate] instead)
-  ///
-  /// **Behavior:**
-  /// 1. Resolves any [RouteRedirect]s (authentication, permissions, etc.)
-  /// 2. Ensures required [RouteLayout] hierarchy is active
-  /// 3. Adds the route to its [StackPath]
-  ///
-  /// **Result handling:**
-  /// Returns a [Future] that completes when the route is popped:
-  /// ```dart
-  /// final result = await coordinator.push<String>(SelectColorRoute());
-  /// if (result != null) {
-  ///   print('User selected: $result');
-  /// }
-  /// ```
-  ///
-  /// **Error Handling:**
-  /// Exceptions from redirect resolution propagate to the caller.
+  /// Resolves redirects, ensures layout hierarchy is active, then pushes to path.
+  /// Returns a future that completes when the route is popped with a result.
   Future<R?> push<R extends Object>(T route) async {
     T? target = await RouteRedirect.resolve(route, this);
     if (target == null) return null;
@@ -481,9 +334,9 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
     }
   }
 
-  /// Pushes a route or moves it to the top if already present.
+  /// Pushes a route to the top, or moves it to top if already in stack.
   ///
-  /// Useful for tab navigation where you don't want duplicates.
+  /// Useful for tab navigation to switch without duplicating entries.
   void pushOrMoveToTop(T route) async {
     final target = await RouteRedirect.resolve(route, this);
     if (target == null) return;
@@ -506,38 +359,9 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
     }
   }
 
-  /// Pops the current route and pushes a new route in its place.
+  /// Replaces the current route with a new one.
   ///
-  /// **When to use:**
-  /// - Swap screens during a wizard/onboarding flow
-  /// - Replace a loading/splash screen with actual content
-  /// - Login → Home transition where back should not return to login
-  ///
-  /// **Avoid when:**
-  /// - You need to clear all navigation history (use [replace] instead)
-  ///
-  /// **Behavior:**
-  /// 1. Resolves any [RouteRedirect]s
-  /// 2. Ensures required [RouteLayout] hierarchy is active
-  /// 3. Delegates to [StackMutatable.pushReplacement] which:
-  ///    - On single-element stack: completes the route and pushes new one
-  ///    - On multi-element stack: pops (respecting guards), then pushes
-  ///
-  /// **Result handling:**
-  /// Pass [result] to complete the popped route's push future:
-  /// ```dart
-  /// // In screen A:
-  /// final result = await coordinator.push<String>(ScreenB());
-  /// print('Got: $result'); // Prints: Got: from_c
-  ///
-  /// // In screen B, replacing with C:
-  /// coordinator.pushReplacement<void, String>(ScreenC(), result: 'from_c');
-  /// ```
-  ///
-  /// **Error Handling:**
-  /// - Returns `null` if redirect resolution returns null
-  /// - Returns `null` if a [RouteGuard] blocks the pop operation
-  /// - Exceptions from redirect resolution propagate to the caller
+  /// Pops the current route (respecting guards) then pushes the new route.
   Future<R?> pushReplacement<R extends Object, RO extends Object>(
     T route, {
     RO? result,
@@ -561,19 +385,10 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
     return null;
   }
 
-  /// Pops the last route from the nearest dynamic path.  /// Pops the last route from all eligible dynamic paths.
-  ///
-  /// This method looks up all active [StackMutatable] paths and attempts
-  /// to pop from those whose stack contains at least two elements.
-  ///
-  /// The returned [Future] completes when all eligible pops have finished.
-  /// If no dynamic paths can be popped, this method completes without
-  /// performing any action.
+  /// Pops from all eligible paths with at least two entries.
   Future<void> pop([Object? result]) async {
-    // Get all dynamic paths from the active layout paths
     final dynamicPaths = activePaths.whereType<StackMutatable>().toList();
 
-    // Try to pop from the farthest element if stack length >= 2
     for (var i = dynamicPaths.length - 1; i >= 0; i--) {
       final path = dynamicPaths[i];
       if (path.stack.length >= 2) {
@@ -582,18 +397,12 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
     }
   }
 
-  /// Attempts to pop the nearest dynamic path.
-  /// The [RouteGuard] logic is handled here.
+  /// Attempts to pop from the nearest eligible path.
   ///
-  /// Returns:
-  /// - `true` if the route can pop
-  /// - `false` if the route can't pop
-  /// - `null` if the [RouteGuard] want manual control
+  /// Returns true if pop succeeded, false if blocked by guard, null if no path eligible.
   Future<bool?> tryPop([Object? result]) async {
-    // Get all dynamic paths from the active layout paths
     final mutatablePaths = activePaths.whereType<StackMutatable>().toList();
 
-    // Try to pop from the farthest element if stack length >= 2
     for (var i = mutatablePaths.length - 1; i >= 0; i--) {
       final path = mutatablePaths[i];
       if (path.stack.length >= 2) {
@@ -604,15 +413,15 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
     return false;
   }
 
-  /// Marks the coordinator as needing a rebuild.
+  /// Triggers a rebuild of the coordinator.
   void markNeedRebuild() => notifyListeners();
 
-  /// Defines a constructor for a specific layout key.
+  /// Registers a constructor for a layout parent.
   void defineLayoutParentConstructor(
     Object layoutKey,
     RouteLayoutParentConstructor constructor,
   );
 
-  /// Creates a layout parent instance from constructor
+  /// Creates a layout parent instance from registered constructor.
   RouteLayoutParent? createLayoutParent(Object layoutKey);
 }

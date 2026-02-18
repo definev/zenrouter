@@ -1,13 +1,14 @@
-
 import 'package:zenrouter_core/src/mixin/target.dart';
 import 'package:zenrouter_core/src/path/base.dart';
 
-/// Mixin for stack paths that support navigation.
+/// Mixin for stack paths that support browser history navigation.
 ///
-/// Apply this mixin to [StackPath] subclasses that need navigation support.
+/// Paths with this mixin can handle back/forward button navigation
+/// by popping or pushing routes to reach a target state.
 mixin StackNavigatable<T extends RouteTarget> on StackPath<T> {
-  /// Navigate to a specific route in the stack.
+  /// Navigates to a specific route, adjusting the stack accordingly.
   ///
-  /// This is useful for handling back/forward button on the browser.
+  /// If the route exists in the stack, pops back to it.
+  /// If not, pushes the route onto the stack.
   Future<void> navigate(T route);
 }

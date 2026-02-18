@@ -3,83 +3,44 @@ import 'dart:async';
 import 'package:zenrouter_core/src/coordinator/base.dart';
 import 'package:zenrouter_core/src/mixin/target.dart';
 
-/// Mixin for routes that need to guard against being popped.
+/// Mixin for routes that can intercept and block pop operations.
 ///
-/// Use this mixin to intercept pop operations and conditionally prevent them.
-/// Common use cases include:
-/// - **Unsaved changes**: Prompt user before losing form data
-/// - **Confirmation dialogs**: Require explicit confirmation before leaving
-/// - **Async validation**: Check with a server before allowing navigation
+/// When a user attempts to navigate back (via back button, swipe gesture, or
+/// programmatic pop), the coordinator checks each route's guard before allowing
+/// the navigation to proceed. This allows routes to implement custom logic such
+/// as prompting for confirmation or blocking navigation based on app state.
 ///
-/// **Example - Confirmation Dialog:**
-/// ```dart
-/// class EditFormRoute extends RouteTarget with RouteUnique, RouteGuard {
-///   bool hasUnsavedChanges = false;
+/// ## Role in Navigation Flow
 ///
-///   @override
-///   FutureOr<bool> popGuard() async {
-///     if (!hasUnsavedChanges) return true;
+/// Guards are checked during:
+/// - [NavigationPath.pop] - when user initiates back navigation
+/// - [CoordinatorCore.tryPop] - programmatic pop attempts
+/// - Browser back button on web platforms
+/// - Tab switches in [IndexedStackPath] when leaving a tab
 ///
-///     // Show confirmation dialog
-///     final shouldPop = await showDialog<bool>(
-///       context: navigatorContext,
-///       builder: (context) => AlertDialog(
-///         title: Text('Discard changes?'),
-///         content: Text('You have unsaved changes.'),
-///         actions: [
-///           TextButton(
-///             onPressed: () => Navigator.pop(context, false),
-///             child: Text('Cancel'),
-///           ),
-///           TextButton(
-///             onPressed: () => Navigator.pop(context, true),
-///             child: Text('Discard'),
-///           ),
-///         ],
-///       ),
-///     );
-///     return shouldPop ?? false;
-///   }
-/// }
-/// ```
-///
-/// **Note:** Guards are consulted during:
-/// - [NavigationPath.pop] and [Coordinator.tryPop]
-/// - Browser back button navigation
-/// - [IndexedStackPath.goToIndexed] when leaving the current tab
+/// If any guard returns `false`, the pop operation is aborted and the
+/// navigation state remains unchanged.
 mixin RouteGuard on RouteTarget {
   // coverage:ignore-start
   /// Called when the route is about to be popped.
   ///
-  /// Return `true` to allow the pop, or `false` to prevent it.
-  /// This can be async to show dialogs or perform validation.
+  /// Return `true` to allow the pop operation to proceed, or `false` to block it.
+  /// This method can be async to support dialogs or asynchronous validation.
   ///
-  /// **Important:** This method should not have side effects beyond
-  /// showing UI (like dialogs). The actual pop happens after this returns.
+  /// The actual pop occurs after this method returns. Side effects beyond
+  /// showing UI (dialogs) should be avoided as they may execute unexpectedly.
   FutureOr<bool> popGuard() => true;
   // coverage:ignore-end
 
-  /// Called when the route is about to be popped, with coordinator access.
+  /// Called when the route is about to be popped, with access to the coordinator.
   ///
-  /// This variant provides access to the [Coordinator] for routes that need
-  /// to check application state or access dependencies during the guard check.
+  /// This variant allows routes to check application state through the coordinator
+  /// before deciding whether to allow the pop. Use this when the guard logic
+  /// depends on external state not available on the route itself.
   ///
-  /// **Coordinator Binding:**
-  /// The assertion ensures the route's path was created with the same coordinator
-  /// that is handling the navigation. This prevents bugs where routes are
-  /// accidentally managed by the wrong coordinator.
-  ///
-  /// **Example - State-dependent guard:**
-  /// ```dart
-  /// @override
-  /// FutureOr<bool> popGuardWith(AppCoordinator coordinator) async {
-  ///   // Access app state through coordinator
-  ///   if (coordinator.authState.isLoggingOut) {
-  ///     return false; // Prevent navigation during logout
-  ///   }
-  ///   return popGuard();
-  /// }
-  /// ```
+  /// The coordinator assertion ensures the route is managed by the correct
+  /// coordinator instance, preventing bugs from routes being handled by
+  /// the wrong navigation state.
   FutureOr<bool> popGuardWith(covariant CoordinatorCore coordinator) {
     assert(stackPath?.coordinator == coordinator, '''
 [RouteGuard] The path [${stackPath.toString()}] is associated with a different coordinator (or null) than the one currently handling the navigation.

@@ -2,7 +2,10 @@ import 'package:meta/meta.dart';
 
 typedef VoidCallback = void Function();
 
-// coverage:ignore-start
+/// Mixin that provides listener management for observable objects.
+///
+/// Used by [CoordinatorCore] and [StackPath] to notify dependents when
+/// navigation state changes. UI widgets listen to these changes to rebuild.
 mixin ListenableObject {
   @mustCallSuper
   void dispose() {}
@@ -14,4 +17,3 @@ mixin ListenableObject {
 
   void removeListener(VoidCallback listener);
 }
-// coverage:ignore-end
