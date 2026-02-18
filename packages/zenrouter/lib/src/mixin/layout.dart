@@ -7,6 +7,19 @@ typedef DecodeLayoutKeyCallback = Object Function(String key);
 ///
 /// A layout is a route that wraps other routes, such as a shell or a tab bar.
 /// It defines how its children are displayed and managed.
+///
+/// ## Role in Navigation Flow
+///
+/// [RouteLayout] creates nested navigation hierarchies:
+/// 1. Acts as a parent container for child routes
+/// 2. Provides a [StackPath] via [resolvePath] for its children
+/// 3. Builds the nested navigation UI via [buildPath]
+/// 4. Coordinates with coordinator for layout parent construction
+///
+/// Layouts enable:
+/// - Shell routes with nested navigation
+/// - Tab bars with multiple navigation stacks
+/// - Drawer navigation with main content area
 mixin RouteLayout<T extends RouteUnique> on RouteUnique
     implements RouteLayoutParent<T> {
   // coverage:ignore-start

@@ -7,6 +7,19 @@ import 'package:zenrouter/zenrouter.dart';
 ///
 /// Supports pushing and popping routes. Used for the main navigation stack
 /// and modal flows.
+///
+/// ## Role in Navigation Flow
+///
+/// [NavigationPath] is the primary path type for imperative navigation:
+/// 1. Stores routes in a mutable list (stack)
+/// 2. Supports push/pop/remove operations
+/// 3. Renders content via [NavigationStack] widget
+/// 4. Implements [RestorablePath] for state restoration
+///
+/// When navigating:
+/// - [push] adds a new route to the top
+/// - [pop] removes the top route
+/// - [navigate] handles browser back/forward
 class NavigationPath<T extends RouteTarget> extends StackPath<T>
     with
         ChangeNotifier,

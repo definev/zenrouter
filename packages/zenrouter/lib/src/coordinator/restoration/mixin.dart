@@ -5,6 +5,18 @@ import 'package:zenrouter/zenrouter.dart';
 ///
 /// [CoordinatorRestoration] - Abstract mixin defining the interface for
 /// encoding/decoding layout restoration keys.
+///
+/// ## Role in Navigation Flow
+///
+/// [CoordinatorRestoration] enables state persistence across app restarts:
+/// 1. Encodes layout keys for restoration when layouts are defined
+/// 2. Decodes layout keys when restoring navigation state
+/// 3. Generates restoration IDs for routes based on their path hierarchy
+///
+/// When restoration is enabled:
+/// - [encodeLayoutKey] is called when layouts are registered
+/// - [decodeLayoutKey] is called during restoration to recreate layouts
+/// - [resolveRouteId] generates unique IDs for each route's state
 /// {@endtemplate}
 mixin CoordinatorRestoration<T extends RouteUnique> on CoordinatorCore<T> {
   final _layoutKeyTable = <String, Object>{};
@@ -43,13 +55,13 @@ mixin CoordinatorRestoration<T extends RouteUnique> on CoordinatorCore<T> {
   ///
   /// This ID is used to restore the route when the app is re-launched.
   String resolveRouteId(covariant T route) {
-    RouteLayout? layout = route.resolveParentLayout(rootCoordinator);
+    RouteLayout? layout = route.resolveParentLayout(this);
     List<RouteLayout> layouts = [];
     List<StackPath> layoutPaths = [];
     while (layout != null) {
       layouts.add(layout);
-      layoutPaths.add(layout.resolvePath(rootCoordinator));
-      layout = layout.resolveParentLayout(rootCoordinator);
+      layoutPaths.add(layout.resolvePath(this));
+      layout = layout.resolveParentLayout(this);
     }
 
     String layoutRestorationId = layoutPaths

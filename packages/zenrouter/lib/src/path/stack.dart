@@ -14,6 +14,20 @@ import 'package:zenrouter_core/zenrouter_core.dart';
 ///
 /// This is the core widget for imperative navigation. It listens to the [path]
 /// and updates the [Navigator] with the corresponding pages.
+///
+/// ## Role in Navigation Flow
+///
+/// [NavigationStack] is the visual representation of a [NavigationPath]:
+/// 1. Listens to path changes via path listeners
+/// 2. Uses Myers diff algorithm to calculate route changes
+/// 3. Builds [Page] objects via the [resolver] callback
+/// 4. Updates Flutter's Navigator with the page stack
+///
+/// The widget handles:
+/// - Page creation and disposal
+/// - Guard execution on pop attempts
+/// - Route result completion
+/// - State restoration
 class NavigationStack<T extends RouteTarget> extends StatefulWidget {
   const NavigationStack({
     super.key,
@@ -278,6 +292,14 @@ class _NavigationStackState<T extends RouteTarget>
 /// Instead of pushing and popping, you provide a list of [routes]. The widget
 /// calculates the difference between the old and new routes (using Myers diff)
 /// and updates the stack accordingly.
+///
+/// ## Role in Navigation Flow
+///
+/// [DeclarativeNavigationStack] provides declarative navigation:
+/// 1. Receives a list of routes as the source of truth
+/// 2. Compares with previous route list using Myers diff
+/// 3. Updates the underlying [NavigationPath] accordingly
+/// 4. Uses the same [NavigationStack] for rendering
 class DeclarativeNavigationStack<T extends RouteTarget> extends StatefulWidget {
   const DeclarativeNavigationStack({
     super.key,
@@ -356,6 +378,14 @@ class _DeclarativeNavigationStackState<T extends RouteTarget>
 
 /// Widget that builds an [IndexedStack] from an [IndexedStackPath].
 /// Ensures that the stack caches pages when rebuilding the widget tree.
+///
+/// ## Role in Navigation Flow
+///
+/// [IndexedStackPathBuilder] renders indexed navigation:
+/// 1. Receives an [IndexedStackPath] with fixed routes
+/// 2. Builds all route widgets once and caches them
+/// 3. Uses [IndexedStack] to show only the active route
+/// 4. Rebuilds when the active index changes
 class IndexedStackPathBuilder<T extends RouteUnique> extends StatefulWidget {
   const IndexedStackPathBuilder({
     super.key,

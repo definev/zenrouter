@@ -62,6 +62,18 @@ final kDefaultLayoutBuilderTable = Map.unmodifiable(<
 
 /// Mixin that provides layout builder and parent constructor management for [Coordinator].
 ///
+/// ## Role in Navigation Flow
+///
+/// [CoordinatorLayout] enables the coordinator to:
+/// 1. Register layout builders that render [StackPath] contents
+/// 2. Create layout parent instances for nested navigation
+/// 3. Bind routes to their appropriate layout containers
+///
+/// When a route is pushed:
+/// 1. [Coordinator] resolves the route's parent layout
+/// 2. [createLayoutParent] instantiates the layout if needed
+/// 3. [getLayoutBuilder] provides the widget that renders the path's stack
+///
 /// This mixin is automatically applied to [Coordinator] and handles:
 /// - [defineLayoutBuilder]: Register layout builders for different path types
 /// - [defineLayoutParentConstructor]: Register constructors for layout parents

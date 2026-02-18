@@ -2,52 +2,72 @@ import 'package:flutter/material.dart';
 import 'package:zenrouter/src/coordinator/layout.dart';
 import 'package:zenrouter/zenrouter.dart';
 
-/// The core class that manages navigation state and logic.
+/// The Flutter-specific implementation of navigation coordinator.
 ///
-/// ## Architecture Overview
+/// ## Inheritance Architecture
 ///
-/// ZenRouter uses a coordinator-based architecture where the [Coordinator]
-/// is the central hub for all navigation operations.
+/// ```
+/// Coordinator<T extends RouteUnique>
+///   extends CoordinatorCore<T>           // Core navigation logic
+///   with CoordinatorLayout<T>,           // Layout builders
+///        CoordinatorRestoration<T>,      // State restoration
+///        CoordinatorTransitionStrategy<T> // Page transitions
+///   implements RouterConfig<Uri>,         // Flutter Router integration
+///            RouteModule<T>,              // Modular navigation support
+///            ChangeNotifier               // Observable state
+/// ```
 ///
-/// ## Core Components
+/// ## Role in Navigation Flow
 ///
-/// - **[Coordinator]**: Manages navigation state, handles deep links, and
-///   coordinates between stack paths. Your app typically has one coordinator.
+/// [Coordinator] orchestrates navigation by:
+/// 1. Receiving navigation calls via [push], [pop], [replace], [navigate]
+/// 2. Processing redirects through [RouteRedirect.resolve]
+/// 3. Resolving layout hierarchies via [RouteLayoutParent]
+/// 4. Updating appropriate [StackPath] (push/pop/activate)
+/// 5. Triggering UI rebuilds through [NavigationStack]
+/// 6. Synchronizing browser URL via [CoordinatorRouterDelegate]
 ///
-/// - **[StackPath]**: A container holding a stack of routes. Two variants:
-///   - [NavigationPath]: Mutable stack (push/pop) for standard navigation
-///   - [IndexedStackPath]: Fixed stack for indexed navigation (tabs)
+/// ## Class Architecture
 ///
-/// - **[RouteTarget]**: Base class for all navigable destinations. Mix in:
-///   - [RouteUnique]: Required for coordinator integration
-///   - [RouteGuard]: Intercept and conditionally prevent pops
-///   - [RouteRedirect]: Redirect to different routes
-///   - [RouteLayout]: Define shell/wrapper with nested [StackPath]
-///   - [RouteTransition]: Custom page transitions
+/// This class composes functionality from multiple sources:
 ///
-/// ## Navigation Flow
+/// | Component | Responsibility |
+/// |-----------|----------------|
+/// | [CoordinatorCore] | Core navigation logic (push, pop, replace) |
+/// | [CoordinatorLayout] | Layout builder registration and parent constructors |
+/// | [CoordinatorRestoration] | State restoration key encoding/decoding |
+/// | [CoordinatorTransitionStrategy] | Default page transition configuration |
 ///
-/// When you call a navigation method:
+/// ## Abstract Nature
 ///
-/// 1. **Route Resolution**: [RouteRedirect.resolve] follows any redirects
-/// 2. **Layout Resolution**: Find/create required [RouteLayout] hierarchy
-/// 3. **Stack Update**: Push/pop/activate routes on appropriate [StackPath]
-/// 4. **Widget Rebuild**: [NavigationStack] rebuilds with new pages
-/// 5. **URL Update**: Browser URL synced via [CoordinatorRouterDelegate]
+/// This is an **abstract class** that requires implementation of:
+/// - [parseRouteFromUri]: Convert URIs to route objects
 ///
-/// ## Navigation Methods
+/// You must extend this class and provide the required implementation:
 ///
-/// Choose the right navigation method for your use case:
+/// ```dart
+/// class AppCoordinator extends Coordinator<AppRoute> {
+///   @override
+///   FutureOr<AppRoute> parseRouteFromUri(Uri uri) {
+///     // Your URI parsing logic
+///   }
+/// }
+/// ```
 ///
-/// | Method        | Use Case                                              |
-/// |---------------|-------------------------------------------------------|
-/// | [push]        | Standard forward navigation (adds to stack)           |
-/// | [pop]         | Go back (removes from stack)                          |
-/// | [replace]     | Reset navigation to a single route (clears stack)     |
-/// | [navigate]    | Browser back/forward (smart stack manipulation)       |
-/// | [recover]     | Deep link handling (respects [RouteDeepLink] strategy)|
+/// ## Relationship with CoordinatorModular
 ///
-/// See each method's documentation for detailed behavior and examples.
+/// [Coordinator] can operate in two modes:
+///
+/// **Standalone Mode** (default):
+/// - Has its own root [NavigationPath]
+/// - Can be used directly with [MaterialApp.router]
+/// - Full control over navigation state
+///
+/// **Modular Mode** (part of [CoordinatorModular]):
+/// - Shares root path with parent coordinator
+/// - Cannot use [routerDelegate] or [routeInformationParser]
+/// - Integrates into larger navigation hierarchy
+/// - Access parent via [coordinator] getter
 ///
 /// ## Quick Start
 ///
@@ -80,6 +100,11 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
     implements RouterConfig<Uri>, RouteModule<T>, ChangeNotifier {
   Coordinator({super.initialRoutePath});
 
+  /// Disposes the coordinator and its resources.
+  ///
+  /// ## Relationship
+  /// Disposes in order: [routerDelegate], internal notifier, then [CoordinatorCore].
+  /// Ensures proper cleanup of Flutter Router integration.
   @override
   void dispose() {
     routerDelegate.dispose();
@@ -95,21 +120,29 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
   ///
   /// All coordinators have at least this one path.
   ///
-  /// If this coordinator is a part of a [CoordinatorModular], the root path will point to the root path of the [CoordinatorModular].
+  /// ## When to Override
+  /// Override if you need a custom root path configuration.
+  ///
+  /// ## Relationship
+  /// In modular mode, returns parent's root via [coordinator].
   @override
   NavigationPath<T> get root => _root;
 
   /// Parses a [Uri] into a route object synchronously.
   ///
-  /// If you have an asynchronous [parseRouteFromUri] and still want [restoration] working,
-  /// you have to provide a synchronous version of it.
+  /// ## When to Override
+  /// Override if [parseRouteFromUri] is asynchronous and you need state restoration.
+  ///
+  /// ## Relationship
+  /// Used by [NavigationPathRestorable] during state restoration.
   RouteUriParserSync<T> get parseRouteFromUriSync =>
       (uri) => parseRouteFromUri(uri) as T;
 
   /// Returns all active [RouteLayout] instances in the navigation hierarchy.
   ///
-  /// This traverses through the active route to collect all layouts from root
-  /// to the deepest layout. Returns an empty list if no layouts are active.
+  /// ## Relationship
+  /// Traverses from root to deepest layout, collecting all [RouteLayoutParent]
+  /// instances. Returns empty list if no layouts are active.
   List<RouteLayout> get activeLayouts => activeLayoutParentList;
 
   @override
@@ -118,16 +151,16 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
 
   /// Returns the deepest active [RouteLayout] in the navigation hierarchy.
   ///
-  /// This traverses through nested layouts to find the most deeply nested
-  /// layout that is currently active. Returns `null` if the root layout is active.
+  /// ## Relationship
+  /// Finds the most deeply nested active layout by traversing the hierarchy.
+  /// Returns `null` if only the root layout is active.
   RouteLayout? get activeLayout => activeLayoutParent;
 
   @override
   RouteLayout? get activeLayoutParent =>
       super.activeLayoutParent as RouteLayout?;
 
-  /// [ChangeNotifier] compatibility implementation for [Coordinator]
-  // coverage:ignore-start
+  /// ChangeNotifier implementation for observing state changes.
   final _proxy = ChangeNotifier();
 
   @override
@@ -141,19 +174,27 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
 
   @override
   bool get hasListeners => _proxy.hasListeners;
-  // coverage:ignore-end
 
   /// Builds the root widget (the primary navigator).
   ///
+  /// ## When to Override
   /// Override to customize the root navigation structure.
+  ///
+  /// ## Relationship
+  /// Called by [CoordinatorRouterDelegate.build] to create the widget tree.
+  /// Delegates to [RouteLayout.buildRoot] by default.
   Widget layoutBuilder(BuildContext context) => RouteLayout.buildRoot(this);
 
   /// Defines new layout parent constructor so [RouteLayoutChild] can look it up via
   /// [RouteLayoutChild.parentLayoutKey] and create new instance of layout parent.
   ///
-  /// Normally, in [Coordinator] context, the [RouteLayoutChild.parentLayoutKey] is the [runtimeType] the [RouteLayout].
+  /// ## When to Override
+  /// Override [defineLayout] in your coordinator subclass instead of calling
+  /// this directly.
   ///
-  /// You can override this behavior by defining your own [RouteLayoutChild.parentLayoutKey] in your [RouteLayout].
+  /// ## Relationship
+  /// - Registers constructor with [CoordinatorLayout.defineLayoutParentConstructor]
+  /// - Encodes layout key for restoration via [CoordinatorRestoration.encodeLayoutKey]
   void defineLayoutParent(RouteLayoutConstructor constructor) {
     final instance = constructor()..onDiscard();
     defineLayoutParentConstructor(instance.layoutKey, (_) => constructor());
@@ -161,11 +202,18 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
   }
 
   /// {@macro zenrouter.CoordinatorRouterDelegate}
+  ///
+  /// ## Relationship
+  /// Bridges the coordinator to Flutter's Router widget. Manages navigator stack
+  /// and handles browser navigation events.
   @override
   late final CoordinatorRouterDelegate routerDelegate =
       CoordinatorRouterDelegate(coordinator: this);
 
   /// {@macro zenrouter.CoordinatorRouteParser}
+  ///
+  /// ## Relationship
+  /// Parses [RouteInformation] to and from [Uri] for Flutter's Router.
   @override
   late final CoordinatorRouteParser routeInformationParser =
       CoordinatorRouteParser(coordinator: this);
@@ -173,22 +221,16 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
   /// Report to a [Router] when the user taps the back button on platforms that
   /// support back buttons (such as Android).
   ///
-  /// When [Router] widgets are nested, consider using a
-  /// [ChildBackButtonDispatcher], passing it the parent [BackButtonDispatcher],
-  /// so that the back button requests get dispatched to the appropriate [Router].
-  /// To make this work properly, it's important that whenever a [Router] thinks
-  /// it should get the back button messages (e.g. after the user taps inside it),
-  /// it calls [takePriority] on its [BackButtonDispatcher] (or
-  /// [ChildBackButtonDispatcher]) instance.
-  ///
-  /// The class takes a single callback, which must return a [Future<bool>]. The
-  /// callback's semantics match [WidgetsBindingObserver.didPopRoute]'s, namely,
-  /// the callback should return a future that completes to true if it can handle
-  /// the pop request, and a future that completes to false otherwise.
+  /// ## Relationship
+  /// Reports back button taps to the [Router]. Uses [RootBackButtonDispatcher]
+  /// for the root coordinator. Nested routers should use [ChildBackButtonDispatcher].
   @override
   final BackButtonDispatcher backButtonDispatcher = RootBackButtonDispatcher();
 
   /// The [RouteInformationProvider] that is used to configure the [Router].
+  ///
+  /// ## Relationship
+  /// Supplies the initial URI from [initialRoutePath] or defaults to `/`.
   @override
   late final RouteInformationProvider routeInformationProvider =
       PlatformRouteInformationProvider(
@@ -198,5 +240,9 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
       );
 
   /// Access to the navigator state.
+  ///
+  /// ## Relationship
+  /// Retrieved from [routerDelegate.navigatorKey]. Useful for imperative
+  /// navigator operations like showing dialogs or bottom sheets.
   NavigatorState get navigator => routerDelegate.navigatorKey.currentState!;
 }

@@ -8,6 +8,16 @@ import 'package:zenrouter_core/zenrouter_core.dart';
 ///
 /// Most routes should mix this in. It provides integration with the [Coordinator]
 /// and layout system.
+///
+/// ## Role in Navigation Flow
+///
+/// [RouteUnique] enables routes to participate in coordinator-based navigation:
+/// 1. Implements [RouteUri] for URI-based identification
+/// 2. Can be resolved by [Coordinator.parseRouteFromUri]
+/// 3. Can be bound to a [RouteLayout] via the [layout] getter
+/// 4. Creates parent layouts via [createParentLayout]
+///
+/// This is the most common mixin for application routes.
 mixin RouteUnique on RouteTarget implements RouteUri {
   @override
   Uri get identifier => toUri();

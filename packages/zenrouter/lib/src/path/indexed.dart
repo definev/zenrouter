@@ -9,6 +9,19 @@ import 'package:zenrouter_core/zenrouter_core.dart';
 ///
 /// Routes are pre-defined and cannot be added or removed. Navigation switches
 /// the active index.
+///
+/// ## Role in Navigation Flow
+///
+/// [IndexedStackPath] manages tab-based navigation:
+/// 1. Routes are defined upfront in a fixed list
+/// 2. Navigation switches the active index rather than stack
+/// 3. Renders content via [IndexedStackPathBuilder] widget
+/// 4. Implements [RestorablePath] for tab index restoration
+///
+/// When navigating:
+/// - [goToIndexed] switches to a different route by index
+/// - [activateRoute] activates a route already in the stack
+/// - Routes cannot be pushed or popped, only activated
 class IndexedStackPath<T extends RouteTarget> extends StackPath<T>
     with StackNavigatable<T>, RestorablePath<T, int, int>, ChangeNotifier {
   IndexedStackPath._(super.stack, {super.debugLabel, super.coordinator})

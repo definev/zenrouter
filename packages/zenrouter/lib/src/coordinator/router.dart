@@ -5,6 +5,15 @@ import 'package:zenrouter/zenrouter.dart';
 /// Parses [RouteInformation] to and from [Uri].
 ///
 /// This is used by Flutter's Router widget to handle URL changes.
+///
+/// ## Role in Navigation Flow
+///
+/// [CoordinatorRouteParser] bridges URL changes and the navigation system:
+/// 1. Flutter's Router calls [parseRouteInformation] when URL changes
+/// 2. The parsed URI is passed to [CoordinatorRouterDelegate.setNewRoutePath]
+/// 3. The coordinator navigates to the appropriate route
+///
+/// This class is used internally by [MaterialApp.router] configuration.
 /// {@endtemplate}
 class CoordinatorRouteParser extends RouteInformationParser<Uri> {
   CoordinatorRouteParser({required this.coordinator});
@@ -28,6 +37,17 @@ class CoordinatorRouteParser extends RouteInformationParser<Uri> {
 /// Router delegate that connects the [Coordinator] to Flutter's Router.
 ///
 /// Manages the navigator stack and handles system navigation events.
+///
+/// ## Role in Navigation Flow
+///
+/// [CoordinatorRouterDelegate] acts as the bridge between Flutter and ZenRouter:
+/// 1. Receives route changes via [setNewRoutePath] from Flutter's Router
+/// 2. Delegates navigation to the [Coordinator] for processing
+/// 3. Builds the navigation widget tree via [coordinator.layoutBuilder]
+/// 4. Handles system back button via [popRoute]
+///
+/// This delegate is automatically created by [Coordinator] and used in
+/// [MaterialApp.router] configuration.
 /// {@endtemplate}
 class CoordinatorRouterDelegate extends RouterDelegate<Uri>
     with ChangeNotifier, PopNavigatorRouterDelegateMixin<Uri> {

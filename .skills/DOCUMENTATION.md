@@ -10,6 +10,7 @@ This skill documents the approach for updating code documentation (doc comments)
 - **Role in Navigation Flow**: Explain how the class/mixin participates in the overall navigation system
 - **Method Purpose**: What the method does, not how it does it
 - **Relationship to Other Components**: How it connects with other parts of the system
+- **When to Override**: For overridable members, explain when customization is needed
 
 ### What to Avoid
 - **Code Examples**: Do not include code examples in documentation
@@ -31,10 +32,63 @@ For classes/mixins:
 mixin RouteExample on RouteTarget { ... }
 ```
 
+For abstract classes with mixins:
+```dart
+/// Brief description of what this is.
+///
+/// ## Inheritance Architecture
+///
+/// ```
+/// ClassName<T extends RouteUnique>
+///   extends ParentClass                    // Parent class responsibility
+///   with Mixin1<T>, Mixin2<T>             // Mixin responsibilities
+///   implements Interface1, Interface2     // Interface responsibilities
+/// ```
+///
+/// ## Role in Navigation Flow
+///
+/// [ClassName] orchestrates by:
+/// 1. First step
+/// 2. Second step
+/// ...
+///
+/// ## Class Architecture
+///
+/// This class composes functionality from multiple sources:
+///
+/// | Component | Responsibility |
+/// |-----------|----------------|
+/// | [ParentClass] | Core responsibility |
+/// | [Mixin1] | Feature responsibility |
+/// | [Mixin2] | Feature responsibility |
+///
+/// ## Abstract Nature
+///
+/// This is an **abstract class** that requires implementation of:
+/// - [requiredMethod]: What it does
+///
+/// You must extend this class and provide the required implementation.
+///
+/// ## Relationship with Related Components
+///
+/// Explain the relationship with related components (e.g., CoordinatorModular).
+
+For properties:
+```dart
+/// Brief description of what this is.
+///
+/// ## When to Override
+/// Override if you need custom behavior.
+///
+/// ## Relationship
+/// Explains how this property connects to other components.
+ReturnType get propertyName;
+```
+
 For methods:
 ```dart
 /// What this method does.
-/// 
+///
 /// Any additional context about behavior.
 ReturnType methodName(Parameters);
 ```
@@ -80,7 +134,40 @@ ReturnType methodName(Parameters);
 
 | File | Description |
 |------|-------------|
+| `lib/src/coordinator/base.dart` | Coordinator - Flutter-specific coordinator with Router integration |
 | `lib/src/coordinator/layout.dart` | CoordinatorLayout mixin for layout management |
+| `lib/src/coordinator/router.dart` | CoordinatorRouterDelegate and CoordinatorRouteParser |
+| `lib/src/coordinator/observer.dart` | CoordinatorNavigatorObserver for navigation observation |
+| `lib/src/coordinator/restoration/mixin.dart` | CoordinatorRestoration for state restoration |
+| `lib/src/coordinator/restoration/restorable.dart` | CoordinatorRestorable and ActiveRouteRestorable |
+
+### zenrouter - Path
+
+| File | Description |
+|------|-------------|
+| `lib/src/path/layout.dart` | RouteLayoutBinding extension |
+| `lib/src/path/navigation.dart` | NavigationPath for mutable stack navigation |
+| `lib/src/path/indexed.dart` | IndexedStackPath for tab-based navigation |
+| `lib/src/path/stack.dart` | NavigationStack, DeclarativeNavigationStack, IndexedStackPathBuilder |
+| `lib/src/path/restoration.dart` | RestorablePath mixin and NavigationPathRestorable |
+| `lib/src/path/transition.dart` | StackTransition, CupertinoSheetPage, DialogPage |
+
+### zenrouter - Mixins
+
+| File | Description |
+|------|-------------|
+| `lib/src/mixin/layout.dart` | RouteLayout for nested layout routes |
+| `lib/src/mixin/unique.dart` | RouteUnique for coordinator-integrated routes |
+| `lib/src/mixin/restoration.dart` | RouteRestorable and RestorableConverter for custom serialization |
+| `lib/src/mixin/transition.dart` | RouteTransition for custom page transitions |
+| `lib/src/mixin/query_parameters.dart` | RouteQueryParameters for URL query support |
+
+### zenrouter - Internal
+
+| File | Description |
+|------|-------------|
+| `lib/src/internal/type.dart` | Type definitions for zenrouter |
+| `lib/src/internal/diff.dart` | Myers diff algorithm for route stack comparison |
 
 ## Key Concepts Documented
 
