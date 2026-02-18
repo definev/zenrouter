@@ -43,6 +43,11 @@ jobs:
         working-directory: packages/zenrouter
         continue-on-error: false
 
+      - name: Run tests with coverage (zenrouter_core)
+        run: flutter test --coverage
+        working-directory: packages/zenrouter_core
+        continue-on-error: false
+
       - name: Run tests with coverage (zenrouter_file_generator)
         run: flutter test --coverage
         working-directory: packages/zenrouter_file_generator
@@ -54,5 +59,14 @@ jobs:
             token: ${{ secrets.CODECOV_TOKEN }}  
             files: packages/zenrouter/coverage/lcov.info
             flags: zenrouter
+            disable_search: true
+            fail_ci_if_error: true
+
+      - name: Upload coverage to Codecov (zenrouter_core)
+        uses: codecov/codecov-action@v4
+        with:
+            token: ${{ secrets.CODECOV_TOKEN }}  
+            files: packages/zenrouter_core/coverage/lcov.info
+            flags: zenrouter_core
             disable_search: true
             fail_ci_if_error: true
