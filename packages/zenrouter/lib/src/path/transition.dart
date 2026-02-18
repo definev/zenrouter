@@ -194,10 +194,7 @@ class CupertinoSheetPage<T extends Object> extends Page<T> {
   @override
   /// Creates the route for this page.
   Route<T> createRoute(BuildContext context) {
-    return CupertinoSheetRoute(
-      settings: this,
-      scrollableBuilder: (context, controller) => builder(context),
-    );
+    return CupertinoSheetRoute(settings: this, builder: builder);
   }
 }
 

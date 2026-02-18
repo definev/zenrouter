@@ -160,6 +160,7 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
   RouteLayout? get activeLayoutParent =>
       super.activeLayoutParent as RouteLayout?;
 
+  // coverage:ignore-start
   /// ChangeNotifier implementation for observing state changes.
   final _proxy = ChangeNotifier();
 
@@ -174,6 +175,7 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
 
   @override
   bool get hasListeners => _proxy.hasListeners;
+  // coverage:ignore-end
 
   /// Builds the root widget (the primary navigator).
   ///

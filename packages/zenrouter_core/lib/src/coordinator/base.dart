@@ -370,6 +370,24 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
     if (target == null) return null;
 
     final parentLayout = target.resolveParentLayout(this);
+    final parentPath = parentLayout?.resolvePath(this) ?? root;
+
+    final currentPath = this.activePath;
+    final currentRoute = currentPath.activeRoute;
+    if (currentPath case StackMutatable activePath
+        when currentRoute != null && activePath != parentPath) {
+      if (activePath.stack.length == 1) {
+        currentRoute.completeOnResult(result, this);
+        currentRoute.onDiscard();
+        activePath.reset();
+      } else {
+        final popped = await activePath.pop(result);
+        if (popped == null || !popped) return null;
+        // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
+        await currentRoute.onResult.future;
+      }
+    }
+
     if (parentLayout != null) {
       await _prepareParentLayoutList(
         parentLayout,
@@ -377,7 +395,6 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
       );
     }
 
-    final parentPath = parentLayout?.resolvePath(this) ?? root;
     if (parentPath case StackMutatable parentPath) {
       return parentPath.pushReplacement(target, result: result);
     }
