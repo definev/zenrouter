@@ -70,3 +70,12 @@ jobs:
             flags: zenrouter_core
             disable_search: true
             fail_ci_if_error: true
+
+      - name: Upload coverage to Codecov (zenrouter_file_generator)
+        uses: codecov/codecov-action@v4
+        with:
+            token: ${{ secrets.CODECOV_TOKEN }}  
+            files: packages/zenrouter_file_generator/coverage/lcov.info
+            flags: zenrouter_file_generator
+            disable_search: true
+            fail_ci_if_error: true
