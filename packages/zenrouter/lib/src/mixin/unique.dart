@@ -12,8 +12,6 @@ mixin RouteUnique on RouteTarget implements RouteUri {
   @override
   Uri get identifier => toUri();
 
-  Uri toUri();
-
   /// The type of layout that wraps this route.
   ///
   /// Return the type of the [RouteLayout] subclass that should contain this route.

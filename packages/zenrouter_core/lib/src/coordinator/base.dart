@@ -44,7 +44,8 @@ enum _ResolveLayoutStrategy {
 ///   - [IndexedStackPath]: Fixed stack for indexed navigation (tabs)
 ///
 /// - **[RouteTarget]**: Base class for all navigable destinations. Mix in:
-///   - [RouteUnique]: Required for coordinator integration
+///   - [RouteUri]: Abstract base for routes with URI representation (implement this)
+///     - [RouteUnique]: The most common mixin - extends [RouteTarget] and implements [RouteUri]
 ///   - [RouteGuard]: Intercept and conditionally prevent pops
 ///   - [RouteRedirect]: Redirect to different routes
 ///   - [RouteLayout]: Define shell/wrapper with nested [StackPath]

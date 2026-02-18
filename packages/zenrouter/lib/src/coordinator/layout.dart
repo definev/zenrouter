@@ -60,6 +60,19 @@ final kDefaultLayoutBuilderTable = Map.unmodifiable(<
   },
 });
 
+/// Mixin that provides layout builder and parent constructor management for [Coordinator].
+///
+/// This mixin is automatically applied to [Coordinator] and handles:
+/// - [defineLayoutBuilder]: Register layout builders for different path types
+/// - [defineLayoutParentConstructor]: Register constructors for layout parents
+/// - [getLayoutBuilder]: Retrieve the builder for a specific [PathKey]
+/// - [getLayoutParentConstructor]: Retrieve the constructor for a layout key
+///
+/// Layout builders control how [StackPath]s render their pages:
+/// - [NavigationPath]: Uses [NavigationStack] widget
+/// - [IndexedStackPath]: Uses [IndexedStackPathBuilder] widget
+///
+/// Default builders are provided via the top-level [kDefaultLayoutBuilderTable].
 mixin CoordinatorLayout<T extends RouteUnique> on CoordinatorCore<T> {
   final _layoutParentConstructorTable =
       <Object, RouteLayoutParentConstructor>{};
@@ -74,22 +87,46 @@ mixin CoordinatorLayout<T extends RouteUnique> on CoordinatorCore<T> {
       ? (coordinator as CoordinatorLayout)._layoutBuilderTable
       : _layoutBuilderTable;
 
+  /// Registers a constructor function for a layout parent identified by [layoutKey].
+  ///
+  /// The constructor is called by [createLayoutParent] to instantiate layout
+  /// parent widgets (e.g., shell routes with nested navigation).
+  ///
+  /// [layoutKey]: Unique identifier for the layout (typically the layout class itself)
+  /// [constructor]: Function that returns a new [RouteLayoutParent] instance
   @override
   void defineLayoutParentConstructor(
     Object layoutKey,
     RouteLayoutParentConstructor constructor,
   ) => layoutParentConstructorTable[layoutKey] = constructor;
 
+  /// Retrieves the constructor function for a layout parent identified by [layoutKey].
+  ///
+  /// Returns `null` if no constructor was registered for the given [layoutKey].
   RouteLayoutParentConstructor? getLayoutParentConstructor(Object layoutKey) =>
       layoutParentConstructorTable[layoutKey];
 
+  /// Creates a new layout parent instance using the registered constructor.
+  ///
+  /// Calls the constructor registered via [defineLayoutParentConstructor] for
+  /// the given [layoutKey]. Returns `null` if no constructor was registered.
   @override
   RouteLayoutParent? createLayoutParent(Object layoutKey) =>
       layoutParentConstructorTable[layoutKey]?.call(layoutKey);
 
+  /// Registers a layout builder for a specific [PathKey].
+  ///
+  /// Layout builders determine how a [StackPath] renders its pages. Common builders:
+  /// - [NavigationPath.key]: Renders pages using [NavigationStack]
+  /// - [IndexedStackPath.key]: Renders pages using [IndexedStackPathBuilder]
+  ///
+  /// Override default builders to customize page rendering behavior.
   void defineLayoutBuilder(PathKey key, RouteLayoutBuilder builder) =>
       layoutBuilderTable[key] = builder;
 
+  /// Retrieves the layout builder registered for a specific [PathKey].
+  ///
+  /// Returns `null` if no builder was registered for the given [key].
   RouteLayoutBuilder? getLayoutBuilder(PathKey key) => layoutBuilderTable[key];
 
   @override
