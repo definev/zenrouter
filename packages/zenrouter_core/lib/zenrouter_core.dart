@@ -1,5 +1,7 @@
 library;
 
+export 'src/internal/diff.dart';
+
 export 'src/coordinator/base.dart';
 export 'src/coordinator/modular.dart';
 

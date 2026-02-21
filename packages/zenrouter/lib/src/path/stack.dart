@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:zenrouter/src/coordinator/base.dart';
 import 'package:zenrouter/src/coordinator/observer.dart';
-import 'package:zenrouter/src/internal/diff.dart';
 import 'package:zenrouter/src/internal/type.dart';
 import 'package:zenrouter/src/mixin/unique.dart';
 import 'package:zenrouter/src/path/indexed.dart';
