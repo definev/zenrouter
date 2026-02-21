@@ -588,7 +588,7 @@ FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
 ```dart
 @override
 void defineLayout() {
-  RouteLayout.defineLayout(MyLayout, MyLayout.new); // ✅ Required
+  defineLayoutParent(MyLayout.new); // ✅ Required
 }
 ```
 

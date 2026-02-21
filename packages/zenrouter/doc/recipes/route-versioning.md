@@ -43,15 +43,10 @@ class ShopCoordinatorV1 extends Coordinator<AppRoute> {
   late final NavigationPath<AppRoute> shopV1Stack = NavigationPath.createWith(
     label: 'shop-v1',
     coordinator: this,
-  );
+  )..bindLayout(ShopV1Layout.new);
 
   @override
   List<StackPath> get paths => [...super.paths, shopV1Stack];
-
-  @override
-  void defineLayout() {
-    RouteLayout.defineLayout(ShopV1Layout, ShopV1Layout.new);
-  }
 
   @override
   FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
@@ -159,15 +154,10 @@ class ShopCoordinatorV2 extends Coordinator<AppRoute> {
   late final NavigationPath<AppRoute> shopV2Stack = NavigationPath.createWith(
     label: 'shop-v2',
     coordinator: this,
-  );
+  )..bindLayout(ShopV2Layout.new);
 
   @override
   List<StackPath> get paths => [...super.paths, shopV2Stack];
-
-  @override
-  void defineLayout() {
-    RouteLayout.defineLayout(ShopV2Layout, ShopV2Layout.new);
-  }
 
   @override
   FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {

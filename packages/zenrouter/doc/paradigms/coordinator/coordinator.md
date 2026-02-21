@@ -513,34 +513,24 @@ class AppCoordinator extends Coordinator<AppRoute> {
       FeedLayout(),
       ProfileLayout(),
     ],
-  );
+  )..bindLayout(HomeLayout.new);
   late final feedNavigation = NavigationPath<AppRoute>.createWith(
     coordinator: this,
     label: 'feed',
-  );
+  )..bindLayout(FeedLayout.new);
   late final profileNavigation = NavigationPath<AppRoute>.createWith(
     coordinator: this,
     label: 'profile',
-  );
+  )..bindLayout(ProfileLayout.new);
 
   @override
   List<StackPath<RouteTarget>> get paths => [
-    root,
+    ...super.paths,
     homeIndexed,
     feedNavigation,
     profileNavigation,
   ];
-
-  @override
-  void defineLayout() {
-    RouteLayout.defineLayout(HomeLayout, HomeLayout.new);
-    RouteLayout.defineLayout(FeedLayout, FeedLayout.new);
-    RouteLayout.defineLayout(ProfileLayout, ProfileLayout.new);
-  }
-
-  ...
 }
-
 ```
 
 The `parseRouteFromUri` method needs to be reworked since we added many new screens.
@@ -713,10 +703,11 @@ class DetailRoute extends AppRoute {
 
 // Register in Coordinator
 class AppCoordinator extends Coordinator<AppRoute> {
-  @override
-  void defineLayout() {
-    RouteLayout.defineLayout(HomeLayout, () => HomeLayout());
-  }
+  late final homeStack = NavigationPath.createWith(
+    label: 'home',
+    coordinator: this,
+  )..bindLayout(HomeLayout.new);
+
 }
 ```
 

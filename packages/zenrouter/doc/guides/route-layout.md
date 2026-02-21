@@ -64,7 +64,9 @@ class AppCoordinator extends Coordinator<AppRoute> {
   late final NavigationPath<AppRoute> shellPath = NavigationPath.createWith(
     label: 'shell',        // Unique label for restoration
     coordinator: this,
-  );
+  )
+  // ✅ Register the route layout constructor
+  ..bindLayout(ShellLayout.new);
 
   @override
   List<StackPath> get paths => [
@@ -76,23 +78,10 @@ class AppCoordinator extends Coordinator<AppRoute> {
 
 > **Important:** Always use the `.createWith()` factory to bind paths to coordinators. This ensures proper lifecycle management and state restoration.
 
-### Step 3: Register the Layout Constructor
-
-Use `defineLayout()` in your coordinator to register how the layout should be instantiated:
-
-```dart
-class AppCoordinator extends Coordinator<AppRoute> {
-  @override
-  void defineLayout() {
-    RouteLayout.defineLayout(ShellLayout, ShellLayout.new);
-  }
-}
-```
-
 > **Why is this needed?**
 > ZenRouter needs to create layout instances during navigation and state restoration. By registering the constructor, you enable ZenRouter to instantiate layouts without reflection (important for web and minification compatibility).
 
-### Step 4: Assign Routes to the Layout
+### Step 3: Assign Routes to the Layout
 
 Routes specify which layout they belong to using the `layout` getter:
 
@@ -434,7 +423,7 @@ When you push `DetailRoute`:
 
 ```
 Missing RouteLayout constructor for [MyLayout] must define by calling 
-[RouteLayout.defineLayout] in [defineLayout] function
+[defineLayoutParent] in [defineLayout] function
 ```
 
 **Solution:** Register the layout constructor:

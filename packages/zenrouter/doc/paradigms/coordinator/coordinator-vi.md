@@ -705,7 +705,7 @@ class DetailRoute extends AppRoute {
 class AppCoordinator extends Coordinator<AppRoute> {
   @override
   void defineLayout() {
-    RouteLayout.defineLayout(HomeLayout, () => HomeLayout());
+    defineLayoutParent(HomeLayout.new);
   }
 }
 ```

@@ -117,12 +117,7 @@ class AppCoordinator extends Coordinator<AppRoute> {
   late final NavigationPath<AppRoute> homeStack = NavigationPath.createWith(
     label: 'home',
     coordinator: this,
-  );
-
-  @override
-  void defineLayout() {
-    RouteLayout.defineLayout(HomeLayout, HomeLayout.new);
-  }
+  )..bindLayout(HomeLayout.new);
 }
 ```
 
