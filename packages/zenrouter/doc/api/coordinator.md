@@ -16,9 +16,9 @@ The Flutter-specific implementation of the navigation coordinator orchestrates n
 
 ```dart
 Coordinator<T extends RouteUnique>
-  extends CoordinatorCore<T>           // Core navigation logic
-  with CoordinatorLayout<T>,           // Layout builders
-       CoordinatorRestoration<T>,      // State restoration
+  extends CoordinatorCore<T>            // Core navigation logic
+  with CoordinatorLayout<T>,            // Layout builders
+       CoordinatorRestoration<T>,       // State restoration
        CoordinatorTransitionStrategy<T> // Page transitions
   implements RouterConfig<Uri>,         // Flutter Router integration
            RouteModule<T>,              // Modular navigation support
