@@ -29,11 +29,24 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique
     'Example: `OLD: RouteLayout.defineLayout(ShopLayout, ShopLayout.new);`\n'
     '         `NEW: defineLayoutParent(ShopLayout.new);`',
   )
+  /// Define a host [RouteLayout] for [StackPath].
+  ///
+  /// Use this to define how a specific layout type should be built.
   static void defineLayout<T extends RouteLayout>(
     Coordinator coordinator,
-    Object layoutKey,
+    Object layoutKey, // Not used, kept for backward compatibility
     RouteLayoutConstructor constructor,
   ) => coordinator.defineLayoutParent(constructor);
+
+  /// Registers a custom layout builder.
+  ///
+  /// Use this to define how a specific layout type should be built.
+  @Deprecated('Use `coordinator.defineLayoutBuilder` instead.')
+  static void definePath(
+    Coordinator coordinator,
+    PathKey key,
+    RouteLayoutBuilder builder,
+  ) => coordinator.defineLayoutBuilder(key, builder);
   // coverage:ignore-end
 
   /// Route restoration reflection table.
