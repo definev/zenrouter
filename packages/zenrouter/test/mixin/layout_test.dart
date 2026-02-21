@@ -181,20 +181,14 @@ class LayoutTestCoordinator extends Coordinator<LayoutTestRoute> {
   late final allowPopPath = NavigationPath<LayoutTestRoute>.create(
     label: 'nested',
     coordinator: this,
-  );
+  )..bindLayout(AllowPopLayout.new);
   late final notAllowPopPath = NavigationPath<LayoutTestRoute>.create(
-    label: 'nested',
+    label: 'not-allow-nested',
     coordinator: this,
-  );
+  )..bindLayout(NotAllowPopLayout.new);
 
   @override
-  void defineLayout() {
-    RouteLayout.defineLayout(AllowPopLayout, AllowPopLayout.new);
-    RouteLayout.defineLayout(NotAllowPopLayout, NotAllowPopLayout.new);
-  }
-
-  @override
-  List<StackPath> get paths => [...super.paths, allowPopPath];
+  List<StackPath> get paths => [...super.paths, allowPopPath, notAllowPopPath];
 
   @override
   LayoutTestRoute parseRouteFromUri(Uri uri) {
@@ -205,6 +199,28 @@ class LayoutTestCoordinator extends Coordinator<LayoutTestRoute> {
       _ => HomeRoute(),
     };
   }
+}
+
+class _ChildModuleCoordinator extends Coordinator<LayoutTestRoute> {
+  _ChildModuleCoordinator(this._parent);
+  final CoordinatorModular<LayoutTestRoute> _parent;
+
+  @override
+  CoordinatorModular<LayoutTestRoute> get coordinator => _parent;
+
+  @override
+  LayoutTestRoute parseRouteFromUri(Uri uri) => HomeRoute();
+}
+
+class _ParentModularCoordinator extends Coordinator<LayoutTestRoute>
+    with CoordinatorModular<LayoutTestRoute> {
+  @override
+  Set<RouteModule<LayoutTestRoute>> defineModules() => {
+    _ChildModuleCoordinator(this),
+  };
+
+  @override
+  LayoutTestRoute notFoundRoute(Uri uri) => HomeRoute();
 }
 
 // ============================================================================
@@ -333,6 +349,42 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const ValueKey('child-1')), findsOneWidget);
+    });
+
+    test('CoordinatorLayout table sharing with RouteModule', () {
+      final parent = _ParentModularCoordinator();
+      final child = parent.getModule<_ChildModuleCoordinator>();
+
+      expect(child.isRouteModule, isTrue);
+      expect(parent.isRouteModule, isFalse);
+
+      // Verify layout constructor table sharing
+      expect(
+        identical(
+          parent.layoutParentConstructorTable,
+          child.layoutParentConstructorTable,
+        ),
+        isTrue,
+        reason:
+            'Child module should share layoutParentConstructorTable with parent',
+      );
+
+      // Verify layout builder table sharing
+      expect(
+        identical(parent.layoutBuilderTable, child.layoutBuilderTable),
+        isTrue,
+        reason: 'Child module should share layoutBuilderTable with parent',
+      );
+
+      // Standalone coordinator has its own table
+      final standalone = LayoutTestCoordinator();
+      expect(
+        identical(
+          standalone.layoutParentConstructorTable,
+          parent.layoutParentConstructorTable,
+        ),
+        isFalse,
+      );
     });
   });
 }

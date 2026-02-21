@@ -1,12 +1,20 @@
-import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
 import 'package:zenrouter/zenrouter.dart';
 
-part 'restoration.dart';
-
+/// {@template zenrouter.CoordinatorRouteParser}
 /// Parses [RouteInformation] to and from [Uri].
 ///
 /// This is used by Flutter's Router widget to handle URL changes.
+///
+/// ## Role in Navigation Flow
+///
+/// [CoordinatorRouteParser] bridges URL changes and the navigation system:
+/// 1. Flutter's Router calls [parseRouteInformation] when URL changes
+/// 2. The parsed URI is passed to [CoordinatorRouterDelegate.setNewRoutePath]
+/// 3. The coordinator navigates to the appropriate route
+///
+/// This class is used internally by [MaterialApp.router] configuration.
+/// {@endtemplate}
 class CoordinatorRouteParser extends RouteInformationParser<Uri> {
   CoordinatorRouteParser({required this.coordinator});
 
@@ -25,9 +33,22 @@ class CoordinatorRouteParser extends RouteInformationParser<Uri> {
   }
 }
 
+/// {@template zenrouter.CoordinatorRouterDelegate}
 /// Router delegate that connects the [Coordinator] to Flutter's Router.
 ///
 /// Manages the navigator stack and handles system navigation events.
+///
+/// ## Role in Navigation Flow
+///
+/// [CoordinatorRouterDelegate] acts as the bridge between Flutter and ZenRouter:
+/// 1. Receives route changes via [setNewRoutePath] from Flutter's Router
+/// 2. Delegates navigation to the [Coordinator] for processing
+/// 3. Builds the navigation widget tree via [coordinator.layoutBuilder]
+/// 4. Handles system back button via [popRoute]
+///
+/// This delegate is automatically created by [Coordinator] and used in
+/// [MaterialApp.router] configuration.
+/// {@endtemplate}
 class CoordinatorRouterDelegate extends RouterDelegate<Uri>
     with ChangeNotifier, PopNavigatorRouterDelegateMixin<Uri> {
   CoordinatorRouterDelegate({required this.coordinator}) {
@@ -45,13 +66,9 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
   String get coordinatorRestorationId =>
       '_${coordinator.rootRestorationId}_coordinator_restorable';
 
-  final GlobalKey<_CoordinatorRestorableState> _coordinatorRestorableKey =
-      GlobalKey();
-
   @override
   Widget build(BuildContext context) {
     return CoordinatorRestorable(
-      key: _coordinatorRestorableKey,
       coordinator: coordinator,
       restorationId: coordinatorRestorationId,
       child: coordinator.layoutBuilder(context),
@@ -102,16 +119,19 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
       'If you want to use coordinator as [RouterConfig], you must return route from [parseRouteFromUri]',
     );
 
-    if (route is RouteDeepLink &&
-        route.deeplinkStrategy == DeeplinkStrategy.custom) {
-      coordinator.recover(route);
-    } else {
-      assert(
-        route != null,
-        'You must to provide a parse route for $configuration in [parseRouteFromUri] to use deeplink to it',
-      );
-      coordinator.navigate(route!);
+    if (route case RouteDeepLink()) {
+      final deeplink = route as RouteDeepLink;
+      if (deeplink.deeplinkStrategy == DeeplinkStrategy.custom) {
+        coordinator.recover(route!);
+      }
+      return;
     }
+
+    assert(
+      route != null,
+      'You must to provide a parse route for $configuration in [parseRouteFromUri] to use deeplink to it',
+    );
+    coordinator.navigate(route!);
   }
 
   /// Dont need to handle restored route since it handled in [CoordinatorRestorable]

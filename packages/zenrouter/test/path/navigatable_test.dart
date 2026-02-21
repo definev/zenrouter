@@ -101,7 +101,8 @@ class RedirectRoute extends NavigatableTestRoute
 
 /// A custom stack path that does NOT implement StackNavigatable
 /// to test the debug warning fallback in Coordinator.navigate()
-class BasicStackPath<T extends RouteTarget> extends StackPath<T> {
+class BasicStackPath<T extends RouteTarget> extends StackPath<T>
+    with ChangeNotifier {
   BasicStackPath({super.debugLabel, super.coordinator}) : super([]);
 
   @override
@@ -205,15 +206,10 @@ class BasicPathCoordinator extends Coordinator<NavigatableTestRoute> {
   late final BasicStackPath<NavigatableTestRoute> basic = BasicStackPath(
     coordinator: this,
     debugLabel: 'basic',
-  );
+  )..bindLayout(BasicLayout.new);
 
   @override
   List<StackPath<RouteTarget>> get paths => [...super.paths, basic];
-
-  @override
-  void defineLayout() {
-    RouteLayout.defineLayout(BasicLayout, BasicLayout.new);
-  }
 
   @override
   FutureOr<NavigatableTestRoute> parseRouteFromUri(Uri uri) {

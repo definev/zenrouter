@@ -1,176 +1,128 @@
 import 'package:flutter/widgets.dart';
 import 'package:zenrouter/zenrouter.dart';
 
+typedef DecodeLayoutKeyCallback = Object Function(String key);
+
 /// Mixin for routes that define a layout structure.
 ///
 /// A layout is a route that wraps other routes, such as a shell or a tab bar.
 /// It defines how its children are displayed and managed.
-mixin RouteLayout<T extends RouteUnique> on RouteUnique {
-  /// Registers a custom layout constructor.
+///
+/// ## Role in Navigation Flow
+///
+/// [RouteLayout] creates nested navigation hierarchies:
+/// 1. Acts as a parent container for child routes
+/// 2. Provides a [StackPath] via [resolvePath] for its children
+/// 3. Builds the nested navigation UI via [buildPath]
+/// 4. Coordinates with coordinator for layout parent construction
+///
+/// Layouts enable:
+/// - Shell routes with nested navigation
+/// - Tab bars with multiple navigation stacks
+/// - Drawer navigation with main content area
+mixin RouteLayout<T extends RouteUnique> on RouteUnique
+    implements RouteLayoutParent<T> {
+  // coverage:ignore-start
+  @Deprecated(
+    'Use `coordinator.defineLayoutParent` or `bindLayout` in the corresponding [StackPath] instead.\n'
+    'If you want to use this method, you must provide a [Coordinator] instance to the [RouteLayout.defineLayout] method.\n'
+    'Example: `OLD: RouteLayout.defineLayout(ShopLayout, ShopLayout.new);`\n'
+    '         `NEW: defineLayoutParent(ShopLayout.new);`',
+  )
+  /// Define a host [RouteLayout] for [StackPath].
   ///
-  /// Use this to define how a specific layout type should be instantiated.
+  /// Use this to define how a specific layout type should be built.
   static void defineLayout<T extends RouteLayout>(
-    Type layout,
-    T Function() constructor,
-  ) {
-    RouteLayout.layoutConstructorTable[layout] = constructor;
-    final layoutInstance = constructor();
-    layoutInstance.completeOnResult(null, null, true);
-    RouteLayout._reflectionLayoutType[layoutInstance.runtimeType.toString()] =
-        layoutInstance.runtimeType;
-  }
+    Coordinator coordinator,
+    Object layoutKey, // Not used, kept for backward compatibility
+    RouteLayoutConstructor constructor,
+    // ignore: invalid_use_of_protected_member
+  ) => coordinator.defineLayoutParent(constructor);
 
-  /// Table of registered layout constructors.
-  static Map<Type, RouteLayoutConstructor> layoutConstructorTable = {};
-
-  static final Map<String, Type> _reflectionLayoutType = {};
-  static RouteLayout deserialize(Map<String, dynamic> value) {
-    final type = _reflectionLayoutType[value['value'] as String];
-    if (type == null) {
-      throw UnimplementedError(
-        'The [${value['value']}] layout isn\'t defined. You must define it using RouteLayout.defineLayout',
-      );
-    }
-    return RouteLayout.layoutConstructorTable[type]!();
-  }
-
-  /// Table of registered layout builders.
+  /// Registers a custom layout builder.
   ///
-  /// This maps layout identifiers to their widget builder functions.
-  static final Map<PathKey, RouteLayoutBuilder> _layoutBuilderTable = {
-    NavigationPath.key: (coordinator, path, layout) {
-      final restorationId = switch (layout) {
-        RouteUnique route => coordinator.resolveRouteId(route),
-        _ => coordinator.rootRestorationId,
-      };
+  /// Use this to define how a specific layout type should be built.
+  @Deprecated('Use `coordinator.defineLayoutBuilder` instead.')
+  static void definePath(
+    Coordinator coordinator,
+    PathKey key,
+    RouteLayoutBuilder builder,
+  ) => coordinator.defineLayoutBuilder(key, builder);
+  // coverage:ignore-end
 
-      return NavigationStack(
-        path: path as NavigationPath<RouteUnique>,
-        navigatorKey: layout == null
-            ? coordinator.routerDelegate.navigatorKey
-            : null,
-        coordinator: coordinator,
-        restorationId: restorationId,
-        resolver: (route) {
-          switch (route) {
-            case RouteTransition():
-              return route.transition(coordinator);
-            default:
-              final routeRestorationId = coordinator.resolveRouteId(route);
-              final builder = Builder(
-                builder: (context) => route.build(coordinator, context),
-              );
-              return switch (coordinator.transitionStrategy) {
-                DefaultTransitionStrategy.material => StackTransition.material(
-                  builder,
-                  restorationId: routeRestorationId,
-                ),
-                DefaultTransitionStrategy.cupertino =>
-                  StackTransition.cupertino(
-                    builder,
-                    restorationId: routeRestorationId,
-                  ),
-                DefaultTransitionStrategy.none => StackTransition.none(
-                  builder,
-                  restorationId: routeRestorationId,
-                ),
-              };
-          }
-        },
-      );
-    },
-    IndexedStackPath.key: (coordinator, path, layout, [restorationId]) =>
-        ListenableBuilder(
-          listenable: path,
-          builder: (context, child) {
-            final indexedStackPath = path as IndexedStackPath<RouteUnique>;
-            return IndexedStackPathBuilder(
-              path: indexedStackPath,
-              coordinator: coordinator,
-              restorationId: restorationId,
-            );
-          },
-        ),
-  };
+  /// Route restoration reflection table.
+  static RouteLayout deserialize(
+    Map<String, dynamic> value, {
+    required RouteLayoutParentConstructor createLayoutParent,
+    required DecodeLayoutKeyCallback decodeLayoutKey,
+  }) {
+    final key = value['value'] as String;
+    final layoutKey = decodeLayoutKey(key);
+    return createLayoutParent(layoutKey) as RouteLayout;
+  }
 
   static Widget buildRoot(Coordinator coordinator) {
     final rootPathKey = coordinator.root.pathKey;
 
-    if (!_layoutBuilderTable.containsKey(rootPathKey)) {
-      // coverage:ignore-start
+    final routeLayoutBuilder = coordinator.getLayoutBuilder(rootPathKey);
+    // coverage:ignore-start
+    if (routeLayoutBuilder == null) {
       throw UnimplementedError(
-        'No layout builder provided for [${rootPathKey.key}]. If you extend the [StackPath] class, you must register it via [RouteLayout.definePath] to use [RouteLayout.buildRoot].',
+        'No layout builder provided for [${rootPathKey.key}]. If you extend the [StackPath] class, you must register it via [defineLayoutBuilder] to use [RouteLayout.buildRoot].',
       );
-      // coverage:ignore-end
     }
+    // coverage:ignore-end
 
-    return _layoutBuilderTable[rootPathKey]!(
-      coordinator,
-      coordinator.root,
-      null,
-    );
+    return routeLayoutBuilder(coordinator, coordinator.root, null);
   }
 
   /// Build the layout for this route.
   Widget buildPath(covariant Coordinator coordinator) {
     final path = resolvePath(coordinator);
 
-    if (!_layoutBuilderTable.containsKey(path.pathKey)) {
+    final routeLayoutBuilder = coordinator.getLayoutBuilder(path.pathKey);
+    if (routeLayoutBuilder == null) {
       throw UnimplementedError(
-        'No layout builder provided for [${path.pathKey.key}]. If you extend the [StackPath] class, you must register it via [RouteLayout.definePath] to use [RouteLayout.buildPath].',
+        'No layout builder provided for [${path.pathKey.key}]. If you extend the [StackPath] class, you must register it via [defineLayoutBuilder] to use [RouteLayout.buildPath].',
       );
     }
-    return _layoutBuilderTable[path.pathKey]!(coordinator, path, this);
+
+    return routeLayoutBuilder(coordinator, path, this);
   }
 
-  // coverage:ignore-start
-  /// Registers a custom layout builder.
-  ///
-  /// Use this to define how a specific layout type should be built.
-  static void definePath(PathKey key, RouteLayoutBuilder builder) =>
-      _layoutBuilderTable[key] = builder;
-  // coverage:ignore-end
+  @override
+  Widget build(covariant CoordinatorCore coordinator, BuildContext context) =>
+      buildPath(coordinator as Coordinator);
+
+  Map<String, dynamic> serialize() => {
+    'type': 'layout',
+    'value': layoutKey.toString(),
+  };
 
   /// Resolves the stack path for this layout.
   ///
   /// This determines which [StackPath] this layout manages.
-  StackPath<RouteUnique> resolvePath(covariant Coordinator coordinator);
+  @override
+  StackPath<RouteUnique> resolvePath(covariant CoordinatorCore coordinator);
 
-  // coverage:ignore-start
+  @override
+  Object get layoutKey => runtimeType;
+
   /// RouteLayout does not use a URI.
   @override
-  Uri toUri() => Uri.parse('/__layout/$runtimeType');
-  // coverage:ignore-end
+  Uri toUri() => Uri(pathSegments: ['__layout', layoutKey.toString()]);
+
+  late final _proxy = RouteLayoutParent.proxy(this);
 
   @override
-  Widget build(covariant Coordinator coordinator, BuildContext context) =>
-      buildPath(coordinator);
-
-  @override
-  void onDidPop(Object? result, covariant Coordinator? coordinator) {
+  void onDidPop(Object? result, covariant CoordinatorCore? coordinator) {
     super.onDidPop(result, coordinator);
-    assert(
-      coordinator != null,
-      '[RouteLayout] must be used with a [Coordinator]',
-    );
-    resolvePath(coordinator!).reset();
+    _proxy.onDidPop(result, coordinator);
   }
 
   @override
-  operator ==(Object other) => other.runtimeType == runtimeType;
+  operator ==(Object other) => _proxy == other;
 
   @override
-  int get hashCode => runtimeType.hashCode;
-
-  Map<String, dynamic> serialize() => {
-    'type': 'layout',
-    'value': runtimeType.toString(),
-  };
-}
-
-extension RouteLayoutBinding<T extends RouteUnique> on StackPath<T> {
-  void bindLayout(RouteLayoutConstructor constructor) {
-    final instance = constructor()..onDiscard();
-    RouteLayout.defineLayout(instance.runtimeType, constructor);
-  }
+  int get hashCode => _proxy.hashCode;
 }

@@ -127,7 +127,7 @@ enum RestorationStrategy { unique, converter }
 /// class AppCoordinator extends Coordinator<AppRoute> {
 ///   @override
 ///   void defineConverter() {
-///     RestorableConverter.defineConverter('book_detail', BookDetailConverter.new);
+///     defineRestorableConverter('book_detail', BookDetailConverter.new);
 ///   }
 /// }
 /// ```
@@ -179,6 +179,7 @@ mixin RouteRestorable<T extends RouteTarget> on RouteTarget {
   static T deserialize<T extends RouteTarget>(
     Map<String, dynamic> data, {
     required RouteUriParserSync<T>? parseRouteFromUri,
+    required RestorableConverterLookupFunction getRestorableConverter,
   }) {
     final rawStrategy = data['strategy'];
     if (rawStrategy == null || rawStrategy is! String) {
@@ -197,9 +198,7 @@ mixin RouteRestorable<T extends RouteTarget> on RouteTarget {
         if (value is Future) throw UnimplementedError();
         return value;
       case RestorationStrategy.converter:
-        final converter = RestorableConverter.buildConverter(
-          data['converter']! as String,
-        );
+        final converter = getRestorableConverter(data['converter']! as String);
         if (converter == null) throw UnimplementedError();
         final route = converter.deserialize((data['value']! as Map).cast());
         return route as T;
@@ -249,8 +248,8 @@ mixin RouteRestorable<T extends RouteTarget> on RouteTarget {
 /// ```
 /// App startup:
 ///   Coordinator.defineConverter() registers converters
-///     └─ RestorableConverter.defineConverter('key', constructor)
-///         └─ Stored in global _converterTable
+///     └─ defineRestorableConverter('key', constructor)
+///         └─ Stored in _converterTable coordinator's table
 ///
 /// During restoration:
 ///   RouteRestorable.deserialize(data)
@@ -317,7 +316,7 @@ mixin RouteRestorable<T extends RouteTarget> on RouteTarget {
 /// class AppCoordinator extends Coordinator<AppRoute> {
 ///   @override
 ///   void defineConverter() {
-///     RestorableConverter.defineConverter(
+///     defineRestorableConverter(
 ///       'myapp_user_profile',
 ///       () => const UserProfileConverter(),
 ///     );
@@ -391,11 +390,12 @@ abstract class RestorableConverter<T extends Object> {
   ///
   /// Example:
   /// ```dart
-  /// RestorableConverter.defineConverter(
+  /// defineRestorableConverter(
   ///   'user_profile',
   ///   () => const UserProfileConverter(),
   /// );
   /// ```
+  @Deprecated('Use `Coordinator.defineRestorableConverter` instead')
   static void defineConverter<T extends Object>(
     String key,
     RestoratableConverterConstructor<T> constructor,
@@ -410,6 +410,57 @@ abstract class RestorableConverter<T extends Object> {
     if (!_converterTable.containsKey(key)) return null;
     return _converterTable[key]!();
   }
+
+  /// Converts [RouteTarget] to primitive data
+  ///
+  /// This is called by Flutter's restoration framework when the app is being
+  /// killed.
+  ///
+  /// Built-in Types supports:
+  /// - [RouteLayout] - Serialize [RouteLayout]
+  /// - [RouteRestorable] - Call custom `serialize` method
+  /// - [RouteUnique] - Leverage `toUri` for serialization
+  static Object serializeRoute(RouteTarget value) => switch (value) {
+    RouteLayout() => value.serialize(),
+    RouteRestorable() => value.serialize(),
+    RouteUnique() => value.toUri().toString(),
+    _ => throw UnimplementedError(),
+  };
+
+  /// Converts saved primitive data back into a route object.
+  ///
+  /// This is called by Flutter's restoration framework when the app is being
+  /// restored. It receives the data that was previously returned by [toPrimitives]
+  /// and reconstructs the route stack.
+  static RT? deserializeRoute<RT extends RouteTarget>(
+    Object value, {
+    required RouteLayoutParentConstructor? createLayoutParent,
+    required DecodeLayoutKeyCallback? decodeLayoutKey,
+    required RouteUriParserSync? parseRouteFromUri,
+    required RestorableConverterLookupFunction getRestorableConverter,
+  }) => switch (value) {
+    String() => parseRouteFromUri!(Uri.parse(value)) as RT,
+    Map()
+        when value['type'] == 'layout' &&
+            createLayoutParent != null &&
+            decodeLayoutKey != null =>
+      RouteLayout.deserialize(
+            value.cast(),
+            createLayoutParent: createLayoutParent,
+            decodeLayoutKey: decodeLayoutKey,
+          )
+          as RT,
+    Map() =>
+      RouteRestorable.deserialize(
+            value.cast(),
+            parseRouteFromUri: parseRouteFromUri,
+            getRestorableConverter: getRestorableConverter,
+          )
+          as RT,
+    // coverage:ignore-start
+    _ => null,
+    // coverage:ignore-end
+  };
 
   /// The unique identifier for this converter.
   ///

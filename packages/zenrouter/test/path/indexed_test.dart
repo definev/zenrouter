@@ -197,15 +197,10 @@ class IndexedTestCoordinator extends Coordinator<IndexedTestRoute> {
     ],
     coordinator: this,
     label: 'indexed',
-  );
+  )..bindLayout(IndexedStackLayout.new);
 
   @override
   List<StackPath<RouteTarget>> get paths => [...super.paths, indexed];
-
-  @override
-  void defineLayout() {
-    RouteLayout.defineLayout(IndexedStackLayout, IndexedStackLayout.new);
-  }
 
   @override
   FutureOr<IndexedTestRoute> parseRouteFromUri(Uri uri) {

@@ -53,11 +53,6 @@ class AuthModule extends RouteModule<AppRoute> {
       _ => null, // Not handled by this module
     };
   }
-
-  @override
-  void defineLayout() {
-    // Auth module doesn't define layouts
-  }
 }
 
 // Auth Routes
@@ -127,7 +122,7 @@ class ShopModule extends RouteModule<AppRoute> {
   late final NavigationPath<AppRoute> shopStack = NavigationPath.createWith(
     label: 'shop',
     coordinator: coordinator,
-  );
+  )..bindLayout(ShopLayout.new);
 
   @override
   List<StackPath> get paths => [shopStack];
@@ -141,12 +136,6 @@ class ShopModule extends RouteModule<AppRoute> {
       ['shop', 'cart'] => CartRoute(),
       _ => null, // Not handled by this module
     };
-  }
-
-  @override
-  void defineLayout() {
-    // Register shop layout
-    RouteLayout.defineLayout(ShopLayout, ShopLayout.new);
   }
 }
 
@@ -354,7 +343,7 @@ class SettingsModule extends RouteModule<AppRoute> {
   late final NavigationPath<AppRoute> settingsStack = NavigationPath.createWith(
     label: 'settings',
     coordinator: coordinator,
-  );
+  )..bindLayout(SettingsLayout.new);
 
   @override
   List<StackPath> get paths => [settingsStack];
@@ -368,12 +357,6 @@ class SettingsModule extends RouteModule<AppRoute> {
       ['settings', 'notifications'] => NotificationsSettingsRoute(),
       _ => null, // Not handled by this module
     };
-  }
-
-  @override
-  void defineLayout() {
-    // Register settings layout
-    RouteLayout.defineLayout(SettingsLayout, SettingsLayout.new);
   }
 }
 

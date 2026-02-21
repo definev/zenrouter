@@ -202,8 +202,7 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      routerDelegate: appCoordinator.routerDelegate,
-      routeInformationParser: appCoordinator.routeInformationParser,
+      routeConfig: appCoordinator,
     );
   }
 }
@@ -512,15 +511,15 @@ class AppCoordinator extends Coordinator<AppRoute> {
       FeedLayout(),
       ProfileLayout(),
     ],
-  );
+  )..bindLayout(HomeLayout.new);
   late final feedNavigation = NavigationPath<AppRoute>.createWith(
     coordinator: this,
     label: 'feed',
-  );
+  )..bindLayout(FeedLayout.new);
   late final profileNavigation = NavigationPath<AppRoute>.createWith(
     coordinator: this,
     label: 'profile',
-  );
+  )..bindLayout(ProfileLayout.new);
 
   @override
   List<StackPath<RouteTarget>> get paths => [
@@ -529,14 +528,6 @@ class AppCoordinator extends Coordinator<AppRoute> {
     feedNavigation,
     profileNavigation,
   ];
-
-  @override
-  void defineLayout() {
-    RouteLayout.defineLayout(HomeLayout, HomeLayout.new);
-    RouteLayout.defineLayout(FeedLayout, FeedLayout.new);
-    RouteLayout.defineLayout(ProfileLayout, ProfileLayout.new);
-  }
-
   ...
 }
 

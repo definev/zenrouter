@@ -26,12 +26,7 @@ class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug {
     coordinator: this,
     label: 'tabs',
     [HomeTab(), SearchTab(), ProfileTab()],
-  );
-
-  @override
-  void defineLayout() {
-    RouteLayout.defineLayout(TabLayout, TabLayout.new);
-  }
+  )..bindLayout(TabLayout.new);
 
   @override
   List<StackPath> get paths => [...super.paths, tabPath];

@@ -143,7 +143,7 @@ class BookmarkDetailConverter extends RestorableConverter<BookmarkDetail> {
 class AppCoordinator extends Coordinator<AppRoute> {
   @override
   void defineConverter() {
-    RestorableConverter.defineConverter(
+    defineRestorableConverter(
       BookmarkDetailConverter.staticKey,
       BookmarkDetailConverter.new,
     );

@@ -69,16 +69,43 @@ Which mixins do I need?
 
 ### RouteUnique
 
-Makes a route identifiable by `Coordinator` and provides URI mapping. This mixin is **required** when using the Coordinator pattern for deep linking and URL synchronization.
+Base mixin for unique routes in the application.
 
-**Required when:**
-- Using the Coordinator pattern
-- You need deep linking support
-- You want URL synchronization
+Most routes should mix this in. It provides integration with the `Coordinator` and layout system.
 
-**Not needed when:**
-- Using pure imperative navigation
-- Using pure declarative navigation without Coordinator
+#### Role in Navigation Flow
+
+`RouteUnique` enables routes to participate in coordinator-based navigation:
+1. Implements `RouteUri` for URI-based identification
+2. Can be resolved by `Coordinator.parseRouteFromUri`
+3. Can be bound to a `RouteLayout` via the `layout` getter
+4. Creates parent layouts via `createParentLayout`
+
+This is the most common mixin for application routes.
+
+#### API
+
+```dart
+mixin RouteUnique on RouteTarget implements RouteUri {
+  @override
+  Uri get identifier => toUri();
+  
+  // Optional: Parent layout Type
+  Type? get layout => null;
+  
+  @override
+  Object? get parentLayoutKey => layout;
+  
+  @override
+  RouteLayout createParentLayout(covariant CoordinatorCore coordinator);
+  
+  @override
+  RouteLayout? resolveParentLayout(covariant CoordinatorCore coordinator);
+  
+  // Build the UI for this route
+  Widget build(covariant CoordinatorCore coordinator, BuildContext context);
+}
+```
 
 #### Recommended Pattern
 
@@ -96,27 +123,6 @@ abstract class AppRoute extends RouteTarget with RouteUnique {}
 
 > [!IMPORTANT]
 > The `Coordinator` class is **covariant**. When you create `AppCoordinator extends Coordinator<AppRoute>`, the `build()` method in your routes will receive `AppCoordinator` (not generic `Coordinator`), providing type-safe access to any custom methods or properties you add.
-
-#### API
-
-```dart
-mixin RouteUnique on RouteTarget {
-  // Convert route to URI
-  Uri toUri();
-  
-  // Build the UI for this route
-  Widget build(covariant Coordinator coordinator, BuildContext context);
-  
-  // Optional: Parent layout Type
-  Type? get layout => null;
-  
-  // Create a new layout instance (called automatically)
-  RouteLayout? createLayout(covariant Coordinator coordinator);
-  
-  // Resolve or create layout from active layouts (called automatically)
-  RouteLayout? resolveLayout(covariant Coordinator coordinator);
-}
-```
 
 #### Example: Basic Setup
 
@@ -169,64 +175,52 @@ class AppCoordinator extends Coordinator<AppRoute> {
 }
 ```
 
-#### Example: With Parameters
+#### Validation Note for IndexedStackPath
 
-```dart
-class UserRoute extends AppRoute {
-  final String userId;
-  
-  UserRoute(this.userId);
-  
-  @override
-  Uri toUri() => Uri.parse('/user/$userId');
-  
-  @override
-  Widget build(AppCoordinator coordinator, BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('User: $userId')),
-      body: UserProfile(userId: userId),
-    );
-  }
-  
-  @override
-  List<Object?> get props => [userId];
-}
-```
+When resolving `IndexedStackPath` layouts, `RouteUnique` validates in development mode that the route is already present in the initial stack. If a route uses an `IndexedStackPath` layout but isn't listed in its children during creation, an assertion error will guide you to fix it.
 
 ---
 
 ### RouteLayout<T>
 
-Creates a navigation layout that contains and manages other routes, essential for building nested navigation hierarchies like tab bars, drawers, and shell routes.
+Mixin for routes that define a layout structure.
 
-`RouteLayout` acts as a layout for `StackPath` instances. Each type of stack path requires its own corresponding layout widget. ZenRouter provides two built-in path types: `NavigationPath` (for stack-based push/pop navigation) uses `NavigationStack` as its layout, while `IndexedStackPath` (for tab bars and indexed navigation) uses `IndexedStack` as its layout.
+A layout is a route that wraps other routes, such as a shell or a tab bar. It defines how its children are displayed and managed.
 
-**Custom Layouts**: You can create your own layout types by implementing the `RouteLayout` mixin, registering the constructor in `layoutConstructorTable`, and providing the default widget builder in `layoutBuilderTable`. For more details, check out the advanced tutorial.
+#### Role in Navigation Flow
+
+`RouteLayout` creates nested navigation hierarchies:
+1. Acts as a parent container for child routes
+2. Provides a `StackPath` via `resolvePath` for its children
+3. Builds the nested navigation UI via `buildPath`
+4. Coordinates with coordinator for layout parent construction
+
+Layouts enable:
+- Shell routes with nested navigation
+- Tab bars with multiple navigation stacks
+- Drawer navigation with main content area
+
+`RouteLayout` acts as a layout for `StackPath` instances. Each type of stack path requires its own corresponding layout widget. ZenRouter provides two built-in path types: `NavigationPath` (for stack-based push/pop navigation) uses `NavigationStack` as its layout, while `IndexedStackPath` (for tab bars and indexed navigation) uses `IndexedStackPathBuilder` as its layout.
 
 #### API
 
 ```dart
-mixin RouteLayout<T extends RouteUnique> on RouteUnique {
+mixin RouteLayout<T extends RouteUnique> on RouteUnique
+    implements RouteLayoutParent<T> {
+    
   // Which navigation path does this layout manage?
-  StackPath<RouteUnique> resolvePath(covariant Coordinator coordinator);
-  
-  // Builds the layout UI (automatically delegates to layoutBuilderTable)
   @override
-  Widget build(covariant Coordinator coordinator, BuildContext context);
+  StackPath<RouteUnique> resolvePath(covariant CoordinatorCore coordinator);
   
-  // Optional: Parent layout Type (for nested layouts)
+  // Identifier for this layout (typically runtimeType)
   @override
-  Type? get layout => null;
+  Object get layoutKey => runtimeType;
   
-  // Static tables for layout construction and building
-  static Map<Type, RouteLayoutConstructor> layoutConstructorTable = {};
-  static Map<String, RouteLayoutBuilder> layoutBuilderTable = {...};
+  // Builds the layout UI
+  Widget buildPath(covariant Coordinator coordinator);
   
-  // Register a layout constructor
-  static void defineLayout<T extends RouteLayout>(
-    Type layoutType,
-    T Function() constructor,
-  );
+  @override
+  Widget build(covariant CoordinatorCore coordinator, BuildContext context);
 }
 ```
 
@@ -239,14 +233,11 @@ class TabBarLayout extends AppRoute with RouteLayout<AppRoute> {
       coordinator.tabPath;
   
   @override
-  Uri toUri() => Uri.parse('/tabs');
-  
-  @override
-  Widget build(AppCoordinator coordinator, BuildContext context) {
+  Widget buildPath(AppCoordinator coordinator) {
     final path = coordinator.tabPath;
     
     return Scaffold(
-      body: buildPath(coordinator),
+      body: super.buildPath(coordinator),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: path.activePathIndex,
         onTap: (index) => switch (index) {
@@ -265,151 +256,14 @@ class TabBarLayout extends AppRoute with RouteLayout<AppRoute> {
   }
 }
 
-// Tab routes point to the tab layout using Type reference
-class FeedTab extends AppRoute {
-  @override
-  Type? get layout => TabBarLayout;
-  
-  @override
-  Uri toUri() => Uri.parse('/tabs/feed');
-  
-  @override
-  Widget build(AppCoordinator coordinator, BuildContext context) {
-    return const Center(child: Text('Feed Tab'));
-  }
-}
-
-// Register layout in Coordinator
+// Register layout using bindLayout on the path
 class AppCoordinator extends Coordinator<AppRoute> {
-  @override
-  void defineLayout() {
-    RouteLayout.defineLayout(TabBarLayout, () => TabBarLayout());
-  }
-}
-```
-
-#### Example: Stack Navigation Layout (NavigationStack style)
-
-```dart
-class SettingsLayout extends AppRoute with RouteLayout<AppRoute> {
-  @override
-  NavigationPath<AppRoute> resolvePath(AppCoordinator coordinator) =>
-      coordinator.settingsStack;
-  
-  @override
-  Uri toUri() => Uri.parse('/settings');
-  
-  @override
-  Widget build(AppCoordinator coordinator, BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
-      body: buildPath(coordinator),
-    );
-  }
-  
-}
-
-// Settings routes point to settings layout using Type reference
-class GeneralSettings extends AppRoute {
-  @override
-  Type? get layout => SettingsLayout;
-  
-  @override
-  Uri toUri() => Uri.parse('/settings/general');
-  
-  @override
-  Widget build(AppCoordinator coordinator, BuildContext context) {
-    return ListView(
-      children: [
-        ListTile(
-          title: const Text('Account'),
-          onTap: () => coordinator.push(AccountSettings()),
-        ),
-        ListTile(
-          title: const Text('Privacy'),
-          onTap: () => coordinator.push(PrivacySettings()),
-        ),
-      ],
-    );
-  }
-}
-
-// Register layout in Coordinator
-class AppCoordinator extends Coordinator<AppRoute> {
-  @override
-  void defineLayout() {
-    RouteLayout.defineLayout(SettingsLayout, () => SettingsLayout());
-  }
-}
-```
-
-#### Example: Nested Layouts
-
-```dart
-// Level 1: Main app layout
-class AppLayout extends AppRoute with RouteLayout<AppRoute> {
-  @override
-  NavigationPath<AppRoute> resolvePath(AppCoordinator coordinator) =>
-      coordinator.mainStack;
-  
-  @override
-  Uri toUri() => Uri.parse('/');
-  
-  @override
-  Widget build(AppCoordinator coordinator, BuildContext context) {
-    return Scaffold(
-      body: buildPath(coordinator),
-    );
-  }
-}
-
-// Level 2: Tab bar layout (nested inside AppLayout)
-class TabBarLayout extends AppRoute with RouteLayout<AppRoute> {
-  @override
-  Type? get layout => AppLayout; // Parent layout Type
-  
-  @override
-  IndexedStackPath<AppRoute> resolvePath(AppCoordinator coordinator) =>
-      coordinator.tabPath;
-  
-  @override
-  Uri toUri() => Uri.parse('/tabs');
-  
-  @override
-  Widget build(AppCoordinator coordinator, BuildContext context) {
-    return Scaffold(
-      body: buildPath(coordinator),
-      bottomNavigationBar: BottomNavigationBar(/* ... */),
-    );
-  }
-}
-
-// Level 3: Feed stack layout (nested inside TabBarLayout)
-class FeedLayout extends AppRoute with RouteLayout<AppRoute> {
-  @override
-  Type? get layout => TabBarLayout; // Parent layout Type
-  
-  @override
-  NavigationPath<AppRoute> resolvePath(AppCoordinator coordinator) =>
-      coordinator.feedStack;
-  
-  @override
-  Uri toUri() => Uri.parse('/tabs/feed');
-  
-  @override
-  Widget build(AppCoordinator coordinator, BuildContext context) {
-    return buildPath(coordinator);
-  }
-}
-
-// Register all layouts in Coordinator
-class AppCoordinator extends Coordinator<AppRoute> {
-  @override
-  void defineLayout() {
-    RouteLayout.defineLayout(AppLayout, () => AppLayout());
-    RouteLayout.defineLayout(TabBarLayout, () => TabBarLayout());
-    RouteLayout.defineLayout(FeedLayout, () => FeedLayout());
-  }
+  // Define layout
+  late final tabPath = IndexedStackPath<AppRoute>.createWith(
+    [FeedTab(), ProfileTab(), SettingsTab()],
+    coordinator: this,
+    label: 'tabs',
+  )..bindLayout(TabBarLayout.new);
 }
 ```
 
@@ -1133,7 +987,16 @@ class CampaignRoute extends RouteTarget with RouteDeepLink {
 
 ### RouteTransition
 
-Customizes page transition animations for a route.
+Mixin that enables custom page transitions for routes.
+
+When mixed into routes, allows each route to define its own transition animation when being pushed or popped from the navigation stack.
+
+#### Role in Navigation Flow
+
+Routes with `RouteTransition` participate in navigation by:
+1. Returning a `StackTransition` from the `transition` method
+2. The `NavigationStack` uses this transition when building pages
+3. The transition is applied by Flutter's Navigator when the route is shown
 
 **Use when:**
 - You want custom page transitions
@@ -1144,8 +1007,9 @@ Customizes page transition animations for a route.
 
 ```dart
 mixin RouteTransition on RouteUnique {
+  /// Returns the StackTransition for this route.
   StackTransition<T> transition<T extends RouteUnique>(
-    covariant Coordinator coordinator,
+    covariant CoordinatorCore coordinator,
   );
 }
 ```
@@ -1159,10 +1023,10 @@ class FadeRoute extends RouteTarget with RouteUnique, RouteTransition {
   
   @override
   StackTransition<T> transition<T extends RouteUnique>(
-    Coordinator coordinator,
+    CoordinatorCore coordinator,
   ) {
     return StackTransition.custom(
-      builder: (context) => build(coordinator, context),
+      builder: (context) => build(coordinator as Coordinator, context),
       pageBuilder: (context, key, child) => PageRouteBuilder(
         settings: RouteSettings(name: key.toString()),
         pageBuilder: (context, animation, secondaryAnimation) => child,
@@ -1177,7 +1041,7 @@ class FadeRoute extends RouteTarget with RouteUnique, RouteTransition {
   }
   
   @override
-  Widget build(Coordinator coordinator, BuildContext context) {
+  Widget build(CoordinatorCore coordinator, BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Fade Transition')),
       body: const Center(child: Text('Faded in!')),
@@ -1185,30 +1049,6 @@ class FadeRoute extends RouteTarget with RouteUnique, RouteTransition {
   }
 }
 ```
-
-#### Example: Platform-Specific Transitions
-
-```dart
-class AdaptiveRoute extends RouteTarget with RouteTransition {
-  @override
-  StackTransition<T> transition<T extends RouteUnique>(
-    Coordinator coordinator,
-  ) {
-    if (Platform.isIOS) {
-      return StackTransition.cupertino(
-        build(coordinator, coordinator.navigator.context),
-      );
-    } else {
-      return StackTransition.material(
-        build(coordinator, coordinator.navigator.context),
-      );
-    }
-  }
-}
-```
-
----
-
 
 ### Full Example
 ```dart
@@ -1325,7 +1165,19 @@ class TabLayout extends RouteTarget with RouteUnique, RouteLayout {...}
 
 ### RouteQueryParameters
 
-Efficiently handles query parameters by allowing granular UI rebuilds. This mixin provides a `ValueNotifier` for query parameters, enabling parts of your UI to rebuild when specific queries change without rebuilding the entire route or triggering navigation transitions.
+Mixin for routes that support query parameters.
+
+This mixin provides a `ValueNotifier` for queries that allows widgets to rebuild only when query parameters change, not on every coordinator update.
+
+#### Role in Navigation Flow
+
+`RouteQueryParameters` enables URL query parameter support:
+1. Maintains query state via `queryNotifier`
+2. Updates URL without triggering navigation via `updateQueries`
+3. Provides targeted rebuilds via `ValueListenableBuilder` or `selectorBuilder`
+4. Supports selective widget updates without full route changes
+
+Query parameters are intentionally excluded from `RouteTarget.props` so that changing queries does not affect route identity. This allows updating the URL without triggering navigation transitions.
 
 **Required when:**
 - You have complex routes with filters, sorting, or pagination
@@ -1336,25 +1188,28 @@ Efficiently handles query parameters by allowing granular UI rebuilds. This mixi
 
 ```dart
 mixin RouteQueryParameters on RouteUnique {
-  // The notifier for query parameters
+  // ValueNotifier for query parameters.
   ValueNotifier<Map<String, String>> get queryNotifier;
 
-  // Current query parameters
-  Map<String, String> get queries;
+  // Current query parameters.
+  Map<String, String> get queries => queryNotifier.value;
+
+  // Set new query parameters directly
+  set queries(Map<String, String> value);
 
   // Get a specific query
   String? query(String name);
-
-  // Update queries and sync URL
-  void updateQueries(
-    covariant Coordinator coordinator, {
-    required Map<String, String> queries,
-  });
 
   // Build widgets that rebuild only when specific queries change
   Widget selectorBuilder<T>({
     required T Function(Map<String, String> queries) selector,
     required Widget Function(BuildContext context, T value) builder,
+  });
+
+  // Updates the query parameters and synchronizes the browser URL.
+  void updateQueries(
+    covariant Coordinator coordinator, {
+    required Map<String, String> queries,
   });
 }
 ```
@@ -1401,8 +1256,6 @@ class CollectionListRoute extends AppRoute with RouteQueryParameters {
   }
 }
 ```
-
----
 
 ## See Also
 

@@ -777,9 +777,6 @@ class FullMixinRoute extends TestAppRoute
 
 class MixinTestCoordinator extends Coordinator<TestAppRoute> {
   @override
-  void defineLayout() {}
-
-  @override
   List<StackPath> get paths => [...super.paths];
 
   @override

@@ -1,54 +1,80 @@
 import 'package:flutter/widgets.dart';
-import 'package:zenrouter/zenrouter.dart';
+import 'package:zenrouter/src/coordinator/base.dart';
+import 'package:zenrouter/src/mixin/layout.dart';
+import 'package:zenrouter/src/path/indexed.dart';
+import 'package:zenrouter_core/zenrouter_core.dart';
 
 /// Base mixin for unique routes in the application.
 ///
 /// Most routes should mix this in. It provides integration with the [Coordinator]
 /// and layout system.
-mixin RouteUnique on RouteTarget {
+///
+/// ## Role in Navigation Flow
+///
+/// [RouteUnique] enables routes to participate in coordinator-based navigation:
+/// 1. Implements [RouteUri] for URI-based identification
+/// 2. Can be resolved by [Coordinator.parseRouteFromUri]
+/// 3. Can be bound to a [RouteLayout] via the [layout] getter
+/// 4. Creates parent layouts via [createParentLayout]
+///
+/// This is the most common mixin for application routes.
+mixin RouteUnique on RouteTarget implements RouteUri {
+  @override
+  Uri get identifier => toUri();
+
   /// The type of layout that wraps this route.
   ///
   /// Return the type of the [RouteLayout] subclass that should contain this route.
   Type? get layout => null;
 
+  @override
+  Object? get parentLayoutKey => layout;
+
+  // coverage:ignore-start
   /// Creates an instance of the layout for this route.
-  ///
-  /// This uses the registered constructor from [RouteLayout.layoutConstructorTable].
-  RouteLayout? createLayout(covariant Coordinator coordinator) {
-    final constructor = RouteLayout.layoutConstructorTable[layout];
+  @Deprecated('Use `createParentLayout` instead.')
+  RouteLayout createLayout(covariant Coordinator coordinator) =>
+      createParentLayout(coordinator);
+  // coverage:ignore-end
+
+  @override
+  RouteLayout createParentLayout(covariant CoordinatorCore coordinator) {
+    final constructor = _proxy.createParentLayout(coordinator);
+
     if (constructor == null) {
       throw UnimplementedError(
-        '$this: Missing RouteLayout constructor for [$layout] must define by calling [RouteLayout.defineLayout] in [defineLayout] function at [${coordinator.runtimeType}]',
+        'Missing constructor for the [$parentLayoutKey] layout. '
+        'You can define a constructor by calling `bindLayout` in the corresponding [StackPath].\n'
+        'Alternatively, you can define a constructor for this layout by calling [defineLayoutParent] '
+        'in the [defineLayout] function of [${coordinator.runtimeType}].',
       );
     }
-    return constructor();
+
+    return constructor as RouteLayout;
   }
 
-  /// Resolves the active layout instance for this route.
+  // coverage:ignore-start
+  /// Resolves the parent layout for this route.
   ///
   /// Checks if an instance of the required layout is already active in the
   /// coordinator. If so, returns it. Otherwise, creates a new one.
-  RouteLayout? resolveLayout(covariant Coordinator coordinator) {
-    if (layout == null) return null;
-    final layouts = coordinator.activeLayouts;
-    if (layouts.isEmpty && layout == null) return null;
+  @Deprecated('use `resolveParentLayout` instead.')
+  RouteLayout? resolveLayout(covariant CoordinatorCore coordinator) =>
+      resolveParentLayout(coordinator);
+  // coverage:ignore-end
 
-    // Find existing layout or create new one
-    RouteLayout? resolvedLayout;
-    for (var i = layouts.length - 1; i >= 0; i -= 1) {
-      final l = layouts[i];
-      if (l.runtimeType == layout) {
-        resolvedLayout = l;
-        break;
-      }
-    }
-    resolvedLayout ??= createLayout(coordinator);
+  late final _proxy = RouteLayoutChild.proxy(this);
+
+  @override
+  RouteLayout? resolveParentLayout(coordinator) {
+    final layout = _proxy.resolveParentLayout(coordinator) as RouteLayout?;
 
     // Validate that routes using IndexedStackPath are in the initial stack
     // Using assert with closure to ensure all validation logic is removed in production
     assert(() {
-      final path = resolvedLayout!.resolvePath(coordinator);
-      if (path is IndexedStackPath) {
+      final p = layout?.resolvePath(coordinator);
+      if (p is IndexedStackPath) {
+        final path = p as IndexedStackPath;
         final routeInStack = path.stack.any(
           (r) => r.runtimeType == runtimeType,
         );
@@ -69,12 +95,9 @@ mixin RouteUnique on RouteTarget {
       return true;
     }());
 
-    return resolvedLayout;
+    return layout;
   }
 
   /// Builds the widget for this route.
-  Widget build(covariant Coordinator coordinator, BuildContext context);
-
-  /// Returns the URI representation of this route.
-  Uri toUri();
+  Widget build(covariant CoordinatorCore coordinator, BuildContext context);
 }

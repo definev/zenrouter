@@ -212,7 +212,7 @@ class TestCoordinator extends Coordinator<AppRoute> {
     [HomeTab(), SearchTab()],
     coordinator: this,
     label: 'tabs',
-  );
+  )..bindLayout(TabLayout.new);
   late final undefinedTabStack = IndexedStackPath.createWith(
     [UndefinedHomeTab(), UndefinedSearchTab()],
     coordinator: this,
@@ -223,16 +223,8 @@ class TestCoordinator extends Coordinator<AppRoute> {
   List<StackPath> get paths => [...super.paths, tabStack, undefinedTabStack];
 
   @override
-  void defineLayout() {
-    RouteLayout.defineLayout(TabLayout, TabLayout.new);
-  }
-
-  @override
   void defineConverter() {
-    RestorableConverter.defineConverter(
-      'test_bookmark',
-      () => const BookmarkConverter(),
-    );
+    defineRestorableConverter('test_bookmark', () => const BookmarkConverter());
   }
 
   @override
@@ -387,10 +379,7 @@ void main() {
       ];
 
       expect(
-        () => coordinator.root.deserialize(
-          serialized,
-          coordinator.parseRouteFromUriSync,
-        ),
+        () => coordinator.root.deserialize(serialized),
         throwsA(
           isA<UnimplementedError>().having(
             (e) => e.message,
@@ -486,6 +475,7 @@ void main() {
       final route = RouteRestorable.deserialize<AppRoute>(
         data,
         parseRouteFromUri: coordinator.parseRouteFromUriSync,
+        getRestorableConverter: coordinator.getRestorableConverter,
       );
 
       expect(route, isA<BookmarkRoute>());
@@ -499,6 +489,7 @@ void main() {
       final route = RouteRestorable.deserialize<AppRoute>(
         data,
         parseRouteFromUri: coordinator.parseRouteFromUriSync,
+        getRestorableConverter: coordinator.getRestorableConverter,
       );
 
       expect(route, isA<ProfileRoute>());
@@ -512,38 +503,10 @@ void main() {
         () => RouteRestorable.deserialize<AppRoute>(
           data,
           parseRouteFromUri: coordinator.parseRouteFromUriSync,
+          getRestorableConverter: coordinator.getRestorableConverter,
         ),
         throwsA(isA<UnimplementedError>()),
       );
-    });
-  });
-
-  group('RestorableConverter Registry', () {
-    test('registers and retrieves converter by key', () {
-      final converter = RestorableConverter.buildConverter('test_bookmark');
-
-      expect(converter, isNotNull);
-      expect(converter, isA<BookmarkConverter>());
-    });
-
-    test('returns null for unregistered converter key', () {
-      final converter = RestorableConverter.buildConverter('non_existent');
-
-      expect(converter, isNull);
-    });
-
-    test('converter round-trip maintains data', () {
-      final original = BookmarkRoute(id: '123', customData: 'original');
-      final converter = const BookmarkConverter();
-
-      // Serialize
-      final serialized = converter.serialize(original);
-
-      // Deserialize
-      final restored = converter.deserialize(serialized);
-
-      expect(restored.id, equals(original.id));
-      expect(restored.customData, equals(original.customData));
     });
   });
 

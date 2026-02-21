@@ -93,6 +93,28 @@ class SearchTab extends AppRoute {
   List<Object?> get props => [];
 }
 
+class SettingsLayout extends AppRoute with RouteLayout {
+  @override
+  StackPath<RouteUnique> resolvePath(TestCoordinator coordinator) =>
+      coordinator.settingsStack;
+}
+
+class SettingsPageRoute extends AppRoute {
+  @override
+  Type? get layout => SettingsLayout;
+
+  @override
+  Uri toUri() => Uri.parse('/settings-page');
+
+  @override
+  Widget build(covariant TestCoordinator coordinator, BuildContext context) {
+    return const Scaffold(body: Text('Settings Page'));
+  }
+
+  @override
+  List<Object?> get props => [];
+}
+
 class RedirectRoute extends AppRoute with RouteRedirect<AppRoute> {
   RedirectRoute(this.target);
   final AppRoute target;
@@ -126,8 +148,11 @@ class RedirectNullRoute extends AppRoute with RouteRedirect<AppRoute> {
 }
 
 class GuardRoute extends AppRoute with RouteGuard {
-  GuardRoute({this.allowPop = true});
+  GuardRoute({this.allowPop = true, this.layout});
   final bool allowPop;
+
+  @override
+  final Type? layout;
 
   @override
   Uri toUri() => Uri.parse('/guard');
@@ -151,8 +176,13 @@ class TestCoordinator extends Coordinator<AppRoute> {
     label: 'tabs',
   )..bindLayout(TabLayout.new);
 
+  late final NavigationPath<AppRoute> settingsStack = NavigationPath.createWith(
+    coordinator: this,
+    label: 'settings',
+  )..bindLayout(SettingsLayout.new);
+
   @override
-  List<StackPath> get paths => [...super.paths, tabStack];
+  List<StackPath> get paths => [...super.paths, tabStack, settingsStack];
 
   @override
   AppRoute parseRouteFromUri(Uri uri) {
@@ -663,5 +693,55 @@ void main() {
         expect(guardResult, isNull);
       },
     );
+
+    testWidgets('pushReplacement with different layout replaces correctly', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Push a root route (SettingsRoute)
+      final settingRootPage = SettingsRoute();
+      final result = coordinator.push(settingRootPage);
+      await tester.pumpAndSettle();
+
+      // Verify initial state: SettingsRoute is active
+      expect(coordinator.root.stack.last, isA<SettingsRoute>());
+
+      // Push replacement with a route that has different layout (SettingsLayout)
+      final settingsPage = SettingsPageRoute();
+      final result2 = coordinator.pushReplacement(settingsPage, result: 'test');
+      await tester.pumpAndSettle();
+
+      // Stack should have the new layout and route
+      expect(await result, 'test');
+      expect(coordinator.root.stack.last, isA<SettingsLayout>());
+      expect(coordinator.settingsStack.activeRoute, isA<SettingsPageRoute>());
+
+      final settingsPage2 = SettingsRoute();
+      coordinator.pushReplacement(settingsPage2, result: 'test');
+      await tester.pumpAndSettle();
+
+      expect(await result2, 'test');
+      expect(coordinator.root.stack.last, isA<SettingsRoute>());
+      expect(coordinator.settingsStack.stack.isEmpty, true);
+
+      final guardPage = GuardRoute(allowPop: false);
+      coordinator.push(guardPage);
+      await tester.pumpAndSettle();
+      expect(coordinator.root.stack.last, isA<GuardRoute>());
+
+      final settingRoot2Page = SettingsPageRoute();
+      coordinator.pushReplacement(settingRoot2Page, result: 'test');
+      await tester.pumpAndSettle();
+
+      expect(coordinator.root.stack.last, isA<GuardRoute>());
+      expect(coordinator.settingsStack.stack.isEmpty, true);
+    });
   });
 }

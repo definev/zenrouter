@@ -164,32 +164,24 @@ class MissingTabRoute extends ErrorTestRoute {
 /// Test coordinator
 class ErrorTestCoordinator extends Coordinator<ErrorTestRoute> {
   late final UnregisteredCustomPath<ErrorTestRoute> testStack =
-      UnregisteredCustomPath(coordinator: this, label: 'test');
+      UnregisteredCustomPath(coordinator: this, label: 'test')
+        ..bindLayout(MockUnregisteredPathLayout.new);
   late final NavigationPath<ErrorTestRoute> normalStack =
       NavigationPath.createWith(coordinator: this, label: 'root');
   late final IndexedStackPath<ErrorTestRoute> normalIndexedStack =
       IndexedStackPath.createWith(
         [SimpleErrorRoute(id: 'home')],
         coordinator: this,
-        label: 'root',
-      );
+        label: 'indexed-root',
+      )..bindLayout(NormalIndexedStackLayout.new);
 
   @override
-  void defineLayout() {
-    // Intentionally NOT defining UndefinedLayout to test the error
-    // But DO define MockUnregisteredPathLayout so we can test the path builder error
-    RouteLayout.defineLayout(
-      MockUnregisteredPathLayout,
-      () => MockUnregisteredPathLayout(),
-    );
-    RouteLayout.defineLayout(
-      NormalIndexedStackLayout,
-      () => NormalIndexedStackLayout(),
-    );
-  }
-
-  @override
-  List<StackPath> get paths => [...super.paths, testStack];
+  List<StackPath> get paths => [
+    ...super.paths,
+    testStack,
+    normalStack,
+    normalIndexedStack,
+  ];
 
   @override
   ErrorTestRoute parseRouteFromUri(Uri uri) {
@@ -208,7 +200,8 @@ class ErrorTestCoordinator extends Coordinator<ErrorTestRoute> {
 }
 
 // Custom StackPath that will not have a registered builder
-class UnregisteredCustomPath<T extends RouteUnique> extends StackPath<T> {
+class UnregisteredCustomPath<T extends RouteUnique> extends StackPath<T>
+    with ChangeNotifier {
   final List<T> _internalStack;
   UnregisteredCustomPath({
     required Coordinator coordinator,
@@ -280,9 +273,6 @@ class GuardedTestRoute extends ErrorTestRoute with RouteGuard {
 }
 
 class SecondCoordinator extends Coordinator<ErrorTestRoute> {
-  @override
-  void defineLayout() {}
-
   @override
   ErrorTestRoute parseRouteFromUri(Uri uri) {
     return SimpleErrorRoute(id: 'second');
@@ -409,7 +399,7 @@ void main() {
                 .having(
                   (e) => e.message,
                   'message',
-                  contains('[RouteLayout.definePath]'),
+                  contains('[defineLayoutBuilder]'),
                 ),
           ),
         );
@@ -485,7 +475,7 @@ void main() {
         // Should mention the type name
         expect(e.message, contains('FakeStackPathType'));
         // Should tell where to register
-        expect(e.message, contains('RouteLayout.definePath'));
+        expect(e.message, contains('defineLayoutBuilder'));
         // Should explain the condition
         expect(e.message, contains('extend the [StackPath]'));
       }
@@ -500,7 +490,8 @@ void main() {
         // Should tell where to define
         expect(e.message, contains('defineLayout'));
         // Should mention how to define
-        expect(e.message, contains('RouteLayout.defineLayout'));
+        expect(e.message, contains('bindLayout'));
+        expect(e.message, contains('defineLayoutParent'));
         // Should reference your coordinator
         expect(e.message, contains('ErrorTestCoordinator'));
       }
@@ -525,7 +516,8 @@ void main() {
         expect(message, contains('UndefinedLayout'));
 
         // Where: mentions where to register
-        expect(message, contains('RouteLayout.defineLayout'));
+        expect(message, contains('bindLayout'));
+        expect(message, contains('defineLayoutParent'));
         expect(message, contains('defineLayout'));
         expect(message, contains('ErrorTestCoordinator'));
       }
@@ -604,7 +596,7 @@ void main() {
           isA<UnimplementedError>().having(
             (e) => e.message,
             'message',
-            contains('definePath'),
+            contains('defineLayoutBuilder'),
           ),
         ),
       );
@@ -728,7 +720,7 @@ void main() {
         // Attempting to resolve layout for a route that's not in the IndexedStackPath
         // should trigger an assertion error
         expect(
-          () => missingRoute.resolveLayout(coordinator),
+          () => missingRoute.resolveParentLayout(coordinator),
           throwsA(
             isA<AssertionError>().having(
               (e) => e.message.toString(),
@@ -816,7 +808,7 @@ void main() {
       final missingRoute = MissingTabRoute();
 
       try {
-        missingRoute.resolveLayout(coordinator);
+        missingRoute.resolveParentLayout(coordinator);
         fail('Should have thrown AssertionError');
       } on AssertionError catch (e) {
         final message = e.message.toString();

@@ -62,6 +62,90 @@ Deeply integrating paths with their coordinator using `createWith` provides seve
 **Why it is worth it:**
 When using `createWith`, you are explicitly creating a path intended to work *with* a Coordinator. Therefore, this coupling is intentional and necessary. It guarantees that the path always has access to the correct context for advanced features like guards and redirects, making the system more robust and preventing common configuration errors.
 
+## Path Layout Builder: `defineLayoutBuilder()`
+
+The `RouteLayout.definePath()` static method has been deprecated and replaced by the instance method `coordinator.defineLayoutBuilder()`.
+
+### Changes
+
+- **Deprecated**: The static method `RouteLayout.definePath(coordinator, key, builder)`.
+- **New**: The instance method `coordinator.defineLayoutBuilder(key, builder)`.
+
+### Migration
+
+Replace calls to the static `RouteLayout.definePath` with the `defineLayoutBuilder` method on your coordinator instance.
+
+**Before:**
+```dart
+// Static definition
+RouteLayout.definePath(
+  NavigationPath.key,
+  (coordinator, path, layout) => CustomNavigationStack(...),
+);
+```
+
+**After:**
+```dart
+// Instance definition
+coordinator.defineLayoutBuilder(
+  NavigationPath.key,
+  (coordinator, path, layout) => CustomNavigationStack(...),
+);
+```
+
+### Rationale
+
+Moving `defineLayoutBuilder` to the `Coordinator` instance solves a critical architectural issue by **avoiding global state**:
+
+1. **Scoped State**: Layout builders are now scoped to the specific `Coordinator` instance rather than sitting in a static global context. This ensures that multiple coordinators (e.g., in testing or advanced architectures) do not interfere with each other's custom layout builders.
+2. **Lifecycle Management**: By associating the builder table with the coordinator, it automatically cleans up when the coordinator is disposed, preventing memory leaks.
+
+## Layout Registration: `bindLayout()`
+
+The layout registration API has been simplified from `defineLayout()` to `bindLayout()`.
+
+### Changes
+
+- **Deprecated**: `defineLayout()` method with `RouteLayout.defineLayout()` calls.
+- **New**: `bindLayout()` method on `StackPath` for inline layout registration.
+
+### Migration
+
+**Before (using defineLayout):**
+```dart
+class AppCoordinator extends Coordinator<AppRoute> {
+  late final NavigationPath<AppRoute> homeStack = NavigationPath.createWith(
+    label: 'home',
+    coordinator: this,
+  );
+
+  @override
+  void defineLayout() {
+    RouteLayout.defineLayout(HomeLayout, HomeLayout.new);
+  }
+}
+```
+
+**After (using bindLayout):**
+```dart
+class AppCoordinator extends Coordinator<AppRoute> {
+  late final NavigationPath<AppRoute> homeStack = NavigationPath.createWith(
+    label: 'home',
+    coordinator: this,
+  )..bindLayout(HomeLayout.new);  // Register inline!
+
+  // No need to override defineLayout() when using bindLayout
+}
+```
+
+Both approaches work, but `bindLayout()` is recommended for new code.
+
+### Benefits
+
+- **More concise**: Single line instead of separate method override
+- **Collocated**: Path creation and layout registration in one place
+- **Less boilerplate**: No need to override `defineLayout()`
+
 ## RouteGuard API
 
 The `RouteGuard` mixin has been enhanced to support coordinator validation during pop operations.
@@ -93,6 +177,29 @@ The `RouteRedirect` mixin has been updated similarly to `RouteGuard`.
   - Internally calls `redirect()`.
 
 - **Existing**: `redirect()` remains the place to implement your redirect logic.
+
+## parseRouteFromUri Return Type
+
+The return type of `parseRouteFromUri` has been changed to support nullable returns.
+
+### Changes
+
+- **Before**: `FutureOr<T> parseRouteFromUri(Uri uri)`
+- **After**: `FutureOr<T?> parseRouteFromUri(Uri uri)`
+
+### Migration
+
+For most coordinators, no changes are needed. The nullable return is primarily for nested coordinators (route modules) that want to indicate "this URI doesn't belong to me".
+
+```dart
+// Before
+@override
+FutureOr<AppRoute> parseRouteFromUri(Uri uri) { ... }
+
+// After - return null to let parent handle unrecognized URIs
+@override
+FutureOr<AppRoute?> parseRouteFromUri(Uri uri) { ... }
+```
 
 ## Internal Properties (`internalProps`)
 
