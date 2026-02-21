@@ -36,6 +36,7 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique
     Coordinator coordinator,
     Object layoutKey, // Not used, kept for backward compatibility
     RouteLayoutConstructor constructor,
+    // ignore: invalid_use_of_protected_member
   ) => coordinator.defineLayoutParent(constructor);
 
   /// Registers a custom layout builder.

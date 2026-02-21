@@ -408,7 +408,7 @@ class TestCoordinator extends Coordinator<AppRoute> {
   late final NavigationPath<AppRoute> shellStack = NavigationPath.createWith(
     coordinator: this,
     label: 'shell',
-  );
+  )..bindLayout(ShellLayout.new);
   late final IndexedStackPath<AppRoute> tabStack = IndexedStackPath.createWith(
     [HomeTab(), SearchTab(), ProfileTab()],
     coordinator: this,
@@ -417,21 +417,14 @@ class TestCoordinator extends Coordinator<AppRoute> {
   late final NavigationPath<AppRoute> profileStack = NavigationPath.createWith(
     coordinator: this,
     label: 'profile',
-  );
+  )..bindLayout(ProfileLayout.new);
 
   late final IndexedStackPath<AppRoute> advancedTabStack =
       IndexedStackPath.createWith(
         [FirstTab(), SecondTab(), ThirdTab()],
         coordinator: this,
         label: 'advanced-tabs',
-      );
-
-  @override
-  void defineLayout() {
-    defineLayoutParent(ShellLayout.new);
-    defineLayoutParent(ProfileLayout.new);
-    defineLayoutParent(AdvancedTabLayout.new);
-  }
+      )..bindLayout(AdvancedTabLayout.new);
 
   @override
   List<StackPath> get paths => [

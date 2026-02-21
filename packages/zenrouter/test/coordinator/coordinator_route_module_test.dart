@@ -215,15 +215,10 @@ class SettingsCoordinator extends Coordinator<AppRoute> {
   late final NavigationPath<AppRoute> settingsStack = NavigationPath.createWith(
     label: 'settings',
     coordinator: _parent,
-  );
+  )..bindLayout(SettingsLayout.new);
 
   @override
   List<StackPath> get paths => [...super.paths, settingsStack];
-
-  @override
-  void defineLayout() {
-    defineLayoutParent(SettingsLayout.new);
-  }
 
   @override
   FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {

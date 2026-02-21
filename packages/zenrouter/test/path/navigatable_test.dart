@@ -206,15 +206,10 @@ class BasicPathCoordinator extends Coordinator<NavigatableTestRoute> {
   late final BasicStackPath<NavigatableTestRoute> basic = BasicStackPath(
     coordinator: this,
     debugLabel: 'basic',
-  );
+  )..bindLayout(BasicLayout.new);
 
   @override
   List<StackPath<RouteTarget>> get paths => [...super.paths, basic];
-
-  @override
-  void defineLayout() {
-    defineLayoutParent(BasicLayout.new);
-  }
 
   @override
   FutureOr<NavigatableTestRoute> parseRouteFromUri(Uri uri) {

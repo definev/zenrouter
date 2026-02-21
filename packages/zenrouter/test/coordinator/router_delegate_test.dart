@@ -146,15 +146,10 @@ class TestCoordinator extends Coordinator<AppRoute> {
     [HomeTab(), SearchTab()],
     coordinator: this,
     label: 'tabs',
-  );
+  )..bindLayout(TabLayout.new);
 
   @override
   List<StackPath> get paths => [...super.paths, tabStack];
-
-  @override
-  void defineLayout() {
-    defineLayoutParent(TabLayout.new);
-  }
 
   @override
   AppRoute parseRouteFromUri(Uri uri) {

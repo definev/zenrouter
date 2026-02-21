@@ -53,11 +53,6 @@ class AuthModule extends RouteModule<AppRoute> {
       _ => null, // Not handled by this module
     };
   }
-
-  @override
-  void defineLayout() {
-    // Auth module doesn't define layouts
-  }
 }
 
 // Auth Routes

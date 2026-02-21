@@ -6,15 +6,15 @@ class AppCoordinator extends Coordinator<AppRoute> {
     coordinator: this,
     label: 'home',
     [FeedLayout(), ProfileLayout()],
-  );
+  )..bindLayout(HomeLayout.new);
   late final feedNavigation = NavigationPath<AppRoute>.createWith(
     coordinator: this,
     label: 'feed',
-  );
+  )..bindLayout(FeedLayout.new);
   late final profileNavigation = NavigationPath<AppRoute>.createWith(
     coordinator: this,
     label: 'profile',
-  );
+  )..bindLayout(ProfileLayout.new);
 
   @override
   List<StackPath<RouteTarget>> get paths => [
@@ -23,13 +23,6 @@ class AppCoordinator extends Coordinator<AppRoute> {
     feedNavigation,
     profileNavigation,
   ];
-
-  @override
-  void defineLayout() {
-    defineLayoutParent(HomeLayout.new);
-    defineLayoutParent(FeedLayout.new);
-    defineLayoutParent(ProfileLayout.new);
-  }
 
   @override
   AppRoute parseRouteFromUri(Uri uri) {

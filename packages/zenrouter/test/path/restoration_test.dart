@@ -99,9 +99,6 @@ class DummyCoordinator extends Coordinator<RouteUnique> {
   void defineConverter() {}
 
   @override
-  void defineLayout() {}
-
-  @override
   RouteUnique parseRouteFromUri(Uri uri) => TestRoute(uri.path);
 
   @override

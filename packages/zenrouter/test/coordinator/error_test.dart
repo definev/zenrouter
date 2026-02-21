@@ -164,26 +164,24 @@ class MissingTabRoute extends ErrorTestRoute {
 /// Test coordinator
 class ErrorTestCoordinator extends Coordinator<ErrorTestRoute> {
   late final UnregisteredCustomPath<ErrorTestRoute> testStack =
-      UnregisteredCustomPath(coordinator: this, label: 'test');
+      UnregisteredCustomPath(coordinator: this, label: 'test')
+        ..bindLayout(MockUnregisteredPathLayout.new);
   late final NavigationPath<ErrorTestRoute> normalStack =
       NavigationPath.createWith(coordinator: this, label: 'root');
   late final IndexedStackPath<ErrorTestRoute> normalIndexedStack =
       IndexedStackPath.createWith(
         [SimpleErrorRoute(id: 'home')],
         coordinator: this,
-        label: 'root',
-      );
+        label: 'indexed-root',
+      )..bindLayout(NormalIndexedStackLayout.new);
 
   @override
-  void defineLayout() {
-    // Intentionally NOT defining UndefinedLayout to test the error
-    // But DO define MockUnregisteredPathLayout so we can test the path builder error
-    defineLayoutParent(MockUnregisteredPathLayout.new);
-    defineLayoutParent(NormalIndexedStackLayout.new);
-  }
-
-  @override
-  List<StackPath> get paths => [...super.paths, testStack];
+  List<StackPath> get paths => [
+    ...super.paths,
+    testStack,
+    normalStack,
+    normalIndexedStack,
+  ];
 
   @override
   ErrorTestRoute parseRouteFromUri(Uri uri) {
@@ -275,9 +273,6 @@ class GuardedTestRoute extends ErrorTestRoute with RouteGuard {
 }
 
 class SecondCoordinator extends Coordinator<ErrorTestRoute> {
-  @override
-  void defineLayout() {}
-
   @override
   ErrorTestRoute parseRouteFromUri(Uri uri) {
     return SimpleErrorRoute(id: 'second');

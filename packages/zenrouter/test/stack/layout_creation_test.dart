@@ -186,27 +186,20 @@ class TestCoordinator extends Coordinator<TestRoute> {
   late final NavigationPath<TestRoute> homeStack = NavigationPath.createWith(
     coordinator: this,
     label: 'home',
-  );
+  )..bindLayout(TestHomeLayout.new);
   late final NavigationPath<TestRoute> settingsStack =
-      NavigationPath.createWith(coordinator: this, label: 'settings');
+      NavigationPath.createWith(coordinator: this, label: 'settings')
+        ..bindLayout(TestSettingsLayout.new);
   late final IndexedStackPath<TestRoute> tabIndexed =
       IndexedStackPath<TestRoute>.createWith(
         [TestFeedTabLayout(), TestProfileTab()],
         coordinator: this,
         label: 'tabs',
-      );
+      )..bindLayout(TestTabBarLayout.new);
   late final NavigationPath<TestRoute> feedTabStack = NavigationPath.createWith(
     coordinator: this,
     label: 'feed',
-  );
-
-  @override
-  void defineLayout() {
-    defineLayoutParent(TestHomeLayout.new);
-    defineLayoutParent(TestSettingsLayout.new);
-    defineLayoutParent(TestTabBarLayout.new);
-    defineLayoutParent(TestFeedTabLayout.new);
-  }
+  )..bindLayout(TestFeedTabLayout.new);
 
   @override
   List<StackPath> get paths => [

@@ -71,15 +71,10 @@ class TestCoordinator extends Coordinator<RouteUnique> {
     [FirstTab(), SecondTab()],
     coordinator: this,
     label: 'tab',
-  );
+  )..bindLayout(TabLayout.new);
 
   void setParsedRoute(RouteUnique route) {
     _parsedRoute = route;
-  }
-
-  @override
-  void defineLayout() {
-    defineLayoutParent(TabLayout.new);
   }
 
   @override
