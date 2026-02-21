@@ -53,10 +53,10 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T>
     required String label,
   }) => IndexedStackPath._(stack, debugLabel: label, coordinator: coordinator);
 
-  /// The key used to identify this type in [RouteLayout.definePath].
+  /// The key used to identify this type in [defineLayoutBuilder].
   static const key = PathKey('IndexedStackPath');
 
-  /// IndexedStackPath key. This is used to identify this type in [RouteLayout.definePath].
+  /// IndexedStackPath key. This is used to identify this type in [defineLayoutBuilder].
   @override
   PathKey get pathKey => key;
 

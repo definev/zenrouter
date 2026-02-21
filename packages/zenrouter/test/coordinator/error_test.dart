@@ -404,7 +404,7 @@ void main() {
                 .having(
                   (e) => e.message,
                   'message',
-                  contains('[RouteLayout.definePath]'),
+                  contains('[defineLayoutBuilder]'),
                 ),
           ),
         );
@@ -480,7 +480,7 @@ void main() {
         // Should mention the type name
         expect(e.message, contains('FakeStackPathType'));
         // Should tell where to register
-        expect(e.message, contains('RouteLayout.definePath'));
+        expect(e.message, contains('defineLayoutBuilder'));
         // Should explain the condition
         expect(e.message, contains('extend the [StackPath]'));
       }
@@ -496,7 +496,7 @@ void main() {
         expect(e.message, contains('defineLayout'));
         // Should mention how to define
         expect(e.message, contains('bindLayout'));
-        expect(e.message, contains('defineRouteLayout'));
+        expect(e.message, contains('defineLayoutParent'));
         // Should reference your coordinator
         expect(e.message, contains('ErrorTestCoordinator'));
       }
@@ -522,7 +522,7 @@ void main() {
 
         // Where: mentions where to register
         expect(message, contains('bindLayout'));
-        expect(message, contains('defineRouteLayout'));
+        expect(message, contains('defineLayoutParent'));
         expect(message, contains('defineLayout'));
         expect(message, contains('ErrorTestCoordinator'));
       }
@@ -601,7 +601,7 @@ void main() {
           isA<UnimplementedError>().having(
             (e) => e.message,
             'message',
-            contains('definePath'),
+            contains('defineLayoutBuilder'),
           ),
         ),
       );

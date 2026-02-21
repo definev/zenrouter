@@ -16,8 +16,7 @@ import 'package:zenrouter_core/zenrouter_core.dart';
 /// Most routes should use [RouteUnique] which implements this class.
 abstract class RouteUri extends RouteTarget
     with RouteIdentity<Uri>, RouteLayoutChild {
-  late final _proxy = RouteLayoutChild.proxy(this);
-
+  // coverage:ignore-start
   @override
   Uri get identifier => toUri();
 
@@ -27,6 +26,8 @@ abstract class RouteUri extends RouteTarget
   @override
   Object? get parentLayoutKey => null;
 
+  late final _proxy = RouteLayoutChild.proxy(this);
+
   @override
   RouteLayoutParent? createParentLayout(CoordinatorCore coordinator) =>
       _proxy.createParentLayout(coordinator);
@@ -34,4 +35,5 @@ abstract class RouteUri extends RouteTarget
   @override
   RouteLayoutParent? resolveParentLayout(CoordinatorCore coordinator) =>
       _proxy.resolveParentLayout(coordinator);
+  // coverage:ignore-end
 }

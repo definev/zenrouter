@@ -181,7 +181,7 @@ class _LayoutProblem extends StatelessWidget {
               decoration: TextDecoration.none,
             ),
             children: [
-              _codeSpan('defineLayout'),
+              _codeSpan('defineLayoutParent or bindLayout'),
               const TextSpan(text: ' to define associated '),
               _codeSpan('RouteLayout'),
               const TextSpan(text: ' that owns '),

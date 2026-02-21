@@ -24,10 +24,10 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique
     implements RouteLayoutParent<T> {
   // coverage:ignore-start
   @Deprecated(
-    'Use `coordinator.defineRouteLayout` insteads\n'
+    'Use `coordinator.defineLayoutParent` or `bindLayout` in the corresponding [StackPath] instead.\n'
     'If you want to use this method, you must provide a [Coordinator] instance to the [RouteLayout.defineLayout] method.\n'
     'Example: `OLD: RouteLayout.defineLayout(ShopLayout, ShopLayout.new);`\n'
-    '         `NEW: RouteLayout.defineLayout(this, ShopLayout, ShopLayout.new);`',
+    '         `NEW: defineLayoutParent(ShopLayout.new);`',
   )
   static void defineLayout<T extends RouteLayout>(
     Coordinator coordinator,
@@ -54,7 +54,7 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique
     // coverage:ignore-start
     if (routeLayoutBuilder == null) {
       throw UnimplementedError(
-        'No layout builder provided for [${rootPathKey.key}]. If you extend the [StackPath] class, you must register it via [RouteLayout.definePath] to use [RouteLayout.buildRoot].',
+        'No layout builder provided for [${rootPathKey.key}]. If you extend the [StackPath] class, you must register it via [defineLayoutBuilder] to use [RouteLayout.buildRoot].',
       );
     }
     // coverage:ignore-end
@@ -69,7 +69,7 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique
     final routeLayoutBuilder = coordinator.getLayoutBuilder(path.pathKey);
     if (routeLayoutBuilder == null) {
       throw UnimplementedError(
-        'No layout builder provided for [${path.pathKey.key}]. If you extend the [StackPath] class, you must register it via [RouteLayout.definePath] to use [RouteLayout.buildPath].',
+        'No layout builder provided for [${path.pathKey.key}]. If you extend the [StackPath] class, you must register it via [defineLayoutBuilder] to use [RouteLayout.buildPath].',
       );
     }
 

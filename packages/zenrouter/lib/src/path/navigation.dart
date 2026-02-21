@@ -50,10 +50,10 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
     List<T>? stack,
   }) => NavigationPath._(label, stack ?? [], coordinator as Coordinator);
 
-  /// The key used to identify this type in [RouteLayout.definePath].
+  /// The key used to identify this type in [defineLayoutBuilder].
   static const key = PathKey('NavigationPath');
 
-  /// NavigationPath key. This is used to identify this type in [RouteLayout.definePath].
+  /// NavigationPath key. This is used to identify this type in [defineLayoutBuilder].
   @override
   PathKey get pathKey => key;
 

@@ -50,7 +50,7 @@ abstract class RouteModule<T extends RouteUri> {
 
   /// Defines layouts for this module.
   ///
-  /// Override to register layout constructors using [defineRouteLayout].
+  /// Override to register layout constructors using [defineLayoutParent].
   void defineLayout() {}
 
   /// Defines restorable converters for this module.

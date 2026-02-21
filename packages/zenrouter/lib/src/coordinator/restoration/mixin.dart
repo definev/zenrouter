@@ -34,7 +34,7 @@ mixin CoordinatorRestoration<T extends RouteUnique> on CoordinatorCore<T> {
     final value = _layoutKeyTable[key];
     if (value == null) {
       throw UnimplementedError(
-        'The [$key] layout is not defined. You must define it using [Coordinator.defineRouteLayout] or via the [bindLayout] method in the corresponding [StackPath].',
+        'The [$key] layout is not defined. You must define it using [Coordinator.defineLayoutParent] or via the [bindLayout] method in the corresponding [StackPath].',
       );
     }
     return value;
