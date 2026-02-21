@@ -2,120 +2,48 @@
 
 import 'dart:async';
 
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
-import 'package:zenrouter/zenrouter.dart';
+import 'package:meta/meta.dart' show protected, mustCallSuper;
+import 'package:zenrouter_core/src/coordinator/base.dart';
+import 'package:zenrouter_core/src/internal/reactive.dart';
+import 'package:zenrouter_core/src/mixin/guard.dart';
+import 'package:zenrouter_core/src/mixin/redirect.dart';
+import 'package:zenrouter_core/src/mixin/target.dart';
+import 'package:zenrouter_core/src/path/navigatable.dart';
 
 part 'mutatable.dart';
 
 /// A type-safe identifier for [StackPath] types.
 ///
-/// [PathKey] is used to register and look up layout builders in
-/// [RouteLayout.definePath]. Each [StackPath] subclass should have
-/// a unique static [PathKey].
-///
-/// **Built-in keys:**
-/// - [NavigationPath.key]: `PathKey('NavigationPath')`
-/// - [IndexedStackPath.key]: `PathKey('IndexedStackPath')`
-///
-/// **Custom path example:**
-/// ```dart
-/// class ModalPath<T extends RouteTarget> extends StackPath<T>
-///     with StackMutatable<T> {
-///   static const key = PathKey('ModalPath');
-///
-///   @override
-///   PathKey get pathKey => key;
-/// }
-/// ```
+/// Each [StackPath] subclass defines a unique [PathKey] used for:
+/// - Registering layout builders in [CoordinatorCore]
+/// - Looking up the appropriate builder when rendering pages
 extension type const PathKey(String key) {}
 
-/// A stack-based container for managing navigation history.
+/// A container managing a stack of [RouteTarget]s for navigation.
 ///
-/// A [StackPath] holds a list of [RouteTarget]s and manages their lifecycle.
-/// It notifies listeners when the stack changes.
+/// [StackPath] is the core abstraction for navigation stacks in ZenRouter.
+/// It holds a list of routes and notifies listeners when the stack changes.
 ///
-/// ## Built-in Implementations
+/// ## Role in Navigation Flow
 ///
-/// - **[NavigationPath]**: Mutable stack with push/pop for standard navigation
-/// - **[IndexedStackPath]**: Fixed stack for indexed navigation (tabs)
+/// Routes are pushed onto and popped from paths during navigation:
+/// 1. When [CoordinatorCore.push] is called, the route is added to a path
+/// 2. The path notifies listeners, causing UI rebuild
+/// 3. When [StackMutatable.pop] is called, the route is removed
+/// 4. [RouteTarget.onDidPop] is called, completing the route's lifecycle
 ///
-/// ## Creating Custom Stack Paths
+/// ## Types of Paths
 ///
-/// To create a custom stack path (e.g., for modals, sheets, or custom navigation):
-///
-/// ```dart
-/// class ModalPath<T extends RouteTarget> extends StackPath<T>
-///     with StackMutatable<T> {
-///   // 1. Define a unique PathKey
-///   static const key = PathKey('ModalPath');
-///
-///   ModalPath._(
-///     super.stack, {
-///     super.debugLabel,
-///     super.coordinator,
-///   });
-///
-///   factory ModalPath.createWith({
-///     required Coordinator coordinator,
-///     required String label,
-///   }) => ModalPath._([], debugLabel: label, coordinator: coordinator);
-///
-///   // 2. Return the key
-///   @override
-///   PathKey get pathKey => key;
-///
-///   @override
-///   T? get activeRoute => _stack.lastOrNull;
-///
-///   @override
-///   void reset() {
-///     for (final route in _stack) {
-///       route.completeOnResult(null, null, true);
-///     }
-///     _stack.clear();
-///   }
-///
-///   @override
-///   Future<void> activateRoute(T route) async {
-///     reset();
-///     push(route);
-///   }
-/// }
-/// ```
-///
-/// Then register a builder in your coordinator's [defineLayout]:
-/// ```dart
-/// @override
-/// void defineLayout() {
-///   RouteLayout.definePath(
-///     ModalPath.key,
-///     (coordinator, path, layout) => ModalStack(path: path as ModalPath),
-///   );
-/// }
-/// ```
-abstract class StackPath<T extends RouteTarget> with ChangeNotifier {
-  StackPath(this._stack, {this.debugLabel, Coordinator? coordinator})
+/// - [NavigationPath]: Mutable stack for standard push/pop navigation
+/// - [IndexedStackPath]: Fixed stack for tab-based navigation
+abstract class StackPath<T extends RouteTarget> with ListenableObject {
+  StackPath(this._stack, {this.debugLabel, CoordinatorCore? coordinator})
     : _proxyCoordinator = coordinator?.isRouteModule == true
           ? coordinator
           : null,
       _coordinator = coordinator?.isRouteModule == true
           ? coordinator?.coordinator
           : coordinator;
-
-  // coverage:ignore-start
-  /// Creates a [NavigationPath] with an optional initial stack.
-  static NavigationPath<T> navigationStack<T extends RouteTarget>([
-    String? debugLabel,
-    List<T>? stack,
-  ]) => NavigationPath<T>.create(label: debugLabel, stack: stack);
-
-  /// Creates an [IndexedStackPath] with a fixed list of routes.
-  static IndexedStackPath<T> indexedStack<T extends RouteTarget>(
-    List<T> stack, [
-    String? label,
-  ]) => IndexedStackPath<T>.create(stack, label: label);
-  // coverage:ignore-end
 
   /// A label for debugging purposes.
   final String? debugLabel;
@@ -137,24 +65,24 @@ abstract class StackPath<T extends RouteTarget> with ChangeNotifier {
   ///
   /// When this path is created with a route module coordinator,
   /// this field holds the parent/root coordinator of that module.
-  final Coordinator? _coordinator;
+  final CoordinatorCore? _coordinator;
 
   /// The proxy coordinator for this path.
   ///
   /// When this path is created with a route module coordinator,
   /// this field holds the original (nested/module) coordinator,
   /// while [_coordinator] points to its parent/root coordinator.
-  final Coordinator? _proxyCoordinator;
+  final CoordinatorCore? _proxyCoordinator;
 
   /// The coordinator this path belongs to.
-  Coordinator? get coordinator => _coordinator;
+  CoordinatorCore? get coordinator => _coordinator;
 
   /// The proxy coordinator for this path.
   ///
   /// For module paths, this is the original module coordinator that
   /// created the path (the "nested" coordinator); [coordinator]
   /// then refers to its parent/root coordinator.
-  Coordinator? get proxyCoordinator => _proxyCoordinator;
+  CoordinatorCore? get proxyCoordinator => _proxyCoordinator;
 
   /// The currently active route in this stack.
   ///

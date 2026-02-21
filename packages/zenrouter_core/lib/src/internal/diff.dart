@@ -1,4 +1,4 @@
-import 'package:zenrouter/zenrouter.dart';
+import 'package:zenrouter_core/zenrouter_core.dart';
 
 /// Represents a diff operation between two lists.
 sealed class DiffOp<T> {
@@ -243,7 +243,7 @@ List<DiffOp<T>> _backtrack<T>(
 /// - Inserts alone are processed by building a new stack
 /// - Keeps are no-ops
 void applyDiff<T extends RouteTarget>(
-  NavigationPath<T> path,
+  StackMutatable<T> path,
   List<DiffOp<T>> operations,
 ) {
   // Early exit if no operations

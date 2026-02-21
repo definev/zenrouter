@@ -370,6 +370,8 @@ class GeneralSettings extends AppRoute {
 
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
+    resolveParentLayout(coordinator);
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -485,30 +487,22 @@ class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug {
   late final NavigationPath<AppRoute> homeStack = NavigationPath.createWith(
     label: 'home',
     coordinator: this,
-  );
+  )..bindLayout(HomeLayout.new);
   late final NavigationPath<AppRoute> settingsStack = NavigationPath.createWith(
     label: 'settings',
     coordinator: this,
-  );
+  )..bindLayout(SettingsLayout.new);
   late final IndexedStackPath<AppRoute> tabIndexed =
       IndexedStackPath.createWith(coordinator: this, label: 'home-tabs', [
         FeedTabLayout(),
         ProfileTab(),
         SettingsTab(),
-      ]);
+      ])..bindLayout(TabBarLayout.new);
 
   late final NavigationPath<AppRoute> feedTabStack = NavigationPath.createWith(
     label: 'feed-nested',
     coordinator: this,
-  );
-
-  @override
-  void defineLayout() {
-    RouteLayout.defineLayout(HomeLayout, HomeLayout.new);
-    RouteLayout.defineLayout(SettingsLayout, SettingsLayout.new);
-    RouteLayout.defineLayout(TabBarLayout, TabBarLayout.new);
-    RouteLayout.defineLayout(FeedTabLayout, FeedTabLayout.new);
-  }
+  )..bindLayout(FeedTabLayout.new);
 
   @override
   List<StackPath> get paths => [

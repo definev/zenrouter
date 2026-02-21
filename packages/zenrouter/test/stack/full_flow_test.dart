@@ -408,7 +408,7 @@ class TestCoordinator extends Coordinator<AppRoute> {
   late final NavigationPath<AppRoute> shellStack = NavigationPath.createWith(
     coordinator: this,
     label: 'shell',
-  );
+  )..bindLayout(ShellLayout.new);
   late final IndexedStackPath<AppRoute> tabStack = IndexedStackPath.createWith(
     [HomeTab(), SearchTab(), ProfileTab()],
     coordinator: this,
@@ -417,24 +417,14 @@ class TestCoordinator extends Coordinator<AppRoute> {
   late final NavigationPath<AppRoute> profileStack = NavigationPath.createWith(
     coordinator: this,
     label: 'profile',
-  );
+  )..bindLayout(ProfileLayout.new);
 
   late final IndexedStackPath<AppRoute> advancedTabStack =
       IndexedStackPath.createWith(
         [FirstTab(), SecondTab(), ThirdTab()],
         coordinator: this,
         label: 'advanced-tabs',
-      );
-
-  @override
-  void defineLayout() {
-    RouteLayout.defineLayout(ShellLayout, () => ShellLayout());
-    RouteLayout.defineLayout(ProfileLayout, () => ProfileLayout());
-    RouteLayout.defineLayout(
-      AdvancedTabLayout,
-      () => AdvancedTabLayout(path: advancedTabStack),
-    );
-  }
+      )..bindLayout(AdvancedTabLayout.new);
 
   @override
   List<StackPath> get paths => [
@@ -472,7 +462,7 @@ class TestCoordinator extends Coordinator<AppRoute> {
       ['tabs', 'profile'] => ProfileTab(),
       ['profile-layout'] => ProfileLayout(),
       ['profile-layout', final section] => ProfileChildRoute(section: section),
-      ['tabs', 'advanced'] => AdvancedTabLayout(path: advancedTabStack),
+      ['tabs', 'advanced'] => AdvancedTabLayout(),
       _ => HomeRoute(),
     };
   }
@@ -480,11 +470,9 @@ class TestCoordinator extends Coordinator<AppRoute> {
 
 /// Advanced Tab Layout
 class AdvancedTabLayout extends AppRoute with RouteLayout<AppRoute> {
-  AdvancedTabLayout({required this.path});
-  final IndexedStackPath<AppRoute> path;
-
   @override
-  IndexedStackPath<AppRoute> resolvePath(TestCoordinator coordinator) => path; // Not used for IndexedStackPath directly in this test
+  IndexedStackPath<AppRoute> resolvePath(TestCoordinator coordinator) =>
+      coordinator.advancedTabStack; // Not used for IndexedStackPath directly in this test
 
   @override
   Uri toUri() => Uri.parse('/tabs/advanced');
@@ -493,12 +481,12 @@ class AdvancedTabLayout extends AppRoute with RouteLayout<AppRoute> {
   Widget build(TestCoordinator coordinator, BuildContext context) {
     return Scaffold(
       key: const ValueKey('advanced-tab-layout'),
-      body: IndexedStackPathBuilder(path: path, coordinator: coordinator),
+      body: buildPath(coordinator),
     );
   }
 
   @override
-  List<Object?> get props => [path];
+  List<Object?> get props => [];
 }
 
 class FirstTab extends AppRoute with RouteGuard {
@@ -683,14 +671,14 @@ void main() {
 
         // Simple route - only root
         await coordinator.replace(HomeRoute());
-        expect(coordinator.activeLayoutPaths.length, 1);
-        expect(coordinator.activeLayoutPaths.first, coordinator.root);
+        expect(coordinator.activePaths.length, 1);
+        expect(coordinator.activePaths.first, coordinator.root);
 
         // Route with shell layout
         await coordinator.replace(ShellChildRoute(id: 'test'));
-        expect(coordinator.activeLayoutPaths.length, 2);
-        expect(coordinator.activeLayoutPaths[0], coordinator.root);
-        expect(coordinator.activeLayoutPaths[1], coordinator.shellStack);
+        expect(coordinator.activePaths.length, 2);
+        expect(coordinator.activePaths[0], coordinator.root);
+        expect(coordinator.activePaths[1], coordinator.shellStack);
       });
 
       test('currentUri returns correct URI for active route', () async {

@@ -9,9 +9,6 @@ import 'package:zenrouter/zenrouter.dart';
 /// Minimal coordinator for testing
 class TestCoordinator extends Coordinator<TestRoute> {
   @override
-  void defineLayout() {}
-
-  @override
   List<StackPath> get paths => [...super.paths];
 
   @override

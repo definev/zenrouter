@@ -119,7 +119,7 @@ class ShopModule extends RouteModule<AppRoute> {
   late final NavigationPath<AppRoute> shopPath = NavigationPath.createWith(
     label: 'shop',
     coordinator: coordinator,
-  );
+  )..bindLayout(ShopLayout.new);
 
   @override
   List<StackPath> get paths => [shopPath];
@@ -131,11 +131,6 @@ class ShopModule extends RouteModule<AppRoute> {
       ['shop', 'products', final id] => ShopProductRoute(id: id),
       _ => null,
     };
-  }
-
-  @override
-  void defineLayout() {
-    RouteLayout.defineLayout(ShopLayout, ShopLayout.new);
   }
 }
 

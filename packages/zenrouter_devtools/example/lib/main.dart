@@ -103,7 +103,7 @@ class CustomLayout extends AppRoute with RouteLayout<AppRoute> {
   }
 }
 
-class FirstLayout extends AppRoute with RouteLayout {
+class FirstLayout extends AppRoute with RouteLayout<AppRoute> {
   @override
   Uri toUri() => Uri.parse('/first');
 
@@ -240,11 +240,11 @@ class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug {
     coordinator: this,
     label: 'CustomIndexed',
     [FirstLayout(), SecondTab(), ThirdTab()],
-  );
+  )..bindLayout(CustomLayout.new);
   late final firstStack = NavigationPath<AppRoute>.createWith(
     label: 'FirstStack',
     coordinator: this,
-  );
+  )..bindLayout(FirstLayout.new);
 
   @override
   List<AppRoute> get debugRoutes => [
@@ -262,12 +262,6 @@ class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug {
     customIndexed,
     firstStack,
   ];
-
-  @override
-  void defineLayout() {
-    RouteLayout.defineLayout(CustomLayout, CustomLayout.new);
-    RouteLayout.defineLayout(FirstLayout, FirstLayout.new);
-  }
 
   @override
   AppRoute parseRouteFromUri(Uri uri) {

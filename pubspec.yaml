@@ -4,8 +4,10 @@ environment:
   sdk: ^3.6.0
 workspace:
   - packages/zenrouter
+  - packages/zenrouter_core
   - packages/zenrouter/example
   - packages/zenrouter_devtools
+  - packages/zenrouter_devtools/example
   - packages/zenrouter_file_generator
   - packages/zenrouter_file_generator/example
   - packages/zenrouter_file_annotation

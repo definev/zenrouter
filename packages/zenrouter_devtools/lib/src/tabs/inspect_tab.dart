@@ -13,7 +13,7 @@ class PathListView<T extends RouteUnique> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final groupedPaths = <Coordinator?, List<StackPath>>{};
+    final groupedPaths = <CoordinatorCore?, List<StackPath>>{};
     for (final path in coordinator.paths) {
       final key = path.proxyCoordinator;
       if (!groupedPaths.containsKey(key)) {
@@ -52,8 +52,8 @@ class _PathTabs<T extends RouteUnique> extends StatefulWidget {
   });
 
   final CoordinatorDebug<T> coordinator;
-  final Map<Coordinator?, List<StackPath>> groupedPaths;
-  final List<Coordinator?> sortedKeys;
+  final Map<CoordinatorCore?, List<StackPath>> groupedPaths;
+  final List<CoordinatorCore?> sortedKeys;
 
   @override
   State<_PathTabs<T>> createState() => _PathTabsState<T>();
@@ -69,7 +69,7 @@ class _PathTabsState<T extends RouteUnique> extends State<_PathTabs<T>> {
   void initState() {
     super.initState();
     _updateTabKeys();
-    _lastActivePath = widget.coordinator.activeLayoutPaths.lastOrNull;
+    _lastActivePath = widget.coordinator.activePaths.lastOrNull;
 
     int initialIndex = 0;
     if (_lastActivePath != null) {
@@ -94,7 +94,7 @@ class _PathTabsState<T extends RouteUnique> extends State<_PathTabs<T>> {
       _updateTabKeys();
     }
 
-    final newActivePath = widget.coordinator.activeLayoutPaths.lastOrNull;
+    final newActivePath = widget.coordinator.activePaths.lastOrNull;
     if (newActivePath != _lastActivePath) {
       _lastActivePath = newActivePath;
       _syncWithActivePath();
@@ -213,10 +213,9 @@ class _PathTabsState<T extends RouteUnique> extends State<_PathTabs<T>> {
                 itemCount: paths.length,
                 itemBuilder: (context, pathIndex) {
                   final path = paths[pathIndex];
-                  final isActiveLayout = widget.coordinator.activeLayoutPaths
+                  final isActiveLayout = widget.coordinator.activePaths
                       .contains(path);
-                  final isActive =
-                      path == widget.coordinator.activeLayoutPaths.last;
+                  final isActive = path == widget.coordinator.activePaths.last;
 
                   final isReadOnly = path is IndexedStackPath;
 

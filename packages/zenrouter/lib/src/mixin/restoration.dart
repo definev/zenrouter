@@ -411,6 +411,55 @@ abstract class RestorableConverter<T extends Object> {
     return _converterTable[key]!();
   }
 
+  /// Converts [RouteTarget] to primitive data
+  ///
+  /// This is called by Flutter's restoration framework when the app is being
+  /// killed.
+  ///
+  /// Built-in Types supports:
+  /// - [RouteLayout] - Serialize [RouteLayout]
+  /// - [RouteRestorable] - Call custom `serialize` method
+  /// - [RouteUnique] - Leverage `toUri` for serialization
+  static Object serializeRoute(RouteTarget value) => switch (value) {
+    RouteLayout() => value.serialize(),
+    RouteRestorable() => value.serialize(),
+    RouteUnique() => value.toUri().toString(),
+    _ => throw UnimplementedError(),
+  };
+
+  /// Converts saved primitive data back into a route object.
+  ///
+  /// This is called by Flutter's restoration framework when the app is being
+  /// restored. It receives the data that was previously returned by [toPrimitives]
+  /// and reconstructs the route stack.
+  static RT? deserializeRoute<RT extends RouteTarget>(
+    Object value, {
+    required RouteLayoutParentConstructor? createLayoutParent,
+    required DecodeLayoutKeyCallback? decodeLayoutKey,
+    required RouteUriParserSync? parseRouteFromUri,
+  }) => switch (value) {
+    String() => parseRouteFromUri!(Uri.parse(value)) as RT,
+    Map()
+        when value['type'] == 'layout' &&
+            createLayoutParent != null &&
+            decodeLayoutKey != null =>
+      RouteLayout.deserialize(
+            value.cast(),
+            createLayoutParent: createLayoutParent,
+            decodeLayoutKey: decodeLayoutKey,
+          )
+          as RT,
+    Map() =>
+      RouteRestorable.deserialize(
+            value.cast(),
+            parseRouteFromUri: parseRouteFromUri,
+          )
+          as RT,
+    // coverage:ignore-start
+    _ => null,
+    // coverage:ignore-end
+  };
+
   /// The unique identifier for this converter.
   ///
   /// This key is used to store and retrieve converter instances from the global registry.

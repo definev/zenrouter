@@ -43,6 +43,11 @@ jobs:
         working-directory: packages/zenrouter
         continue-on-error: false
 
+      - name: Run tests with coverage (zenrouter_core)
+        run: flutter test --coverage
+        working-directory: packages/zenrouter_core
+        continue-on-error: false
+
       - name: Run tests with coverage (zenrouter_file_generator)
         run: flutter test --coverage
         working-directory: packages/zenrouter_file_generator

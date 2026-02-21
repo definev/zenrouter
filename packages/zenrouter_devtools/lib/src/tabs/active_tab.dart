@@ -16,7 +16,7 @@ class ActiveLayoutsListView<T extends RouteUnique> extends StatelessWidget {
       listenable: coordinator,
       builder: (context, _) {
         final activeLayouts = coordinator.activeLayouts;
-        final activeLayoutPaths = coordinator.activeLayoutPaths;
+        final activeLayoutPaths = coordinator.activePaths;
 
         if (activeLayouts.isEmpty) {
           return const Center(

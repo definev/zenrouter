@@ -11,6 +11,8 @@
 [![pub package](https://img.shields.io/pub/v/zenrouter.svg)](https://pub.dev/packages/zenrouter)
 [![Test](https://github.com/definev/zenrouter/actions/workflows/test.yml/badge.svg)](https://github.com/definev/zenrouter/actions/workflows/test.yml)
 [![Codecov - zenrouter](https://codecov.io/gh/definev/zenrouter/branch/main/graph/badge.svg?flag=zenrouter)](https://app.codecov.io/gh/definev/zenrouter?branch=main&flags=zenrouter)
+[![Codecov - zenrouter_core](https://codecov.io/gh/definev/zenrouter/branch/main/graph/badge.svg?flag=zenrouter_core)](https://app.codecov.io/gh/definev/zenrouter?branch=main&flags=zenrouter_core)
+[![Codecov - zenrouter_file_generator](https://codecov.io/gh/definev/zenrouter/branch/main/graph/badge.svg?flag=zenrouter_file_generator)](https://app.codecov.io/gh/definev/zenrouter?branch=main&flags=zenrouter_file_generator)
 
 </div>
 

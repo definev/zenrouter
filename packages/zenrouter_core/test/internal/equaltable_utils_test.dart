@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:zenrouter/src/internal/equatable.dart' as eq;
-import 'package:zenrouter/zenrouter.dart';
+import 'package:zenrouter_core/src/internal/equatable.dart' as eq;
+import 'package:zenrouter_core/zenrouter_core.dart';
 
 // Test route implementations
 class TestRoute extends RouteTarget {
@@ -18,6 +18,47 @@ class MultiPropRoute extends RouteTarget {
 
   @override
   List<Object?> get props => [id, value];
+}
+
+// Bare Equatable (not RouteTarget) for isolated class testing
+class SimpleEquatable extends eq.Equatable {
+  SimpleEquatable(this.name, this.age);
+  final String name;
+  final int age;
+
+  @override
+  List<Object?> get props => [name, age];
+}
+
+class EmptyEquatable extends eq.Equatable {}
+
+class NullPropEquatable extends eq.Equatable {
+  NullPropEquatable(this.value);
+  final Object? value;
+
+  @override
+  List<Object?> get props => [value];
+}
+
+class CollectionPropEquatable extends eq.Equatable {
+  CollectionPropEquatable(this.items, this.metadata);
+  final List<int> items;
+  final Map<String, Object?> metadata;
+
+  @override
+  List<Object?> get props => [items, metadata];
+}
+
+class InternalPropEquatable extends eq.Equatable {
+  InternalPropEquatable(this.id, {this.internalTag = ''});
+  final String id;
+  final String internalTag;
+
+  @override
+  List<Object?> get props => [id];
+
+  @override
+  List<Object?> get internalProps => [internalTag];
 }
 
 void main() {
@@ -683,6 +724,182 @@ void main() {
       };
 
       expect(eq.objectsEquals(obj1, obj2), isTrue);
+    });
+  });
+
+  group('Equatable class', () {
+    group('compareWith', () {
+      test('returns true for identical reference', () {
+        final a = SimpleEquatable('Alice', 30);
+        expect(a.compareWith(a), isTrue);
+      });
+
+      test('returns true for same type and props', () {
+        final a = SimpleEquatable('Alice', 30);
+        final b = SimpleEquatable('Alice', 30);
+        expect(a.compareWith(b), isTrue);
+      });
+
+      test('returns false for different props', () {
+        final a = SimpleEquatable('Alice', 30);
+        final b = SimpleEquatable('Bob', 30);
+        expect(a.compareWith(b), isFalse);
+      });
+
+      test('returns false for different type', () {
+        final a = SimpleEquatable('Alice', 30);
+        final b = EmptyEquatable();
+        expect(a.compareWith(b), isFalse);
+      });
+
+      test('returns false for non-Equatable object', () {
+        final a = SimpleEquatable('Alice', 30);
+        expect(a.compareWith('not equatable'), isFalse);
+        expect(a.compareWith(42), isFalse);
+        expect(a.compareWith(Object()), isFalse);
+      });
+
+      test('returns true for two EmptyEquatable instances', () {
+        final a = EmptyEquatable();
+        final b = EmptyEquatable();
+        expect(a.compareWith(b), isTrue);
+      });
+    });
+
+    group('== operator', () {
+      test('mirrors compareWith behavior', () {
+        final a = SimpleEquatable('Alice', 30);
+        final b = SimpleEquatable('Alice', 30);
+        final c = SimpleEquatable('Bob', 25);
+
+        expect(a == b, isTrue);
+        expect(a == c, isFalse);
+      });
+
+      test('handles null props in equality', () {
+        final a = NullPropEquatable(null);
+        final b = NullPropEquatable(null);
+        final c = NullPropEquatable('value');
+
+        expect(a == b, isTrue);
+        expect(a == c, isFalse);
+      });
+
+      test('handles collection props using deep equality', () {
+        final a = CollectionPropEquatable([1, 2, 3], {'key': 'value'});
+        final b = CollectionPropEquatable([1, 2, 3], {'key': 'value'});
+        final c = CollectionPropEquatable([1, 2, 4], {'key': 'value'});
+
+        expect(a == b, isTrue);
+        expect(a == c, isFalse);
+      });
+
+      test('is symmetric', () {
+        final a = SimpleEquatable('Alice', 30);
+        final b = SimpleEquatable('Alice', 30);
+
+        expect(a == b, isTrue);
+        expect(b == a, isTrue);
+      });
+
+      test('is transitive', () {
+        final a = SimpleEquatable('Alice', 30);
+        final b = SimpleEquatable('Alice', 30);
+        final c = SimpleEquatable('Alice', 30);
+
+        expect(a == b, isTrue);
+        expect(b == c, isTrue);
+        expect(a == c, isTrue);
+      });
+
+      test('is reflexive', () {
+        final a = SimpleEquatable('Alice', 30);
+        expect(a == a, isTrue);
+      });
+    });
+
+    group('hashCode', () {
+      test('combines internalProps and props', () {
+        final a = InternalPropEquatable('id1', internalTag: 'tagA');
+        final b = InternalPropEquatable('id1', internalTag: 'tagB');
+
+        // Same props → equal via ==
+        expect(a == b, isTrue);
+        // Different internalProps → different hashCode
+        expect(a.hashCode, isNot(equals(b.hashCode)));
+      });
+
+      test('is consistent across calls', () {
+        final a = SimpleEquatable('Alice', 30);
+        final h1 = a.hashCode;
+        final h2 = a.hashCode;
+        final h3 = a.hashCode;
+
+        expect(h1, equals(h2));
+        expect(h2, equals(h3));
+      });
+
+      test('empty props still produces valid hash', () {
+        final a = EmptyEquatable();
+        expect(a.hashCode, isA<int>());
+      });
+
+      test('different props produce different hashes (high probability)', () {
+        final a = SimpleEquatable('Alice', 30);
+        final b = SimpleEquatable('Bob', 25);
+        expect(a.hashCode, isNot(equals(b.hashCode)));
+      });
+    });
+
+    group('toString', () {
+      test('returns runtimeType only when props are empty', () {
+        final a = EmptyEquatable();
+        expect(a.toString(), equals('EmptyEquatable'));
+      });
+
+      test('formats single prop', () {
+        final a = NullPropEquatable('hello');
+        expect(a.toString(), equals('NullPropEquatable[hello]'));
+      });
+
+      test('formats multiple props comma-separated', () {
+        final a = SimpleEquatable('Alice', 30);
+        expect(a.toString(), equals('SimpleEquatable[Alice,30]'));
+      });
+
+      test('formats null prop value', () {
+        final a = NullPropEquatable(null);
+        expect(a.toString(), equals('NullPropEquatable[null]'));
+      });
+
+      test('formats collection props', () {
+        final a = CollectionPropEquatable([1, 2], {'k': 'v'});
+        expect(a.toString(), contains('CollectionPropEquatable['));
+        expect(a.toString(), contains('[1, 2]'));
+        expect(a.toString(), contains('{k: v}'));
+      });
+    });
+
+    group('internalProps', () {
+      test('defaults to empty list', () {
+        final a = SimpleEquatable('Alice', 30);
+        expect(a.internalProps, isEmpty);
+      });
+
+      test('does not affect equality comparison', () {
+        final a = InternalPropEquatable('id1', internalTag: 'tagA');
+        final b = InternalPropEquatable('id1', internalTag: 'tagB');
+
+        // compareWith only compares props, not internalProps
+        expect(a == b, isTrue);
+      });
+
+      test('does affect hashCode', () {
+        final a = InternalPropEquatable('id1', internalTag: 'tagA');
+        final b = InternalPropEquatable('id1', internalTag: 'tagB');
+
+        expect(a.hashCode, isNot(equals(b.hashCode)));
+      });
     });
   });
 }

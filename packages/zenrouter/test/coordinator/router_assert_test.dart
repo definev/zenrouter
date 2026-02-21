@@ -30,9 +30,6 @@ class ParentCoordinator extends Coordinator<AppRoute>
   AppRoute? parseRouteFromUri(Uri uri) => HomeRoute();
 
   @override
-  void defineLayout() {}
-
-  @override
   AppRoute notFoundRoute(Uri uri) => HomeRoute();
 }
 
@@ -57,9 +54,6 @@ class StrictCoordinator extends Coordinator<AppRoute>
 
   @override
   List<StackPath> get paths => [...super.paths, homeStack];
-
-  @override
-  void defineLayout() {}
 
   @override
   AppRoute? parseRouteFromUri(Uri uri) {

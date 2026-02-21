@@ -16,8 +16,8 @@ class ProblemsTab<T extends RouteUnique> extends StatelessWidget {
 
     // 2. Instantiate all registered layouts
     final layouts =
-        RouteLayout.layoutConstructorTable.values
-            .map((constructor) => constructor())
+        coordinator.layoutParentConstructorTable.entries
+            .map((entry) => entry.value(entry.key) as RouteLayout)
             .toList();
 
     // 3. Map paths to the layouts that claim them
@@ -181,7 +181,7 @@ class _LayoutProblem extends StatelessWidget {
               decoration: TextDecoration.none,
             ),
             children: [
-              _codeSpan('defineLayout'),
+              _codeSpan('defineLayoutParent or bindLayout'),
               const TextSpan(text: ' to define associated '),
               _codeSpan('RouteLayout'),
               const TextSpan(text: ' that owns '),

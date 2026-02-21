@@ -8,6 +8,16 @@ import 'unique.dart';
 /// This mixin provides a [ValueNotifier] for queries that allows widgets to
 /// rebuild only when query parameters change, not on every coordinator update.
 ///
+/// ## Role in Navigation Flow
+///
+/// [RouteQueryParameters] enables URL query parameter support:
+/// 1. Maintains query state via [queryNotifier]
+/// 2. Updates URL without triggering navigation via [updateQueries]
+/// 3. Provides targeted rebuilds via [ValueListenableBuilder]
+/// 4. Supports selective widget updates without full route changes
+///
+/// Query parameters are excluded from route identity, allowing URL-only changes.
+///
 /// **Example usage:**
 /// ```dart
 /// class ProductListRoute extends RouteTarget
