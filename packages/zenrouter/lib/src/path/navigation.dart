@@ -83,12 +83,14 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
     RouteUriParserSync<RouteUri>? parseRouteFromUri,
     RouteLayoutParentConstructor? createLayoutParent,
     DecodeLayoutKeyCallback? decodeLayoutKey,
+    RestorableConverterLookupFunction? getRestorableConverter,
   ]) {
     final coordinator = this.coordinator as Coordinator?;
 
     parseRouteFromUri ??= coordinator?.parseRouteFromUriSync;
     createLayoutParent ??= coordinator?.createLayoutParent;
     decodeLayoutKey ??= coordinator?.decodeLayoutKey;
+    getRestorableConverter ??= coordinator?.getRestorableConverter;
     return <T>[
       for (final routeRaw in data)
         RestorableConverter.deserializeRoute(
@@ -96,6 +98,7 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
               parseRouteFromUri: parseRouteFromUri,
               createLayoutParent: createLayoutParent,
               decodeLayoutKey: decodeLayoutKey,
+              getRestorableConverter: getRestorableConverter ?? (_) => null,
             )
             as T,
     ];

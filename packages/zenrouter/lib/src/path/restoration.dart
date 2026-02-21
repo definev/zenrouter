@@ -209,6 +209,7 @@ class NavigationPathRestorable<T extends RouteTarget>
       RestorableConverter.deserializeRoute(
             route,
             parseRouteFromUri: parseRouteFromUri,
+            getRestorableConverter: RestorableConverter.buildConverter,
             decodeLayoutKey: null,
             createLayoutParent: null,
           )

@@ -111,7 +111,7 @@ class UniqueRestorableRoute extends TestRoute
 class TestCoordinator extends Coordinator<TestRoute> {
   @override
   void defineConverter() {
-    RestorableConverter.defineConverter(
+    defineRestorableConverter(
       'test_complex_route',
       () => const ComplexRouteConverter(),
     );
@@ -238,6 +238,7 @@ void main() {
       final route = RouteRestorable.deserialize<TestRoute>(
         data,
         parseRouteFromUri: coordinator.parseRouteFromUriSync,
+        getRestorableConverter: coordinator.getRestorableConverter,
       );
 
       expect(route, isA<ComplexRoute>());
@@ -254,6 +255,7 @@ void main() {
       final route = RouteRestorable.deserialize<TestRoute>(
         data,
         parseRouteFromUri: coordinator.parseRouteFromUriSync,
+        getRestorableConverter: coordinator.getRestorableConverter,
       );
 
       expect(route, isA<UniqueRestorableRoute>());
@@ -274,6 +276,7 @@ void main() {
       final route = RouteRestorable.deserialize<TestRoute>(
         data,
         parseRouteFromUri: coordinator.parseRouteFromUriSync,
+        getRestorableConverter: coordinator.getRestorableConverter,
       );
 
       expect(route, isA<ComplexRoute>());
@@ -287,6 +290,7 @@ void main() {
         () => RouteRestorable.deserialize<TestRoute>(
           data,
           parseRouteFromUri: coordinator.parseRouteFromUriSync,
+          getRestorableConverter: coordinator.getRestorableConverter,
         ),
         throwsA(isA<UnimplementedError>()),
       );
@@ -302,6 +306,7 @@ void main() {
         () => RouteRestorable.deserialize<TestRoute>(
           data,
           parseRouteFromUri: coordinator.parseRouteFromUriSync,
+          getRestorableConverter: coordinator.getRestorableConverter,
         ),
         throwsA(isA<UnimplementedError>()),
       );
@@ -318,6 +323,7 @@ void main() {
         () => RouteRestorable.deserialize<TestRoute>(
           data,
           parseRouteFromUri: coordinator.parseRouteFromUriSync,
+          getRestorableConverter: coordinator.getRestorableConverter,
         ),
         throwsA(isA<UnimplementedError>()),
       );
@@ -331,6 +337,7 @@ void main() {
         () => RouteRestorable.deserialize<TestRoute>(
           data,
           parseRouteFromUri: null,
+          getRestorableConverter: coordinator.getRestorableConverter,
         ),
         throwsAssertionError,
       );
@@ -359,6 +366,7 @@ void main() {
           RouteRestorable.deserialize<TestRoute>(
                 serialized,
                 parseRouteFromUri: coordinator.parseRouteFromUriSync,
+                getRestorableConverter: coordinator.getRestorableConverter,
               )
               as ComplexRoute;
 
@@ -375,60 +383,12 @@ void main() {
           RouteRestorable.deserialize<TestRoute>(
                 serialized,
                 parseRouteFromUri: coordinator.parseRouteFromUriSync,
+                getRestorableConverter: coordinator.getRestorableConverter,
               )
               as UniqueRestorableRoute;
 
       expect(restored.id, equals(original.id));
       expect(restored.toUri(), equals(original.toUri()));
-    });
-  });
-
-  group('RestorableConverter - Registry', () {
-    test('registers converter successfully', () {
-      // Converter should already be registered in setUp
-      final converter = RestorableConverter.buildConverter(
-        'test_complex_route',
-      );
-
-      expect(converter, isNotNull);
-      expect(converter, isA<ComplexRouteConverter>());
-    });
-
-    test('returns null for unregistered key', () {
-      final converter = RestorableConverter.buildConverter('non_existent_key');
-
-      expect(converter, isNull);
-    });
-
-    test('can register multiple converters', () {
-      // Register a second converter
-      RestorableConverter.defineConverter(
-        'test_converter_2',
-        () => const ComplexRouteConverter(),
-      );
-
-      final converter1 = RestorableConverter.buildConverter(
-        'test_complex_route',
-      );
-      final converter2 = RestorableConverter.buildConverter('test_converter_2');
-
-      expect(converter1, isNotNull);
-      expect(converter2, isNotNull);
-    });
-
-    test('overwrites converter with same key', () {
-      // Register with same key
-      RestorableConverter.defineConverter(
-        'test_complex_route',
-        () => const ComplexRouteConverter(),
-      );
-
-      final converter = RestorableConverter.buildConverter(
-        'test_complex_route',
-      );
-
-      expect(converter, isNotNull);
-      expect(converter, isA<ComplexRouteConverter>());
     });
   });
 

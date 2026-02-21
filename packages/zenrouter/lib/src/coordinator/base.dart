@@ -88,8 +88,7 @@ import 'package:zenrouter/zenrouter.dart';
 ///
 /// // 3. Use in MaterialApp.router
 /// MaterialApp.router(
-///   routerDelegate: coordinator.routerDelegate,
-///   routeInformationParser: coordinator.routeInformationParser,
+///   routerConfig: coordinator,
 /// )
 /// ```
 abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>

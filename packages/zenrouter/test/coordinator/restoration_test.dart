@@ -224,10 +224,7 @@ class TestCoordinator extends Coordinator<AppRoute> {
 
   @override
   void defineConverter() {
-    RestorableConverter.defineConverter(
-      'test_bookmark',
-      () => const BookmarkConverter(),
-    );
+    defineRestorableConverter('test_bookmark', () => const BookmarkConverter());
   }
 
   @override
@@ -478,6 +475,7 @@ void main() {
       final route = RouteRestorable.deserialize<AppRoute>(
         data,
         parseRouteFromUri: coordinator.parseRouteFromUriSync,
+        getRestorableConverter: coordinator.getRestorableConverter,
       );
 
       expect(route, isA<BookmarkRoute>());
@@ -491,6 +489,7 @@ void main() {
       final route = RouteRestorable.deserialize<AppRoute>(
         data,
         parseRouteFromUri: coordinator.parseRouteFromUriSync,
+        getRestorableConverter: coordinator.getRestorableConverter,
       );
 
       expect(route, isA<ProfileRoute>());
@@ -504,38 +503,10 @@ void main() {
         () => RouteRestorable.deserialize<AppRoute>(
           data,
           parseRouteFromUri: coordinator.parseRouteFromUriSync,
+          getRestorableConverter: coordinator.getRestorableConverter,
         ),
         throwsA(isA<UnimplementedError>()),
       );
-    });
-  });
-
-  group('RestorableConverter Registry', () {
-    test('registers and retrieves converter by key', () {
-      final converter = RestorableConverter.buildConverter('test_bookmark');
-
-      expect(converter, isNotNull);
-      expect(converter, isA<BookmarkConverter>());
-    });
-
-    test('returns null for unregistered converter key', () {
-      final converter = RestorableConverter.buildConverter('non_existent');
-
-      expect(converter, isNull);
-    });
-
-    test('converter round-trip maintains data', () {
-      final original = BookmarkRoute(id: '123', customData: 'original');
-      final converter = const BookmarkConverter();
-
-      // Serialize
-      final serialized = converter.serialize(original);
-
-      // Deserialize
-      final restored = converter.deserialize(serialized);
-
-      expect(restored.id, equals(original.id));
-      expect(restored.customData, equals(original.customData));
     });
   });
 

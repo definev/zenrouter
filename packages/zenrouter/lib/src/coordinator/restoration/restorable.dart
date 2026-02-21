@@ -66,6 +66,7 @@ class _CoordinatorRestorableState extends State<CoordinatorRestorable>
     parseRouteFromUri: widget.coordinator.parseRouteFromUriSync,
     createLayoutParent: widget.coordinator.createLayoutParent,
     decodeLayoutKey: widget.coordinator.decodeLayoutKey,
+    getRestorableConverter: widget.coordinator.getRestorableConverter,
   );
 
   void _saveCoordinator() {
@@ -183,6 +184,7 @@ class ActiveRouteRestorable<T extends RouteUnique> extends RestorableValue<T?> {
     required this.parseRouteFromUri,
     required this.createLayoutParent,
     required this.decodeLayoutKey,
+    required this.getRestorableConverter,
   });
 
   /// The initial route to use when no restoration data is available.
@@ -201,6 +203,8 @@ class ActiveRouteRestorable<T extends RouteUnique> extends RestorableValue<T?> {
   final RouteLayoutParentConstructor createLayoutParent;
 
   final DecodeLayoutKeyCallback decodeLayoutKey;
+
+  final RestorableConverterLookupFunction getRestorableConverter;
 
   @override
   T? createDefaultValue() => initialRoute;
@@ -221,6 +225,7 @@ class ActiveRouteRestorable<T extends RouteUnique> extends RestorableValue<T?> {
       decodeLayoutKey: decodeLayoutKey,
       createLayoutParent: createLayoutParent,
       parseRouteFromUri: parseRouteFromUri,
+      getRestorableConverter: getRestorableConverter,
     );
   }
 

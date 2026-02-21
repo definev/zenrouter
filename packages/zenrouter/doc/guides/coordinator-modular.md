@@ -40,6 +40,14 @@ Each module extends `RouteModule` and handles routes for a specific domain:
 class AuthModule extends RouteModule<AppRoute> {
   AuthModule(super.coordinator);
 
+  late final authPath = NavigationPath.createWith(
+    label: 'auth',
+    coordinator: coordinator,
+  )..bindLayout(AuthLayout.new);
+
+  @override
+  List<StackPath> get paths => [authPath];
+
   @override
   FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
     return switch (uri.pathSegments) {
@@ -47,12 +55,6 @@ class AuthModule extends RouteModule<AppRoute> {
       ['auth', 'register'] => RegisterRoute(),
       _ => null, // Not handled by this module
     };
-  }
-
-  @override
-  void defineLayout() {
-    // Register auth-specific layouts
-    RouteLayout.defineLayout(AuthLayout, AuthLayout.new);
   }
 }
 
@@ -64,7 +66,7 @@ class ShopModule extends RouteModule<AppRoute> {
   late final NavigationPath<AppRoute> shopPath = NavigationPath.createWith(
     label: 'shop',
     coordinator: coordinator,
-  );
+  )..bindLayout(ShopLayout.new);
 
   @override
   List<StackPath> get paths => [shopPath];
@@ -77,11 +79,6 @@ class ShopModule extends RouteModule<AppRoute> {
       ['shop', 'cart'] => CartRoute(),
       _ => null,
     };
-  }
-
-  @override
-  void defineLayout() {
-    RouteLayout.defineLayout(ShopLayout, ShopLayout.new);
   }
 }
 ```
@@ -220,7 +217,7 @@ class ShopModule extends RouteModule<AppRoute> {
   late final NavigationPath<AppRoute> shopPath = NavigationPath.createWith(
     label: 'shop',
     coordinator: coordinator,
-  );
+  )..bindLayout(ShopLayout.new);
 
   @override
   List<StackPath> get paths => [shopPath];
@@ -233,17 +230,12 @@ class ShopModule extends RouteModule<AppRoute> {
       _ => null,
     };
   }
-
-  @override
-  void defineLayout() {
-    RouteLayout.defineLayout(ShopLayout, ShopLayout.new);
-  }
 }
 
 class ShopLayout extends AppRoute with RouteLayout<AppRoute> {
   @override
   NavigationPath<AppRoute> resolvePath(AppCoordinator coordinator) {
-    final shopModule = coordinator.getModule<ShopModule>() as ShopModule;
+    final shopModule = coordinator.getModule<ShopModule>();
     return shopModule.shopPath;
   }
 
@@ -379,7 +371,7 @@ FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
 
 **Best practice:** Return `null` for routes you don't handle. This allows other modules to process them.
 
-### 2. Navigation Paths
+### 2. Navigation Paths & bindLayout
 
 Override `paths` to provide paths for nested navigation:
 
@@ -387,7 +379,7 @@ Override `paths` to provide paths for nested navigation:
 late final NavigationPath<AppRoute> myPath = NavigationPath.createWith(
   label: 'my-module',
   coordinator: coordinator,
-);
+)..bindLayout(MyLayout.new);
 
 @override
 List<StackPath> get paths => [myPath];
@@ -395,28 +387,16 @@ List<StackPath> get paths => [myPath];
 
 **Important:** Always use `.createWith()` to bind paths to the coordinator.
 
-### 3. Layout Registration
-
-Override `defineLayout` to register layouts:
-
-```dart
-@override
-void defineLayout() {
-  RouteLayout.defineLayout(MyLayout, MyLayout.new);
-}
-```
-
-### 4. Converter Registration
+### 3. Converter Registration
 
 Override `defineConverter` to register restorable converters:
 
 ```dart
 @override
 void defineConverter() {
-  RestorableConverter.defineConverter(
-    MyRoute,
-    (json) => MyRoute.fromJson(json),
-    (route) => route.toJson(),
+  defineRestorableConverter(
+    'my_route',
+    () => MyRoute(),
   );
 }
 ```

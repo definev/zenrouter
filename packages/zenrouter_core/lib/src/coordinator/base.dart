@@ -107,7 +107,7 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
   /// Defines the restorable converters for this coordinator.
   ///
   /// Override this method to register custom restorable converters using
-  /// [RestorableConverter.defineConverter].
+  /// [defineRestorableConverter].
   @override
   void defineConverter() {}
 

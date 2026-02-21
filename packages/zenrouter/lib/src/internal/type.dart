@@ -1,6 +1,10 @@
 import 'package:flutter/widgets.dart';
 import 'package:zenrouter/zenrouter.dart';
 
+/// A function that looks up a [RestorableConverter] by its key.
+typedef RestorableConverterLookupFunction =
+    RestorableConverter? Function(String key);
+
 /// Synchronous parser function that converts a [Uri] into a route instance.
 ///
 /// Used by the restoration system to restore navigation state from URLs.

@@ -20,10 +20,18 @@ import 'package:zenrouter/zenrouter.dart';
 /// {@endtemplate}
 mixin CoordinatorRestoration<T extends RouteUnique> on CoordinatorCore<T> {
   final _layoutKeyTable = <String, Object>{};
+  late final layoutKeyTable = isRouteModule
+      ? (coordinator as CoordinatorRestoration)._layoutKeyTable
+      : _layoutKeyTable;
+  final Map<String, RestoratableConverterConstructor> _converterTable = {};
+  late final converterTable = isRouteModule
+      ? (coordinator as CoordinatorRestoration)._converterTable
+      : _converterTable;
 
   @override
   void dispose() {
     _layoutKeyTable.clear();
+    _converterTable.clear();
     super.dispose();
   }
 
@@ -31,7 +39,7 @@ mixin CoordinatorRestoration<T extends RouteUnique> on CoordinatorCore<T> {
   /// Decodes and returns the stored layout key for the given [key].
   /// {@endtemplate}
   Object decodeLayoutKey(String key) {
-    final value = _layoutKeyTable[key];
+    final value = layoutKeyTable[key];
     if (value == null) {
       throw UnimplementedError(
         'The [$key] layout is not defined. You must define it using [Coordinator.defineLayoutParent] or via the [bindLayout] method in the corresponding [StackPath].',
@@ -44,7 +52,7 @@ mixin CoordinatorRestoration<T extends RouteUnique> on CoordinatorCore<T> {
   /// Encodes the layout key to be restored later.
   /// {@endtemplate}
   void encodeLayoutKey(Object value) =>
-      _layoutKeyTable[value.toString()] = value;
+      layoutKeyTable[value.toString()] = value;
 
   /// The restoration ID for the root path.
   ///
@@ -82,4 +90,12 @@ mixin CoordinatorRestoration<T extends RouteUnique> on CoordinatorCore<T> {
 
     return '${layoutRestorationId}_$routeRestorationId';
   }
+
+  void defineRestorableConverter(
+    String key,
+    RestoratableConverterConstructor<T> constructor,
+  ) => converterTable[key] = constructor;
+
+  RestorableConverter? getRestorableConverter(String key) =>
+      converterTable[key]?.call();
 }

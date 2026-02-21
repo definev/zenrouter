@@ -127,7 +127,7 @@ enum RestorationStrategy { unique, converter }
 /// class AppCoordinator extends Coordinator<AppRoute> {
 ///   @override
 ///   void defineConverter() {
-///     RestorableConverter.defineConverter('book_detail', BookDetailConverter.new);
+///     defineRestorableConverter('book_detail', BookDetailConverter.new);
 ///   }
 /// }
 /// ```
@@ -179,6 +179,7 @@ mixin RouteRestorable<T extends RouteTarget> on RouteTarget {
   static T deserialize<T extends RouteTarget>(
     Map<String, dynamic> data, {
     required RouteUriParserSync<T>? parseRouteFromUri,
+    required RestorableConverterLookupFunction getRestorableConverter,
   }) {
     final rawStrategy = data['strategy'];
     if (rawStrategy == null || rawStrategy is! String) {
@@ -197,9 +198,7 @@ mixin RouteRestorable<T extends RouteTarget> on RouteTarget {
         if (value is Future) throw UnimplementedError();
         return value;
       case RestorationStrategy.converter:
-        final converter = RestorableConverter.buildConverter(
-          data['converter']! as String,
-        );
+        final converter = getRestorableConverter(data['converter']! as String);
         if (converter == null) throw UnimplementedError();
         final route = converter.deserialize((data['value']! as Map).cast());
         return route as T;
@@ -249,8 +248,8 @@ mixin RouteRestorable<T extends RouteTarget> on RouteTarget {
 /// ```
 /// App startup:
 ///   Coordinator.defineConverter() registers converters
-///     └─ RestorableConverter.defineConverter('key', constructor)
-///         └─ Stored in global _converterTable
+///     └─ defineRestorableConverter('key', constructor)
+///         └─ Stored in _converterTable coordinator's table
 ///
 /// During restoration:
 ///   RouteRestorable.deserialize(data)
@@ -317,7 +316,7 @@ mixin RouteRestorable<T extends RouteTarget> on RouteTarget {
 /// class AppCoordinator extends Coordinator<AppRoute> {
 ///   @override
 ///   void defineConverter() {
-///     RestorableConverter.defineConverter(
+///     defineRestorableConverter(
 ///       'myapp_user_profile',
 ///       () => const UserProfileConverter(),
 ///     );
@@ -391,11 +390,12 @@ abstract class RestorableConverter<T extends Object> {
   ///
   /// Example:
   /// ```dart
-  /// RestorableConverter.defineConverter(
+  /// defineRestorableConverter(
   ///   'user_profile',
   ///   () => const UserProfileConverter(),
   /// );
   /// ```
+  @Deprecated('Use `Coordinator.defineRestorableConverter` instead')
   static void defineConverter<T extends Object>(
     String key,
     RestoratableConverterConstructor<T> constructor,
@@ -437,6 +437,7 @@ abstract class RestorableConverter<T extends Object> {
     required RouteLayoutParentConstructor? createLayoutParent,
     required DecodeLayoutKeyCallback? decodeLayoutKey,
     required RouteUriParserSync? parseRouteFromUri,
+    required RestorableConverterLookupFunction getRestorableConverter,
   }) => switch (value) {
     String() => parseRouteFromUri!(Uri.parse(value)) as RT,
     Map()
@@ -453,6 +454,7 @@ abstract class RestorableConverter<T extends Object> {
       RouteRestorable.deserialize(
             value.cast(),
             parseRouteFromUri: parseRouteFromUri,
+            getRestorableConverter: getRestorableConverter,
           )
           as RT,
     // coverage:ignore-start
