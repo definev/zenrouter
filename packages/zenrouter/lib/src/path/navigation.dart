@@ -98,7 +98,9 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
               parseRouteFromUri: parseRouteFromUri,
               createLayoutParent: createLayoutParent,
               decodeLayoutKey: decodeLayoutKey,
+              // coverage:ignore-start
               getRestorableConverter: getRestorableConverter ?? (_) => null,
+              // coverage:ignore-end
             )
             as T,
     ];
