@@ -125,12 +125,60 @@ Navigates to a specific route.
 await path.activateRoute(ProfileRoute());
 ```
 
+
+#### `bindLayout(RouteLayoutConstructor constructor)`
+Registers a layout constructor with the coordinator, allowing routes in this path to be wrapped by the specified layout.
+
+**Example:**
+```dart
+late final profileStack = NavigationPath<AppRoute>.createWith(
+  coordinator: this,
+  label: 'profile',
+)..bindLayout(ProfileLayout.new);
+```
+
 ---
+
 
 ## NavigationPath<T>
 
-A mutable navigation path with push/pop operations. Extends `StackPath` with `StackMutatable` mixin.
+A mutable stack path for standard navigation. Extends `StackPath` with `StackMutatable` mixin.
 
+Supports pushing and popping routes. Used for the main navigation stack and modal flows.
+
+### Role in Navigation Flow
+
+`NavigationPath` is the primary path type for imperative navigation:
+1. Stores routes in a mutable list (stack)
+2. Supports push/pop/remove operations
+3. Renders content via `NavigationStack` widget
+4. Implements `RestorablePath` for state restoration
+
+When navigating:
+- `push` adds a new route to the top
+- `pop` removes the top route
+- `navigate` handles browser back/forward
+
+### Constructor
+
+Use the factory constructors:
+
+```dart
+// Standard creation
+final path = NavigationPath.create(
+  label: 'main-nav',
+  stack: [HomeRoute()],
+);
+
+// With explicit coordinator binding (inside Coordinator)
+late final path = NavigationPath.createWith(
+  coordinator: this,
+  label: 'main-nav',
+  stack: [HomeRoute()],
+);
+```
+
+### Methods
 ### Constructor
 
 Use the factory constructors:
@@ -330,9 +378,25 @@ path.push(WelcomeRoute());
 
 ## IndexedStackPath<T>
 
-An immutable navigation path with index-based navigation. Perfect for tab bars and drawer navigation.
+A fixed stack path for indexed navigation (like tabs).
+
+Routes are pre-defined and cannot be added or removed. Navigation switches the active index.
+
+### Role in Navigation Flow
+
+`IndexedStackPath` manages tab-based navigation:
+1. Routes are defined upfront in a fixed list
+2. Navigation switches the active index rather than stack
+3. Renders content via `IndexedStackPathBuilder` widget
+4. Implements `RestorablePath` for tab index restoration
+
+When navigating:
+- `goToIndexed` switches to a different route by index
+- `activateRoute` activates a route already in the stack
+- Routes cannot be pushed or popped, only activated
 
 ### Constructor
+
 
 Use the factory constructors:
 
@@ -452,13 +516,43 @@ tabPath.reset();
 // Active index remains the same
 ```
 
+
+#### `bindLayout(RouteLayoutConstructor constructor)`
+Registers a layout constructor with the coordinator, allowing routes in this path to be wrapped by the specified layout.
+
+**Example:**
+```dart
+late final profileStack = NavigationPath<AppRoute>.createWith(
+  coordinator: this,
+  label: 'profile',
+)..bindLayout(ProfileLayout.new);
+```
+
 ---
+
 
 ## NavigationStack Widget
 
-Widget that renders a navigation path. Works with both `DynamicNavigationPath` and `FixedNavigationPath`.
+A widget that renders a stack of pages based on a `NavigationPath`.
+
+This is the core widget for imperative navigation. It listens to the `path` and updates the `Navigator` with the corresponding pages.
+
+### Role in Navigation Flow
+
+`NavigationStack` is the visual representation of a `NavigationPath`:
+1. Listens to path changes via path listeners
+2. Uses Myers diff algorithm to calculate route changes
+3. Builds `Page` objects via the `resolver` callback
+4. Updates Flutter's Navigator with the page stack
+
+The widget handles:
+- Page creation and disposal
+- Guard execution on pop attempts
+- Route result completion
+- State restoration
 
 ### Constructor
+
 
 ```dart
 NavigationStack<T extends RouteTarget>({
@@ -546,7 +640,18 @@ class MyApp extends StatelessWidget {
 
 Factory constructor for creating a declarative, state-driven navigation stack.
 
+Instead of pushing and popping, you provide a list of `routes`. The widget calculates the difference between the old and new routes (using Myers diff) and updates the stack accordingly.
+
+### Role in Navigation Flow
+
+`DeclarativeNavigationStack` provides declarative navigation:
+1. Receives a list of routes as the source of truth
+2. Compares with previous route list using Myers diff
+3. Updates the underlying `NavigationPath` accordingly
+4. Uses the same `NavigationStack` for rendering
+
 ### Constructor
+
 
 ```dart
 static DeclarativeNavigationStack<T> declarative<T extends RouteTarget>({
