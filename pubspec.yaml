@@ -5,6 +5,8 @@ environment:
 workspace:
   - packages/zenrouter
   - packages/zenrouter_core
+  - packages/zenrouter_nocterm
+  - packages/zenrouter_nocterm/example
   - packages/zenrouter/example
   - packages/zenrouter_devtools
   - packages/zenrouter_devtools/example

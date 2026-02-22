@@ -1,0 +1,14 @@
+name: zenrouter_nocterm_example
+description: "Example app for zenrouter_nocterm."
+version: 0.0.1
+publish_to: none
+
+resolution: workspace
+
+environment:
+  sdk: ^3.8.0
+
+dependencies:
+  nocterm: ^0.5.1
+  zenrouter_core: ^2.0.0
+  zenrouter_nocterm: ^0.0.1
