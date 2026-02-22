@@ -1,3 +1,6 @@
+## 1.1.0
+- **Fix**: dot-notation failed to resolve layout
+
 ## 1.0.0
 - **BREAKING**: Requires `zenrouter: ^1.0.0` and `zenrouter_file_annotation: ^1.0.0`
 - **Stable release**: Production-ready file-based routing generator

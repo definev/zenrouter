@@ -1,3 +1,6 @@
+## 2.0.0
+- **BREAKING**: Update dependency to `zenrouter: ^2.0.0`
+
 ## 1.1.1
 - **Feat**: Display correct `url` for each `RouteUnique`
 - **Feat**: Display better type of `StackPath`
