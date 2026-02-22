@@ -25,6 +25,7 @@ void main() {
         final route = RouteInfo(
           className: 'HomeRoute',
           pathSegments: [],
+          dirParts: [],
           parameters: [],
           queries: null,
         );
@@ -36,6 +37,7 @@ void main() {
         final route = RouteInfo(
           className: 'HomeRoute',
           pathSegments: [],
+          dirParts: [],
           parameters: [],
           queries: [],
         );
@@ -47,6 +49,7 @@ void main() {
         final route = RouteInfo(
           className: 'SearchRoute',
           pathSegments: ['search'],
+          dirParts: ['search'],
           parameters: [],
           queries: ['q', 'page'],
         );
@@ -60,6 +63,7 @@ void main() {
       final route = RouteInfo(
         className: 'UserRoute',
         pathSegments: ['users', ':userId'],
+        dirParts: ['users', '[userId]'],
         parameters: params,
         hasGuard: true,
         hasRedirect: true,
@@ -90,6 +94,7 @@ void main() {
       final route = RouteInfo(
         className: 'HomeRoute',
         pathSegments: [],
+        dirParts: [],
         parameters: [],
       );
 
@@ -104,6 +109,7 @@ void main() {
       final layout = LayoutInfo(
         className: 'TabsLayout',
         pathSegments: ['tabs'],
+        dirParts: ['tabs'],
         layoutType: LayoutType.indexed,
         indexedRouteTypes: ['HomeRoute', 'ProfileRoute', 'SettingsRoute'],
         parentLayoutType: 'RootLayout',
@@ -124,6 +130,7 @@ void main() {
       final layout = LayoutInfo(
         className: 'StackLayout',
         pathSegments: ['stack'],
+        dirParts: ['stack'],
         layoutType: LayoutType.stack,
       );
 
@@ -134,6 +141,7 @@ void main() {
       final layout = LayoutInfo(
         className: 'ChildLayout',
         pathSegments: ['child'],
+        dirParts: ['child'],
         layoutType: LayoutType.stack,
       );
 
@@ -146,13 +154,19 @@ void main() {
   group('RouteTreeInfo', () {
     test('stores routes and layouts', () {
       final routes = [
-        RouteInfo(className: 'HomeRoute', pathSegments: [], parameters: []),
+        RouteInfo(
+          className: 'HomeRoute',
+          pathSegments: [],
+          dirParts: [],
+          parameters: [],
+        ),
       ];
 
       final layouts = [
         LayoutInfo(
           className: 'MainLayout',
           pathSegments: [],
+          dirParts: [],
           layoutType: LayoutType.stack,
         ),
       ];

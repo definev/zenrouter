@@ -137,6 +137,27 @@ class PathParser {
 
     return buffer.toString();
   }
+
+  /// Extract directory parts for file-hierarchy matching.
+  /// Preserves group segments like `(auth)` and handles dot notation.
+  static List<String> parseDirParts(String relativePath) {
+    var path = relativePath;
+    if (path.endsWith('.dart')) {
+      path = path.substring(0, path.length - 5);
+    }
+
+    path = _normalizeFilePath(path);
+    final parts = path.split('/').where((p) => p.isNotEmpty).toList();
+
+    if (parts.isNotEmpty) {
+      if (parts.last == '_layout') {
+        parts.removeLast();
+      } else {
+        parts.removeLast(); // Remove route file name
+      }
+    }
+    return parts;
+  }
 }
 
 /// Simplified parameter info for path parsing.

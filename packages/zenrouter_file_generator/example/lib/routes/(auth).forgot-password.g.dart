@@ -9,8 +9,12 @@ part of '(auth).forgot-password.dart';
 /// Generated base class for ForgotPasswordRoute.
 ///
 /// URI: /forgot-password
+/// Layout: AuthLayout
 abstract class _$ForgotPasswordRoute extends AppRoute {
   _$ForgotPasswordRoute();
+
+  @override
+  Type? get layout => AuthLayout;
 
   @override
   Uri toUri() => Uri.parse('/forgot-password');

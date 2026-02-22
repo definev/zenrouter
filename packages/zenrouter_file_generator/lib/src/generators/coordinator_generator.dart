@@ -324,6 +324,7 @@ class CoordinatorGenerator implements Builder {
     final (segments, params, isIndex, fileName) = PathParser.parsePath(
       relativePath,
     );
+    final dirParts = PathParser.parseDirParts(relativePath);
 
     // Check for mixins
     final hasGuard = content.contains('guard: true');
@@ -367,6 +368,7 @@ class CoordinatorGenerator implements Builder {
     return RouteInfo(
       className: className,
       pathSegments: segments,
+      dirParts: dirParts,
       parameters: params,
       hasGuard: hasGuard,
       hasRedirect: hasRedirect,
@@ -388,6 +390,7 @@ class CoordinatorGenerator implements Builder {
 
     // Parse path segments using shared parser
     final segments = PathParser.parseLayoutPath(relativePath);
+    final dirParts = PathParser.parseDirParts(relativePath);
 
     // Determine layout type
     final isIndexed = content.contains('LayoutType.indexed');
@@ -412,6 +415,7 @@ class CoordinatorGenerator implements Builder {
     return LayoutInfo(
       className: className,
       pathSegments: segments,
+      dirParts: dirParts,
       layoutType: layoutType,
       indexedRouteTypes: indexedRoutes,
     );
@@ -427,10 +431,10 @@ class CoordinatorGenerator implements Builder {
       int maxMatchLength = 0;
 
       for (final layout in layouts) {
-        if (_isPathPrefix(layout.pathSegments, route.pathSegments) &&
-            layout.pathSegments.length > maxMatchLength) {
+        if (_isPathPrefix(layout.dirParts, route.dirParts) &&
+            layout.dirParts.length > maxMatchLength) {
           parentLayout = layout.className;
-          maxMatchLength = layout.pathSegments.length;
+          maxMatchLength = layout.dirParts.length;
         }
       }
 
@@ -444,10 +448,10 @@ class CoordinatorGenerator implements Builder {
 
       for (final other in layouts) {
         if (other.className == layout.className) continue;
-        if (_isPathPrefix(other.pathSegments, layout.pathSegments) &&
-            other.pathSegments.length > maxMatchLength) {
+        if (_isPathPrefix(other.dirParts, layout.dirParts) &&
+            other.dirParts.length > maxMatchLength) {
           parentLayout = other.className;
-          maxMatchLength = other.pathSegments.length;
+          maxMatchLength = other.dirParts.length;
         }
       }
 
@@ -458,9 +462,8 @@ class CoordinatorGenerator implements Builder {
   }
 
   bool _isPathPrefix(List<String> prefix, List<String> path) {
-    if (prefix.length >= path.length) return false;
+    if (prefix.length > path.length) return false;
     for (var i = 0; i < prefix.length; i++) {
-      if (prefix[i].startsWith(':') || path[i].startsWith(':')) continue;
       if (prefix[i] != path[i]) return false;
     }
     return true;
@@ -1129,6 +1132,7 @@ class CoordinatorGenerator implements Builder {
 class RouteInfo {
   final String className;
   final List<String> pathSegments;
+  final List<String> dirParts;
   final List<ParamInfo> parameters;
   final bool hasGuard;
   final bool hasRedirect;
@@ -1149,6 +1153,7 @@ class RouteInfo {
   RouteInfo({
     required this.className,
     required this.pathSegments,
+    required this.dirParts,
     required this.parameters,
     this.hasGuard = false,
     this.hasRedirect = false,
@@ -1190,6 +1195,7 @@ class RouteInfo {
 class LayoutInfo {
   final String className;
   final List<String> pathSegments;
+  final List<String> dirParts;
   final LayoutType layoutType;
   final List<String> indexedRouteTypes;
   String? parentLayoutType;
@@ -1197,6 +1203,7 @@ class LayoutInfo {
   LayoutInfo({
     required this.className,
     required this.pathSegments,
+    required this.dirParts,
     required this.layoutType,
     this.indexedRouteTypes = const [],
     this.parentLayoutType,

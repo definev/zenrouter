@@ -117,49 +117,49 @@ class RouteGenerator extends GeneratorForAnnotation<ZenRoute> {
       relativePath = relativePath.substring(1);
     }
 
-    // Split into directory parts
-    final parts = relativePath.split('/');
-    if (parts.isEmpty) return null;
+    final routeDirParts = PathParser.parseDirParts(relativePath);
 
-    // Remove the file name to get directory parts
-    parts.removeLast();
+    String? bestLayoutClass;
+    int maxMatchLength = -1;
 
-    // Search from innermost to outermost directory for _layout.dart
-    while (parts.isNotEmpty) {
-      final layoutPath = '$routesDir/${parts.join('/')}/_layout.dart';
-      // Escape parentheses in glob patterns - they are special characters
-      final escapedPath = _escapeGlobPattern(layoutPath);
-      final layoutGlob = Glob(escapedPath);
+    // Check all layout files in the routes directory
+    // We use a broader glob matching all files since glob syntax can be tricky with **
+    final glob = Glob('$routesDir/**');
+    await for (final asset in buildStep.findAssets(glob)) {
+      final path = asset.path.replaceAll('\\', '/');
+      if (!path.endsWith('_layout.dart')) continue;
 
-      await for (final asset in buildStep.findAssets(layoutGlob)) {
-        // Found a layout file, extract the class name
-        final content = await buildStep.readAsString(asset);
-        final classMatch = _classMatchLayout.firstMatch(content);
-        if (classMatch != null) {
-          return classMatch.group(1);
+      var layoutRelPath = path.substring(
+        path.indexOf(routesDir) + routesDir.length,
+      );
+      if (layoutRelPath.startsWith('/')) {
+        layoutRelPath = layoutRelPath.substring(1);
+      }
+
+      final layoutDirParts = PathParser.parseDirParts(layoutRelPath);
+
+      // Check if layout is a prefix of the route
+      if (_isPrefix(layoutDirParts, routeDirParts)) {
+        if (layoutDirParts.length > maxMatchLength) {
+          maxMatchLength = layoutDirParts.length;
+          final content = await buildStep.readAsString(asset);
+          final classMatch = _classMatchLayout.firstMatch(content);
+          if (classMatch != null) {
+            bestLayoutClass = classMatch.group(1);
+          }
         }
       }
-
-      // Move to parent directory
-      parts.removeLast();
     }
 
-    // Check root _layout.dart
-    final rootLayoutGlob = Glob('$routesDir/_layout.dart');
-    await for (final asset in buildStep.findAssets(rootLayoutGlob)) {
-      final content = await buildStep.readAsString(asset);
-      final classMatch = _classMatchLayout.firstMatch(content);
-      if (classMatch != null) {
-        return classMatch.group(1);
-      }
-    }
-
-    return null;
+    return bestLayoutClass;
   }
 
-  /// Escape special glob characters in a path.
-  String _escapeGlobPattern(String path) {
-    return path.replaceAll('(', '[(]').replaceAll(')', '[)]');
+  bool _isPrefix(List<String> prefix, List<String> list) {
+    if (prefix.length > list.length) return false;
+    for (int i = 0; i < prefix.length; i++) {
+      if (prefix[i] != list[i]) return false;
+    }
+    return true;
   }
 
   String _generateRouteBaseClass(

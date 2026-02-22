@@ -205,8 +205,30 @@ class SearchTab extends AppRoute {
   List<Object?> get props => [];
 }
 
+class TestCoordinatorModular extends Coordinator<AppRoute>
+    with CoordinatorModular {
+  TestCoordinatorModular({super.initialRoutePath, required this.modules});
+
+  final List<RouteModule<AppRoute> Function(CoordinatorModular<AppRoute>)>
+  modules;
+
+  @override
+  Set<RouteModule<AppRoute>> defineModules() {
+    return modules.map((e) => e(this)).toSet();
+  }
+
+  @override
+  AppRoute notFoundRoute(Uri uri) => throw UnimplementedError();
+}
+
 class TestCoordinator extends Coordinator<AppRoute> {
-  TestCoordinator({super.initialRoutePath});
+  TestCoordinator({super.initialRoutePath, this.parentCoordinator});
+
+  final CoordinatorModular<AppRoute>? parentCoordinator;
+
+  @override
+  CoordinatorModular<AppRoute> get coordinator =>
+      parentCoordinator != null ? parentCoordinator! : super.coordinator;
 
   late final tabStack = IndexedStackPath.createWith(
     [HomeTab(), SearchTab()],
@@ -969,5 +991,70 @@ void main() {
       expect(coordinator.root.stack.length, equals(1));
       expect(coordinator.root.stack[0], isA<HomeRoute>());
     });
+  });
+
+  group('isRouteModule cases', () {
+    test(
+      'shares layoutKeyTable and converterTable with parent coordinator',
+      () {
+        final parentCoordinator = TestCoordinatorModular(
+          modules: [(parent) => TestCoordinator(parentCoordinator: parent)],
+        );
+
+        final childCoordinator = parentCoordinator.getModule<TestCoordinator>();
+
+        expect(childCoordinator.isRouteModule, isTrue);
+
+        // Verify layoutKeyTable is shared
+        parentCoordinator.encodeLayoutKey('test_layout');
+        expect(
+          childCoordinator.layoutKeyTable.containsKey('test_layout'),
+          isTrue,
+        );
+
+        childCoordinator.encodeLayoutKey('child_layout');
+        expect(
+          parentCoordinator.layoutKeyTable.containsKey('child_layout'),
+          isTrue,
+        );
+
+        // Verify converterTable is shared
+        parentCoordinator.defineRestorableConverter(
+          'parent_conv',
+          () => const BookmarkConverter(),
+        );
+        expect(
+          childCoordinator.converterTable.containsKey('parent_conv'),
+          isTrue,
+        );
+
+        childCoordinator.defineRestorableConverter(
+          'child_conv',
+          () => const BookmarkConverter(),
+        );
+        expect(
+          parentCoordinator.converterTable.containsKey('child_conv'),
+          isTrue,
+        );
+      },
+    );
+
+    test(
+      'uses own layoutKeyTable and converterTable when isRouteModule is false',
+      () {
+        final coordinator = TestCoordinator();
+
+        expect(coordinator.isRouteModule, isFalse);
+
+        coordinator.encodeLayoutKey('test_layout');
+        expect(coordinator.layoutKeyTable.containsKey('test_layout'), isTrue);
+
+        coordinator.defineRestorableConverter(
+          'test_conv',
+          () => const BookmarkConverter(),
+        );
+        expect(coordinator.converterTable.containsKey('test_conv'), isTrue);
+      },
+    );
   });
 }
