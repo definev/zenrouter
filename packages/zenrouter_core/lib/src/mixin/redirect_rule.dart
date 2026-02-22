@@ -86,11 +86,17 @@ abstract class RedirectRule<T extends RouteTarget> {
 ///
 /// Routes with this mixin delegate their redirect logic to a list of
 /// [RedirectRule] instances, enabling composable and testable redirect chains.
-mixin RouteRedirectRule<T extends RouteTarget> on RouteRedirect<T> {
+mixin RouteRedirectRule<T extends RouteTarget> on RouteTarget
+    implements RouteRedirect<T> {
   /// The list of rules applied to this route, in order.
   ///
   /// Rules are processed sequentially. Earlier rules have higher priority.
   List<RedirectRule> get redirectRules;
+
+  // coverage:ignore-start
+  @override
+  FutureOr<T> redirect() => this as T;
+  // coverage:ignore-end
 
   /// Implements [RouteRedirect.redirectWith] by running all rules in sequence.
   ///

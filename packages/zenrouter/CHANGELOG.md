@@ -1,3 +1,24 @@
+## 2.0.0
+
+🎉 **Major Release - Core Architecture & Layouts**
+
+### 🚀 New Features
+
+- **`zenrouter_core` Package**: Extracted all platform-independent core routing types (`RouteTarget`, `CoordinatorCore`, `StackPath`, and route mixins) into a new dedicated package.
+- **Composable Redirects**: You can use `RouteRedirectRule` as `RouteRedirect` to allow composable, testable redirect logic via multiple rules (e.g., `StopRedirect`, `ContinueRedirect`, `RedirectTo`).
+- **Route Identity updates**: Introduced `RouteUri` abstract class (and `RouteUnique`) to centralize URI-based identity for coordinator-managed routes.
+
+### ⚠️ Breaking Changes
+
+- **Layout Binding Refactoring**: The global `RouteLayout.defineLayout` has been removed. You must now bind layouts to paths using the `StackPath.bindLayout()` cascade syntax (e.g., `NavigationPath.createWith(...)..bindLayout(HomeLayout.new)`), or use `defineLayoutParent()` / `defineLayoutBuilder()` inside the coordinator.
+- **Core Mixins Relocated**: Core routing types have been consolidated under `zenrouter_core`. The main package still exports them, but any explicit deep imports to old paths must be updated.
+- **RouteLayout.definePath Deprecated**: Deprecated `RouteLayout.definePath` in favor of `coordinator.defineLayoutBuilder`.
+
+### 📖 Documentation
+
+- **Architecture Overview**: Completely redesigned READMEs to highlight the layered architecture and paradigm decisions.
+- **API Reference**: Rewrote coordinator, mixins, and navigation paths API references from source.
+
 ## 1.2.0
 
 ### 🐞 Fixes
@@ -20,8 +41,6 @@
 
 - **New Guide**: [Coordinator as RouteModule](doc/guides/coordinator-as-module.md)
 - **New Recipe**: [Route Versioning](doc/recipes/route-versioning.md)
-
----
 
 ## 1.1.0
 

@@ -295,8 +295,7 @@ void main() {
 
 abstract class RedirectRuleTestRoute extends RouteTarget with RouteUnique {}
 
-class RuleRoute extends RedirectRuleTestRoute
-    with RouteRedirect, RouteRedirectRule {
+class RuleRoute extends RedirectRuleTestRoute with RouteRedirectRule {
   RuleRoute({required this.id, required this.rules});
 
   final String id;
@@ -459,8 +458,7 @@ class FirstTab extends RedirectRuleTestRoute {
   Uri toUri() => Uri.parse('/first-tab');
 }
 
-class SecondTab extends RedirectRuleTestRoute
-    with RouteRedirect, RouteRedirectRule {
+class SecondTab extends RedirectRuleTestRoute with RouteRedirectRule {
   @override
   Type get layout => TestIndexedStackLayout;
 
