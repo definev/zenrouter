@@ -97,5 +97,5 @@ mixin CoordinatorRestoration<T extends RouteUnique> on CoordinatorCore<T> {
   ) => converterTable[key] = constructor;
 
   RestorableConverter? getRestorableConverter(String key) =>
-      converterTable[key]?.call();
+      converterTable[key]?.call() ?? RestorableConverter.buildConverter(key);
 }

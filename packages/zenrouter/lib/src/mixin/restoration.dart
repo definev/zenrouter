@@ -238,7 +238,7 @@ mixin RouteRestorable<T extends RouteTarget> on RouteTarget {
 ///
 /// ## Where It Fits in the Architecture
 ///
-/// Converters are registered globally in your [Coordinator] via [defineConverter] during
+/// Converters are registered globally in your [Coordinator] via [Coordinator.defineConverter] during
 /// initialization. When the restoration system needs to serialize or deserialize a route,
 /// it looks up the converter by its unique key and delegates the work to it. This architecture
 /// allows converters to be reused across different parts of your application and provides
@@ -376,7 +376,7 @@ abstract class RestorableConverter<T extends Object> {
 
   /// The global registry mapping converter keys to their constructor functions.
   ///
-  /// This table is populated during app initialization via [defineConverter] and queried
+  /// This table is populated during app initialization via [Coordinator.defineConverter] and queried
   /// during restoration via [buildConverter]. It persists for the entire application lifetime.
   static final Map<String, RestoratableConverterConstructor> _converterTable =
       {};
@@ -395,7 +395,6 @@ abstract class RestorableConverter<T extends Object> {
   ///   () => const UserProfileConverter(),
   /// );
   /// ```
-  @Deprecated('Use `Coordinator.defineRestorableConverter` instead')
   static void defineConverter<T extends Object>(
     String key,
     RestoratableConverterConstructor<T> constructor,

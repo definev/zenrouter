@@ -482,7 +482,7 @@ void main() {
 
       // Test createLayout error
       try {
-        RouteWithUndefinedLayout().createLayout(coordinator);
+        RouteWithUndefinedLayout().createParentLayout(coordinator);
         fail('Should have thrown UnimplementedError');
       } on UnimplementedError catch (e) {
         // Should mention the layout type
@@ -506,7 +506,7 @@ void main() {
       final coordinator = ErrorTestCoordinator();
 
       try {
-        RouteWithUndefinedLayout().createLayout(coordinator);
+        RouteWithUndefinedLayout().createParentLayout(coordinator);
         fail('Should have thrown');
       } on UnimplementedError catch (e) {
         final message = e.message ?? '';
