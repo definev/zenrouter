@@ -99,7 +99,8 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
               createLayoutParent: createLayoutParent,
               decodeLayoutKey: decodeLayoutKey,
               // coverage:ignore-start
-              getRestorableConverter: getRestorableConverter ?? (_) => null,
+              getRestorableConverter:
+                  getRestorableConverter ?? RestorableConverter.buildConverter,
               // coverage:ignore-end
             )
             as T,
