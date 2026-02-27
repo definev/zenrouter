@@ -236,9 +236,24 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
   late final RouteInformationProvider routeInformationProvider =
       PlatformRouteInformationProvider(
         initialRouteInformation: RouteInformation(
-          uri: initialRoutePath ?? Uri.parse('/'),
+          uri: _resolveInitialUri(initialRoutePath),
         ),
       );
+
+  Uri _resolveInitialUri(Uri? initialUri) {
+    final defaultUri = Uri.tryParse(
+      WidgetsBinding.instance.platformDispatcher.defaultRouteName,
+    );
+    if (defaultUri?.hasEmptyPath == true && initialUri != null) {
+      return initialUri;
+    }
+
+    if (defaultUri != null && defaultUri.hasEmptyPath) {
+      return defaultUri.replace(path: '/');
+    }
+
+    return defaultUri ?? Uri();
+  }
 
   /// Access to the navigator state.
   ///
