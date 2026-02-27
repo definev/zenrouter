@@ -164,7 +164,7 @@ void main() {
           '::invalid::',
           initialUri,
         );
-        expect(result.toString(), equals('/'));
+        expect(result.toString(), equals('/initial'));
       },
     );
   });
