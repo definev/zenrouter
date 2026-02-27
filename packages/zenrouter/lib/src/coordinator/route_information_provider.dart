@@ -1,6 +1,15 @@
 import 'package:flutter/widgets.dart';
 import 'package:zenrouter/zenrouter.dart';
 
+/// A [RouteInformationProvider] that derives its initial route from both the
+/// platform and a [Coordinator].
+///
+/// The initial [Uri] is resolved by first parsing the platform dispatcher’s
+/// [defaultRouteName]. If that route has no path segments (is effectively
+/// empty) and [Coordinator.initialRoutePath] is non-null, the coordinator’s
+/// [initialRoutePath] is used instead. When an initial URI is chosen but has
+/// an empty path, it is normalized to `/`, and if no usable platform route
+/// can be parsed the URI defaults to `/`.
 class CoordinatorRouteInformationProvider
     extends PlatformRouteInformationProvider {
   CoordinatorRouteInformationProvider({required Coordinator coordinator})
