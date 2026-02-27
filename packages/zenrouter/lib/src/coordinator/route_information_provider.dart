@@ -21,14 +21,21 @@ class CoordinatorRouteInformationProvider
   @visibleForTesting
   static Uri resolveInitialUri(String? platformRouteName, Uri? initialUri) {
     final defaultUri = Uri.tryParse(platformRouteName ?? '');
-    if (defaultUri?.pathSegments.isEmpty == true && initialUri != null) {
+
+    // If the platform route name can't be parsed, fall back to the provided
+    // initialUri when available; otherwise, use the root route.
+    if (defaultUri == null) {
+      return initialUri ?? Uri.parse('/');
+    }
+
+    if (defaultUri.pathSegments.isEmpty && initialUri != null) {
       return initialUri;
     }
 
-    if (defaultUri != null && defaultUri.hasEmptyPath) {
+    if (defaultUri.hasEmptyPath) {
       return defaultUri.replace(path: '/');
     }
 
-    return defaultUri ?? Uri.parse('/');
+    return defaultUri;
   }
 }
