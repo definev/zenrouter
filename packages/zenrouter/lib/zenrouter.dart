@@ -8,6 +8,7 @@ export 'src/coordinator/observer.dart';
 export 'src/coordinator/router.dart';
 export 'src/coordinator/transition.dart';
 export 'src/coordinator/restoration/_public.dart';
+export 'src/coordinator/route_information_provider.dart';
 
 /// Path base
 export 'src/path/layout.dart';
