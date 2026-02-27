@@ -1,3 +1,7 @@
+## 2.0.1
+- **Fix**: Revert `hasEmptyPath` back to `pathSegments.isEmpty` in `resolveInitialUri` for correct path empty checks.
+- **Refactor**: Remove redundant `initialRouteInformation` parameter from `CoordinatorRouteInformationProvider` since fallback defaults and resolution logic is robust now.
+
 ## 2.0.0
 
 🎉 **Major Release - Core Architecture & Layouts**

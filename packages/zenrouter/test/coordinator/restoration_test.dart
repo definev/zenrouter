@@ -855,9 +855,8 @@ void main() {
       final coordinator = TestCoordinator(
         initialRoutePath: Uri.parse('/settings'),
       );
-      final config = coordinator;
 
-      await tester.pumpWidget(MaterialApp.router(routerConfig: config));
+      await tester.pumpWidget(MaterialApp.router(routerConfig: coordinator));
 
       await tester.pumpAndSettle();
 

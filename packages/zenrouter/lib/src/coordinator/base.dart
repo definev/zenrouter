@@ -231,14 +231,12 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
   /// The [RouteInformationProvider] that is used to configure the [Router].
   ///
   /// ## Relationship
-  /// Supplies the initial URI from [initialRoutePath] or defaults to `/`.
+  /// Supplies the initial URI, preferring any platform-provided route
+  /// (e.g. from [PlatformDispatcher.defaultRouteName]), then falling back to
+  /// [initialRoutePath] if set, and finally defaulting to `/`.
   @override
   late final RouteInformationProvider routeInformationProvider =
-      PlatformRouteInformationProvider(
-        initialRouteInformation: RouteInformation(
-          uri: initialRoutePath ?? Uri.parse('/'),
-        ),
-      );
+      CoordinatorRouteInformationProvider(coordinator: this);
 
   /// Access to the navigator state.
   ///
