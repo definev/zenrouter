@@ -10,19 +10,15 @@ import 'package:zenrouter_nocterm/src/path/stack.dart';
 final kDefaultLayoutBuilderTable =
     Map.unmodifiable(<PathKey, RouteLayoutBuilder>{
       NavigationPath.key: (coordinator, path, layout) {
-        return NavigationStack<RouteUnique>(
+        return NavigationStack(
           path: path as NavigationPath<RouteUnique>,
           coordinator: coordinator,
-          resolver: (RouteUnique route) {
-            switch (route) {
-              case RouteTransition():
-                return route.transition(coordinator);
-              default:
-                return PageRoute(
-                  builder: (context) => route.build(coordinator, context),
-                  settings: RouteSettings(name: route.identifier.toString()),
-                );
-            }
+          resolver: (route) => switch (route) {
+            RouteTransition() => route.transition(coordinator),
+            _ => PageRoute(
+              builder: (context) => route.build(coordinator, context),
+              settings: route.settings,
+            ),
           },
         );
       },

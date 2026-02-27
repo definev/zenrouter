@@ -28,7 +28,11 @@ class _NavigationStackState<T extends RouteTarget>
   List<T> _currentStack = [];
 
   void _applyDiff() async {
-    final diffOps = myersDiff<T>(_currentStack, component.path.stack);
+    final diffOps = myersDiff<T>(
+      _currentStack,
+      component.path.stack,
+      equals: (a, b) => identical(a, b),
+    );
     final state = _navigatorKey.currentState!;
     for (final op in diffOps) {
       switch (op) {
@@ -71,7 +75,40 @@ class _NavigationStackState<T extends RouteTarget>
 
   @override
   Component build(BuildContext context) {
-    return Navigator(key: _navigatorKey, routes: {});
+    return Navigator(
+      key: _navigatorKey,
+      routes: {},
+      popBehavior: PopBehavior(
+        onPopInvoked: (route) async {
+          if (route.settings.arguments case RouteGuard guard) {
+            if (component.coordinator != null) {
+              return guard.popGuardWith(component.coordinator!);
+            } else {
+              return guard.popGuard();
+            }
+          }
+
+          final target = route.settings.arguments as T;
+          if (!target.isPopByPath) component.path.remove(target, discard: true);
+
+          return true;
+        },
+      ),
+      observers: [NavigationPathObserver(component.path)],
+    );
+  }
+}
+
+class NavigationPathObserver<T extends RouteTarget> extends NavigatorObserver {
+  NavigationPathObserver(this.path);
+  final NavigationPath<T> path;
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    final target = route.settings.arguments as T;
+    if (!target.isPopByPath) {
+      path.remove(target, discard: true);
+    }
   }
 }
 

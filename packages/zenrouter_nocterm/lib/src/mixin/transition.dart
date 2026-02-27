@@ -18,6 +18,9 @@ mixin RouteTransition on RouteUnique {
   Route<T> transition<T extends RouteUnique>(
     covariant CoordinatorCore coordinator,
   );
+}
 
-  RouteSettings get settings => RouteSettings(name: identifier.toString());
+extension RouteSettingsExtension on RouteIdentity {
+  RouteSettings get settings =>
+      RouteSettings(name: identifier.toString(), arguments: this);
 }
