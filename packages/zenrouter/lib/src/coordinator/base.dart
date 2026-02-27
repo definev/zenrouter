@@ -252,7 +252,7 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
       return defaultUri.replace(path: '/');
     }
 
-    return defaultUri ?? Uri();
+    return defaultUri ?? Uri.parse('/');
   }
 
   /// Access to the navigator state.
