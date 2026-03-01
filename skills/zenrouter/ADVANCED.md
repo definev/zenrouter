@@ -16,7 +16,7 @@ class ShopCoordinator extends Coordinator<AppRoute>
   @override
   final CoordinatorModular<AppRoute> coordinator;
 
-  late final shopStack = NavigationPath.createWith(
+  late final shopStack = NavigationPath<AppRoute>.createWith(
     label: 'shop',
     coordinator: coordinator,
   )..bindLayout(ShopLayout.new);
@@ -103,7 +103,7 @@ class AuthModule extends RouteModule<AppRoute> {
 class ShopModule extends RouteModule<AppRoute> {
   ShopModule(super.coordinator);
 
-  late final shopStack = NavigationPath.createWith(
+  late final shopStack = NavigationPath<AppRoute>.createWith(
     coordinator: coordinator,
     label: 'shop',
   )..bindLayout(ShopLayout.new);
@@ -192,7 +192,7 @@ class ShopLayout extends AppRoute with RouteLayout<AppRoute> {
 | Rule | Why |
 |:-----|:----|
 | Always return `null` for unrecognised URIs | So other modules can claim them |
-| Use the inherited `coordinator` field for `NavigationPath.createWith` | It always refers to the root coordinator that owns the navigation state |
+| Use the inherited `coordinator` field for `NavigationPath<T>.createWith` | It always refers to the root coordinator that owns the navigation state |
 | Module order in `defineModules()` matters | First non-null `parseRouteFromUri` wins |
 | `defineLayout` / `defineConverter` are called once | During coordinator construction — do not call them manually |
 | `getModule<T>()` throws `TypeError` if `T` is not registered | Make sure the target module is in `defineModules()` |
@@ -259,7 +259,7 @@ For tab-bar style navigation where all tabs stay alive:
 
 ```dart
 // In coordinator / module:
-late final tabStack = IndexedStackPath.createWith(
+late final tabStack = IndexedStackPath<AppRoute>.createWith(
   coordinator: this,
   label: 'main-tabs',
   [HomeTab(), ShopTab(), ProfileTab()],

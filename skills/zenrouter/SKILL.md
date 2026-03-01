@@ -65,7 +65,7 @@ abstract class AppRoute extends RouteTarget with RouteUnique {
 
 ```dart
 class AppCoordinator extends Coordinator<AppRoute> {
-  late final homeStack = NavigationPath.createWith(
+  late final homeStack = NavigationPath<AppRoute>.createWith(
     label: 'home',
     coordinator: this,
   )..bindLayout(HomeLayout.new);
@@ -119,7 +119,7 @@ class AppCoordinator extends Coordinator<AppRoute>
 class ShopModule extends RouteModule<AppRoute> {
   ShopModule(super.coordinator);
 
-  late final shopStack = NavigationPath.createWith(
+  late final shopStack = NavigationPath<AppRoute>.createWith(
     coordinator: coordinator,   // ← always the inherited `coordinator` field (= root)
     label: 'shop',
   )..bindLayout(ShopLayout.new);
