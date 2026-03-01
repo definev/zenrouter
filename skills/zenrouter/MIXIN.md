@@ -8,19 +8,19 @@ All mixins that can be applied to a `RouteTarget` to extend its capabilities.
 
 ```
 RouteTarget (base class)
-├── RouteIdentity<T>         ← URI/string identity
-│   └── RouteLayoutChild     ← declares parentLayoutKey
-│       ├── RouteUri          ← combines identity + layout child (abstract)
-│       │   ├── RouteDeepLink ← deep link strategy
-│       │   └── RouteUnique   ← concrete: build(), toUri(), layout resolution
+├── RouteIdentity<T>                     ← URI/string identity
+│   └── RouteLayoutChild                 ← declares parentLayoutKey
+│       ├── RouteUri                     ← combines identity + layout child (abstract)
+│       │   ├── RouteDeepLink            ← deep link strategy
+│       │   └── RouteUnique              ← concrete: build(), toUri(), layout resolution
 │       │       ├── RouteTransition      ← custom page transition
 │       │       ├── RouteQueryParameters ← reactive URL query params
-│       │       └── RouteLayout<T>       ← shell/tab layout (wraps child routes)
-│       └── RouteLayoutParent ← resolves StackPath for child routes
-├── RouteGuard               ← blocks pop
-├── RouteRedirect<T>         ← redirects before display
-├── RouteRedirectRule<T>     ← composable redirect chain
-└── RouteRestorable<T>       ← state restoration after process death
+│       │       └── RouteLayout<T>       ← shell/tab layout (implements RouteLayoutParent)
+│       └── RouteLayoutParent            ← resolves StackPath for child routes
+├── RouteGuard                           ← blocks pop
+├── RouteRedirect<T>                     ← redirects before display
+├── RouteRedirectRule<T>                 ← composable redirect chain
+└── RouteRestorable<T>                   ← state restoration after process death
 ```
 
 ---
