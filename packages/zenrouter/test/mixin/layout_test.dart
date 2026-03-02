@@ -210,6 +210,13 @@ class _ChildModuleCoordinator extends Coordinator<LayoutTestRoute> {
 
   @override
   LayoutTestRoute parseRouteFromUri(Uri uri) => HomeRoute();
+
+  bool isDisposed = false;
+  @override
+  void dispose() {
+    isDisposed = true;
+    super.dispose();
+  }
 }
 
 class _ParentModularCoordinator extends Coordinator<LayoutTestRoute>
@@ -221,6 +228,13 @@ class _ParentModularCoordinator extends Coordinator<LayoutTestRoute>
 
   @override
   LayoutTestRoute notFoundRoute(Uri uri) => HomeRoute();
+
+  bool isDisposed = false;
+  @override
+  void dispose() {
+    isDisposed = true;
+    super.dispose();
+  }
 }
 
 // ============================================================================
@@ -385,6 +399,19 @@ void main() {
         ),
         isFalse,
       );
+    });
+
+    test('CoordinatorModular dispose cascade', () {
+      final parent = _ParentModularCoordinator();
+      final child = parent.getModule<_ChildModuleCoordinator>();
+
+      expect(child.isDisposed, isFalse);
+      expect(parent.isDisposed, isFalse);
+
+      parent.dispose();
+
+      expect(child.isDisposed, isTrue);
+      expect(parent.isDisposed, isTrue);
     });
   });
 }
