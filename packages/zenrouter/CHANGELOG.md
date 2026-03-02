@@ -1,3 +1,6 @@
+## 2.0.2
+- **Fix**: Fix `CoordinatorModular` edgecase cascading dispose and prevent duplicate definitions. (Bumped `zenrouter_core` to 2.0.1)
+
 ## 2.0.1
 - **Fix**: Revert `hasEmptyPath` back to `pathSegments.isEmpty` in `resolveInitialUri` for correct path empty checks.
 - **Refactor**: Remove redundant `initialRouteInformation` parameter from `CoordinatorRouteInformationProvider` since fallback defaults and resolution logic is robust now.

@@ -2,7 +2,7 @@ name: zenrouter_core
 description: >-
   The core routing engine and unified interfaces for the ZenRouter navigation system.
   Contains common models, types, and logic used across the zenrouter ecosystem.
-version: 2.0.0
+version: 2.0.1
 
 repository: https://github.com/definev/zenrouter
 homepage: https://github.com/definev/zenrouter/tree/main/packages/zenrouter_core

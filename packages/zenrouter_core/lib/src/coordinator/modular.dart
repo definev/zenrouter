@@ -75,6 +75,22 @@ mixin CoordinatorModular<T extends RouteUri> on CoordinatorCore<T> {
     for (final module in defineModules()) module.runtimeType: module,
   };
 
+  late final Map<Type, RouteModule<T>> _allModules = {
+    ..._modules,
+    for (final module in _modules.values)
+      if (module case CoordinatorModular modular) ...modular._allModules.cast(),
+  };
+
+  @override
+  void dispose() {
+    for (final module in _modules.values.whereType<CoordinatorCore>()) {
+      module.dispose();
+    }
+    _modules.clear();
+    _allModules.clear();
+    super.dispose();
+  }
+
   /// Returns the set of route modules for this coordinator.
   ///
   /// The order determines which module is checked first during route parsing.
@@ -83,7 +99,7 @@ mixin CoordinatorModular<T extends RouteUri> on CoordinatorCore<T> {
   /// Retrieves a module by its type.
   ///
   /// Throws [TypeError] if the module is not registered.
-  R getModule<R extends RouteModule<T>>() => _modules[R] as R;
+  R getModule<R extends RouteModule<T>>() => _allModules[R] as R;
 
   @override
   List<StackPath<RouteTarget>> get paths => [
@@ -100,7 +116,9 @@ mixin CoordinatorModular<T extends RouteUri> on CoordinatorCore<T> {
   void defineLayout() {
     super.defineLayout();
     for (final module in _modules.values) {
-      module.defineLayout();
+      if (module is! CoordinatorCore) {
+        module.defineLayout();
+      }
     }
   }
 
@@ -108,7 +126,9 @@ mixin CoordinatorModular<T extends RouteUri> on CoordinatorCore<T> {
   void defineConverter() {
     super.defineConverter();
     for (final module in _modules.values) {
-      module.defineConverter();
+      if (module is! CoordinatorCore) {
+        module.defineConverter();
+      }
     }
   }
 
