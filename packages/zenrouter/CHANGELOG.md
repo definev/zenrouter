@@ -1,3 +1,6 @@
+## 2.0.3
+- **Fix**: `CoordinatorModular.getModule` now correctly resolves the coordinator itself — `runtimeType: this` is registered in `_allModules`, enabling `getModule<MyCoordinator>()` to work at any level of the hierarchy. (Bumped `zenrouter_core` to 2.0.2)
+
 ## 2.0.2
 - **Fix**: Fix `CoordinatorModular` edgecase cascading dispose and prevent duplicate definitions. (Bumped `zenrouter_core` to 2.0.1)
 

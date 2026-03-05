@@ -76,6 +76,7 @@ mixin CoordinatorModular<T extends RouteUri> on CoordinatorCore<T> {
   };
 
   late final Map<Type, RouteModule<T>> _allModules = {
+    runtimeType: this,
     ..._modules,
     for (final module in _modules.values)
       if (module case CoordinatorModular modular) ...modular._allModules.cast(),
