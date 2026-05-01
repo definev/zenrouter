@@ -20,10 +20,10 @@ This package is usually added automatically when using `zenrouter_file_generator
 
 ```yaml
 dependencies:
-  zenrouter_file_annotation: ^0.4.5
+  zenrouter_file_annotation: ^1.0.1
 
 dev_dependencies:
-  zenrouter_file_generator: ^0.4.5
+  zenrouter_file_generator: ^1.1.1
 ```
 
 ## Usage

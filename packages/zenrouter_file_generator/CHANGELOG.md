@@ -1,3 +1,6 @@
+## 1.1.1
+- **Fix**: Require `zenrouter_file_annotation: ^1.0.1` so `PathParser.parseDirParts` is always available.
+
 ## 1.1.0
 - **Fix**: dot-notation failed to resolve layout
 

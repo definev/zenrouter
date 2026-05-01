@@ -1,3 +1,6 @@
+## 1.0.1
+- **Fix**: Publish `PathParser.parseDirParts` used by `zenrouter_file_generator` 1.1.x to prevent build script compilation failures.
+
 ## 1.0.0
 - **Stable release**: Production-ready annotation package
 - Compatible with `zenrouter: ^1.0.0` and `zenrouter_file_generator: ^1.0.0`
