@@ -676,7 +676,7 @@ Create route files in a special directory structure, and the generator creates t
 ## Need Help?
 
 - [ZenRouter Getting Started](../guides/getting-started.md)
-- [Coordinator Pattern Guide](../paradigms/coordinator.md)
+- [Coordinator Pattern Guide](../paradigms/coordinator/coordinator.md)
 - [Bottom Navigation Recipe](../recipes/bottom-navigation.md)
 - [Authentication Recipe](../recipes/authentication-flow.md)
 - [GitHub Issues](https://github.com/definev/zenrouter/issues)

@@ -615,7 +615,7 @@ void defineLayout() {
 - **See [state-restoration.md](./state-restoration.md)** for persisting navigation state
 - **See [query-parameters.md](./query-parameters.md)** for handling URL parameters
 - **Check example code** in `packages/zenrouter/example/lib/main_modular.dart`
-- **Read API docs** for [RouteModule](../api/coordinator.md#routemodule) and [CoordinatorModular](../api/coordinator.md#coordinatormodular)
+- **Read API docs** for [Coordinator](../api/coordinator.md) and the [Coordinator as RouteModule guide](./coordinator-as-module.md)
 
 ---
 

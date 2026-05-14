@@ -543,7 +543,7 @@ class LoginRoute extends AppRoute {
 
 - [404 Handling](404-handling.md) - Handle unauthorized vs not found
 - [State Management Integration](state-management.md) - Integrate with Riverpod/Bloc
-- [Nested Navigation](nested-navigation.md) - Protected sections in nested nav
+- [Route Layout](../guides/route-layout.md) - Protected sections in nested layouts
 
 ## See Also
 

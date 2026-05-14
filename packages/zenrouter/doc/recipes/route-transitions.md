@@ -372,8 +372,7 @@ Curves.bounceOut    // Exaggerated bounce
 
 ## Related Recipes
 
-- [Modal Routing](modal-routing.md) - Full-screen modals with custom transitions
-- [Nested Navigation](nested-navigation.md) - Transitions in nested contexts
+- [Route Layout](../guides/route-layout.md) - Transitions in nested contexts
 - [Bottom Navigation](bottom-navigation.md) - Tab switching animations
 
 ## See Also

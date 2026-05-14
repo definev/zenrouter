@@ -14,7 +14,7 @@ The imperative paradigm gives you full, explicit control over the navigation sta
 - You need fine-grained control over the stack
 
 ❌ **Don't use imperative navigation when:**
-- You need deep linking or web URL support (use [Coordinator](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/coordinator.md) instead)
+- You need deep linking or web URL support (use [Coordinator](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/coordinator/coordinator.md) instead)
 - Your navigation is driven by state changes (use [Declarative](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/declarative.md) instead)
 - You want automatic browser back button support
 
@@ -483,7 +483,7 @@ NavigationStack.declarative(
 
 ### Moving to Coordinator
 
-If you need deep linking or web support, upgrade to [Coordinator](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/coordinator.md):
+If you need deep linking or web support, upgrade to [Coordinator](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/coordinator/coordinator.md):
 
 ```dart
 // 1. Add RouteUnique to your routes
@@ -519,6 +519,6 @@ MaterialApp.router(
 ## See Also
 
 - [Declarative Navigation](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/declarative.md) - State-driven routing
-- [Coordinator Pattern](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/coordinator.md) - Deep linking and web support
+- [Coordinator Pattern](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/coordinator/coordinator.md) - Deep linking and web support
 - [Route Mixins Guide](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/mixins.md) - RouteGuard, RouteRedirect, and more
 - [NavigationPath API](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/navigation-paths.md#navigationpath) - Complete API reference

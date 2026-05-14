@@ -495,7 +495,7 @@ class SearchPage extends StatelessWidget {
 
 - [Authentication Flow](authentication-flow.md) - Auth patterns with state
 - [Bottom Navigation](bottom-navigation.md) - Tab state management
-- [Nested Navigation](nested-navigation.md) - Nested state contexts
+- [Route Layout](../guides/route-layout.md) - Nested state contexts
 
 ## See Also
 

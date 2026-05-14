@@ -882,4 +882,4 @@ coordinator.recoverRouteFromUri(
 - [Điều hướng Khai báo (Declarative)](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/declarative.md) - Định tuyến dựa trên trạng thái (State-driven)
 - [Hướng dẫn Mixin Route](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/mixins.md) - Tất cả các mixin có sẵn
 - [API Coordinator](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/coordinator.md) - Tham khảo API đầy đủ
-- [Hướng dẫn Deep Linking](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/guides/deep-linking.md) - Thiết lập deep link
+- [Hướng dẫn Deep Linking](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/coordinator/coordinator.md) - Thiết lập deep link

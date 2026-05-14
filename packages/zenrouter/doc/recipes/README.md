@@ -92,9 +92,9 @@ Configure hash vs. path-based URLs, server setup, and deployment strategies.
 | Tab bar with persistent tabs | [Bottom Navigation](bottom-navigation.md) |
 | Login with protected routes | [Authentication Flow](authentication-flow.md) |
 | Invalid URL handling | [404 Handling](404-handling.md) |
-| Sidebar + content layout | [Nested Navigation](nested-navigation.md) |
+| Sidebar + content layout | [Route Layout](../guides/route-layout.md) |
 | Custom animations | [Route Transitions](route-transitions.md) |
-| Full-screen flows | [Modal Routing](modal-routing.md) |
+| Full-screen flows | [Route Transitions](route-transitions.md) |
 | API versioning / feature flags | [Route Versioning](route-versioning.md) |
 | Riverpod/Bloc integration | [State Management](state-management.md) |
 | Deploying to web | [URL Strategies](url-strategies.md) |
@@ -121,7 +121,7 @@ Configure hash vs. path-based URLs, server setup, and deployment strategies.
 
 - **Can't find a recipe?** [Open an issue](https://github.com/definev/zenrouter/issues) requesting a new recipe
 - **Found a problem?** [Report it](https://github.com/definev/zenrouter/issues)
-- **Have a better solution?** [Contribute](https://github.com/definev/zenrouter/blob/main/CONTRIBUTING.md) your recipe!
+- **Have a better solution?** [Open an issue](https://github.com/definev/zenrouter/issues) with your recipe idea!
 
 ---
 

@@ -377,7 +377,7 @@ enum NotFoundSection { generic, blog, shop }
 
 - [Authentication Flow](authentication-flow.md) - Redirect to login before showing 404
 - [Route Transitions](route-transitions.md) - Custom animations for error pages
-- [Nested Navigation](nested-navigation.md) - 404s in nested navigation contexts
+- [Route Layout](../guides/route-layout.md) - 404s in nested navigation contexts
 
 ## See Also
 

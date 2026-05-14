@@ -635,7 +635,7 @@ Pattern matching gives you powerful URI parsing logic.
 ## Need Help?
 
 - [ZenRouter Getting Started](../guides/getting-started.md)
-- [Coordinator Pattern Guide](../paradigms/coordinator.md)
+- [Coordinator Pattern Guide](../paradigms/coordinator/coordinator.md)
 - [Authentication Recipe](../recipes/authentication-flow.md)
 - [GitHub Issues](https://github.com/definev/zenrouter/issues)
 

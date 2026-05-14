@@ -607,7 +607,7 @@ class RootLayout extends StatelessWidget {
 
 ## Related Recipes
 
-- [Nested Navigation](nested-navigation.md) - Complex nested navigation patterns
+- [Route Layout](../guides/route-layout.md) - Complex nested navigation patterns
 - [State Management Integration](state-management.md) - Manage tab state with Riverpod/Bloc
 - [Authentication Flow](authentication-flow.md) - Protect tabs with authentication
 

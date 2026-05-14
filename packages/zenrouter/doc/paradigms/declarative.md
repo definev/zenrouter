@@ -15,7 +15,7 @@ The declarative paradigm lets you define your navigation stack as a function of 
 
 ❌ **Don't use declarative navigation when:**
 - Navigation is primarily event-driven (use [Imperative](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/imperative.md) instead)
-- You need deep linking or web URLs (use [Coordinator](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/coordinator.md) instead)
+- You need deep linking or web URLs (use [Coordinator](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/coordinator/coordinator.md) instead)
 - You need fine-grained control over push/pop operations
 
 ## Core Concept
@@ -633,6 +633,6 @@ class AppCoordinator extends Coordinator<AppRoute> {
 ## See Also
 
 - [Imperative Navigation](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/imperative.md) - Direct stack control
-- [Coordinator Pattern](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/coordinator.md) - Deep linking and web support
-- [Myers Diff Implementation](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/diff.md) - Algorithm details
-- [DeclarativeNavigationStack API](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/navigation-paths.md#declarativenavigationstack) - Complete API reference
+- [Coordinator Pattern](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/coordinator/coordinator.md) - Deep linking and web support
+- [Myers Diff Implementation](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/navigation-paths.md#navigationstackdeclarative) - Algorithm details
+- [DeclarativeNavigationStack API](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/navigation-paths.md#navigationstackdeclarative) - Complete API reference

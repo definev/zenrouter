@@ -883,4 +883,4 @@ coordinator.recoverRouteFromUri(
 - [Declarative Navigation](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/declarative.md) - State-driven routing
 - [Route Mixins Guide](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/mixins.md) - All available mixins
 - [Coordinator API](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/coordinator.md) - Complete API reference
-- [Deep Linking Guide](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/guides/deep-linking.md) - Deep linking setup
+- [Deep Linking Guide](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/coordinator/coordinator.md) - Deep linking setup

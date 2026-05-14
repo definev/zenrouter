@@ -616,7 +616,7 @@ Navigator 2.0 requires ~200 lines for basic routing. ZenRouter Coordinator: ~50 
 
 - [ZenRouter Getting Started](../guides/getting-started.md)
 - [Imperative Paradigm Guide](../paradigms/imperative.md)
-- [Coordinator Pattern Guide](../paradigms/coordinator.md)
+- [Coordinator Pattern Guide](../paradigms/coordinator/coordinator.md)
 - [Route Transitions Recipe](../recipes/route-transitions.md)
 - [GitHub Issues](https://github.com/definev/zenrouter/issues)
 

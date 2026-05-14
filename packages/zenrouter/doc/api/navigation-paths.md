@@ -869,5 +869,5 @@ StackTransition resolver(AppRoute route) {
 
 - [Imperative Navigation Guide](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/imperative.md) - Using DynamicNavigationPath
 - [Declarative Navigation Guide](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/declarative.md) - Using NavigationStack.declarative
-- [Coordinator Pattern Guide](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/coordinator.md) - Using paths with Coordinator
+- [Coordinator Pattern Guide](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/coordinator/coordinator.md) - Using paths with Coordinator
 - [Route Mixins](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/mixins.md) - Adding behavior to routes

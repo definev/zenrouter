@@ -424,7 +424,7 @@ void testHashUrl() {
 ## Related Recipes
 
 - [404 Handling](404-handling.md) - Handle invalid URLs gracefully
-- [Nested Navigation](nested-navigation.md) - URLs for nested routes
+- [Route Layout](../guides/route-layout.md) - URLs for nested layouts
 - [Authentication Flow](authentication-flow.md) - Protected URLs
 
 ## See Also

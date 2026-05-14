@@ -90,7 +90,6 @@ Practical solutions for specific scenarios:
 
 ### 🔧 API Reference (Information-Oriented)
 Complete technical documentation:
-- [Core Classes](api/core-classes.md) - RouteTarget fundamentals
 - [Navigation Paths](api/navigation-paths.md) - NavigationPath, IndexedStackPath
 - [Route Mixins](api/mixins.md) - Guards, redirects, transitions
 - [Coordinator API](api/coordinator.md) - Deep linking reference
@@ -141,7 +140,6 @@ zenrouter/
     │   └── from-navigator.md
     │
     ├── api/                   # Technical reference
-    │   ├── core-classes.md
     │   ├── navigation-paths.md
     │   ├── mixins.md
     │   └── coordinator.md
@@ -158,7 +156,7 @@ zenrouter/
 ## ✨ Quick Reference
 
 ### Core Concepts
-- **RouteTarget** - Base class for all routes ([Core Classes](api/core-classes.md))
+- **RouteTarget** - Base class for all routes ([Route Mixins](api/mixins.md))
 - **NavigationPath** - Stack container ([Navigation Paths](api/navigation-paths.md))
 - **Coordinator** - Deep linking coordinator ([Coordinator API](api/coordinator.md))
 - **CoordinatorModular** - Modular route delegation ([Modular Guide](guides/coordinator-modular.md))

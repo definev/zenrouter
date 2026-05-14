@@ -1260,5 +1260,5 @@ class CollectionListRoute extends AppRoute with RouteQueryParameters {
 ## See Also
 
 - [Imperative Navigation](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/imperative.md) - Using mixins with imperative navigation
-- [Coordinator Pattern](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/coordinator.md) - Using mixins with coordinator
-- [API Reference](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/core-classes.md) - Detailed API documentation
+- [Coordinator Pattern](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/coordinator/coordinator.md) - Using mixins with coordinator
+- [Navigation Paths API](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/navigation-paths.md) - Detailed navigation API documentation
