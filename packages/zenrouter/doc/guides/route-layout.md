@@ -419,6 +419,40 @@ When you push `DetailRoute`:
 
 ## Troubleshooting
 
+### Default layout builders require `Coordinator`
+
+In debug mode you may see:
+
+```
+The default layout builder for "NavigationPath" requires a zenrouter Coordinator
+(extend Coordinator<YourRoute>), but received ...
+```
+
+**Cause:** [`kDefaultLayoutBuilderTable`](../../lib/src/coordinator/layout.dart) builders for [`NavigationPath`](../api/navigation-paths.md) and [`IndexedStackPath`](../api/navigation-paths.md) need Flutter's [`Coordinator`](../api/coordinator.md) (`NavigationStack`, `routerDelegate`, restoration IDs, transitions). A bare [`CoordinatorCore`](https://pub.dev/packages/zenrouter_core) that does not extend `Coordinator` cannot use those defaults.
+
+**Solution:**
+
+1. **Recommended** — extend `Coordinator<YourRoute>` for any app using `NavigationPath` / `IndexedStackPath` with the stock builders.
+2. **Custom core** — register your own builder that accepts your `CoordinatorCore` subtype:
+
+```dart
+@override
+void defineLayout() {
+  defineLayoutBuilder(
+    NavigationPath.key,
+    (coordinatorCore, path, layout) {
+      final coordinator = coordinatorCore as MyCustomCoordinator;
+      return MyNavigationStack(
+        path: path as NavigationPath<MyRoute>,
+        coordinator: coordinator,
+      );
+    },
+  );
+}
+```
+
+See also [Migration Guide — `RouteLayoutBuilder`](../MIGRATION_GUIDE.md#routelayoutbuilder-first-parameter-coordinatorcore).
+
 ### Error: "Missing RouteLayout constructor"
 
 ```

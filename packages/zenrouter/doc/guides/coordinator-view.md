@@ -24,6 +24,8 @@ MaterialApp(
 
 The coordinator must implement `CoordinatorLayoutBuilder`—in practice, extend [`Coordinator`](../api/coordinator.md), which mixes in `CoordinatorLayout` and provides `layoutBuilder` by default.
 
+> **Note:** Default builders for [`NavigationPath`](../api/navigation-paths.md) / [`IndexedStackPath`](../api/navigation-paths.md) require a full `Coordinator`, not a bare `CoordinatorCore`. See [route-layout — default builders](route-layout.md#default-layout-builders-require-coordinator).
+
 ---
 
 ## When to Use It

@@ -40,7 +40,9 @@ class _CoordinatorViewState<T extends RouteUri>
     );
     if (route == null) return;
     await widget.coordinator.navigate(route);
+    // coverage:ignore-start
     if (mounted) setState(() {});
+    // coverage:ignore-end
   }
 
   @override

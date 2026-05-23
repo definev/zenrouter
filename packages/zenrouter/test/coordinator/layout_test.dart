@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'dart:async';
+
+import 'package:zenrouter/src/coordinator/layout.dart';
 import 'package:zenrouter/zenrouter.dart';
 
 // ============================================================================
@@ -187,6 +190,68 @@ void main() {
     });
   });
 
+  group('requireFlutterCoordinator', () {
+    late _CoreOnlyCoordinator coreOnly;
+
+    setUp(() {
+      coreOnly = _CoreOnlyCoordinator();
+    });
+
+    test('asserts for CoordinatorCore that is not Coordinator', () {
+      expect(
+        () => requireFlutterCoordinator(
+          coreOnly,
+          pathKey: NavigationPath.key,
+        ),
+        throwsA(
+          isA<AssertionError>().having(
+            (e) => e.message,
+            'message',
+            allOf(
+              contains('NavigationPath'),
+              contains('Coordinator'),
+              contains('defineLayoutBuilder'),
+              contains('route-layout.md'),
+            ),
+          ),
+        ),
+      );
+    });
+
+    test('default NavigationPath builder asserts before building stack', () {
+      final builder = kDefaultLayoutBuilderTable[NavigationPath.key]!;
+      final path = NavigationPath<LayoutRoute>.create(
+        label: 'assert-test',
+        stack: [],
+      );
+
+      expect(
+        () => builder(coreOnly, path, null),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+
+    test('default IndexedStackPath builder asserts before building stack', () {
+      final builder = kDefaultLayoutBuilderTable[IndexedStackPath.key]!;
+      final path = IndexedStackPath<LayoutRoute>.createWith(
+        coordinator: TestCoordinator(),
+        label: 'assert-test',
+        [HomeChildRoute()],
+      );
+
+      expect(
+        () => builder(coreOnly, path, null),
+        throwsA(
+          isA<AssertionError>().having(
+            (e) => e.message,
+            'message',
+            contains('IndexedStackPath'),
+          ),
+        ),
+      );
+    });
+  });
+
   group('CoordinatorLayout - defineLayoutBuilder', () {
     late TestCoordinator coordinator;
 
@@ -306,4 +371,16 @@ void main() {
       expect(customBuilderCalled, isTrue);
     });
   });
+}
+
+/// [CoordinatorCore] stand-in that is not a Flutter [Coordinator].
+class _CoreOnlyCoordinator extends Fake implements CoordinatorCore<LayoutRoute> {
+  @override
+  NavigationPath<LayoutRoute> get root => NavigationPath<LayoutRoute>.create(
+    label: 'root',
+    stack: [],
+  );
+
+  @override
+  FutureOr<LayoutRoute?> parseRouteFromUri(Uri uri) => null;
 }

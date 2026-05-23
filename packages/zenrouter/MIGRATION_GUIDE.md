@@ -109,6 +109,8 @@ coordinator.defineLayoutBuilder(
 
 If your builder only uses `coordinator.root`, `getLayoutBuilder`, or other members on `CoordinatorCore` / `CoordinatorLayout`, no cast is required.
 
+**Default builders (`NavigationPath` / `IndexedStackPath`):** [`kDefaultLayoutBuilderTable`](lib/src/coordinator/layout.dart) still require a Flutter **`Coordinator`**, not an arbitrary `CoordinatorCore`. In debug builds, passing the wrong type triggers an `assert` with a link to [route-layout.md — default layout builders](doc/guides/route-layout.md#default-layout-builders-require-coordinator). Register `defineLayoutBuilder` if you use a custom core type.
+
 #### Rationale
 
 Layout builders are shared infrastructure; the narrower parameter type matches `RouteLayout.buildRoot` and allows future embed hosts that implement `CoordinatorLayoutBuilder` without full `RouterConfig`.
