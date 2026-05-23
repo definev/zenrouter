@@ -198,7 +198,7 @@ void main() {
       expect(coordinator.getLayoutBuilder(NavigationPath.key), isNotNull);
 
       SizedBox customBuilder<T extends RouteUnique>(
-        Coordinator coordinator,
+        CoordinatorCore coordinator,
         StackPath<T> path,
         RouteLayout<T>? layout,
       ) {
@@ -237,7 +237,7 @@ void main() {
 
     test('returns custom builder after being defined', () {
       Widget customBuilder<T extends RouteUnique>(
-        Coordinator coordinator,
+        CoordinatorCore coordinator,
         StackPath<T> path,
         RouteLayout<T>? layout,
       ) {
@@ -285,7 +285,7 @@ void main() {
 
       bool customBuilderCalled = false;
       Widget customBuilder<T extends RouteUnique>(
-        Coordinator coordinator,
+        CoordinatorCore coordinator,
         StackPath<T> path,
         RouteLayout<T>? layout,
       ) {

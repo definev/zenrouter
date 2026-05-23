@@ -5,7 +5,9 @@ final kDefaultLayoutBuilderTable = Map.unmodifiable(<
   PathKey,
   RouteLayoutBuilder
 >{
-  NavigationPath.key: (coordinator, path, layout) {
+  NavigationPath.key: (coordinatorCore, path, layout) {
+    final coordinator = coordinatorCore as Coordinator;
+
     final restorationId = switch (layout) {
       RouteUnique route => coordinator.resolveRouteId(route),
       _ => coordinator.rootRestorationId,
@@ -45,7 +47,8 @@ final kDefaultLayoutBuilderTable = Map.unmodifiable(<
       },
     );
   },
-  IndexedStackPath.key: (coordinator, path, layout, [restorationId]) {
+  IndexedStackPath.key: (coordinatorCore, path, layout, [restorationId]) {
+    final coordinator = coordinatorCore as Coordinator;
     return ListenableBuilder(
       listenable: path as Listenable,
       builder: (context, child) {
@@ -85,7 +88,8 @@ final kDefaultLayoutBuilderTable = Map.unmodifiable(<
 /// - [IndexedStackPath]: Uses [IndexedStackPathBuilder] widget
 ///
 /// Default builders are provided via the top-level [kDefaultLayoutBuilderTable].
-mixin CoordinatorLayout<T extends RouteUnique> on CoordinatorCore<T> {
+mixin CoordinatorLayout<T extends RouteUnique> on CoordinatorCore<T>
+    implements CoordinatorLayoutBuilder<T> {
   final _layoutParentConstructorTable =
       <Object, RouteLayoutParentConstructor>{};
   late final layoutParentConstructorTable = isRouteModule
@@ -147,4 +151,27 @@ mixin CoordinatorLayout<T extends RouteUnique> on CoordinatorCore<T> {
     _layoutBuilderTable.clear();
     super.dispose();
   }
+
+  /// Builds the root widget (the primary navigator).
+  ///
+  /// ## When to Override
+  /// Override to customize the root navigation structure.
+  ///
+  /// ## Relationship
+  /// Called by [CoordinatorRouterDelegate.build] to create the widget tree.
+  /// Delegates to [RouteLayout.buildRoot] by default.
+  @override
+  Widget layoutBuilder(BuildContext context) => RouteLayout.buildRoot(this);
+}
+
+mixin CoordinatorLayoutBuilder<T extends RouteUri> on CoordinatorCore<T> {
+  /// Builds the root widget (the primary navigator).
+  ///
+  /// ## When to Override
+  /// Override to customize the root navigation structure.
+  ///
+  /// ## Relationship
+  /// Called by [CoordinatorRouterDelegate.build] to create the widget tree.
+  /// Delegates to [RouteLayout.buildRoot] by default.
+  Widget layoutBuilder(BuildContext context);
 }

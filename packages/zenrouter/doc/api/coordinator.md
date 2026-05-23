@@ -53,12 +53,30 @@ class AppCoordinator extends Coordinator<AppRoute> {
   }
 }
 
-// 3. Use in MaterialApp.router
-MaterialApp.router(
-  routerDelegate: coordinator.routerDelegate,
-  routeInformationParser: coordinator.routeInformationParser,
+// 3a. Full app with URL sync and system back (recommended for web/mobile root)
+MaterialApp.router(routerConfig: coordinator)
+
+// 3b. Embedded surface without Router (mini-apps, parallel panels)
+MaterialApp(
+  home: CoordinatorView<AppRoute>(
+    coordinator: coordinator,
+    initialUri: Uri.parse('/product/42'),
+  ),
 )
 ```
+
+> For embed pitfalls, `initialUri` rules, and host patterns, see [CoordinatorView Guide](../guides/coordinator-view.md).
+
+## CoordinatorView
+
+Headless host widget that builds `coordinator.layoutBuilder` without integrating Flutter's `Router`.
+
+| Parameter | Description |
+|-----------|-------------|
+| `coordinator` | Must implement `CoordinatorLayoutBuilder` (typically `Coordinator`) |
+| `initialUri` | When non-null and `coordinator.root.stack` is empty, parsed and passed to `navigate` once after the first frame |
+
+Does **not** provide browser URL sync, `popRoute`, or `CoordinatorRestorable`—use `MaterialApp.router(routerConfig:)` for app-root coordinators, or handle those in the host. See [CoordinatorView Guide](../guides/coordinator-view.md).
 
 ## Coordinator<T extends RouteUnique>
 

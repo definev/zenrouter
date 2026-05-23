@@ -881,6 +881,7 @@ coordinator.recoverRouteFromUri(
 
 - [Imperative Navigation](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/imperative.md) - Direct stack control
 - [Declarative Navigation](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/declarative.md) - State-driven routing
+- [CoordinatorView Guide](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/guides/coordinator-view.md) - Embed coordinators without Flutter Router (mini-apps, parallel panels)
 - [Route Mixins Guide](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/mixins.md) - All available mixins
 - [Coordinator API](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/coordinator.md) - Complete API reference
 - [Deep Linking Guide](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/coordinator/coordinator.md) - Deep linking setup

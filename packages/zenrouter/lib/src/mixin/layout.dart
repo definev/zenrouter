@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:zenrouter/src/coordinator/layout.dart';
 import 'package:zenrouter/zenrouter.dart';
 
 typedef DecodeLayoutKeyCallback = Object Function(String key);
@@ -61,7 +62,7 @@ mixin RouteLayout<T extends RouteUnique> on RouteUnique
     return createLayoutParent(layoutKey) as RouteLayout;
   }
 
-  static Widget buildRoot(Coordinator coordinator) {
+  static Widget buildRoot(CoordinatorLayout coordinator) {
     final rootPathKey = coordinator.root.pathKey;
 
     final routeLayoutBuilder = coordinator.getLayoutBuilder(rootPathKey);
