@@ -18,7 +18,10 @@ class HomeRoute extends ViewRoute {
   Uri toUri() => Uri.parse('/');
 
   @override
-  Widget build(covariant Coordinator<ViewRoute> coordinator, BuildContext context) {
+  Widget build(
+    covariant Coordinator<ViewRoute> coordinator,
+    BuildContext context,
+  ) {
     return const Scaffold(body: Text('Home'));
   }
 
@@ -31,7 +34,10 @@ class SettingsRoute extends ViewRoute {
   Uri toUri() => Uri.parse('/settings');
 
   @override
-  Widget build(covariant Coordinator<ViewRoute> coordinator, BuildContext context) {
+  Widget build(
+    covariant Coordinator<ViewRoute> coordinator,
+    BuildContext context,
+  ) {
     return const Scaffold(body: Text('Settings'));
   }
 
@@ -48,7 +54,10 @@ class ProfileRoute extends ViewRoute {
   Uri toUri() => Uri.parse('/profile/$id');
 
   @override
-  Widget build(covariant Coordinator<ViewRoute> coordinator, BuildContext context) {
+  Widget build(
+    covariant Coordinator<ViewRoute> coordinator,
+    BuildContext context,
+  ) {
     return Scaffold(body: Text('Profile $id'));
   }
 
@@ -113,10 +122,7 @@ void main() {
       final coordinator = ViewTestCoordinator();
 
       await tester.pumpWidget(
-        _host(
-          coordinator: coordinator,
-          initialUri: Uri.parse('/settings'),
-        ),
+        _host(coordinator: coordinator, initialUri: Uri.parse('/settings')),
       );
       await tester.pump();
       await tester.pumpAndSettle();
@@ -131,10 +137,7 @@ void main() {
       final coordinator = ViewTestCoordinator(asyncParse: true);
 
       await tester.pumpWidget(
-        _host(
-          coordinator: coordinator,
-          initialUri: Uri.parse('/settings'),
-        ),
+        _host(coordinator: coordinator, initialUri: Uri.parse('/settings')),
       );
       await tester.pump();
       expect(coordinator.parseCalls, 1);
@@ -153,10 +156,7 @@ void main() {
       await coordinator.replace(HomeRoute());
 
       await tester.pumpWidget(
-        _host(
-          coordinator: coordinator,
-          initialUri: Uri.parse('/settings'),
-        ),
+        _host(coordinator: coordinator, initialUri: Uri.parse('/settings')),
       );
       await tester.pumpAndSettle();
 
@@ -180,10 +180,7 @@ void main() {
       final coordinator = ViewTestCoordinator(parser: (_) => null);
 
       await tester.pumpWidget(
-        _host(
-          coordinator: coordinator,
-          initialUri: Uri.parse('/unknown'),
-        ),
+        _host(coordinator: coordinator, initialUri: Uri.parse('/unknown')),
       );
       await tester.pumpAndSettle();
 
@@ -217,34 +214,29 @@ void main() {
       expect(find.text('Settings'), findsOneWidget);
     });
 
-    testWidgets('applies initialUri after coordinator swap when root is empty', (
-      tester,
-    ) async {
-      final first = ViewTestCoordinator();
-      final second = ViewTestCoordinator();
+    testWidgets(
+      'applies initialUri after coordinator swap when root is empty',
+      (tester) async {
+        final first = ViewTestCoordinator();
+        final second = ViewTestCoordinator();
 
-      await tester.pumpWidget(
-        _host(
-          coordinator: first,
-          initialUri: Uri.parse('/settings'),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Settings'), findsOneWidget);
+        await tester.pumpWidget(
+          _host(coordinator: first, initialUri: Uri.parse('/settings')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Settings'), findsOneWidget);
 
-      await tester.pumpWidget(
-        _host(
-          coordinator: second,
-          initialUri: Uri.parse('/profile/42'),
-        ),
-      );
-      await tester.pump();
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          _host(coordinator: second, initialUri: Uri.parse('/profile/42')),
+        );
+        await tester.pump();
+        await tester.pumpAndSettle();
 
-      expect(second.root.stack.single, isA<ProfileRoute>());
-      expect(find.text('Profile 42'), findsOneWidget);
-      expect(first.root.stack.single, isA<SettingsRoute>());
-    });
+        expect(second.root.stack.single, isA<ProfileRoute>());
+        expect(find.text('Profile 42'), findsOneWidget);
+        expect(first.root.stack.single, isA<SettingsRoute>());
+      },
+    );
 
     testWidgets('applies initialUri when it is set while root is still empty', (
       tester,
@@ -287,11 +279,7 @@ void main() {
 }
 
 class _InitialUriHost extends StatefulWidget {
-  const _InitialUriHost({
-    this.coordinator,
-    this.startUri,
-    this.updatedUri,
-  });
+  const _InitialUriHost({this.coordinator, this.startUri, this.updatedUri});
 
   final ViewTestCoordinator? coordinator;
   final Uri? startUri;
