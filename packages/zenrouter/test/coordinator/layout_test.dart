@@ -199,10 +199,7 @@ void main() {
 
     test('asserts for CoordinatorCore that is not Coordinator', () {
       expect(
-        () => requireFlutterCoordinator(
-          coreOnly,
-          pathKey: NavigationPath.key,
-        ),
+        () => requireFlutterCoordinator(coreOnly, pathKey: NavigationPath.key),
         throwsA(
           isA<AssertionError>().having(
             (e) => e.message,
@@ -374,12 +371,11 @@ void main() {
 }
 
 /// [CoordinatorCore] stand-in that is not a Flutter [Coordinator].
-class _CoreOnlyCoordinator extends Fake implements CoordinatorCore<LayoutRoute> {
+class _CoreOnlyCoordinator extends Fake
+    implements CoordinatorCore<LayoutRoute> {
   @override
-  NavigationPath<LayoutRoute> get root => NavigationPath<LayoutRoute>.create(
-    label: 'root',
-    stack: [],
-  );
+  NavigationPath<LayoutRoute> get root =>
+      NavigationPath<LayoutRoute>.create(label: 'root', stack: []);
 
   @override
   FutureOr<LayoutRoute?> parseRouteFromUri(Uri uri) => null;
