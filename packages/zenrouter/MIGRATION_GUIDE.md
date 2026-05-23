@@ -2,6 +2,161 @@
 
 This guide outlines the changes and steps required to migrate to the latest version of `zenrouter`.
 
+**Latest:** [2.1.0](#210-coordinatorview--layout-builder-api) — `CoordinatorView`, `CoordinatorLayoutBuilder`, layout builder signature updates.
+
+---
+
+## 2.1.0: CoordinatorView & layout builder API
+
+### Adopting `CoordinatorView` (optional)
+
+2.1.0 adds [`CoordinatorView`](doc/guides/coordinator-view.md) for embedding a standalone coordinator **without** `MaterialApp.router`. No migration is required unless you want this pattern.
+
+**App root (unchanged — recommended for web / single-surface apps):**
+
+```dart
+MaterialApp.router(routerConfig: appCoordinator)
+```
+
+**Embedded surface (new):**
+
+```dart
+MaterialApp(
+  home: CoordinatorView<AppRoute>(
+    coordinator: miniAppCoordinator,
+    initialUri: Uri.parse('/dashboard'),
+  ),
+)
+```
+
+| Concern | `routerConfig` | `CoordinatorView` |
+|---------|----------------|-------------------|
+| Browser URL / back button | Automatic | Host must handle |
+| `initialUri` | Platform + parser | Once, when `root.stack` is empty |
+| Ongoing deep links | `setNewRoutePath` | Call `coordinator.navigate(...)` explicitly |
+
+See [CoordinatorView Guide](doc/guides/coordinator-view.md) for pitfalls, parallel panels, and mini-app hosts.
+
+---
+
+### `layoutBuilder` moved to `CoordinatorLayout`
+
+#### Changes
+
+- **Before**: `layoutBuilder` was declared on the `Coordinator` class.
+- **After**: `layoutBuilder` lives on the [`CoordinatorLayout`](lib/src/coordinator/layout.dart) mixin (via [`CoordinatorLayoutBuilder`](lib/src/coordinator/layout.dart)).
+
+#### Migration
+
+If you override `layoutBuilder`, keep overriding it on your coordinator class — `Coordinator` still mixes in `CoordinatorLayout`. No import or call-site changes are needed for typical apps.
+
+**Before and after (same for `extends Coordinator`):**
+
+```dart
+class AppCoordinator extends Coordinator<AppRoute> {
+  @override
+  Widget layoutBuilder(BuildContext context) {
+    return RouteLayout.buildRoot(this);
+  }
+}
+```
+
+Only update code that referenced `layoutBuilder` as a member **defined on `Coordinator` itself** in documentation, implements clauses, or custom abstractions that extended `CoordinatorCore` without `CoordinatorLayout`. Those types must now mix in or implement `CoordinatorLayoutBuilder`.
+
+---
+
+### `RouteLayoutBuilder` first parameter: `CoordinatorCore`
+
+#### Changes
+
+- **Before**: `Widget Function(Coordinator coordinator, StackPath<T> path, RouteLayout<T>? layout)`
+- **After**: `Widget Function(CoordinatorCore coordinator, StackPath<T> path, RouteLayout<T>? layout)`
+
+#### Migration
+
+Update custom layout builders registered with `defineLayoutBuilder` (or copies of `kDefaultLayoutBuilderTable`). Cast when you need Flutter-specific APIs:
+
+**Before:**
+
+```dart
+coordinator.defineLayoutBuilder(
+  NavigationPath.key,
+  (Coordinator coordinator, path, layout) {
+    return NavigationStack(
+      path: path as NavigationPath<AppRoute>,
+      coordinator: coordinator,
+      // ...
+    );
+  },
+);
+```
+
+**After:**
+
+```dart
+coordinator.defineLayoutBuilder(
+  NavigationPath.key,
+  (CoordinatorCore coordinatorCore, path, layout) {
+    final coordinator = coordinatorCore as Coordinator;
+    return NavigationStack(
+      path: path as NavigationPath<AppRoute>,
+      coordinator: coordinator,
+      // ...
+    );
+  },
+);
+```
+
+If your builder only uses `coordinator.root`, `getLayoutBuilder`, or other members on `CoordinatorCore` / `CoordinatorLayout`, no cast is required.
+
+**Default builders (`NavigationPath` / `IndexedStackPath`):** [`kDefaultLayoutBuilderTable`](lib/src/coordinator/layout.dart) still require a Flutter **`Coordinator`**, not an arbitrary `CoordinatorCore`. In debug builds, passing the wrong type triggers an `assert` with a link to [route-layout.md — default layout builders](doc/guides/route-layout.md#default-layout-builders-require-coordinator). Register `defineLayoutBuilder` if you use a custom core type.
+
+#### Rationale
+
+Layout builders are shared infrastructure; the narrower parameter type matches `RouteLayout.buildRoot` and allows future embed hosts that implement `CoordinatorLayoutBuilder` without full `RouterConfig`.
+
+---
+
+### `RouteLayout.buildRoot` parameter: `CoordinatorLayout`
+
+#### Changes
+
+- **Before**: `RouteLayout.buildRoot(Coordinator coordinator)`
+- **After**: `RouteLayout.buildRoot(CoordinatorLayout coordinator)`
+
+#### Migration
+
+Pass `this` from any class that mixes in `CoordinatorLayout` (including `Coordinator`). Update helpers that accepted `Coordinator` only for `buildRoot`:
+
+**Before:**
+
+```dart
+Widget buildAppShell(Coordinator coordinator) => RouteLayout.buildRoot(coordinator);
+```
+
+**After:**
+
+```dart
+Widget buildAppShell(CoordinatorLayout coordinator) => RouteLayout.buildRoot(coordinator);
+```
+
+`Coordinator` satisfies `CoordinatorLayout`; existing `layoutBuilder` overrides that delegate to `RouteLayout.buildRoot(this)` continue to work unchanged.
+
+---
+
+### `CoordinatorLayoutBuilder` mixin
+
+#### Changes
+
+- **New**: `CoordinatorLayoutBuilder<T extends RouteUri>` declares `Widget layoutBuilder(BuildContext context)`.
+- **New**: [`CoordinatorView`](lib/src/coordinator/view.dart) takes `CoordinatorLayoutBuilder<T> coordinator` instead of requiring full `Coordinator` / `RouterConfig`.
+
+#### Migration
+
+No action required unless you build custom embed widgets. Prefer typing embed APIs against `CoordinatorLayoutBuilder<T>` rather than `Coordinator<T>` when URL sync and `Router` are not needed.
+
+---
+
 ## Path Constructors
 
 The constructors for `NavigationPath` and `IndexedStackPath` have been updated to provide better clarity and type safety, especially when binding to a `Coordinator`.

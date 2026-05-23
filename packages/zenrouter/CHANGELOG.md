@@ -1,3 +1,27 @@
+## 2.1.0
+
+### 🚀 New Features
+
+#### `CoordinatorView` — headless coordinator embed
+- New [`CoordinatorView`](lib/src/coordinator/view.dart) widget renders a coordinator via `layoutBuilder` **without** Flutter's `Router`—for super apps, parallel panels, plugin surfaces, and other host-owned shells.
+- Optional `initialUri` seeds navigation once when `coordinator.root.stack` is empty (ignored after the embed has stack state or on remount with the same coordinator).
+- Supports sync and async `parseRouteFromUri` for the initial bootstrap.
+
+#### `CoordinatorLayoutBuilder` mixin
+- Extracted `layoutBuilder(BuildContext)` into [`CoordinatorLayoutBuilder`](lib/src/coordinator/layout.dart); [`CoordinatorLayout`](lib/src/coordinator/layout.dart) implements it so embed hosts can depend on layout rendering without `RouterConfig`.
+
+### ⚠️ Breaking Changes
+
+- **`layoutBuilder` moved to `CoordinatorLayout`**: Override `layoutBuilder` on your coordinator's `CoordinatorLayout` mixin (unchanged for typical `extends Coordinator` subclasses). It is no longer declared on the `Coordinator` class body.
+- **`RouteLayoutBuilder` signature**: The first parameter is now `CoordinatorCore` instead of `Coordinator`. Update custom `defineLayoutBuilder` / `kDefaultLayoutBuilderTable` callbacks accordingly (cast to `Coordinator` when you need Flutter-specific APIs).
+- **`RouteLayout.buildRoot`**: Now accepts `CoordinatorLayout` instead of `Coordinator`. Call sites that passed a bare `CoordinatorCore` must use a type that provides `getLayoutBuilder` / `root`.
+
+### 📖 Documentation
+
+- **New Guide**: [CoordinatorView](doc/guides/coordinator-view.md) — embed patterns, `initialUri` semantics, pitfalls vs `MaterialApp.router`
+- **API**: [Coordinator API](doc/api/coordinator.md) — `CoordinatorView` section and dual quick-start
+- **Roadmap**: Embedded / multi-surface learning path in [DOCUMENTATION_ROADMAP](doc/DOCUMENTATION_ROADMAP.md)
+
 ## 2.0.3
 - **Fix**: `CoordinatorModular.getModule` now correctly resolves the coordinator itself — `runtimeType: this` is registered in `_allModules`, enabling `getModule<MyCoordinator>()` to work at any level of the hierarchy. (Bumped `zenrouter_core` to 2.0.2)
 

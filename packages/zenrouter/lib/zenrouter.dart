@@ -5,6 +5,7 @@ export 'package:zenrouter_core/zenrouter_core.dart';
 /// Coordinator
 export 'src/coordinator/base.dart';
 export 'src/coordinator/observer.dart';
+export 'src/coordinator/view.dart';
 export 'src/coordinator/router.dart';
 export 'src/coordinator/transition.dart';
 export 'src/coordinator/restoration/_public.dart';

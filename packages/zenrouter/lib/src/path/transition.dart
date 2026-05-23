@@ -194,6 +194,7 @@ class CupertinoSheetPage<T extends Object> extends Page<T> {
   @override
   /// Creates the route for this page.
   Route<T> createRoute(BuildContext context) {
+    // ignore: deprecated_member_use
     return CupertinoSheetRoute(settings: this, builder: builder);
   }
 }

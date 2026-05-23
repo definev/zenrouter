@@ -52,6 +52,10 @@ Coming from another router? We have dedicated migration guides:
 5. [URL Strategies Recipe](recipes/url-strategies.md)
 6. [Route Versioning Recipe](recipes/route-versioning.md)
 
+### Embedded / Multi-Surface Apps
+1. [CoordinatorView Guide](guides/coordinator-view.md) — headless coordinator embeds (mini-apps, parallel panels)
+2. [Route Layout Guide](guides/route-layout.md) — shells inside each embed
+
 ### Authentication & Guards
 1. [Authentication Flow Recipe](recipes/authentication-flow.md)
 2. [Route Mixins - RouteRedirect](api/mixins.md#routeredirect)
@@ -72,6 +76,7 @@ Coming from another router? We have dedicated migration guides:
 Step-by-step tutorials for getting started:
 - [Getting Started](guides/getting-started.md) - Choose and learn your paradigm
 - [Route Layout](guides/route-layout.md) - Create custom layouts
+- [CoordinatorView](guides/coordinator-view.md) - Embed coordinators without Router
 - [Coordinator Modular](guides/coordinator-modular.md) - Split coordinator into modules
 - [Coordinator as RouteModule](guides/coordinator-as-module.md) - Nest coordinators as modules
 - [Query Parameters](guides/query-parameters.md) - Handle URL query parameters  
@@ -117,6 +122,7 @@ zenrouter/
     ├── guides/                # Step-by-step learning
     │   ├── getting-started.md
     │   ├── route-layout.md
+    │   ├── coordinator-view.md
     │   ├── coordinator-modular.md
     │   ├── coordinator-as-module.md
     │   ├── query-parameters.md
@@ -159,6 +165,7 @@ zenrouter/
 - **RouteTarget** - Base class for all routes ([Route Mixins](api/mixins.md))
 - **NavigationPath** - Stack container ([Navigation Paths](api/navigation-paths.md))
 - **Coordinator** - Deep linking coordinator ([Coordinator API](api/coordinator.md))
+- **CoordinatorView** - Embed a coordinator without Flutter Router ([CoordinatorView Guide](guides/coordinator-view.md))
 - **CoordinatorModular** - Modular route delegation ([Modular Guide](guides/coordinator-modular.md))
 - **Coordinator as RouteModule** - Nested coordinator modules ([Guide](guides/coordinator-as-module.md))
 
@@ -226,7 +233,7 @@ Find what you need from any starting point.
 
 ---
 
-**Last Updated**: 2026-01-06  
+**Last Updated**: 2026-05-23  
 **Version**: 0.4.14
 
 ---

@@ -176,16 +176,6 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
   bool get hasListeners => _proxy.hasListeners;
   // coverage:ignore-end
 
-  /// Builds the root widget (the primary navigator).
-  ///
-  /// ## When to Override
-  /// Override to customize the root navigation structure.
-  ///
-  /// ## Relationship
-  /// Called by [CoordinatorRouterDelegate.build] to create the widget tree.
-  /// Delegates to [RouteLayout.buildRoot] by default.
-  Widget layoutBuilder(BuildContext context) => RouteLayout.buildRoot(this);
-
   /// Defines new layout parent constructor so [RouteLayoutChild] can look it up via
   /// [RouteLayoutChild.parentLayoutKey] and create new instance of layout parent.
   ///
