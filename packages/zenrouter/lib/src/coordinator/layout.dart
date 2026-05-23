@@ -8,6 +8,8 @@ import 'package:zenrouter/zenrouter.dart';
 /// [AssertionError] in debug when [coordinatorCore] is another [CoordinatorCore]
 /// implementation — register a custom builder via
 /// [CoordinatorLayout.defineLayoutBuilder] instead.
+@visibleForTesting
+@protected
 Coordinator requireFlutterCoordinator(
   CoordinatorCore coordinatorCore, {
   required PathKey pathKey,

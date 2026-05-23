@@ -6,7 +6,7 @@ import 'package:zenrouter/zenrouter.dart';
 /// root [Router].
 ///
 /// [initialUri] is applied **once per empty coordinator**: when the root
-/// [NavigationPath] has no routes yet, the URI is parsed and navigation runs.
+/// path has no routes yet, the URI is parsed and navigation runs.
 /// If the coordinator already has stack state (user navigated, or this is the
 /// same instance after a widget remount), [initialUri] is ignored so the
 /// embed does not reset navigation.
