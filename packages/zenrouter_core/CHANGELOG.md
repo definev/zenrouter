@@ -1,3 +1,7 @@
+## 2.0.3
+
+- chore: make `RedirectRule` can be const
+
 ## 2.0.2
 
 - Fix `CoordinatorModular.getModule` now correctly resolves the coordinator itself by registering `runtimeType: this` in `_allModules`, enabling `getModule<MyCoordinator>()` to work at any level of the hierarchy.

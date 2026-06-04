@@ -1,3 +1,7 @@
+## 2.1.1
+
+- Bump `zenrouter_core` version to `2.0.3`
+
 ## 2.1.0
 
 ### 🚀 New Features
