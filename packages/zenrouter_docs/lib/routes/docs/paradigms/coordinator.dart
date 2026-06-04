@@ -102,6 +102,8 @@ The Coordinator provides a `routerDelegate` and `routeInformationParser` that pl
 final coordinator = AppCoordinator();
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(

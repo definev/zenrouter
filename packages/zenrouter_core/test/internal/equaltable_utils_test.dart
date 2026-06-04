@@ -22,7 +22,7 @@ class MultiPropRoute extends RouteTarget {
 
 // Bare Equatable (not RouteTarget) for isolated class testing
 class SimpleEquatable extends eq.Equatable {
-  SimpleEquatable(this.name, this.age);
+  const SimpleEquatable(this.name, this.age);
   final String name;
   final int age;
 
@@ -30,10 +30,12 @@ class SimpleEquatable extends eq.Equatable {
   List<Object?> get props => [name, age];
 }
 
-class EmptyEquatable extends eq.Equatable {}
+class EmptyEquatable extends eq.Equatable {
+  const EmptyEquatable();
+}
 
 class NullPropEquatable extends eq.Equatable {
-  NullPropEquatable(this.value);
+  const NullPropEquatable(this.value);
   final Object? value;
 
   @override
@@ -41,7 +43,7 @@ class NullPropEquatable extends eq.Equatable {
 }
 
 class CollectionPropEquatable extends eq.Equatable {
-  CollectionPropEquatable(this.items, this.metadata);
+  const CollectionPropEquatable(this.items, this.metadata);
   final List<int> items;
   final Map<String, Object?> metadata;
 
@@ -50,7 +52,7 @@ class CollectionPropEquatable extends eq.Equatable {
 }
 
 class InternalPropEquatable extends eq.Equatable {
-  InternalPropEquatable(this.id, {this.internalTag = ''});
+  const InternalPropEquatable(this.id, {this.internalTag = ''});
   final String id;
   final String internalTag;
 

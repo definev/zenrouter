@@ -16,7 +16,7 @@ import 'package:zenrouter/zenrouter.dart';
 /// This class is used internally by [MaterialApp.router] configuration.
 /// {@endtemplate}
 class CoordinatorRouteParser extends RouteInformationParser<Uri> {
-  CoordinatorRouteParser({required this.coordinator});
+  const CoordinatorRouteParser({required this.coordinator});
 
   final Coordinator coordinator;
 

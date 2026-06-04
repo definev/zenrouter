@@ -35,7 +35,7 @@ class RouteElement {
   /// Expected query parameter names (if any).
   final List<String>? queries;
 
-  RouteElement({
+  const RouteElement({
     required this.className,
     required this.relativePath,
     required this.pathSegments,
@@ -99,7 +99,7 @@ class RouteParameter {
   /// Whether this is a rest parameter that captures multiple segments.
   final bool isRest;
 
-  RouteParameter({
+  const RouteParameter({
     required this.name,
     this.type = 'String',
     this.isOptional = false,

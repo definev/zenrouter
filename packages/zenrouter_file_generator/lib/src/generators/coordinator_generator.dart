@@ -24,7 +24,7 @@ class CoordinatorGenerator implements Builder {
   /// Defaults to 'routes.zen.dart'.
   final String outputFile;
 
-  CoordinatorGenerator({
+  const CoordinatorGenerator({
     this.globalDeferredImport = false,
     this.outputFile = 'routes.zen.dart',
   });
@@ -131,9 +131,7 @@ class CoordinatorGenerator implements Builder {
       );
       if (info != null) {
         if (info is RouteInfo) {
-          // Store file path for error reporting
-          info.filePath = input.path;
-          routes.add(info);
+          routes.add(info.copyWith(filePath: input.path));
           // Track which file this route comes from
           routeFileMap[info.className] = relativePath;
         } else if (info is LayoutInfo) {
@@ -150,16 +148,22 @@ class CoordinatorGenerator implements Builder {
     }
 
     // Build the route tree
-    final tree = _buildRouteTree(routes, layouts);
+    var tree = _buildRouteTree(routes, layouts);
 
     // Validate and enforce IndexedStack routes to be non-deferred
     // This must happen BEFORE we build allFilePaths
     _validateRouteConflicts(tree.routes);
-    _validateIndexedStackDeferredImports(tree.routes, tree.layouts);
+    tree = RouteTreeInfo(
+      routes: _validateIndexedStackDeferredImports(
+        tree.routes,
+        tree.layouts,
+      ),
+      layouts: tree.layouts,
+    );
 
     // Now build allFilePaths with correct deferred import flags
     final allFilePaths = <FileImportPath>[];
-    for (final route in routes) {
+    for (final route in tree.routes) {
       final relativePath = routeFileMap[route.className];
       if (relativePath != null) {
         final fileName = relativePath.split('/').last;
@@ -425,40 +429,57 @@ class CoordinatorGenerator implements Builder {
     List<RouteInfo> routes,
     List<LayoutInfo> layouts,
   ) {
-    // Resolve parent layouts for routes
-    for (final route in routes) {
-      String? parentLayout;
-      int maxMatchLength = 0;
+    final resolvedRoutes = [
+      for (final route in routes)
+        route.copyWith(
+          parentLayoutType: _resolveParentLayout(
+            route.dirParts,
+            layouts,
+            (layout) => layout.dirParts,
+            (layout) => layout.className,
+          ),
+        ),
+    ];
 
-      for (final layout in layouts) {
-        if (_isPathPrefix(layout.dirParts, route.dirParts) &&
-            layout.dirParts.length > maxMatchLength) {
-          parentLayout = layout.className;
-          maxMatchLength = layout.dirParts.length;
-        }
+    final resolvedLayouts = [
+      for (final layout in layouts)
+        layout.copyWith(
+          parentLayoutType: _resolveParentLayout(
+            layout.dirParts,
+            layouts,
+            (other) => other.dirParts,
+            (other) => other.className,
+            skipClassName: layout.className,
+          ),
+        ),
+    ];
+
+    return RouteTreeInfo(routes: resolvedRoutes, layouts: resolvedLayouts);
+  }
+
+  String? _resolveParentLayout<T>(
+    List<String> dirParts,
+    List<T> candidates,
+    List<String> Function(T candidate) dirPartsOf,
+    String Function(T candidate) classNameOf, {
+    String? skipClassName,
+  }) {
+    String? parentLayout;
+    var maxMatchLength = 0;
+
+    for (final candidate in candidates) {
+      if (skipClassName != null && classNameOf(candidate) == skipClassName) {
+        continue;
       }
-
-      route.parentLayoutType = parentLayout;
+      final candidateDirParts = dirPartsOf(candidate);
+      if (_isPathPrefix(candidateDirParts, dirParts) &&
+          candidateDirParts.length > maxMatchLength) {
+        parentLayout = classNameOf(candidate);
+        maxMatchLength = candidateDirParts.length;
+      }
     }
 
-    // Resolve parent layouts for layouts
-    for (final layout in layouts) {
-      String? parentLayout;
-      int maxMatchLength = 0;
-
-      for (final other in layouts) {
-        if (other.className == layout.className) continue;
-        if (_isPathPrefix(other.dirParts, layout.dirParts) &&
-            other.dirParts.length > maxMatchLength) {
-          parentLayout = other.className;
-          maxMatchLength = other.dirParts.length;
-        }
-      }
-
-      layout.parentLayoutType = parentLayout;
-    }
-
-    return RouteTreeInfo(routes: routes, layouts: layouts);
+    return parentLayout;
   }
 
   bool _isPathPrefix(List<String> prefix, List<String> path) {
@@ -510,34 +531,25 @@ class CoordinatorGenerator implements Builder {
   ///
   /// This method also enforces hasDeferredImport = false for these routes,
   /// overriding both annotation and global config.
-  void _validateIndexedStackDeferredImports(
+  List<RouteInfo> _validateIndexedStackDeferredImports(
     List<RouteInfo> routes,
     List<LayoutInfo> layouts,
   ) {
-    // Check each IndexedStack layout
+    final indexedRouteTypes = <String>{};
     for (final layout in layouts) {
       if (layout.layoutType == LayoutType.indexed) {
-        // Check each route type listed in the IndexedStack
-        for (final routeType in layout.indexedRouteTypes) {
-          RouteInfo? route;
-          for (final r in routes) {
-            if (r.className == routeType) {
-              route = r;
-              break;
-            }
-          }
-          if (route == null) {
-            continue;
-          }
-
-          // Force deferred import to false for IndexedStack routes
-          // This overrides both annotation and global config
-          if (route.hasDeferredImport) {
-            route.hasDeferredImport = false;
-          }
-        }
+        indexedRouteTypes.addAll(layout.indexedRouteTypes);
       }
     }
+
+    return [
+      for (final route in routes)
+        if (indexedRouteTypes.contains(route.className) &&
+            route.hasDeferredImport)
+          route.copyWith(hasDeferredImport: false)
+        else
+          route,
+    ];
   }
 
   String _getAliasImport(String path) {
@@ -1138,19 +1150,14 @@ class RouteInfo {
   final bool hasRedirect;
   final DeeplinkStrategyType? deepLinkStrategy;
   final bool hasTransition;
-  bool hasDeferredImport;
+  final bool hasDeferredImport;
   final bool isIndexFile;
   final String originalFileName;
   final List<String>? queries;
-  String? parentLayoutType;
-  String? filePath; // File path for error reporting
+  final String? parentLayoutType;
+  final String? filePath;
 
-  // Cached path characteristics for performance (computed once during construction)
-  late final bool _hasRestParams;
-  late final int _staticSegmentCount;
-  late final int _dynamicSegmentCount;
-
-  RouteInfo({
+  const RouteInfo({
     required this.className,
     required this.pathSegments,
     required this.dirParts,
@@ -1165,30 +1172,59 @@ class RouteInfo {
     this.queries,
     this.parentLayoutType,
     this.filePath,
-  }) {
-    // Pre-compute path characteristics for faster sorting
-    _hasRestParams = pathSegments.any((s) => s.startsWith('...:'));
-    _staticSegmentCount =
-        pathSegments
-            .where((s) => !s.startsWith(':') && !s.startsWith('...'))
-            .length;
-    _dynamicSegmentCount =
-        pathSegments
-            .where((s) => s.startsWith(':') && !s.startsWith('...'))
-            .length;
-  }
+  });
 
   /// Whether this route expects query parameters.
   bool get hasQueries => queries != null && queries!.isNotEmpty;
 
-  /// Cached: whether this route has rest parameters
-  bool get hasRestParams => _hasRestParams;
+  /// Whether this route has rest parameters.
+  bool get hasRestParams => pathSegments.any((s) => s.startsWith('...:'));
 
-  /// Cached: number of static segments
-  int get staticSegmentCount => _staticSegmentCount;
+  /// Number of static segments.
+  int get staticSegmentCount =>
+      pathSegments
+          .where((s) => !s.startsWith(':') && !s.startsWith('...'))
+          .length;
 
-  /// Cached: number of dynamic segments (excluding rest params)
-  int get dynamicSegmentCount => _dynamicSegmentCount;
+  /// Number of dynamic segments (excluding rest params).
+  int get dynamicSegmentCount =>
+      pathSegments
+          .where((s) => s.startsWith(':') && !s.startsWith('...'))
+          .length;
+
+  RouteInfo copyWith({
+    String? className,
+    List<String>? pathSegments,
+    List<String>? dirParts,
+    List<ParamInfo>? parameters,
+    bool? hasGuard,
+    bool? hasRedirect,
+    DeeplinkStrategyType? deepLinkStrategy,
+    bool? hasTransition,
+    bool? hasDeferredImport,
+    bool? isIndexFile,
+    String? originalFileName,
+    List<String>? queries,
+    String? parentLayoutType,
+    String? filePath,
+  }) {
+    return RouteInfo(
+      className: className ?? this.className,
+      pathSegments: pathSegments ?? this.pathSegments,
+      dirParts: dirParts ?? this.dirParts,
+      parameters: parameters ?? this.parameters,
+      hasGuard: hasGuard ?? this.hasGuard,
+      hasRedirect: hasRedirect ?? this.hasRedirect,
+      deepLinkStrategy: deepLinkStrategy ?? this.deepLinkStrategy,
+      hasTransition: hasTransition ?? this.hasTransition,
+      hasDeferredImport: hasDeferredImport ?? this.hasDeferredImport,
+      isIndexFile: isIndexFile ?? this.isIndexFile,
+      originalFileName: originalFileName ?? this.originalFileName,
+      queries: queries ?? this.queries,
+      parentLayoutType: parentLayoutType ?? this.parentLayoutType,
+      filePath: filePath ?? this.filePath,
+    );
+  }
 }
 
 /// Simplified layout info for coordinator generation.
@@ -1198,9 +1234,9 @@ class LayoutInfo {
   final List<String> dirParts;
   final LayoutType layoutType;
   final List<String> indexedRouteTypes;
-  String? parentLayoutType;
+  final String? parentLayoutType;
 
-  LayoutInfo({
+  const LayoutInfo({
     required this.className,
     required this.pathSegments,
     required this.dirParts,
@@ -1208,6 +1244,24 @@ class LayoutInfo {
     this.indexedRouteTypes = const [],
     this.parentLayoutType,
   });
+
+  LayoutInfo copyWith({
+    String? className,
+    List<String>? pathSegments,
+    List<String>? dirParts,
+    LayoutType? layoutType,
+    List<String>? indexedRouteTypes,
+    String? parentLayoutType,
+  }) {
+    return LayoutInfo(
+      className: className ?? this.className,
+      pathSegments: pathSegments ?? this.pathSegments,
+      dirParts: dirParts ?? this.dirParts,
+      layoutType: layoutType ?? this.layoutType,
+      indexedRouteTypes: indexedRouteTypes ?? this.indexedRouteTypes,
+      parentLayoutType: parentLayoutType ?? this.parentLayoutType,
+    );
+  }
 }
 
 /// Container for route tree info.
@@ -1215,5 +1269,5 @@ class RouteTreeInfo {
   final List<RouteInfo> routes;
   final List<LayoutInfo> layouts;
 
-  RouteTreeInfo({required this.routes, required this.layouts});
+  const RouteTreeInfo({required this.routes, required this.layouts});
 }

@@ -26,7 +26,7 @@ class LayoutElement {
   /// are required. For indexed layouts, provide [indexedRouteTypes] to
   /// specify the route types in tab order. Set [parentLayoutType] if
   /// this layout is nested within another layout.
-  LayoutElement({
+  const LayoutElement({
     required this.className,
     required this.relativePath,
     required this.pathSegments,

@@ -90,7 +90,7 @@ void main() {
       expect(route.filePath, 'lib/routes/users/[userId].dart');
     });
 
-    test('allows mutable parentLayoutType', () {
+    test('allows updating parentLayoutType via copyWith', () {
       final route = RouteInfo(
         className: 'HomeRoute',
         pathSegments: [],
@@ -99,8 +99,9 @@ void main() {
       );
 
       expect(route.parentLayoutType, null);
-      route.parentLayoutType = 'MainLayout';
-      expect(route.parentLayoutType, 'MainLayout');
+      final updated = route.copyWith(parentLayoutType: 'MainLayout');
+      expect(updated.parentLayoutType, 'MainLayout');
+      expect(route.parentLayoutType, null);
     });
   });
 
@@ -137,7 +138,7 @@ void main() {
       expect(layout.indexedRouteTypes, isEmpty);
     });
 
-    test('allows mutable parentLayoutType', () {
+    test('allows updating parentLayoutType via copyWith', () {
       final layout = LayoutInfo(
         className: 'ChildLayout',
         pathSegments: ['child'],
@@ -146,8 +147,9 @@ void main() {
       );
 
       expect(layout.parentLayoutType, null);
-      layout.parentLayoutType = 'ParentLayout';
-      expect(layout.parentLayoutType, 'ParentLayout');
+      final updated = layout.copyWith(parentLayoutType: 'ParentLayout');
+      expect(updated.parentLayoutType, 'ParentLayout');
+      expect(layout.parentLayoutType, null);
     });
   });
 

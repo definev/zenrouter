@@ -72,6 +72,8 @@ class RedirectTo<T extends RouteTarget> extends RedirectResult<T> {
 /// Rules can be composed for complex scenarios: authentication checks,
 /// feature flags, permissions, logging, etc.
 abstract class RedirectRule<T extends RouteTarget> {
+  const RedirectRule();
+
   /// Determines the redirect result for a given route.
   ///
   /// Called during redirect resolution to determine what action should take

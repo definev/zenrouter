@@ -2,6 +2,7 @@
 ///
 /// This centralizes path parsing logic used by both route and coordinator generators.
 class PathParser {
+  const PathParser._();
   /// Parse a relative file path into segments and parameters.
   ///
   /// Example:
@@ -177,5 +178,5 @@ class ParamInfo {
   ///
   /// The [name] is required and represents the parameter identifier.
   /// Set [isRest] to `true` for rest parameters (`[...name]` syntax).
-  ParamInfo({required this.name, this.isRest = false});
+  const ParamInfo({required this.name, this.isRest = false});
 }

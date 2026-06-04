@@ -6,4 +6,6 @@ import 'package:zenrouter_file_annotation/zenrouter_file_annotation.dart';
   routeBasePath: '_route.dart',
   deferredImport: true,
 )
-class CoordinatorConfig {}
+class CoordinatorConfig {
+  const CoordinatorConfig();
+}

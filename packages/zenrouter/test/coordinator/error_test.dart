@@ -33,7 +33,9 @@ class SimpleErrorRoute extends ErrorTestRoute {
 }
 
 // Mock a custom StackPath type by using a fake Type
-class FakeStackPathType {}
+class FakeStackPathType {
+  const FakeStackPathType();
+}
 
 /// Layout that uses a non-existent path type name for testing
 class MockUnregisteredPathLayout extends ErrorTestRoute

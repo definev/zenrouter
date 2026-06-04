@@ -185,6 +185,8 @@ String mapPropsToString(Type runtimeType, List<Object?> props) {
 /// - Hash code generation
 /// - Internal framework identity checks
 abstract class Equatable {
+  const Equatable();
+
   // coverage:ignore-start
   /// Framework-managed properties for internal identity.
   ///

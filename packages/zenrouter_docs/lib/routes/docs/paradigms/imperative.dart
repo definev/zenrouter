@@ -69,6 +69,8 @@ A NavigationPath holds state; a NavigationStack renders it. The stack listens to
 
 ```dart
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(

@@ -18,7 +18,9 @@ import 'package:zenrouter_docs/widgets/mardown_section.dart';
 import 'package:zenrouter_file_annotation/zenrouter_file_annotation.dart';
 
 @ZenCoordinator(name: 'DocsCoordinator', routeBase: 'DocsRoute')
-class CoordinatorConfig {}
+class CoordinatorConfig {
+  const CoordinatorConfig();
+}
 
 class CustomDocsCoordinator extends DocsCoordinator {
   @override

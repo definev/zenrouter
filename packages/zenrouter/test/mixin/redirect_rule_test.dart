@@ -357,6 +357,8 @@ class LoginRoute extends RedirectRuleTestRoute {
 // ============================================================================
 
 class StopRule extends RedirectRule<RedirectRuleTestRoute> {
+  const StopRule();
+
   @override
   FutureOr<RedirectResult<RedirectRuleTestRoute>> redirectResult(
     covariant Coordinator coordinator,
@@ -367,6 +369,8 @@ class StopRule extends RedirectRule<RedirectRuleTestRoute> {
 }
 
 class ContinueRule extends RedirectRule<RedirectRuleTestRoute> {
+  const ContinueRule();
+
   @override
   FutureOr<RedirectResult<RedirectRuleTestRoute>> redirectResult(
     covariant Coordinator coordinator,
@@ -377,7 +381,7 @@ class ContinueRule extends RedirectRule<RedirectRuleTestRoute> {
 }
 
 class RedirectToTargetRule extends RedirectRule<RedirectRuleTestRoute> {
-  RedirectToTargetRule({required this.targetId});
+  const RedirectToTargetRule({required this.targetId});
 
   final String targetId;
 
@@ -391,7 +395,7 @@ class RedirectToTargetRule extends RedirectRule<RedirectRuleTestRoute> {
 }
 
 class AuthRedirectRule extends RedirectRule<RedirectRuleTestRoute> {
-  AuthRedirectRule({required this.isAuthenticated});
+  const AuthRedirectRule({required this.isAuthenticated});
 
   final bool isAuthenticated;
 
@@ -423,7 +427,7 @@ class RedirectCountingRule extends RedirectRule<RedirectRuleTestRoute> {
 }
 
 class AsyncRedirectRule extends RedirectRule<RedirectRuleTestRoute> {
-  AsyncRedirectRule({required this.targetId, required this.delay});
+  const AsyncRedirectRule({required this.targetId, required this.delay});
 
   final String targetId;
   final Duration delay;
