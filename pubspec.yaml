@@ -13,3 +13,5 @@ workspace:
   - packages/zenrouter_file_annotation
   - packages/zenrouter/doc/paradigms/coordinator/example
   - packages/zenrouter_docs
+  - packages/zenrouter_chat_ui
+  - packages/zenrouter_chat_ui/example

@@ -1,0 +1,23 @@
+name: zenrouter_chat_ui_example
+description: Demo app for zenrouter_chat_ui — slot-based chat screen.
+publish_to: none
+
+environment:
+  sdk: ^3.8.0
+  flutter: ">=3.0.0"
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  zenrouter:
+  zenrouter_chat_ui:
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
