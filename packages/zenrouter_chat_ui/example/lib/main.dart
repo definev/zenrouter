@@ -1,6 +1,7 @@
 // ignore_for_file: avoid_print
 
 import 'package:flutter/material.dart';
+import 'package:super_sliver_list/super_sliver_list.dart';
 import 'package:zenrouter/zenrouter.dart';
 import 'package:zenrouter_chat_ui/zenrouter_chat_ui.dart';
 
@@ -276,8 +277,11 @@ class MessageListBody extends DemoChatRoute {
 
         return Stack(
           children: [
-            ListView.builder(
+            // SuperListView gives accurate jump-to-index for variable-height
+            // items via the ListController extent estimation.
+            SuperListView.builder(
               controller: controller.scrollController,
+              listController: controller.listController,
               // Pad so content is never hidden under floating bars.
               padding: EdgeInsets.only(
                 top: metrics.topInset + 8,
@@ -309,7 +313,7 @@ class MessageListBody extends DemoChatRoute {
               },
             ),
 
-            // Unread badge — shown when scrolled up and new messages arrive.
+            // Unread badge — tap to animate to the newest message.
             Positioned(
               bottom: metrics.bottomInset + 12,
               right: 16,
@@ -330,6 +334,19 @@ class MessageListBody extends DemoChatRoute {
                 },
               ),
             ),
+
+            // Demo: jump-to-first button (shows jumpToIndex API).
+            if (items.length > 1)
+              Positioned(
+                bottom: metrics.bottomInset + 12,
+                left: 72,
+                child: FloatingActionButton.small(
+                  heroTag: 'jump_first',
+                  tooltip: 'Jump to first message',
+                  onPressed: () => controller.jumpToIndex(0),
+                  child: const Icon(Icons.vertical_align_top),
+                ),
+              ),
 
             // FAB to add demo messages.
             Positioned(

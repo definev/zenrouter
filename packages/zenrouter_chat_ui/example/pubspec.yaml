@@ -13,6 +13,7 @@ dependencies:
     sdk: flutter
   zenrouter:
   zenrouter_chat_ui:
+  super_sliver_list: ^0.4.1
 
 dev_dependencies:
   flutter_test:

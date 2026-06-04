@@ -25,6 +25,8 @@ dependencies:
   flutter:
     sdk: flutter
   zenrouter: ^2.1.1
+  super_sliver_list: ^0.4.1
+  navigator_resizable: ^3.0.2
 
 dev_dependencies:
   flutter_test:

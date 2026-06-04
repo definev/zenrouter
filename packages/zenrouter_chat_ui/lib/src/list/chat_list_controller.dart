@@ -2,37 +2,30 @@ import 'dart:collection';
 
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
+import 'package:super_sliver_list/super_sliver_list.dart';
 
 /// Manages a chat message list together with its scroll position and unread
 /// count.
 ///
-/// Attach one instance to your coordinator and pass [scrollController] to the
-/// [ListView] (or equivalent) that renders [items].
+/// Attach one instance to your coordinator and pass [scrollController] and
+/// [listController] to the [SuperListView] that renders [items]:
 ///
 /// ```dart
-/// class MyChatCoordinator extends Coordinator<MyChatRoute>
-///     with ChatCoordinatorMixin<MyChatRoute> {
-///   final listController = ChatListController<ChatMessage>();
-///
-///   @override
-///   void dispose() {
-///     listController.dispose();
-///     super.dispose();
-///   }
-/// }
-/// ```
-///
-/// In the body route's build method:
-/// ```dart
-/// ListView.builder(
-///   controller: coordinator.listController.scrollController,
-///   itemCount:   coordinator.listController.items.length,
-///   itemBuilder: (context, i) => MessageTile(coordinator.listController.items[i]),
+/// SuperListView.builder(
+///   controller:     coordinator.listController.scrollController,
+///   listController: coordinator.listController.listController,
+///   itemCount:      coordinator.listController.items.length,
+///   itemBuilder:    (context, i) =>
+///       MessageTile(coordinator.listController.items[i]),
 /// )
 /// ```
+///
+/// [listController] (the inner `super_sliver_list` [ListController]) enables
+/// accurate jump/animate-to-index even before the target item has been laid
+/// out, using extent estimation.
 class ChatListController<Item extends Object> extends ChangeNotifier {
-  ChatListController({double _atBottomThreshold = 40.0})
-      : _atBottomThreshold = _atBottomThreshold {
+  ChatListController({double atBottomThreshold = 40.0})
+      : _atBottomThreshold = atBottomThreshold {
     scrollController.addListener(_onScroll);
   }
 
@@ -43,6 +36,13 @@ class ChatListController<Item extends Object> extends ChangeNotifier {
   /// A [ScrollController] to attach to the body list widget.
   final ScrollController scrollController = ScrollController();
 
+  /// The [super_sliver_list] [ListController] for item-accurate navigation.
+  ///
+  /// Pass this to `SuperListView.builder(listController: ...)`.
+  /// Use [jumpToIndex] / [animateToIndex] rather than calling methods on this
+  /// directly, since those wrappers include the [scrollController] binding.
+  final ListController listController = ListController();
+
   // ── item ownership ──────────────────────────────────────────────────────────
 
   /// The current list of items (unmodifiable view).
@@ -50,22 +50,24 @@ class ChatListController<Item extends Object> extends ChangeNotifier {
 
   /// Append [item] to the end of the list.
   ///
-  /// If the user has scrolled up (not at bottom), [unreadCount] is incremented.
+  /// Increments [unreadCount] if the user is not at the bottom. Auto-scrolls
+  /// to the new item if the user was already at the bottom.
   void add(Item item) {
+    final wasAtBottom = isAtBottom;
     _items.add(item);
-    if (!isAtBottom) _unreadCount++;
+    if (!wasAtBottom) _unreadCount++;
     notifyListeners();
-    if (isAtBottom) _scheduleScrollToBottom();
+    if (wasAtBottom) _scheduleScrollToBottom();
   }
 
   /// Append all [items] to the end of the list.
   void addAll(Iterable<Item> items) {
-    final hadBottom = isAtBottom;
+    final wasAtBottom = isAtBottom;
     final newCount = items.length;
     _items.addAll(items);
-    if (!hadBottom) _unreadCount += newCount;
+    if (!wasAtBottom) _unreadCount += newCount;
     notifyListeners();
-    if (hadBottom) _scheduleScrollToBottom();
+    if (wasAtBottom) _scheduleScrollToBottom();
   }
 
   /// Insert [item] at [index].
@@ -98,27 +100,48 @@ class ChatListController<Item extends Object> extends ChangeNotifier {
     return pos.pixels >= pos.maxScrollExtent - _atBottomThreshold;
   }
 
-  /// Animate the list to the bottom.
+  /// Scroll to the bottom of the list.
+  ///
+  /// Uses [listController.animateToItem] so the position is accurate even
+  /// for a list with variable-height items.
   void scrollToBottom({
     bool animate = true,
     Duration duration = const Duration(milliseconds: 300),
     Curve curve = Curves.easeOut,
   }) {
-    if (!scrollController.hasClients) return;
-    if (animate) {
-      scrollController.animateTo(
-        scrollController.position.maxScrollExtent,
-        duration: duration,
-        curve: curve,
-      );
-    } else {
-      scrollController.jumpTo(scrollController.position.maxScrollExtent);
-    }
+    if (_items.isEmpty) return;
+    _scrollToIndex(
+      _items.length - 1,
+      alignment: 1.0,
+      animate: animate,
+      duration: duration,
+      curve: curve,
+    );
   }
 
-  /// Ensure [itemContext] is visible in the scroll view.
-  ///
-  /// Convenience wrapper around [Scrollable.ensureVisible].
+  /// Instantly scroll to the item at [index].
+  void jumpToIndex(int index, {double alignment = 0.0}) {
+    _scrollToIndex(index, alignment: alignment, animate: false);
+  }
+
+  /// Animate to the item at [index].
+  void animateToIndex(
+    int index, {
+    double alignment = 0.0,
+    Duration duration = const Duration(milliseconds: 300),
+    Curve curve = Curves.easeOut,
+  }) {
+    _scrollToIndex(
+      index,
+      alignment: alignment,
+      animate: true,
+      duration: duration,
+      curve: curve,
+    );
+  }
+
+  /// Ensure [itemContext] is visible in the scroll view (e.g. for
+  /// scroll-to-reply that resolves a BuildContext from a GlobalKey).
   Future<void> ensureVisible(
     BuildContext itemContext, {
     double alignment = 0.0,
@@ -133,8 +156,8 @@ class ChatListController<Item extends Object> extends ChangeNotifier {
 
   // ── unread badge ────────────────────────────────────────────────────────────
 
-  /// Number of items added to the end of the list while the user was not at
-  /// the bottom of the scroll view.
+  /// Number of items appended while the user was scrolled away from the
+  /// bottom. Used to show an unread-messages badge.
   int get unreadCount => _unreadCount;
 
   /// Reset [unreadCount] to zero (call after scrolling to bottom or tapping
@@ -147,6 +170,31 @@ class ChatListController<Item extends Object> extends ChangeNotifier {
 
   // ── internals ───────────────────────────────────────────────────────────────
 
+  void _scrollToIndex(
+    int index, {
+    required double alignment,
+    required bool animate,
+    Duration duration = const Duration(milliseconds: 300),
+    Curve curve = Curves.easeOut,
+  }) {
+    if (!scrollController.hasClients) return;
+    if (animate) {
+      listController.animateToItem(
+        index: index,
+        scrollController: scrollController,
+        alignment: alignment,
+        duration: (_) => duration,
+        curve: (_) => curve,
+      );
+    } else {
+      listController.jumpToItem(
+        index: index,
+        scrollController: scrollController,
+        alignment: alignment,
+      );
+    }
+  }
+
   void _onScroll() {
     if (isAtBottom && _unreadCount > 0) {
       _unreadCount = 0;
@@ -155,13 +203,16 @@ class ChatListController<Item extends Object> extends ChangeNotifier {
   }
 
   void _scheduleScrollToBottom() {
-    SchedulerBinding.instance.addPostFrameCallback((_) => scrollToBottom());
+    SchedulerBinding.instance.addPostFrameCallback(
+      (_) => scrollToBottom(),
+    );
   }
 
   @override
   void dispose() {
     scrollController.removeListener(_onScroll);
     scrollController.dispose();
+    listController.dispose();
     super.dispose();
   }
 }
