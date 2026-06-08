@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:navigator_resizable/navigator_resizable.dart';
 import 'package:zenrouter/zenrouter.dart';
-import 'package:zenrouter_chat_ui/src/coordinator/chat_coordinator_mixin.dart';
-import 'package:zenrouter_chat_ui/src/widgets/chat_metrics.dart';
-import 'package:zenrouter_chat_ui/src/widgets/slot_bar_view.dart';
+import 'package:zenrouter_chat_ui/zenrouter_chat_ui.dart';
 
 /// The root layout for a slot-based chat screen.
 ///
@@ -26,14 +23,12 @@ import 'package:zenrouter_chat_ui/src/widgets/slot_bar_view.dart';
 /// ## Top-bar slot — NavigatorResizable
 ///
 /// The top-bar [ChatSlot] is rendered through a [NavigatorResizable]-wrapped
-/// [NavigationStack]. Pages are created with [ResizableMaterialPage] so the
+/// [NavigationStack]. Pages use [ChatStackTransition.verticalSlide] so the
 /// bar animates its height smoothly when routes swap (e.g. default header →
 /// selection header → search field).
 ///
-/// ## Pinned slot — LayerLink
+/// ## Pinned slot
 ///
-/// A [CompositedTransformTarget] wraps the top-bar container. The pinned slot
-/// is rendered inside a [CompositedTransformFollower] with
 /// `targetAnchor: Alignment.bottomLeft` so it automatically tracks the bottom
 /// edge of the top bar — including during the [NavigatorResizable] resize
 /// animation — without any polling or manual height measurement for positioning.
@@ -46,36 +41,24 @@ import 'package:zenrouter_chat_ui/src/widgets/slot_bar_view.dart';
 ///
 /// ## Minimal usage
 ///
+/// Back the shell with a [ChatShellCoordinator] and hand it to [ChatShell]:
+///
 /// ```dart
-/// class MyChatCoordinator extends Coordinator<MyChatRoute>
-///     with ChatCoordinatorMixin<MyChatRoute> {
-///   MyChatCoordinator() {
-///     topBarSlot.swap(DefaultTopBar());
-///     bottomSlot.swap(ComposerBar());
-///     bodySlot.swap(MessageListBody());
-///   }
-///   @override MyChatRoute parseRouteFromUri(Uri uri) => ChatShellRoute();
+/// class MyChatShell extends ChatShellCoordinator<MyChatRoute> {
+///   @override
+///   MyChatRoute parseRouteFromUri(Uri uri) => MessageListBody();
 /// }
 ///
-/// // In the shell route's build():
-/// @override
-/// Widget build(MyChatCoordinator coordinator, BuildContext context) =>
-///     ChatShell(coordinator: coordinator);
+/// // Rendered for you by ChatShellRouteLayout, or directly:
+/// ChatShell<MyChatRoute>(shell: myChatShell);
 /// ```
+///
+/// See [ChatShellRoute] / [ChatShellRouteLayout] for wiring the shell into an
+/// outer [Coordinator] through `parseRouteFromUri`.
 class ChatShell<T extends RouteUnique> extends StatefulWidget {
-  const ChatShell({
-    super.key,
-    required this.coordinator,
-    this.bodyTransition,
-  });
+  const ChatShell({super.key, required this.shell});
 
-  final Coordinator<T> coordinator;
-
-  /// Optional resolver mapping body routes to their [StackTransition].
-  ///
-  /// Defaults to a material transition. Routes mixing [RouteTransition] supply
-  /// their own transition and take priority over this resolver.
-  final StackTransitionResolver<T>? bodyTransition;
+  final ChatShellCoordinator<T> shell;
 
   @override
   State<ChatShell<T>> createState() => _ChatShellState<T>();
@@ -84,38 +67,22 @@ class ChatShell<T extends RouteUnique> extends StatefulWidget {
 class _ChatShellState<T extends RouteUnique> extends State<ChatShell<T>> {
   final _metrics = ChatShellMetricsNotifier();
 
-  /// [LayerLink] connecting the top-bar [CompositedTransformTarget] to the
-  /// pinned-slot [CompositedTransformFollower].
-  final _topBarLayerLink = LayerLink();
-
-  ChatCoordinatorMixin<T> get _chat =>
-      widget.coordinator as ChatCoordinatorMixin<T>;
+  ChatShellCoordinator<T> get _shell => widget.shell;
 
   // ── resolvers ───────────────────────────────────────────────────────────────
 
   /// Body slot resolver: material or cupertino depending on route mixin,
   /// or a user-supplied override.
   StackTransitionResolver<T> get _bodyResolver {
-    final custom = widget.bodyTransition;
-    if (custom != null) return custom;
-    final coordinator = widget.coordinator;
+    final coordinator = widget.shell;
+    final slot = coordinator.bodySlot;
     return (route) => switch (route) {
       RouteTransition() => route.transition(coordinator),
-      _ => StackTransition.material(
-          Builder(builder: (c) => route.build(coordinator, c)),
-        ),
+      _ => StackTransition.none(
+        Builder(builder: (c) => route.build(coordinator, c)),
+        restorationId: slot.routeRestorationId(coordinator, route),
+      ),
     };
-  }
-
-  /// Top-bar slot resolver: always uses [ResizableMaterialPage] so
-  /// [NavigatorResizable] can animate the bar's height during route transitions.
-  StackTransitionResolver<T> get _topBarResolver {
-    final coordinator = widget.coordinator;
-    return (route) => StackTransition.custom(
-      builder: (c) => route.build(coordinator, c),
-      pageBuilder: (context, key, child) =>
-          ResizableMaterialPage(key: key, child: child),
-    );
   }
 
   @override
@@ -137,58 +104,48 @@ class _ChatShellState<T extends RouteUnique> extends State<ChatShell<T>> {
               // ── BODY — full-screen, bottom of z-order ─────────────────────
               Positioned.fill(
                 child: NavigationStack<T>(
-                  path: _chat.bodySlot,
-                  coordinator: widget.coordinator,
+                  path: _shell.bodySlot,
+                  coordinator: widget.shell,
+                  restorationId: _shell.bodySlot.stackRestorationId(
+                    widget.shell,
+                  ),
                   resolver: _bodyResolver,
                 ),
               ),
 
-              // ── TOP BAR — NavigatorResizable, height animates on swap ─────
-              //
-              // CompositedTransformTarget establishes the LayerLink leader that
-              // the pinned-slot follower tracks.
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: MeasuredBar(
-                  onSize: _metrics.updateTopBar,
-                  child: SafeArea(
-                    bottom: false,
-                    child: CompositedTransformTarget(
-                      link: _topBarLayerLink,
-                      child: NavigatorResizable(
-                        child: NavigationStack<T>(
-                          path: _chat.topBarSlot,
-                          coordinator: widget.coordinator,
-                          resolver: _topBarResolver,
-                        ),
+              Align(
+                alignment: .topCenter,
+                child: Column(
+                  mainAxisSize: .min,
+                  children: [
+                    // ── TOP BAR — NavigatorResizable, height animates on swap ─────
+                    //
+                    // CompositedTransformTarget establishes the LayerLink leader that
+                    // the pinned-slot follower tracks.
+                    SlotBarView<T>(
+                      onSize: _metrics.updateTopBar,
+                      slot: _shell.topBarSlot,
+                      coordinator: widget.shell,
+                      slideDirections: VerticalSlideDirections.fromTop,
+                    ),
+
+                    // ── PINNED SLOT — LayerLink follower, tracks top-bar bottom ───
+                    //
+                    // No Positioned wrapper — CompositedTransformFollower positions
+                    // itself relative to the CompositedTransformTarget above, placing
+                    // its top-left at the top-bar's bottom-left edge (including
+                    // during NavigatorResizable resize animations).
+                    //
+                    // showWhenUnlinked: false ensures it hides before the top bar has
+                    // been laid out in the first frame.
+                    IntrinsicHeight(
+                      child: SlotBarView<T>(
+                        onSize: _metrics.updatePinned,
+                        slot: _shell.pinnedSlot,
+                        coordinator: widget.shell,
                       ),
                     ),
-                  ),
-                ),
-              ),
-
-              // ── PINNED SLOT — LayerLink follower, tracks top-bar bottom ───
-              //
-              // No Positioned wrapper — CompositedTransformFollower positions
-              // itself relative to the CompositedTransformTarget above, placing
-              // its top-left at the top-bar's bottom-left edge (including
-              // during NavigatorResizable resize animations).
-              //
-              // showWhenUnlinked: false ensures it hides before the top bar has
-              // been laid out in the first frame.
-              CompositedTransformFollower(
-                link: _topBarLayerLink,
-                showWhenUnlinked: false,
-                targetAnchor: Alignment.bottomLeft,
-                followerAnchor: Alignment.topLeft,
-                child: MeasuredBar(
-                  onSize: _metrics.updatePinned,
-                  child: SlotBarView<T>(
-                    slot: _chat.pinnedSlot,
-                    coordinator: widget.coordinator,
-                  ),
+                  ],
                 ),
               ),
 
@@ -197,13 +154,17 @@ class _ChatShellState<T extends RouteUnique> extends State<ChatShell<T>> {
                 bottom: 0,
                 left: 0,
                 right: 0,
-                child: MeasuredBar(
-                  onSize: _metrics.updateBottom,
-                  child: SafeArea(
-                    top: false,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.sizeOf(context).height,
+                  ),
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
                     child: SlotBarView<T>(
-                      slot: _chat.bottomSlot,
-                      coordinator: widget.coordinator,
+                      onSize: _metrics.updateBottom,
+                      slot: _shell.bottomSlot,
+                      coordinator: widget.shell,
+                      slideDirections: VerticalSlideDirections.chatBar,
                     ),
                   ),
                 ),

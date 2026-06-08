@@ -154,20 +154,6 @@ class ChatListController<Item extends Object> extends ChangeNotifier {
     curve: curve,
   );
 
-  // ── unread badge ────────────────────────────────────────────────────────────
-
-  /// Number of items appended while the user was scrolled away from the
-  /// bottom. Used to show an unread-messages badge.
-  int get unreadCount => _unreadCount;
-
-  /// Reset [unreadCount] to zero (call after scrolling to bottom or tapping
-  /// the unread badge).
-  void markAllRead() {
-    if (_unreadCount == 0) return;
-    _unreadCount = 0;
-    notifyListeners();
-  }
-
   // ── internals ───────────────────────────────────────────────────────────────
 
   void _scrollToIndex(

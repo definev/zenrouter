@@ -326,7 +326,7 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
 
     final parentPath = parentLayout?.resolvePath(this) ?? root;
     switch (parentPath) {
-      case StackMutatable():
+      case StackPush():
         return parentPath.push(target);
       default:
         parentPath.activateRoute(target);
@@ -352,7 +352,7 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
     final parentPath = parentLayout?.resolvePath(this) ?? root;
 
     switch (parentPath) {
-      case StackMutatable():
+      case StackPushOrMoveToTop():
         parentPath.pushOrMoveToTop(target);
       default:
         parentPath.activateRoute(target);
@@ -418,7 +418,7 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
   ///
   /// Returns true if pop succeeded, false if blocked by guard, null if no path eligible.
   Future<bool?> tryPop([Object? result]) async {
-    final mutatablePaths = activePaths.whereType<StackMutatable>().toList();
+    final mutatablePaths = activePaths.whereType<StackPop>().toList();
 
     for (var i = mutatablePaths.length - 1; i >= 0; i--) {
       final path = mutatablePaths[i];

@@ -32,11 +32,32 @@ extension ChatSlotOps<T extends RouteTarget> on NavigationPath<T> {
   /// Use when the new content is a **peer replacement** with no back navigation
   /// (e.g. switching the composer bar to a recording bar, or changing the top
   /// bar between default ↔ selection-mode ↔ search).
-  Future<void> swap(T route) => activateRoute(route);
+  Future<void> swap(T route) => navigate(route);
 
   /// Remove all routes from this slot.
   ///
   /// An empty slot renders [SizedBox.shrink] — use this to hide optional
   /// regions such as the pinned-message banner.
-  void clearSlot() => reset();
+  void clearSlot() {
+    reset();
+    // ignore: invalid_use_of_visible_for_testing_member, invalid_use_of_protected_member
+    notifyListeners();
+  }
+}
+
+/// Restoration IDs for [ChatSlot] navigators inside [ChatShell].
+extension ChatSlotRestoration<T extends RouteUnique> on NavigationPath<T> {
+  /// Stack-level scope for a slot's [NavigationStack] / Navigator.
+  String stackRestorationId(Coordinator<T> coordinator) {
+    final label = debugLabel;
+    assert(
+      label != null,
+      'ChatSlot paths must have a debugLabel for restoration',
+    );
+    return '${coordinator.rootRestorationId}_$label';
+  }
+
+  /// Page-level scope for an individual route in a slot stack.
+  String routeRestorationId(Coordinator<T> coordinator, RouteUnique route) =>
+      '${stackRestorationId(coordinator)}_${route.identifier}';
 }

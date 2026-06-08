@@ -1,6 +1,9 @@
 import 'package:flutter/widgets.dart';
+import 'package:navigator_resizable/navigator_resizable.dart';
 import 'package:zenrouter/zenrouter.dart';
 import 'package:zenrouter_chat_ui/src/path/chat_slot.dart';
+import 'package:zenrouter_chat_ui/src/transition/vertical_slide_transition.dart';
+import 'package:zenrouter_chat_ui/src/widgets/chat_metrics.dart';
 
 /// Content-sized renderer for a bar [ChatSlot].
 ///
@@ -28,21 +31,56 @@ class SlotBarView<T extends RouteUnique> extends StatelessWidget {
   const SlotBarView({
     super.key,
     required this.slot,
+    required this.onSize,
     required this.coordinator,
+    this.slideDirections = VerticalSlideDirections.chatBar,
   });
 
   final ChatSlot<T> slot;
   final Coordinator<T> coordinator;
+  final ValueChanged<double> onSize;
+
+  /// Vertical slide directions for bar slot pushes and pops.
+  final VerticalSlideDirections slideDirections;
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: slot,
-      builder: (context, _) {
-        final route = slot.activeRoute;
-        if (route == null) return const SizedBox.shrink();
-        return route.build(coordinator, context);
-      },
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: 1000),
+      child: ListenableBuilder(
+        listenable: slot,
+        builder: (context, child) {
+          final isEmpty = slot.stack.isEmpty;
+
+          return MeasuredBar(
+            onSize: onSize,
+            measureCount: !isEmpty ? 10 : null,
+            child: NavigatorResizable(
+              onSize: (size) {
+                WidgetsBinding.instance.addPostFrameCallback(
+                  (_) => onSize(size.height),
+                );
+              },
+              child: NavigationStack(
+                path: slot,
+                coordinator: coordinator,
+                restorationId: slot.stackRestorationId(coordinator),
+                resolver: (route) => switch (route) {
+                  RouteTransition() => route.transition(coordinator),
+                  _ => ChatStackTransition.verticalSlide(
+                    (context) => route.build(coordinator, context),
+                    directions: slideDirections,
+                    restorationId: slot.routeRestorationId(
+                      coordinator,
+                      route,
+                    ),
+                  ),
+                },
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }

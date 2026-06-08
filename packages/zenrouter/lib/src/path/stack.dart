@@ -142,8 +142,8 @@ class _NavigationStackState<T extends RouteTarget>
       ValueKey(route),
       PopScope(
         canPop: switch (route) {
-          RouteGuard() => false,
-          _ when destination.guard != null => false,
+          RouteGuard() => route.canPop,
+          _ when destination.guard != null => destination.guard!.canPop,
           _ => true,
         },
         onPopInvokedWithResult: (didPop, result) async {
@@ -186,7 +186,10 @@ class _NavigationStackState<T extends RouteTarget>
             // coverage:ignore-end
           }
         },
-        child: destination.builder(context),
+        // Defer route build until the Navigator mounts this page — builders may
+        // read inherited widgets (Theme, CupertinoTheme, etc.) and must not run
+        // during initState when _updatePages first runs.
+        child: Builder(builder: destination.builder),
       ),
     );
   }

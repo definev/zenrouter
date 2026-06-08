@@ -2,16 +2,53 @@
 
 part of 'base.dart';
 
+/// Adds a new route to the top of the stack.
+mixin StackPush<T extends RouteTarget> on StackPath<T> {
+  Future<R?> push<R extends Object>(T element);
+}
+
+/// Adds a new route to the top of the stack.
+mixin StackPushOrMoveToTop<T extends RouteTarget> on StackPath<T> {
+  Future<void> pushOrMoveToTop(T element);
+}
+
+mixin StackPushReplacement<T extends RouteTarget> on StackPath<T> {
+  Future<R?> pushReplacement<R extends Object, RO extends Object>(
+    T element, {
+    RO? result,
+  });
+}
+
+mixin StackPop<T extends RouteTarget> on StackPath<T> {
+  Future<bool?> pop([Object? result]);
+}
+
+mixin StackReset<T extends RouteTarget> on StackPath<T> {
+  void reset();
+}
+
+mixin StackRemove<T extends RouteTarget> on StackPath<T> {
+  void remove(T element, {bool discard = true});
+}
+
 /// Mixin for stack paths that support mutable navigation operations.
 ///
 /// Provides push/pop functionality for navigating between routes.
 /// This mixin is applied to paths that need dynamic navigation.
 mixin StackMutatable<T extends RouteTarget> on StackPath<T>
-    implements StackNavigatable<T> {
+    implements
+        StackNavigatable<T>,
+        StackPush<T>,
+        StackPushReplacement<T>,
+        StackPushOrMoveToTop<T>,
+        StackReset<T>,
+        StackRemove<T>,
+        StackPop<T> {
   /// Adds a new route to the top of the stack.
   ///
   /// Resolves redirects via [RouteRedirect.resolve] before pushing.
   /// Returns a future that completes when the popped route provides a result.
+  @override
   Future<R?> push<R extends Object>(T element) async {
     T? target = await RouteRedirect.resolve(element, coordinator);
     if (target == null) return null;

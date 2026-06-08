@@ -52,10 +52,16 @@ class ChatMetrics extends InheritedWidget {
 ///
 /// Used internally by [ChatShell] to track bar heights.
 class MeasuredBar extends StatefulWidget {
-  const MeasuredBar({super.key, required this.child, required this.onSize});
+  const MeasuredBar({
+    super.key,
+    required this.child,
+    required this.onSize,
+    this.measureCount,
+  });
 
   final Widget child;
   final ValueChanged<double> onSize;
+  final int? measureCount;
 
   @override
   State<MeasuredBar> createState() => _MeasuredBarState();
@@ -63,6 +69,8 @@ class MeasuredBar extends StatefulWidget {
 
 class _MeasuredBarState extends State<MeasuredBar> {
   final _key = GlobalKey();
+
+  int count = 0;
 
   @override
   void initState() {
@@ -76,7 +84,19 @@ class _MeasuredBarState extends State<MeasuredBar> {
     if (renderBox != null) {
       widget.onSize(renderBox.size.height);
     }
-    WidgetsBinding.instance.addPostFrameCallback(_measure);
+
+    if (widget.measureCount == null || count <= widget.measureCount!) {
+      WidgetsBinding.instance.addPostFrameCallback(_measure);
+    }
+  }
+
+  @override
+  void didUpdateWidget(MeasuredBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.measureCount != oldWidget.measureCount) {
+      count = 0; 
+      WidgetsBinding.instance.addPostFrameCallback(_measure);
+    }
   }
 
   @override
