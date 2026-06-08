@@ -6,6 +6,8 @@ import 'package:zenrouter/zenrouter.dart';
 
 abstract class ProxyTestRoute extends RouteTarget with RouteUnique {}
 
+enum ProxyInvocation { activate, navigate, push, pushReplacement, pop }
+
 class TestRoute extends ProxyTestRoute with ProxyRoute<ProxyTestRoute> {
   TestRoute(this.name);
 
@@ -30,6 +32,25 @@ class TestRoute extends ProxyTestRoute with ProxyRoute<ProxyTestRoute> {
 
   @override
   List<Object?> get props => [name];
+}
+
+class LifecycleRoute extends RouteHandledRoute {
+  LifecycleRoute(super.name);
+
+  var discardCount = 0;
+  var updateCount = 0;
+
+  @override
+  void onDiscard() {
+    discardCount++;
+    super.onDiscard();
+  }
+
+  @override
+  void onUpdate(covariant RouteTarget newRoute) {
+    updateCount++;
+    super.onUpdate(newRoute);
+  }
 }
 
 class PlainRoute extends ProxyTestRoute {
@@ -70,24 +91,25 @@ class RedirectRoute extends ProxyTestRoute with RouteRedirect<ProxyTestRoute> {
 class RouteHandledRoute extends TestRoute {
   RouteHandledRoute(super.name);
 
-  final actions = <ProxyPathAction<ProxyTestRoute>>[];
+  final invocations = <ProxyInvocation>[];
   Object? nextResult;
+  Object? lastReplacementResult;
+  Object? lastPopResult;
   bool popResult = true;
-  VoidCallback? onPopCallback;
 
   @override
   FutureOr<void> onActivate(ProxyPath<ProxyTestRoute> path) {
-    actions.add(ProxyActivate(this));
+    invocations.add(ProxyInvocation.activate);
   }
 
   @override
   FutureOr<void> onNavigate(ProxyPath<ProxyTestRoute> path) {
-    actions.add(ProxyNavigate(this));
+    invocations.add(ProxyInvocation.navigate);
   }
 
   @override
   FutureOr<R?> onPush<R extends Object>(ProxyPath<ProxyTestRoute> path) {
-    actions.add(ProxyPush(this));
+    invocations.add(ProxyInvocation.push);
     return nextResult as R?;
   }
 
@@ -96,58 +118,50 @@ class RouteHandledRoute extends TestRoute {
     ProxyPath<ProxyTestRoute> path, {
     RO? result,
   }) {
-    actions.add(ProxyPushReplacement(this, result: result));
+    invocations.add(ProxyInvocation.pushReplacement);
+    lastReplacementResult = result;
     return nextResult as R?;
   }
 
   @override
   FutureOr<bool?> onPop(ProxyPath<ProxyTestRoute> path, [Object? result]) {
-    actions.add(ProxyPop(result));
-    onPopCallback?.call();
+    invocations.add(ProxyInvocation.pop);
+    lastPopResult = result;
     return popResult;
   }
 }
 
 void main() {
   group('ProxyPath', () {
-    test('owns a mirror stack synced from a provider', () {
+    test('owns route stack state', () async {
       final home = TestRoute('home');
       final details = TestRoute('details');
-      var externalStack = <ProxyTestRoute>[home];
 
-      final path = ProxyPath<ProxyTestRoute>.create(
-        label: 'proxy',
-        stack: () => externalStack,
-      );
+      final path = ProxyPath<ProxyTestRoute>.create(label: 'proxy');
 
-      expect(path.stack, [home]);
-      expect(home.stackPath, same(path));
-
-      externalStack = [home, details];
-      expect(path.stack, [home]);
-
-      path.notifyListeners();
+      await path.push(home);
+      await path.push(details);
 
       expect(path.stack, [home, details]);
+      expect(home.stackPath, same(path));
       expect(details.stackPath, same(path));
     });
 
-    test('uses the owned mirror stack for active route', () {
+    test('uses the owned stack for active route', () async {
       final home = TestRoute('home');
       final active = TestRoute('active');
 
-      final path = ProxyPath<ProxyTestRoute>.create(
-        stack: () => [home, active],
-      );
+      final path = ProxyPath<ProxyTestRoute>.create();
+      await path.activateRoute(home);
+      await path.push(active);
 
       expect(path.stack, [home, active]);
       expect(path.activeRoute, active);
     });
 
-    test('requires mirrored routes to implement ProxyRoute', () {
+    test('requires routes to implement ProxyRoute', () {
       expect(
-        () =>
-            ProxyPath<ProxyTestRoute>.create(stack: () => [PlainRoute('bad')]),
+        ProxyPath<ProxyTestRoute>.create().push(PlainRoute('bad')),
         throwsArgumentError,
       );
     });
@@ -158,7 +172,7 @@ void main() {
 
       await path.navigate(RedirectRoute(target));
 
-      expect(target.actions.single, isA<ProxyNavigate<ProxyTestRoute>>());
+      expect(target.invocations, [ProxyInvocation.navigate]);
     });
 
     test(
@@ -166,24 +180,17 @@ void main() {
       () async {
         final home = TestRoute('home');
         final details = RouteHandledRoute('details');
-        var externalStack = <ProxyTestRoute>[home, details];
-        final path = ProxyPath<ProxyTestRoute>.create(
-          stack: () => externalStack,
-        );
-        details.onPopCallback = () {
-          externalStack = [home];
-        };
+        final path = ProxyPath<ProxyTestRoute>.create();
+        await path.push(home);
+        await path.push(details);
 
         final popped = await path.pop('done');
 
         expect(popped, true);
         expect(details.isPopByPath, true);
         expect(details.resultValue, 'done');
-        expect(details.actions.single, isA<ProxyPop<ProxyTestRoute>>());
-        expect(
-          (details.actions.single as ProxyPop<ProxyTestRoute>).result,
-          'done',
-        );
+        expect(details.invocations.last, ProxyInvocation.pop);
+        expect(details.lastPopResult, 'done');
         expect(path.stack, [home]);
       },
     );
@@ -208,6 +215,38 @@ void main() {
       expect(route.activateCount, 1);
     });
 
+    test(
+      'navigate updates existing route and discards incoming replacement',
+      () async {
+        final existing = LifecycleRoute('home');
+        final incoming = LifecycleRoute('home');
+        final path = ProxyPath<ProxyTestRoute>.create();
+        await path.push(existing);
+
+        await path.navigate(incoming);
+
+        expect(path.stack, [existing]);
+        expect(existing.updateCount, 1);
+        expect(incoming.discardCount, 1);
+        expect(incoming.stackPath, isNull);
+        expect(incoming.invocations, isEmpty);
+      },
+    );
+
+    test('navigate pops and removes routes above existing route', () async {
+      final home = LifecycleRoute('home');
+      final details = LifecycleRoute('details');
+      final path = ProxyPath<ProxyTestRoute>.create();
+      await path.push(home);
+      await path.push(details);
+
+      await path.navigate(LifecycleRoute('home'));
+
+      expect(path.stack, [home]);
+      expect(details.invocations.last, ProxyInvocation.pop);
+      expect(details.stackPath, isNull);
+    });
+
     test('lets route mixin handle push result', () async {
       final route = RouteHandledRoute('route-handled')..nextResult = 'route';
       final path = ProxyPath<ProxyTestRoute>.create();
@@ -215,7 +254,7 @@ void main() {
       final result = await path.push<String>(route);
 
       expect(result, 'route');
-      expect(route.actions.single, isA<ProxyPush<ProxyTestRoute>>());
+      expect(route.invocations, [ProxyInvocation.push]);
     });
 
     test('lets route mixin handle push replacement result', () async {
@@ -228,29 +267,40 @@ void main() {
       );
 
       expect(result, 'next');
-      expect(route.actions.single, isA<ProxyPushReplacement<ProxyTestRoute>>());
-      expect(
-        (route.actions.single as ProxyPushReplacement<ProxyTestRoute>).result,
-        'previous',
-      );
+      expect(route.invocations, [ProxyInvocation.pushReplacement]);
+      expect(route.lastReplacementResult, 'previous');
     });
 
     test('lets active route mixin handle pop', () async {
       final route = RouteHandledRoute('active');
-      final path = ProxyPath<ProxyTestRoute>.create(stack: () => [route]);
+      final path = ProxyPath<ProxyTestRoute>.create();
+      await path.push(route);
 
       final popped = await path.pop('done');
 
       expect(popped, true);
       expect(route.isPopByPath, true);
       expect(route.resultValue, 'done');
-      expect(route.actions.single, isA<ProxyPop<ProxyTestRoute>>());
+      expect(route.invocations, [ProxyInvocation.push, ProxyInvocation.pop]);
+      expect(route.lastPopResult, 'done');
+    });
+
+    test('invokes onReset callback when reset', () {
+      var resetCount = 0;
+      final path = ProxyPath<ProxyTestRoute>.create(
+        onReset: () => resetCount++,
+      );
+
+      path.reset();
+
+      expect(resetCount, 1);
+      expect(path.stack, isEmpty);
     });
 
     testWidgets('defers notifications while widgets are building', (
       tester,
     ) async {
-      final path = ProxyPath<ProxyTestRoute>.create(onAction: (_) => null);
+      final path = ProxyPath<ProxyTestRoute>.create(onReset: () {});
 
       await tester.pumpWidget(
         StatefulBuilder(

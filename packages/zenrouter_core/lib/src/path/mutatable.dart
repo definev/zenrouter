@@ -21,6 +21,8 @@ mixin StackPushReplacement<T extends RouteTarget> on StackPath<T> {
 
 mixin StackPop<T extends RouteTarget> on StackPath<T> {
   Future<bool?> pop([Object? result]);
+
+  FutureOr<bool?> get canPop;
 }
 
 mixin StackReset<T extends RouteTarget> on StackPath<T> {
@@ -44,21 +46,34 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
         StackReset<T>,
         StackRemove<T>,
         StackPop<T> {
-  /// Adds a new route to the top of the stack.
+  /// Resolves redirects when this path is not owned by a coordinator.
   ///
-  /// Resolves redirects via [RouteRedirect.resolve] before pushing.
-  /// Returns a future that completes when the popped route provides a result.
-  @override
-  Future<R?> push<R extends Object>(T element) async {
-    T? target = await RouteRedirect.resolve(element, coordinator);
-    if (target == null) return null;
+  /// Coordinator-owned paths receive pre-resolved routes from
+  /// [CoordinatorCore]; standalone paths resolve locally.
+  Future<T?> _resolveRedirect(T route) async {
+    if (coordinator != null) return route;
+    return RouteRedirect.resolve(route, coordinator);
+  }
 
+  /// Pushes [target] without redirect resolution.
+  Future<R?> _pushResolved<R extends Object>(T target) async {
     target.isPopByPath = false;
     target.bindStackPath(this);
     _stack.add(target);
     notifyListeners();
     // ignore: invalid_use_of_visible_for_testing_member
     return await target.onResult.future as R?;
+  }
+
+  /// Adds a new route to the top of the stack.
+  ///
+  /// Resolves redirects via [_resolveRedirect] when this path is standalone.
+  /// Returns a future that completes when the popped route provides a result.
+  @override
+  Future<R?> push<R extends Object>(T element) async {
+    T? target = await _resolveRedirect(element);
+    if (target == null) return null;
+    return _pushResolved<R>(target);
   }
 
   /// Replaces the current route with a new one.
@@ -73,7 +88,7 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
     T element, {
     RO? result,
   }) async {
-    T? target = await RouteRedirect.resolve(element, coordinator);
+    T? target = await _resolveRedirect(element);
     if (target == null) return null;
 
     final activeRoute = this.activeRoute;
@@ -82,17 +97,17 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
         activeRoute.completeOnResult(result, coordinator);
         activeRoute.onDiscard();
         reset();
-        return push(target);
+        return _pushResolved<R>(target);
       }
 
       final popped = await pop(result);
       if (popped == null || !popped) return null;
       // ignore: invalid_use_of_visible_for_testing_member
       await activeRoute.onResult.future;
-      return push(target);
+      return _pushResolved<R>(target);
     }
 
-    return push(target);
+    return _pushResolved<R>(target);
   }
 
   /// Adds a route to the top, or moves it to the top if already in stack.
@@ -100,7 +115,7 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
   /// If the route exists in the stack, it's moved to the top position.
   /// If not, it's pushed as a new entry. Useful for tab navigation.
   Future<void> pushOrMoveToTop(T element) async {
-    T? target = await RouteRedirect.resolve(element, coordinator);
+    T? target = await _resolveRedirect(element);
     if (target == null) return;
 
     target.isPopByPath = false;
@@ -156,6 +171,8 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
     return true;
   }
 
+  bool get canPop => stack.length >= 2;
+
   /// Removes a specific route from any position in the stack.
   ///
   /// Unlike [pop], this bypasses guards and operates on any index.
@@ -171,7 +188,7 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
 
   @override
   Future<void> navigate(T route) async {
-    T? target = await RouteRedirect.resolve(route, coordinator);
+    T? target = await _resolveRedirect(route);
     if (target == null) return;
 
     final routeIndex = stack.indexOf(target);
@@ -192,7 +209,7 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
         target.onDiscard();
       }
     } else {
-      await push(target);
+      await _pushResolved(target);
     }
   }
 }

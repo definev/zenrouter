@@ -6,19 +6,6 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:zenrouter/zenrouter.dart';
 
-/// Builds the host-route mirror stack represented by a [ProxyPath].
-typedef ProxyPathStackProvider<T extends RouteTarget> = List<T> Function();
-
-/// Handles navigation actions emitted by a [ProxyPath].
-///
-/// Return values are action-specific:
-/// - [ProxyPush] and [ProxyPushReplacement] may return the route result, or a
-///   future that completes with that result.
-/// - [ProxyPop] should return whether the pop was accepted.
-/// - Other actions ignore the returned value.
-typedef ProxyPathActionHandler<T extends RouteTarget> =
-    FutureOr<Object?> Function(ProxyPathAction<T> action);
-
 /// Builds the embedded router represented by a [ProxyPath].
 typedef ProxyPathWidgetBuilder<T extends RouteTarget> =
     Widget Function(BuildContext context, ProxyPath<T> path);
@@ -29,124 +16,67 @@ typedef ProxyPathWidgetBuilder<T extends RouteTarget> =
 /// [onPop] are required because deep-link activation and back navigation are
 /// shell-specific. Other navigation methods default to activation semantics.
 mixin ProxyRoute<T extends RouteTarget> on RouteTarget {
-  /// Handles [ProxyActivate] for this route.
+  /// Handles route activation for this proxy route.
   FutureOr<void> onActivate(ProxyPath<T> path);
 
-  /// Handles [ProxyNavigate] for this route.
+  /// Handles idempotent navigation to this proxy route.
   FutureOr<void> onNavigate(ProxyPath<T> path) => onActivate(path);
 
-  /// Handles [ProxyPush] for this route.
+  /// Handles pushing this proxy route.
   FutureOr<R?> onPush<R extends Object>(ProxyPath<T> path) async {
     await Future<void>.value(onNavigate(path));
     return null;
   }
 
-  /// Handles [ProxyPushReplacement] for this route.
+  /// Handles replacing the current route with this proxy route.
   FutureOr<R?> onPushReplacement<R extends Object, RO extends Object>(
     ProxyPath<T> path, {
     RO? result,
-  }) async {
-    await Future<void>.value(onNavigate(path));
-    return null;
-  }
+  }) async => onPush(path);
 
-  /// Handles [ProxyPushOrMoveToTop] for this route.
+  /// Handles pushing this route or moving it to the top of the proxy stack.
   FutureOr<void> onPushOrMoveToTop(ProxyPath<T> path) => onNavigate(path);
 
-  /// Handles [ProxyPop] for the currently active route.
+  /// Handles popping while this route is active.
   FutureOr<bool?> onPop(ProxyPath<T> path, [Object? result]);
-}
-
-/// A navigation action emitted by [ProxyPath].
-sealed class ProxyPathAction<T extends RouteTarget> {
-  const ProxyPathAction();
-}
-
-/// Makes [route] the active route.
-final class ProxyActivate<T extends RouteTarget> extends ProxyPathAction<T> {
-  const ProxyActivate(this.route);
-
-  final T route;
-}
-
-/// Navigates to [route] using the target router's idempotent navigation.
-final class ProxyNavigate<T extends RouteTarget> extends ProxyPathAction<T> {
-  const ProxyNavigate(this.route);
-
-  final T route;
-}
-
-/// Pushes [route] onto the target router.
-final class ProxyPush<T extends RouteTarget> extends ProxyPathAction<T> {
-  const ProxyPush(this.route);
-
-  final T route;
-}
-
-/// Replaces the current route with [route].
-final class ProxyPushReplacement<T extends RouteTarget>
-    extends ProxyPathAction<T> {
-  const ProxyPushReplacement(this.route, {this.result});
-
-  final T route;
-  final Object? result;
-}
-
-/// Pushes [route] or moves an existing route instance to the top.
-final class ProxyPushOrMoveToTop<T extends RouteTarget>
-    extends ProxyPathAction<T> {
-  const ProxyPushOrMoveToTop(this.route);
-
-  final T route;
-}
-
-/// Pops the target router.
-final class ProxyPop<T extends RouteTarget> extends ProxyPathAction<T> {
-  const ProxyPop([this.result]);
-
-  final Object? result;
-}
-
-/// Resets the target router.
-final class ProxyReset<T extends RouteTarget> extends ProxyPathAction<T> {
-  const ProxyReset();
 }
 
 /// A [StackPath] facade that proxies route actions to another router.
 ///
-/// Unlike [NavigationPath], this path owns only a host-route mirror stack.
+/// Unlike [NavigationPath], this path owns only a host-route proxy stack.
 /// The real navigation state remains in the embedded router, while mutation
 /// methods are forwarded through [ProxyRoute] handlers.
 class ProxyPath<T extends RouteTarget> extends StackPath<T>
     with ChangeNotifier
-    implements StackMutatable<T> {
+    implements
+        StackNavigatable<T>,
+        StackPush<T>,
+        StackPushReplacement<T>,
+        StackPushOrMoveToTop<T>,
+        StackReset<T>,
+        StackRemove<T>,
+        StackPop<T> {
   ProxyPath._({
-    ProxyPathActionHandler<T>? onAction,
-    ProxyPathStackProvider<T>? stack,
     ProxyPathWidgetBuilder<T>? builder,
+    VoidCallback? onReset,
     String? label,
     super.coordinator,
     bool notifyAfterAction = true,
-  }) : _onAction = onAction,
-       _stackProvider = stack,
-       _builder = builder,
+  }) : _builder = builder,
+       _onReset = onReset,
        _notifyAfterAction = notifyAfterAction,
-       super(<T>[], debugLabel: label) {
-    _syncStackFromProvider();
-  }
+       super(<T>[], debugLabel: label);
 
-  /// Creates a proxy path with an optional host-route mirror stack provider.
+  /// Creates a proxy path.
   factory ProxyPath.create({
-    ProxyPathActionHandler<T>? onAction,
-    ProxyPathStackProvider<T>? stack,
     ProxyPathWidgetBuilder<T>? builder,
+    VoidCallback? onReset,
     String? label,
     CoordinatorCore? coordinator,
     bool notifyAfterAction = true,
   }) => ProxyPath._(
-    onAction: onAction,
-    stack: stack,
     builder: builder,
+    onReset: onReset,
     label: label,
     coordinator: coordinator,
     notifyAfterAction: notifyAfterAction,
@@ -156,14 +86,12 @@ class ProxyPath<T extends RouteTarget> extends StackPath<T>
   factory ProxyPath.createWith({
     required CoordinatorCore coordinator,
     required String label,
-    ProxyPathActionHandler<T>? onAction,
-    ProxyPathStackProvider<T>? stack,
     ProxyPathWidgetBuilder<T>? builder,
+    VoidCallback? onReset,
     bool notifyAfterAction = true,
   }) => ProxyPath._(
-    onAction: onAction,
-    stack: stack,
     builder: builder,
+    onReset: onReset,
     label: label,
     coordinator: coordinator,
     notifyAfterAction: notifyAfterAction,
@@ -172,9 +100,8 @@ class ProxyPath<T extends RouteTarget> extends StackPath<T>
   /// The key used to identify this type in [defineLayoutBuilder].
   static const key = PathKey('ProxyPath');
 
-  final ProxyPathActionHandler<T>? _onAction;
-  final ProxyPathStackProvider<T>? _stackProvider;
   final ProxyPathWidgetBuilder<T>? _builder;
+  final VoidCallback? _onReset;
   final bool _notifyAfterAction;
   bool _notificationPending = false;
   bool _isDisposed = false;
@@ -183,11 +110,7 @@ class ProxyPath<T extends RouteTarget> extends StackPath<T>
   PathKey get pathKey => key;
 
   @override
-  T? get activeRoute {
-    final snapshot = stack;
-    if (snapshot.isEmpty) return null;
-    return snapshot.last;
-  }
+  T? get activeRoute => stack.lastOrNull;
 
   @override
   void dispose() {
@@ -203,7 +126,6 @@ class ProxyPath<T extends RouteTarget> extends StackPath<T>
   @override
   void notifyListeners() {
     if (_isDisposed) return;
-    _syncStackFromProvider();
 
     if (SchedulerBinding.instance.schedulerPhase ==
         SchedulerPhase.persistentCallbacks) {
@@ -219,11 +141,6 @@ class ProxyPath<T extends RouteTarget> extends StackPath<T>
     super.notifyListeners();
   }
 
-  /// Rebuilds the owned host-route mirror stack from [stack].
-  ///
-  /// Call this directly when you need to sync without notifying listeners.
-  bool syncStack() => _syncStackFromProvider();
-
   /// Builds the embedded router represented by this path.
   Widget build(BuildContext context) {
     final builder = _builder;
@@ -236,7 +153,11 @@ class ProxyPath<T extends RouteTarget> extends StackPath<T>
     return builder(context, this);
   }
 
-  Future<T?> _resolve(T route) => RouteRedirect.resolve(route, coordinator);
+  Future<T?> _resolve(T route) async {
+    // Coordinator-owned paths receive pre-resolved routes from CoordinatorCore.
+    if (coordinator != null) return route;
+    return RouteRedirect.resolve(route, coordinator);
+  }
 
   void _prepareRoute(T route) {
     _proxyRouteFor(route);
@@ -244,42 +165,40 @@ class ProxyPath<T extends RouteTarget> extends StackPath<T>
     route.bindStackPath(this);
   }
 
-  bool _syncStackFromProvider() {
-    final provider = _stackProvider;
-    if (provider == null) return false;
-    return _replaceStack(provider());
-  }
-
   void _activateOwnedRoute(T route) {
-    if (_stackProvider != null) return;
     _replaceStack([route]);
   }
 
-  void _navigateOwnedRoute(T route) {
-    if (_stackProvider != null) return;
-
+  Future<bool> _navigateOwnedRoute(T route) async {
     final routeIndex = stack.indexOf(route);
     if (routeIndex == -1) {
-      _replaceStack([...stack, route]);
-      return;
+      return false;
+    }
+
+    while (stack.length > routeIndex + 1) {
+      final allowPop = await pop();
+      if (allowPop == null || !allowPop) {
+        notifyListeners();
+        return true;
+      }
     }
 
     final existingRoute = stack[routeIndex];
     existingRoute.onUpdate(route);
-    if (!identical(existingRoute, route)) {
+    notifyListeners();
+
+    if (!existingRoute.deepEquals(route)) {
       route.onDiscard();
       route.clearStackPath();
     }
-    _replaceStack(stack.take(routeIndex + 1).toList());
+    return true;
   }
 
   void _pushOwnedRoute(T route) {
-    if (_stackProvider != null) return;
     _replaceStack([...stack, route]);
   }
 
   void _pushReplacementOwnedRoute(T route) {
-    if (_stackProvider != null) return;
     final nextStack = stack.isEmpty
         ? [route]
         : [...stack.take(stack.length - 1), route];
@@ -287,13 +206,11 @@ class ProxyPath<T extends RouteTarget> extends StackPath<T>
   }
 
   void _pushOrMoveOwnedRoute(T route) {
-    if (_stackProvider != null) return;
-
     final currentStack = stack;
     final routeIndex = currentStack.indexOf(route);
     if (routeIndex != -1 && routeIndex == currentStack.length - 1) {
       currentStack.last.onUpdate(route);
-      if (!identical(currentStack.last, route)) {
+      if (!currentStack.last.deepEquals(route)) {
         route.onDiscard();
         route.clearStackPath();
       }
@@ -303,7 +220,7 @@ class ProxyPath<T extends RouteTarget> extends StackPath<T>
     final nextStack = [...currentStack];
     if (routeIndex != -1) {
       final removed = nextStack.removeAt(routeIndex);
-      if (!identical(removed, route)) {
+      if (!removed.deepEquals(route)) {
         removed.onDiscard();
         removed.clearStackPath();
       }
@@ -312,17 +229,20 @@ class ProxyPath<T extends RouteTarget> extends StackPath<T>
   }
 
   void _popOwnedRouteIfAccepted(bool? accepted) {
-    if (_stackProvider != null || accepted != true || stack.isEmpty) return;
+    if (accepted != true || stack.isEmpty) return;
     _replaceStack(stack.take(stack.length - 1).toList());
   }
 
-  bool _replaceStack(List<T> nextStack) {
+  bool _replaceStack(List<T> nextStack, {bool discardRemoved = false}) {
     for (final route in nextStack) {
       _proxyRouteFor(route);
     }
     if (_stackMatches(nextStack)) return false;
 
     for (final route in stack) {
+      if (discardRemoved && !nextStack.contains(route)) {
+        route.onDiscard();
+      }
       route.clearStackPath();
     }
     bindStack(nextStack);
@@ -351,36 +271,11 @@ class ProxyPath<T extends RouteTarget> extends StackPath<T>
     if (_notifyAfterAction) notifyListeners();
   }
 
-  FutureOr<Object?> _fallbackAction(ProxyPathAction<T> action) {
-    final onAction = _onAction;
-    if (onAction == null) {
-      throw UnimplementedError(
-        'ProxyPath has no handler for ${action.runtimeType}. Provide onAction '
-        'or override the matching method on ProxyRoute.',
-      );
-    }
-    return onAction(action);
-  }
-
-  Future<Object?> _dispatchProxy(
-    FutureOr<Object?> Function() invoke,
-    ProxyPathAction<T> fallback,
-  ) async {
-    try {
-      return await Future<Object?>.value(invoke());
-    } on UnimplementedError {
-      return await Future<Object?>.value(_fallbackAction(fallback));
-    }
-  }
-
   @override
   Future<void> activateRoute(T route) async {
     _prepareRoute(route);
     final proxyRoute = _proxyRouteFor(route);
-    final result = _dispatchProxy(
-      () => proxyRoute.onActivate(this),
-      ProxyActivate(route),
-    );
+    final result = proxyRoute.onActivate(this);
     _activateOwnedRoute(route);
     _notifyActionProxied();
     await result;
@@ -393,11 +288,11 @@ class ProxyPath<T extends RouteTarget> extends StackPath<T>
 
     _prepareRoute(target);
     final proxyRoute = _proxyRouteFor(target);
-    final result = _dispatchProxy(
-      () => proxyRoute.onNavigate(this),
-      ProxyNavigate(target),
-    );
-    _navigateOwnedRoute(target);
+    final handledExistingRoute = await _navigateOwnedRoute(target);
+    if (handledExistingRoute) return;
+
+    final result = proxyRoute.onNavigate(this);
+    _pushOwnedRoute(target);
     _notifyActionProxied();
     await result;
   }
@@ -409,13 +304,10 @@ class ProxyPath<T extends RouteTarget> extends StackPath<T>
 
     _prepareRoute(target);
     final proxyRoute = _proxyRouteFor(target);
-    final result = _dispatchProxy(
-      () => proxyRoute.onPush<R>(this),
-      ProxyPush(target),
-    );
+    final result = proxyRoute.onPush<R>(this);
     _pushOwnedRoute(target);
     _notifyActionProxied();
-    return await Future<Object?>.value(result) as R?;
+    return result;
   }
 
   @override
@@ -428,13 +320,13 @@ class ProxyPath<T extends RouteTarget> extends StackPath<T>
 
     _prepareRoute(target);
     final proxyRoute = _proxyRouteFor(target);
-    final proxyResult = _dispatchProxy(
-      () => proxyRoute.onPushReplacement<R, RO>(this, result: result),
-      ProxyPushReplacement(target, result: result),
+    final proxyResult = proxyRoute.onPushReplacement<R, RO>(
+      this,
+      result: result,
     );
     _pushReplacementOwnedRoute(target);
     _notifyActionProxied();
-    return await Future<Object?>.value(proxyResult) as R?;
+    return proxyResult;
   }
 
   @override
@@ -444,13 +336,10 @@ class ProxyPath<T extends RouteTarget> extends StackPath<T>
 
     _prepareRoute(target);
     final proxyRoute = _proxyRouteFor(target);
-    final result = _dispatchProxy(
-      () => proxyRoute.onPushOrMoveToTop(this),
-      ProxyPushOrMoveToTop(target),
-    );
+    final result = proxyRoute.onPushOrMoveToTop(this);
     _pushOrMoveOwnedRoute(target);
     _notifyActionProxied();
-    await result;
+    return result;
   }
 
   @override
@@ -461,14 +350,11 @@ class ProxyPath<T extends RouteTarget> extends StackPath<T>
       route.bindResultValue(result);
     }
 
-    final proxyResult = switch (route) {
-      final T route => _dispatchProxy(
-        () => _proxyRouteFor(route).onPop(this, result),
-        ProxyPop(result),
-      ),
-      _ => _fallbackAction(ProxyPop(result)),
+    final proxyResult = switch (activeRoute) {
+      final T route => _proxyRouteFor(route).onPop(this, result),
+      _ => null,
     };
-    final accepted = await Future<Object?>.value(proxyResult) as bool?;
+    final accepted = await proxyResult;
     _popOwnedRouteIfAccepted(accepted);
     _notifyActionProxied();
     return accepted;
@@ -476,9 +362,8 @@ class ProxyPath<T extends RouteTarget> extends StackPath<T>
 
   @override
   void reset() {
-    final handler = _onAction;
-    if (handler != null) handler(const ProxyReset());
-    if (_stackProvider == null) _replaceStack(<T>[]);
+    _onReset?.call();
+    _replaceStack(<T>[]);
     _notifyActionProxied();
   }
 
@@ -486,9 +371,10 @@ class ProxyPath<T extends RouteTarget> extends StackPath<T>
   void remove(T element, {bool discard = true}) {
     if (discard) element.onDiscard();
     element.clearStackPath();
-    if (_stackProvider == null) {
-      _replaceStack(stack.where((route) => route != element).toList());
-    }
+    _replaceStack(stack.where((route) => route != element).toList());
     _notifyActionProxied();
   }
+
+  @override
+  FutureOr<bool?> get canPop => stack.length >= 2;
 }

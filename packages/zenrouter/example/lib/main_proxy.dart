@@ -22,61 +22,22 @@ class MainApp extends StatelessWidget {
 abstract class AppRoute extends RouteTarget with RouteUnique {}
 
 class AppCoordinator extends Coordinator<AppRoute> {
-  AppCoordinator() {
-    embeddedCoordinator.addListener(embeddedPath.notifyListeners);
-  }
-
   late final embeddedCoordinator = EmbeddedCoordinator();
 
   late final embeddedPath = ProxyPath<AppRoute>.createWith(
     coordinator: this,
     label: 'embedded-coordinator',
-    stack: _embeddedProxyStack,
     builder: (context, path) =>
         CoordinatorView<EmbeddedAppRoute>(coordinator: embeddedCoordinator),
-    onAction: (action) {
-      if (action is ProxyReset<AppRoute>) {
-        for (final path in embeddedCoordinator.paths) {
-          path.reset();
-        }
-        return null;
+    onReset: () {
+      for (final path in embeddedCoordinator.paths) {
+        path.reset();
       }
-
-      throw UnimplementedError(
-        'Embedded routes handle ${action.runtimeType} through ProxyRoute.',
-      );
     },
   )..bindLayout(EmbeddedShellRoute.new);
 
   @override
   List<StackPath> get paths => [...super.paths, embeddedPath];
-
-  List<AppRoute> _embeddedProxyStack() {
-    final contentStack = embeddedCoordinator.contentPath.stack;
-    if (contentStack.isNotEmpty) {
-      final stack = <AppRoute>[];
-      for (final route in contentStack) {
-        final proxy = _proxyFromEmbeddedRoute(route);
-        if (proxy != null) stack.add(proxy);
-      }
-      return stack;
-    }
-
-    final rootActiveRoute = embeddedCoordinator.root.activeRoute;
-    final proxy = _proxyFromEmbeddedRoute(rootActiveRoute);
-    return proxy == null ? const [] : [proxy];
-  }
-
-  AppRoute? _proxyFromEmbeddedRoute(EmbeddedAppRoute? route) {
-    return switch (route) {
-      null => null,
-      EmbeddedHomeRoute() ||
-      EmbeddedDashboardLayout() => OpenEmbeddedHomeRoute(),
-      EmbeddedDetailRoute(:final id) => OpenEmbeddedDetailRoute(id),
-      EmbeddedSettingsRoute() => OpenEmbeddedSettingsRoute(),
-      _ => null,
-    };
-  }
 
   @override
   AppRoute parseRouteFromUri(Uri uri) {
@@ -91,7 +52,6 @@ class AppCoordinator extends Coordinator<AppRoute> {
 
   @override
   void dispose() {
-    embeddedCoordinator.removeListener(embeddedPath.notifyListeners);
     embeddedCoordinator.dispose();
     super.dispose();
   }

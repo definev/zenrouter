@@ -422,9 +422,10 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
 
     for (var i = mutatablePaths.length - 1; i >= 0; i--) {
       final path = mutatablePaths[i];
-      if (path.stack.length >= 2) {
-        return await path.pop(result);
-      }
+      final canPop = await path.canPop;
+      // If the pop is interupt, stop the pop and return null
+      if (canPop == null) return null;
+      if (canPop) return await path.pop(result);
     }
 
     return false;
