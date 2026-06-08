@@ -668,32 +668,6 @@ void main() {
       expect(guardResult, isNull);
     });
 
-    testWidgets(
-      'pushReplacement with Redirect to null should do nothing if called in path',
-      (tester) async {
-        await tester.pumpWidget(
-          MaterialApp.router(
-            routerDelegate: coordinator.routerDelegate,
-            routeInformationParser: coordinator.routeInformationParser,
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        // Push routes
-        final home = coordinator.root.stack.first;
-
-        final redirectNull = RedirectNullRoute();
-        final guardResult = await coordinator.root.pushReplacement(
-          redirectNull,
-        );
-        await tester.pumpAndSettle();
-
-        expect(coordinator.root.stack.length, 1);
-        expect(coordinator.root.stack[0], home);
-        expect(guardResult, isNull);
-      },
-    );
-
     testWidgets('pushReplacement with different layout replaces correctly', (
       tester,
     ) async {

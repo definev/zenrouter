@@ -98,6 +98,8 @@ final kDefaultLayoutBuilderTable = Map.unmodifiable(<
       },
     );
   },
+  ProxyPath.key: (coordinatorCore, path, layout) =>
+      Builder(builder: (context) => (path as ProxyPath).build(context)),
 });
 
 /// Mixin that provides layout builder and parent constructor management for [Coordinator].

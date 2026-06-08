@@ -21,6 +21,12 @@ import 'package:zenrouter_core/src/mixin/target.dart';
 /// If any guard returns `false`, the pop operation is aborted and the
 /// navigation state remains unchanged.
 mixin RouteGuard on RouteTarget {
+  /// Whether the route can be popped.
+  ///
+  /// If `false`, the route will not be popped when the user initiates back navigation.
+  /// This is useful for routes that are modal and should not be popped by the user.
+  bool get canPop => false;
+
   // coverage:ignore-start
   /// Called when the route is about to be popped.
   ///

@@ -16,6 +16,7 @@ export 'src/path/layout.dart';
 export 'src/path/navigation.dart';
 export 'src/path/restoration.dart';
 export 'src/path/indexed.dart';
+export 'src/path/proxy.dart';
 export 'src/path/stack.dart';
 export 'src/path/transition.dart';
 

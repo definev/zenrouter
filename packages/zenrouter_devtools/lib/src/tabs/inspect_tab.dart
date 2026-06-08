@@ -382,13 +382,13 @@ class _PathItemView<T extends RouteUnique> extends StatelessWidget {
             ),
           ),
           // Only show pop button for non-read-only paths
-          if (path.stack.isNotEmpty && path is NavigationPath)
+          if (path.stack.isNotEmpty && path is StackPop)
             SmallIconButton(
               icon: CupertinoIcons.arrow_left,
               onTap:
                   path.stack.length > 1
                       ? () async {
-                        await (path as NavigationPath).pop();
+                        await (path as StackPop).pop();
                       }
                       : null,
               color:

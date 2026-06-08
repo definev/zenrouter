@@ -279,16 +279,6 @@ class _CoordinatorRestorable<T extends RouteUnique>
       final path = coordinator.paths.firstWhereOrNull(
         (p) => p.debugLabel == pathEntry.key,
       );
-      if (path case NavigationPath path) {
-        assert(
-          path.debugLabel != null,
-          'NavigationPath must have a debugLabel for restoration to work',
-        );
-        result[path.debugLabel!] = path.deserialize(
-          pathEntry.value,
-          coordinator.parseRouteFromUriSync,
-        );
-      }
       if (path case RestorablePath path) {
         assert(
           path.debugLabel != null,

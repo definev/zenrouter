@@ -263,6 +263,98 @@ class TestCoordinator extends Coordinator<AppRoute> {
   }
 }
 
+abstract class ParentRestorationRoute extends RouteTarget with RouteUnique {}
+
+class ParentRestorationHomeRoute extends ParentRestorationRoute {
+  @override
+  Uri toUri() => Uri.parse('/');
+
+  @override
+  Widget build(covariant CoordinatorCore coordinator, BuildContext context) {
+    return const SizedBox.shrink();
+  }
+}
+
+class ParentRestorationFallbackRoute extends ParentRestorationRoute {
+  ParentRestorationFallbackRoute(this.uri);
+
+  final String uri;
+
+  @override
+  Uri toUri() => Uri.parse(uri);
+
+  @override
+  Widget build(covariant CoordinatorCore coordinator, BuildContext context) {
+    return const SizedBox.shrink();
+  }
+
+  @override
+  List<Object?> get props => [uri];
+}
+
+abstract class ChildRestorationRoute extends RouteTarget with RouteUnique {}
+
+class ChildRestorationDetailRoute extends ChildRestorationRoute {
+  ChildRestorationDetailRoute(this.id);
+
+  final String id;
+
+  @override
+  Uri toUri() => Uri.parse('/child/detail/$id');
+
+  @override
+  Widget build(covariant CoordinatorCore coordinator, BuildContext context) {
+    return const SizedBox.shrink();
+  }
+
+  @override
+  List<Object?> get props => [id];
+}
+
+class ChildRestorationFallbackRoute extends ChildRestorationRoute {
+  @override
+  Uri toUri() => Uri.parse('/child');
+
+  @override
+  Widget build(covariant CoordinatorCore coordinator, BuildContext context) {
+    return const SizedBox.shrink();
+  }
+}
+
+class ChildRestorationCoordinator extends Coordinator<ChildRestorationRoute> {
+  late final childStack = NavigationPath<ChildRestorationRoute>.createWith(
+    coordinator: this,
+    label: 'child.stack',
+  );
+
+  @override
+  List<StackPath> get paths => [...super.paths, childStack];
+
+  @override
+  ChildRestorationRoute parseRouteFromUri(Uri uri) {
+    return switch (uri.pathSegments) {
+      ['child', 'detail', final id] => ChildRestorationDetailRoute(id),
+      _ => ChildRestorationFallbackRoute(),
+    };
+  }
+}
+
+class ParentWithChildRestorationCoordinator
+    extends Coordinator<ParentRestorationRoute> {
+  late final childCoordinator = ChildRestorationCoordinator();
+
+  @override
+  List<StackPath> get paths => [...super.paths, childCoordinator.childStack];
+
+  @override
+  ParentRestorationRoute parseRouteFromUri(Uri uri) {
+    return switch (uri.pathSegments) {
+      [] => ParentRestorationHomeRoute(),
+      _ => ParentRestorationFallbackRoute(uri.toString()),
+    };
+  }
+}
+
 // ============================================================================
 // Tests
 // ============================================================================
@@ -574,6 +666,36 @@ void main() {
 
       expect(coordinator.tabStack.activeIndex, equals(1));
       expect(coordinator.tabStack.activeRoute, isA<SearchTab>());
+    });
+
+    testWidgets('restores child coordinator paths with the child parser', (
+      tester,
+    ) async {
+      final coordinator = ParentWithChildRestorationCoordinator();
+      final childStack = coordinator.childCoordinator.childStack;
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          restorationScopeId: 'app',
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      childStack.push(ChildRestorationDetailRoute('42'));
+      await tester.pumpAndSettle();
+
+      expect(childStack.stack.single, isA<ChildRestorationDetailRoute>());
+
+      final restart = tester.restartAndRestore();
+      childStack.reset();
+      await restart;
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(childStack.stack.single, isA<ChildRestorationDetailRoute>());
+      expect((childStack.stack.single as ChildRestorationDetailRoute).id, '42');
     });
   });
 
