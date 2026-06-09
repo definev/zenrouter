@@ -164,10 +164,9 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
       if (!canPop) return false;
     }
 
-    final element = _stack.removeLast();
+    final element = detachLast()!;
     element.isPopByPath = true;
     element.bindResultValue(result);
-    notifyListeners();
     return true;
   }
 

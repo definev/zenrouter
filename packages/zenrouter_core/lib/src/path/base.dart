@@ -102,6 +102,18 @@ abstract class StackPath<T extends RouteTarget> with ListenableObject {
   /// and the last element is the top of the stack (current route).
   List<T> get stack => List.unmodifiable(_stack);
 
+  /// Removes and returns the top route from the internal stack.
+  ///
+  /// Does not consult guards or bind a pop result. Subclasses use this for
+  /// controlled stack mutation after higher-level pop logic completes.
+  @protected
+  T? detachLast() {
+    if (_stack.isEmpty) return null;
+    final element = _stack.removeLast();
+    notifyListeners();
+    return element;
+  }
+
   @protected
   /// Clears all routes from this path.
   ///

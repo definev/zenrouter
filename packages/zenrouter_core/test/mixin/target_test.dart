@@ -147,6 +147,9 @@ class _MockStackPath implements StackPath<TestRoute> {
 
   @override
   void dispose() {}
+
+  @override
+  TestRoute? detachLast() => null;
 }
 
 typedef VoidCallback = void Function();

@@ -404,12 +404,16 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
 
   /// Pops from all eligible paths with at least two entries.
   Future<void> pop([Object? result]) async {
-    final dynamicPaths = activePaths.whereType<StackMutatable>().toList();
+    final dynamicPaths = activePaths.whereType<StackPop>().toList();
 
     for (var i = dynamicPaths.length - 1; i >= 0; i--) {
       final path = dynamicPaths[i];
-      if (path.stack.length >= 2) {
+      final canPop = await path.canPop;
+      // If the pop is interupt, stop the pop and return null
+      if (canPop == null) return;
+      if (canPop) {
         await path.pop(result);
+        return;
       }
     }
   }

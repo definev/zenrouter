@@ -69,6 +69,8 @@ class TestStackPath extends StackPath<TestRoute> with SimpleListenableObject {
   void pushDirect(TestRoute route) {
     bindStack([...stack, route]);
   }
+
+  TestRoute? detachLast() => super.detachLast();
 }
 
 class TestStackMutatablePath extends TestStackPath
@@ -159,6 +161,48 @@ void main() {
       await path.activateRoute(route);
 
       expect(notifyCount, 0);
+    });
+
+    test('detachLast returns null when stack is empty', () {
+      final path = TestStackPath();
+
+      expect(path.detachLast(), isNull);
+      expect(path.stack, isEmpty);
+    });
+
+    test('detachLast removes and returns the top route', () {
+      final path = TestStackPath();
+      final route1 = TestRoute('1');
+      final route2 = TestRoute('2');
+      path.bindStack([route1, route2]);
+
+      final detached = path.detachLast();
+
+      expect(detached, route2);
+      expect(path.stack, [route1]);
+    });
+
+    test('detachLast notifies listeners', () {
+      final path = TestStackPath();
+      path.bindStack([TestRoute('1')]);
+
+      var notifyCount = 0;
+      path.addListener(() => notifyCount++);
+
+      path.detachLast();
+
+      expect(notifyCount, 1);
+    });
+
+    test('detachLast does not clear stackPath on detached route', () {
+      final path = TestStackPath();
+      final route = TestRoute('1');
+      path.bindStack([route]);
+
+      path.detachLast();
+
+      expect(path.stack, isEmpty);
+      expect(route.stackPath, path);
     });
   });
 

@@ -265,8 +265,8 @@ class ProxyPath<T extends RouteTarget> extends StackPath<T>
   }
 
   void _popOwnedRouteIfAccepted(bool? accepted) {
-    if (accepted != true || stack.isEmpty) return;
-    _replaceStack(stack.take(stack.length - 1).toList());
+    if (accepted != true) return;
+    detachLast()?.clearStackPath();
   }
 
   bool _replaceStack(List<T> nextStack, {bool discardRemoved = false}) {
