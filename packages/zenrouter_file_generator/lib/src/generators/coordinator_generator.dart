@@ -154,10 +154,7 @@ class CoordinatorGenerator implements Builder {
     // This must happen BEFORE we build allFilePaths
     _validateRouteConflicts(tree.routes);
     tree = RouteTreeInfo(
-      routes: _validateIndexedStackDeferredImports(
-        tree.routes,
-        tree.layouts,
-      ),
+      routes: _validateIndexedStackDeferredImports(tree.routes, tree.layouts),
       layouts: tree.layouts,
     );
 

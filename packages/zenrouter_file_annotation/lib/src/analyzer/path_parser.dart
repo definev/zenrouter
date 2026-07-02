@@ -3,6 +3,7 @@
 /// This centralizes path parsing logic used by both route and coordinator generators.
 class PathParser {
   const PathParser._();
+
   /// Parse a relative file path into segments and parameters.
   ///
   /// Example:
