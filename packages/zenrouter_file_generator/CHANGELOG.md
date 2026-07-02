@@ -1,3 +1,6 @@
+## 1.1.3
+- **Chore**: Bump `analyzer: ^12.0.0`, `build: ^4.0.6`, `source_gen: ^4.2.3`, `dart_style: ^3.1.8`
+
 ## 1.1.2
 - **Chore**: Clean up code style
 
