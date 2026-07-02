@@ -16,23 +16,18 @@ RouteElement? routeElementFromAnnotatedElement(
   // Parse path segments and parameters using shared parser
   final (segments, paramInfos, _, _) = PathParser.parsePath(relativePath);
   // Convert ParamInfo to RouteParameter
-  final params =
-      paramInfos
-          .map(
-            (p) => switch (p.isRest) {
-              true => RouteParameter(
-                name: p.name,
-                type: 'List<String>',
-                isRest: true,
-              ),
-              false => RouteParameter(
-                name: p.name,
-                type: 'String',
-                isRest: false,
-              ),
-            },
-          )
-          .toList();
+  final params = paramInfos
+      .map(
+        (p) => switch (p.isRest) {
+          true => RouteParameter(
+            name: p.name,
+            type: 'List<String>',
+            isRest: true,
+          ),
+          false => RouteParameter(name: p.name, type: 'String', isRest: false),
+        },
+      )
+      .toList();
 
   // Read annotation values
   final guard = annotation.read('guard').boolValue;

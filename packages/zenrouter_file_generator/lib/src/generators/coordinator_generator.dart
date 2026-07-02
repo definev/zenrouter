@@ -359,11 +359,10 @@ class CoordinatorGenerator implements Builder {
     final queriesMatch = _queriesMatch.firstMatch(content);
     if (queriesMatch != null) {
       final queriesList = queriesMatch.group(1)!;
-      queries =
-          _queriesContentMatch
-              .allMatches(queriesList)
-              .map((m) => m.group(1)!)
-              .toList();
+      queries = _queriesContentMatch
+          .allMatches(queriesList)
+          .map((m) => m.group(1)!)
+          .toList();
     }
 
     return RouteInfo(
@@ -641,8 +640,8 @@ class CoordinatorGenerator implements Builder {
       );
       imports.add((relativePath, false));
     }
-    final sortedImports =
-        imports.toList()..sort((a, b) => a.$1.compareTo(b.$1));
+    final sortedImports = imports.toList()
+      ..sort((a, b) => a.$1.compareTo(b.$1));
     for (final import in sortedImports) {
       if (import.$2 == true) {
         final aliasImport = _getAliasImport(import.$1);
@@ -732,32 +731,33 @@ class CoordinatorGenerator implements Builder {
     // Sort routes by specificity (more segments first, static before dynamic)
     // This ensures static routes come before dynamic routes, allowing both to coexist
     // Performance optimization: use pre-computed route characteristics
-    final sortedRoutes = List<RouteInfo>.from(tree.routes)..sort((a, b) {
-      // 1. Routes with rest params go last
-      if (a.hasRestParams && !b.hasRestParams) return 1; // a goes after b
-      if (!a.hasRestParams && b.hasRestParams) return -1; // a goes before b
+    final sortedRoutes = List<RouteInfo>.from(tree.routes)
+      ..sort((a, b) {
+        // 1. Routes with rest params go last
+        if (a.hasRestParams && !b.hasRestParams) return 1; // a goes after b
+        if (!a.hasRestParams && b.hasRestParams) return -1; // a goes before b
 
-      // 2. More static segments first (cached)
-      if (a.staticSegmentCount != b.staticSegmentCount) {
-        return b.staticSegmentCount - a.staticSegmentCount;
-      }
+        // 2. More static segments first (cached)
+        if (a.staticSegmentCount != b.staticSegmentCount) {
+          return b.staticSegmentCount - a.staticSegmentCount;
+        }
 
-      // 3. More total segments first
-      final segmentDiff = b.pathSegments.length - a.pathSegments.length;
-      if (segmentDiff != 0) return segmentDiff;
+        // 3. More total segments first
+        final segmentDiff = b.pathSegments.length - a.pathSegments.length;
+        if (segmentDiff != 0) return segmentDiff;
 
-      // 4. Static segments before dynamic (cached)
-      return a.dynamicSegmentCount - b.dynamicSegmentCount;
-    });
+        // 4. Static segments before dynamic (cached)
+        return a.dynamicSegmentCount - b.dynamicSegmentCount;
+      });
 
     // Root route
-    final rootRoute =
-        sortedRoutes.where((r) => r.pathSegments.isEmpty).firstOrNull;
+    final rootRoute = sortedRoutes
+        .where((r) => r.pathSegments.isEmpty)
+        .firstOrNull;
     if (rootRoute != null) {
-      final routeInstance =
-          rootRoute.hasQueries
-              ? '${rootRoute.className}(queries: uri.queryParameters)'
-              : '${rootRoute.className}()';
+      final routeInstance = rootRoute.hasQueries
+          ? '${rootRoute.className}(queries: uri.queryParameters)'
+          : '${rootRoute.className}()';
       if (rootRoute.hasDeferredImport) {
         final relativePath = routeFileMap[rootRoute.className] ?? 'index.dart';
         buffer.writeln(
@@ -852,10 +852,9 @@ class CoordinatorGenerator implements Builder {
     for (final route in tree.routes) {
       final baseMethodName = _getBaseMethodName(route.className);
       final (params, args) = _buildMethodParams(route);
-      final deferredImportPath =
-          route.hasDeferredImport
-              ? route.filePath!.replaceFirst('lib/routes/', '')
-              : null;
+      final deferredImportPath = route.hasDeferredImport
+          ? route.filePath!.replaceFirst('lib/routes/', '')
+          : null;
 
       // Generate push method
       _writeNavMethod(
@@ -1178,16 +1177,14 @@ class RouteInfo {
   bool get hasRestParams => pathSegments.any((s) => s.startsWith('...:'));
 
   /// Number of static segments.
-  int get staticSegmentCount =>
-      pathSegments
-          .where((s) => !s.startsWith(':') && !s.startsWith('...'))
-          .length;
+  int get staticSegmentCount => pathSegments
+      .where((s) => !s.startsWith(':') && !s.startsWith('...'))
+      .length;
 
   /// Number of dynamic segments (excluding rest params).
-  int get dynamicSegmentCount =>
-      pathSegments
-          .where((s) => s.startsWith(':') && !s.startsWith('...'))
-          .length;
+  int get dynamicSegmentCount => pathSegments
+      .where((s) => s.startsWith(':') && !s.startsWith('...'))
+      .length;
 
   RouteInfo copyWith({
     String? className,
