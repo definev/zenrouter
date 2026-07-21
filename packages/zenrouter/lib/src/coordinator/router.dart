@@ -120,10 +120,8 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
     );
 
     if (route case RouteDeepLink()) {
-      final deeplink = route as RouteDeepLink;
-      if (deeplink.deeplinkStrategy == DeeplinkStrategy.custom) {
-        coordinator.recover(route!);
-      }
+      // Not awaited: recover → push/navigate futures complete on pop.
+      coordinator.recover(route!);
       return;
     }
 
@@ -131,6 +129,7 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
       route != null,
       'You must to provide a parse route for $configuration in [parseRouteFromUri] to use deeplink to it',
     );
+    // Not awaited: navigate → push future completes when the route is popped.
     coordinator.navigate(route!);
   }
 

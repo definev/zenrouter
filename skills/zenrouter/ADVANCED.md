@@ -253,6 +253,73 @@ class ShopIndexRoute extends AppRoute with RouteRedirectRule<AppRoute> {
 
 ---
 
+## GuardRule
+
+Composable pop guards applied via `RouteGuardRule<T>` mixin on a route.
+
+### Writing a rule
+
+```dart
+class UnsavedChangesRule extends GuardRule<AppRoute> {
+  @override
+  bool canPop(AppRoute route) =>
+      route is! EditableRoute || !route.hasUnsavedChanges;
+
+  @override
+  ListenableMixin? canPopListenable(AppRoute route) =>
+      route is EditableRoute ? route.dirty.toListenableMixin() : null;
+
+  @override
+  Future<bool?> guard(
+    covariant AppCoordinator coordinator,
+    AppRoute route,
+  ) async {
+    if (route is! EditableRoute || !route.hasUnsavedChanges) {
+      return null; // not applicable — next rule
+    }
+    return showDiscardDialog(coordinator.context); // true allow / false block
+  }
+}
+```
+
+| `bool?` (async `guard`) | Meaning |
+|:------------------------|:--------|
+| `null` | Pass to next rule |
+| `true` | Allow pop; stops chain |
+| `false` | Block pop; stops chain |
+
+| Sync `canPop` | Meaning |
+|:--------------|:--------|
+| `true` (default) | This rule does not force intercept |
+| `false` | Force `PopScope` intercept |
+
+Rules are evaluated in list order; first non-`null` `guard` result wins. If every rule returns `null`, the pop is allowed. `RouteGuardRule.canPop` is `true` only when every rule's `canPop` is `true`.
+
+### Applying rules to a route
+
+```dart
+class EditorRoute extends AppRoute with RouteGuardRule<AppRoute> {
+  @override
+  Uri toUri() => Uri.parse('/editor');
+
+  @override
+  Widget build(covariant AppCoordinator coordinator, BuildContext context) =>
+      const SizedBox.shrink();
+
+  @override
+  List<GuardRule<AppRoute>> get guardRules => [
+    UnsavedChangesRule(),
+    ConfirmLeaveRule(),
+  ];
+}
+```
+
+Full multi-rule sample (upload + unsaved + audit + reactive `canPop`):
+[`example/lib/main_guard_rules.dart`](../../packages/zenrouter/example/lib/main_guard_rules.dart)
+· [recipe](../../packages/zenrouter/doc/recipes/route-guard-rules.md)
+
+---
+
 ## IndexedStackPath (Tab Navigation)
 
 For tab-bar style navigation where all tabs stay alive:

@@ -34,6 +34,12 @@ void main() {
       expect(defaultGuard.popGuard(), isTrue);
     });
 
+    test('canPop defaults to false', () {
+      final defaultGuard = _DefaultGuardRoute('default');
+      expect(defaultGuard.canPop, isFalse);
+      expect(defaultGuard.canPopListenable, isNull);
+    });
+
     test('popGuard returns configured value', () async {
       final allowRoute = TestGuardedRoute('1', allowPop: true);
       final denyRoute = TestGuardedRoute('2', allowPop: false);

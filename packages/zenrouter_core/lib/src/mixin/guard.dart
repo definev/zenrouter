@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:zenrouter_core/src/coordinator/base.dart';
+import 'package:zenrouter_core/src/internal/reactive.dart';
 import 'package:zenrouter_core/src/mixin/target.dart';
 
 /// Mixin for routes that can intercept and block pop operations.
@@ -20,8 +21,48 @@ import 'package:zenrouter_core/src/mixin/target.dart';
 ///
 /// If any guard returns `false`, the pop operation is aborted and the
 /// navigation state remains unchanged.
+///
+/// ## System back vs programmatic pop
+///
+/// - [canPop] maps to Flutter's `PopScope.canPop`. When `true`, the platform
+///   may pop without calling [popGuard]. When `false` (default), the pop is
+///   intercepted and [popGuard] / [popGuardWith] decide.
+/// - Programmatic [StackMutatable.pop] always consults [popGuard], regardless
+///   of [canPop].
+/// - Provide [canPopListenable] so `PopScope` rebuilds when [canPop] changes
+///   without recreating the page.
 mixin RouteGuard on RouteTarget {
   // coverage:ignore-start
+  /// Whether the platform may pop this route without consulting [popGuard].
+  ///
+  /// Mapped to Flutter's `PopScope.canPop`.
+  ///
+  /// - `true` — system back / gesture pops immediately; [popGuard] is not
+  ///   called for that gesture.
+  /// - `false` — intercept; then [popGuard] / [popGuardWith] decide.
+  ///
+  /// Defaults to `false` (always intercept), matching historical behavior.
+  ///
+  /// When this value can change over time, also override [canPopListenable]
+  /// so the navigation stack rebuilds `PopScope`.
+  bool get canPop => false;
+
+  /// A [ListenableMixin] that triggers `PopScope` rebuilds when [canPop] may
+  /// have changed.
+  ///
+  /// Returns `null` when [canPop] is static (no reactive updates needed).
+  ///
+  /// In Flutter apps, convert a foundation `ValueNotifier` / `ChangeNotifier`
+  /// with `toListenableMixin()` from `package:zenrouter`:
+  ///
+  /// ```dart
+  /// final dirty = ValueNotifier(false);
+  ///
+  /// @override
+  /// ListenableMixin? get canPopListenable => dirty.toListenableMixin();
+  /// ```
+  ListenableMixin? get canPopListenable => null;
+
   /// Called when the route is about to be popped.
   ///
   /// Return `true` to allow the pop operation to proceed, or `false` to block it.

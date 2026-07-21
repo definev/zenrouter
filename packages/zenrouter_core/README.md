@@ -485,5 +485,5 @@ export 'src/mixin/redirect_rule.dart';    // RedirectRule
 // Internal
 export 'src/internal/diff.dart';          // myersDiff, DiffOp, applyDiff
 export 'src/internal/equatable.dart';     // Equatable
-export 'src/internal/reactive.dart';     // ListenableObject
+export 'src/internal/reactive.dart';     // ListenableMixin, ListenableObject
 ```

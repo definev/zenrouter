@@ -30,6 +30,17 @@ Protect routes, redirect unauthenticated users, and preserve intended destinatio
 
 ---
 
+### [Composable Route Guard Rules](route-guard-rules.md)
+Block leaving a screen with reusable rules — unsaved edits, uploads, confirm dialogs — plus reactive `canPop`.
+
+Runnable: [`example/lib/main_guard_rules.dart`](../../example/lib/main_guard_rules.dart) (`flutter run -t lib/main_guard_rules.dart`)
+
+**Topics**: RouteGuardRule, GuardRule, canPop, ListenableMixin, PopScope  
+**Paradigm**: Coordinator  
+**Difficulty**: ⭐⭐ Moderate
+
+---
+
 ### [Bottom Navigation with Persistent State](bottom-navigation.md)
 Create tab bars where each tab maintains its own navigation stack independently.
 
@@ -91,6 +102,7 @@ Configure hash vs. path-based URLs, server setup, and deployment strategies.
 |----------|--------|
 | Tab bar with persistent tabs | [Bottom Navigation](bottom-navigation.md) |
 | Login with protected routes | [Authentication Flow](authentication-flow.md) |
+| Unsaved changes / confirm leave | [Composable Route Guard Rules](route-guard-rules.md) |
 | Invalid URL handling | [404 Handling](404-handling.md) |
 | Sidebar + content layout | [Route Layout](../guides/route-layout.md) |
 | Custom animations | [Route Transitions](route-transitions.md) |
@@ -112,7 +124,7 @@ Configure hash vs. path-based URLs, server setup, and deployment strategies.
 | Level | Recipes |
 |-------|---------|
 | ⭐ **Easy** | 404 Handling |
-| ⭐⭐ **Moderate** | Authentication Flow, Bottom Navigation, Route Transitions, Modal Routing, State Management, URL Strategies |
+| ⭐⭐ **Moderate** | Authentication Flow, Composable Route Guard Rules, Bottom Navigation, Route Transitions, Modal Routing, State Management, URL Strategies |
 | ⭐⭐⭐ **Advanced** | Nested Navigation, Route Versioning |
 
 ---

@@ -215,6 +215,34 @@ class GuardedPopRoute extends TestAppRoute with RouteGuard {
   List<Object?> get props => [allowPop, popDelay];
 }
 
+/// Route whose [canPop] tracks a Flutter [ValueNotifier] via bridge.
+class ReactiveCanPopRoute extends TestAppRoute with RouteGuard {
+  final dirty = ValueNotifier(false);
+
+  @override
+  ListenableMixin? get canPopListenable => dirty.toListenableMixin();
+
+  @override
+  bool get canPop => !dirty.value;
+
+  @override
+  Future<bool> popGuard() async => false;
+
+  @override
+  Uri toUri() => Uri.parse('/reactive-can-pop');
+
+  @override
+  Widget build(
+    covariant MixinTestCoordinator coordinator,
+    BuildContext context,
+  ) {
+    return const Scaffold(
+      key: ValueKey('reactive-can-pop'),
+      body: Text('Reactive CanPop'),
+    );
+  }
+}
+
 /// Route with guard that shows confirmation dialog
 class ConfirmationGuardRoute extends TestAppRoute with RouteGuard {
   ConfirmationGuardRoute({this.showConfirmation = true});

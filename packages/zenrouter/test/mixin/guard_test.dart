@@ -107,5 +107,45 @@ void main() {
       // Should eventually return to home
       expect(find.byKey(const ValueKey('simple-home')), findsOneWidget);
     });
+
+    testWidgets('reactive canPop updates PopScope without recreating page', (
+      tester,
+    ) async {
+      final coordinator = MixinTestCoordinator();
+      final route = ReactiveCanPopRoute();
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      coordinator.push(route);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('reactive-can-pop')), findsOneWidget);
+
+      PopScope<Object> popScopeOf(Finder content) {
+        final element = tester.element(content);
+        final popScope = element.findAncestorWidgetOfExactType<PopScope<Object>>();
+        expect(popScope, isNotNull);
+        return popScope!;
+      }
+
+      expect(
+        popScopeOf(find.byKey(const ValueKey('reactive-can-pop'))).canPop,
+        isTrue,
+      );
+
+      route.dirty.value = true;
+      await tester.pump();
+
+      expect(
+        popScopeOf(find.byKey(const ValueKey('reactive-can-pop'))).canPop,
+        isFalse,
+      );
+    });
   });
 }

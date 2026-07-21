@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:zenrouter/src/coordinator/base.dart';
 import 'package:zenrouter/src/coordinator/observer.dart';
 import 'package:zenrouter/src/internal/type.dart';
+import 'package:zenrouter/src/internal/reactive.dart';
 import 'package:zenrouter/src/mixin/unique.dart';
 import 'package:zenrouter/src/path/indexed.dart';
 import 'package:zenrouter/src/path/navigation.dart';
 import 'package:zenrouter/src/path/restoration.dart';
+import 'package:zenrouter/src/path/transition.dart';
 import 'package:zenrouter_core/zenrouter_core.dart';
 
 /// A widget that renders a stack of pages based on a [NavigationPath].
@@ -137,15 +139,30 @@ class _NavigationStackState<T extends RouteTarget>
     // ignore: invalid_use_of_protected_member
     route.bindStackPath(widget.path);
     final destination = widget.resolver(route);
+    final RouteGuard? guard = switch (route) {
+      final RouteGuard routeGuard => routeGuard,
+      _ => destination.guard,
+    };
+
     return destination.pageBuilder(
       context,
       ValueKey(route),
-      PopScope(
-        canPop: switch (route) {
-          RouteGuard() => false,
-          _ when destination.guard != null => false,
-          _ => true,
-        },
+      _buildPopScope(
+        route: route,
+        guard: guard,
+        destination: destination,
+      ),
+    );
+  }
+
+  Widget _buildPopScope({
+    required T route,
+    required RouteGuard? guard,
+    required StackTransition<T> destination,
+  }) {
+    Widget buildScope(bool canPop) {
+      return PopScope(
+        canPop: canPop,
         onPopInvokedWithResult: (didPop, result) async {
           // ignore: invalid_use_of_protected_member
           if (route.stackPath == null) route.bindStackPath(widget.path);
@@ -187,7 +204,17 @@ class _NavigationStackState<T extends RouteTarget>
           }
         },
         child: destination.builder(context),
-      ),
+      );
+    }
+
+    if (guard == null) return buildScope(true);
+
+    final canPopListenable = guard.canPopListenable;
+    if (canPopListenable == null) return buildScope(guard.canPop);
+
+    return ListenableBuilder(
+      listenable: canPopListenable.toFlutterListenable(),
+      builder: (context, _) => buildScope(guard.canPop),
     );
   }
 

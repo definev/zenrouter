@@ -237,6 +237,10 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
   }
 
   /// Recovers navigation state from a route, respecting [RouteDeepLink] strategy.
+  ///
+  /// [navigate]/[push]/[replace] are intentionally not awaited: their futures
+  /// complete when the route is later popped (via [StackMutatable.push]), so
+  /// awaiting them would hang callers such as [recoverRouteFromUri].
   Future<void> recover(T route) async {
     T? target = await RouteRedirect.resolve(route, this);
     if (target == null) return;
@@ -402,7 +406,11 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
     return null;
   }
 
-  /// Pops from all eligible paths with at least two entries.
+  /// Pops from the nearest eligible path with at least two entries.
+  ///
+  /// Only the deepest mutatable path is popped. Unlike the previous
+  /// multi-path behavior, nested shells are not popped together with
+  /// their child stacks in a single call.
   Future<void> pop([Object? result]) async {
     final dynamicPaths = activePaths.whereType<StackMutatable>().toList();
 
@@ -410,6 +418,7 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
       final path = dynamicPaths[i];
       if (path.stack.length >= 2) {
         await path.pop(result);
+        return;
       }
     }
   }

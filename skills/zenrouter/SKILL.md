@@ -6,9 +6,9 @@ description: >
   redirect rule, redirect guard, nested coordinator, or navigate programmatically.
   Triggers on: route, router, routing, coordinator, CoordinatorModular, RouteModule,
   NavigationPath, IndexedStackPath, RouteLayout, RouteRedirectRule, RedirectRule,
-  RedirectResult, parseRouteFromUri, push, pop, replace, navigate, deep link,
-  toUri, parentLayoutKey, layoutKey, bindLayout, RouteUnique, RouteGuard,
-  RouteRedirect, notFoundRoute, zenrouter.
+  RedirectResult, RouteGuardRule, GuardRule, parseRouteFromUri, push, pop, replace,
+  navigate, deep link, toUri, parentLayoutKey, layoutKey, bindLayout, RouteUnique,
+  RouteGuard, RouteRedirect, notFoundRoute, zenrouter.
 ---
 
 # ZenRouter Skill
@@ -23,8 +23,8 @@ feature organisation.
 >
 > | File | When to read |
 > |:-----|:-------------|
-> | [ADVANCED.md](./ADVANCED.md) | Coordinator-as-Module, tab navigation, composable redirect rules, parameter route examples |
-> | [MIXIN.md](./MIXIN.md) | Full reference for `RouteGuard`, `RouteRedirect`, `RouteDeepLink`, `RouteTransition`, `RouteQueryParameters`, `RouteRestorable` |
+> | [ADVANCED.md](./ADVANCED.md) | Coordinator-as-Module, tab navigation, composable redirect/guard rules, parameter route examples |
+> | [MIXIN.md](./MIXIN.md) | Full reference for `RouteGuard`, `RouteGuardRule`, `RouteRedirect`, `RouteDeepLink`, `RouteTransition`, `RouteQueryParameters`, `RouteRestorable` |
 > | [NAVIGATION.md](./NAVIGATION.md) | When to use `push` vs `navigate` vs `replace` and other navigation methods |
 
 ---
@@ -42,7 +42,9 @@ feature organisation.
 | `IndexedStackPath<T>` | `zenrouter` | Fixed set of routes for tab-bar style navigation |
 | `RouteLayout<T>` | `zenrouter` | Mixin — layout route that wraps nested routes (shell, tab bar, drawer, etc.) |
 | `RouteRedirectRule<T>` | `zenrouter_core` | Mixin — delegates redirect logic to a list of `RedirectRule`s |
-| `RedirectRule<T>` | `zenrouter_core` | Single composable guard; returns `continueRedirect`, `redirectTo`, or `stop` |
+| `RedirectRule<T>` | `zenrouter_core` | Single composable redirect; returns `continueRedirect`, `redirectTo`, or `stop` |
+| `RouteGuardRule<T>` | `zenrouter_core` | Mixin — delegates pop-guard logic to a list of `GuardRule`s |
+| `GuardRule<T>` | `zenrouter_core` | Single composable pop guard; returns `null` / `true` / `false` |
 
 ---
 
