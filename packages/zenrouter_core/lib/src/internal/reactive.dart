@@ -21,10 +21,12 @@ abstract mixin class ListenableMixin {
   ///
   /// Null entries are ignored. Once created, the iterable must not change.
   static ListenableMixin merge(Iterable<ListenableMixin?> listenables) =>
-      _MergingListenable(List<ListenableMixin>.unmodifiable([
-        for (final listenable in listenables)
-          if (listenable != null) listenable,
-      ]));
+      _MergingListenable(
+        List<ListenableMixin>.unmodifiable([
+          for (final listenable in listenables)
+            if (listenable != null) listenable,
+        ]),
+      );
 }
 
 class _MergingListenable implements ListenableMixin {

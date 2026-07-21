@@ -293,7 +293,10 @@ class HomeRoute extends AppRoute {
   Uri toUri() => Uri.parse('/');
 
   @override
-  Widget build(covariant GuardRulesCoordinator coordinator, BuildContext context) {
+  Widget build(
+    covariant GuardRulesCoordinator coordinator,
+    BuildContext context,
+  ) {
     return Scaffold(
       appBar: AppBar(title: const Text('Guard Rules Demo')),
       body: ListView(
@@ -348,7 +351,10 @@ class EditorRoute extends AppRoute
   Uri toUri() => Uri.parse('/editor/$documentId');
 
   @override
-  Widget build(covariant GuardRulesCoordinator coordinator, BuildContext context) {
+  Widget build(
+    covariant GuardRulesCoordinator coordinator,
+    BuildContext context,
+  ) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Editor $documentId'),
@@ -370,9 +376,13 @@ class EditorRoute extends AppRoute
             ValueListenableBuilder<bool>(
               valueListenable: dirty,
               builder: (context, isDirty, _) => Text(
-                isDirty ? 'Status: unsaved changes' : 'Status: clean (free back)',
+                isDirty
+                    ? 'Status: unsaved changes'
+                    : 'Status: clean (free back)',
                 style: TextStyle(
-                  color: isDirty ? Colors.orange.shade800 : Colors.green.shade700,
+                  color: isDirty
+                      ? Colors.orange.shade800
+                      : Colors.green.shade700,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -405,7 +415,10 @@ class SettingsRoute extends AppRoute with RouteGuardRule<AppRoute> {
   Uri toUri() => Uri.parse('/settings');
 
   @override
-  Widget build(covariant GuardRulesCoordinator coordinator, BuildContext context) {
+  Widget build(
+    covariant GuardRulesCoordinator coordinator,
+    BuildContext context,
+  ) {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: const Padding(
@@ -439,7 +452,10 @@ class UploadRoute extends AppRoute
   Uri toUri() => Uri.parse('/upload/$jobId');
 
   @override
-  Widget build(covariant GuardRulesCoordinator coordinator, BuildContext context) {
+  Widget build(
+    covariant GuardRulesCoordinator coordinator,
+    BuildContext context,
+  ) {
     return Scaffold(
       appBar: AppBar(title: Text('Upload $jobId')),
       body: Padding(

@@ -455,10 +455,7 @@ void main() {
             isA<StateError>().having(
               (e) => e.message,
               'message',
-              allOf(
-                contains('TestRoute'),
-                contains('expected RedirectRoute'),
-              ),
+              allOf(contains('TestRoute'), contains('expected RedirectRoute')),
             ),
           ),
         );

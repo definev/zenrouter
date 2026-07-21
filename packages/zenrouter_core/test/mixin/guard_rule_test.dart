@@ -49,16 +49,16 @@ void main() {
     });
 
     test('canPopListenable is null when no rules expose one', () {
-      final route = RuleGuardedRoute('1', rules: [const _FixedCanPopRule(true)]);
+      final route = RuleGuardedRoute(
+        '1',
+        rules: [const _FixedCanPopRule(true)],
+      );
       expect(route.canPopListenable, isNull);
     });
 
     test('canPopListenable returns single listenable', () {
       final notifier = _TestListenable();
-      final route = RuleGuardedRoute(
-        '1',
-        rules: [_ListenableRule(notifier)],
-      );
+      final route = RuleGuardedRoute('1', rules: [_ListenableRule(notifier)]);
       expect(route.canPopListenable, same(notifier));
     });
 

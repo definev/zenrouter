@@ -147,11 +147,7 @@ class _NavigationStackState<T extends RouteTarget>
     return destination.pageBuilder(
       context,
       ValueKey(route),
-      _buildPopScope(
-        route: route,
-        guard: guard,
-        destination: destination,
-      ),
+      _buildPopScope(route: route, guard: guard, destination: destination),
     );
   }
 

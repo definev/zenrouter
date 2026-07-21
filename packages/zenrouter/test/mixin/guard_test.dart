@@ -129,7 +129,8 @@ void main() {
 
       PopScope<Object> popScopeOf(Finder content) {
         final element = tester.element(content);
-        final popScope = element.findAncestorWidgetOfExactType<PopScope<Object>>();
+        final popScope = element
+            .findAncestorWidgetOfExactType<PopScope<Object>>();
         expect(popScope, isNotNull);
         return popScope!;
       }

@@ -67,8 +67,7 @@ mixin RouteGuardRule<T extends RouteTarget> on RouteTarget
   ListenableMixin? get canPopListenable {
     final listenables = <ListenableMixin>[
       for (final rule in guardRules)
-        if (rule.canPopListenable(this as T) case final listenable?)
-          listenable,
+        if (rule.canPopListenable(this as T) case final listenable?) listenable,
     ];
     return switch (listenables) {
       [] => null,

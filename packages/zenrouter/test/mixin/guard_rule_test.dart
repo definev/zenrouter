@@ -88,10 +88,7 @@ void main() {
       await tester.pumpAndSettle();
 
       coordinator.push(
-        RuleGuardedRoute(
-          id: '4',
-          rules: [const AllowGuardRule(), later],
-        ),
+        RuleGuardedRoute(id: '4', rules: [const AllowGuardRule(), later]),
       );
       await tester.pumpAndSettle();
 
@@ -115,10 +112,7 @@ void main() {
       await tester.pumpAndSettle();
 
       coordinator.push(
-        RuleGuardedRoute(
-          id: '5',
-          rules: [const ContinueGuardRule(), second],
-        ),
+        RuleGuardedRoute(id: '5', rules: [const ContinueGuardRule(), second]),
       );
       await tester.pumpAndSettle();
 
@@ -145,10 +139,7 @@ void main() {
       await tester.pumpAndSettle();
 
       coordinator.push(
-        RuleGuardedRoute(
-          id: '6',
-          rules: [const BlockGuardRule(), later],
-        ),
+        RuleGuardedRoute(id: '6', rules: [const BlockGuardRule(), later]),
       );
       await tester.pumpAndSettle();
 
@@ -174,10 +165,7 @@ void main() {
         RuleGuardedRoute(
           id: '7',
           rules: [
-            AsyncGuardRule(
-              true,
-              delay: const Duration(milliseconds: 50),
-            ),
+            AsyncGuardRule(true, delay: const Duration(milliseconds: 50)),
           ],
         ),
       );
