@@ -18,6 +18,7 @@ RouteTarget (base class)
 │       │       └── RouteLayout<T>       ← shell/tab layout (implements RouteLayoutParent)
 │       └── RouteLayoutParent            ← resolves StackPath for child routes
 ├── RouteGuard                           ← blocks pop
+├── RouteGuardRule<T>                    ← composable pop-guard chain
 ├── RouteRedirect<T>                     ← redirects before display
 ├── RouteRedirectRule<T>                 ← composable redirect chain
 └── RouteRestorable<T>                   ← state restoration after process death
@@ -90,15 +91,30 @@ Intercepts pop operations so you can block or confirm navigation away.
 
 ```dart
 mixin RouteGuard on RouteTarget {
+  bool get canPop;                                    // PopScope.canPop (default false)
+  ListenableMixin? get canPopListenable;              // reactive canPop invalidation
   FutureOr<bool> popGuard();                              // return false to block pop
   FutureOr<bool> popGuardWith(CoordinatorCore coordinator); // same, with coordinator access
 }
 ```
 
-**Example — confirmation dialog:**
+- `canPop: true` → platform pops freely (no `popGuard` for that gesture).
+- `canPop: false` → intercept, then `popGuard` decides.
+- Programmatic `pop` always consults `popGuard`.
+- Set `canPopListenable` (e.g. `dirty.toListenableMixin()` on a Flutter `ValueNotifier` / `ChangeNotifier`) so `PopScope` updates when state changes.
+
+**Example — reactive unsaved changes:**
 
 ```dart
 class EditRoute extends AppRoute with RouteGuard {
+  final dirty = ValueNotifier(false);
+
+  @override
+  ListenableMixin? get canPopListenable => dirty.toListenableMixin();
+
+  @override
+  bool get canPop => !dirty.value;
+
   @override
   Future<bool> popGuardWith(covariant AppCoordinator coordinator) async {
     return await showDialog<bool>(
@@ -114,6 +130,39 @@ class EditRoute extends AppRoute with RouteGuard {
   }
 }
 ```
+
+---
+
+### RouteGuardRule\<T\>
+
+**Package:** `zenrouter_core` · **Applies to:** `RouteTarget` (implements `RouteGuard`)
+
+Delegates pop-guard logic to a composable list of `GuardRule<T>` objects. See [ADVANCED.md — GuardRule](./ADVANCED.md#guardrule) for full details.
+
+```dart
+mixin RouteGuardRule<T extends RouteTarget> on RouteTarget implements RouteGuard {
+  List<GuardRule> get guardRules;
+}
+```
+
+Rules are evaluated in order. Each returns a `bool?`:
+
+| Result | Meaning |
+|:-------|:--------|
+| `null` | Pass to next rule |
+| `true` | Allow pop; stops chain |
+| `false` | Block pop; stops chain |
+
+If every rule returns `null` (or the list is empty), the pop is allowed.
+
+Sync [canPop](./MIXIN.md#routeguard) composition:
+
+| API | Meaning |
+|:----|:--------|
+| `GuardRule.canPop(route)` | `false` forces intercept; default `true` |
+| `RouteGuardRule.canPop` | `true` only if every rule returns `true` |
+| `GuardRule.canPopListenable(route)` | Optional `ListenableMixin` |
+| `RouteGuardRule.canPopListenable` | Single listenable, or `ListenableMixin.merge` |
 
 ---
 
@@ -384,6 +433,7 @@ void defineConverter() {
 | `RouteLayoutChild` | core | `RouteTarget` | Declares parent layout |
 | `RouteLayoutParent<T>` | core | `RouteLayoutChild` | Manages child StackPath |
 | `RouteGuard` | core | `RouteTarget` | Blocks pop |
+| `RouteGuardRule<T>` | core | `RouteTarget` | Composable pop-guard chain |
 | `RouteRedirect<T>` | core | `RouteTarget` | Simple redirect |
 | `RouteRedirectRule<T>` | core | `RouteTarget` | Composable redirect chain |
 | `RouteDeepLink` | core | `RouteUri` | Deep link strategy |

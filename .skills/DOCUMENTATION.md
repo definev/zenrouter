@@ -105,6 +105,7 @@ ReturnType methodName(Parameters);
 | `lib/src/mixin/deeplink.dart` | RouteDeepLink and DeeplinkStrategy |
 | `lib/src/mixin/redirect.dart` | RouteRedirect for route redirection |
 | `lib/src/mixin/redirect_rule.dart` | RedirectRule and RedirectResult for composable redirects |
+| `lib/src/mixin/guard_rule.dart` | GuardRule and RouteGuardRule for composable pop guards |
 | `lib/src/mixin/identity.dart` | RouteIdentity for route identification |
 | `lib/src/mixin/target.dart` | RouteTarget base class with lifecycle |
 

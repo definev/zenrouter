@@ -25,6 +25,12 @@ export 'src/mixin/query_parameters.dart';
 export 'src/mixin/transition.dart';
 export 'src/mixin/unique.dart';
 export 'src/mixin/restoration.dart';
+export 'src/internal/reactive.dart'
+    show
+        ListenableMixinToFlutterListenable,
+        ListenableToListenableMixin,
+        FlutterListenableMixin,
+        ListenableMixinToFlutter;
 
 /// Internal types
 export 'src/internal/type.dart';

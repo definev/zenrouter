@@ -46,10 +46,16 @@ mixin RouteRedirect<T extends RouteTarget> on RouteTarget {
 
       if (newTarget == target) break;
 
-      if (newTarget is T) {
+      if (newTarget is! T) {
         target.onDiscard();
-        target = newTarget;
+        throw StateError(
+          'RouteRedirect returned ${newTarget.runtimeType}, expected $T. '
+          'Redirect destinations must be the same route type as the source.',
+        );
       }
+
+      target.onDiscard();
+      target = newTarget;
     }
     return target;
   }

@@ -23,6 +23,7 @@ Each mixin adds specific capabilities:
 - **RouteLayout** - Creates navigation layout for nested routes
 - **RouteTransition** - Custom page transitions
 - **RouteGuard** - Prevents unwanted navigation
+- **RouteGuardRule** - Composable pop-guard rules (works with RouteGuard)
 - **RouteRedirect** - Redirects to different routes
 - **RouteRedirectRule** - Composable redirect rules (works with RouteRedirect)
 - **RouteDeepLink** - Custom deep link handling
@@ -38,7 +39,9 @@ Which mixins do I need?
 │  └─ No → Continue
 │
 ├─ Prevent navigation (unsaved changes)?
-│  ├─ Yes → Add RouteGuard ✓
+│  ├─ Need reusable/composable rules?
+│  │  ├─ Yes → Add RouteGuardRule ✓
+│  │  └─ No → Add RouteGuard ✓
 │  └─ No → Continue
 │
 ├─ Conditional routing (auth, permissions)?
@@ -279,6 +282,12 @@ Use this mixin when you need to protect forms with unsaved changes, prevent inte
 
 ```dart
 mixin RouteGuard on RouteTarget {
+  // PopScope.canPop — true = free pop, false = intercept then popGuard (default false)
+  bool get canPop;
+
+  // ListenableMixin so PopScope rebuilds when canPop changes
+  ListenableMixin? get canPopListenable;
+
   // Return true to allow pop, false to prevent
   FutureOr<bool> popGuard();
 
@@ -288,24 +297,26 @@ mixin RouteGuard on RouteTarget {
 }
 ```
 
-#### Example: Unsaved Changes Warning
+#### Example: Reactive Unsaved Changes
 
 ```dart
 class EditFormRoute extends RouteTarget with RouteUnique, RouteGuard {
-  bool hasUnsavedChanges = false;
-  
+  final dirty = ValueNotifier(false);
+
+  @override
+  ListenableMixin? get canPopListenable => dirty.toListenableMixin();
+
+  @override
+  bool get canPop => !dirty.value; // free back when clean
+
   @override
   Future<bool> popGuard() async {
-    if (!hasUnsavedChanges) return true; // No unsaved changes, allow navigation
-    
-    // Ask user to confirm discarding changes
+    // Only reached when dirty (canPop was false)
     final shouldPop = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Unsaved Changes'),
-        content: const Text(
-          'You have unsaved changes. Discard them?',
-        ),
+        content: const Text('You have unsaved changes. Discard them?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -319,13 +330,12 @@ class EditFormRoute extends RouteTarget with RouteUnique, RouteGuard {
         ],
       ),
     );
-    
     return shouldPop ?? false;
   }
-  
+
   @override
   Uri toUri() => Uri.parse('/edit');
-  
+
   @override
   Widget build(Coordinator coordinator, BuildContext context) {
     return Scaffold(
@@ -340,7 +350,7 @@ class EditFormRoute extends RouteTarget with RouteUnique, RouteGuard {
         ),
       ),
       body: TextField(
-        onChanged: (value) => hasUnsavedChanges = true,
+        onChanged: (value) => dirty.value = true,
         decoration: const InputDecoration(
           hintText: 'Start typing...',
         ),
@@ -387,6 +397,117 @@ class UploadRoute extends RouteTarget with RouteGuard {
   }
 }
 ```
+
+---
+
+### RouteGuardRule
+
+Enables composable, reusable pop-guard logic by chaining multiple `GuardRule` instances together. This mixin implements `RouteGuard` and provides a rule-based approach to leave confirmation, making it easy to create reusable unsaved-changes, permission, and logging rules.
+
+**Benefits over direct `RouteGuard` implementation:**
+- **Reusable**: One rule can be used for multiple routes
+- **Composable**: Chain multiple rules together (unsaved changes → confirm leave)
+- **Testable**: Test each rule independently
+- **Maintainable**: Centralized guard logic, easy to modify
+
+**Use when:**
+- You need the same pop-guard logic across multiple routes
+- You want to combine multiple leave checks
+- You prefer a rule-based architecture
+- You want to test guard logic independently
+
+**Not needed when:**
+- You have simple, route-specific pop-guard logic
+- You only need a single guard check
+
+#### API
+
+```dart
+// Base class for creating guard rules
+abstract class GuardRule<T extends RouteTarget> {
+  bool canPop(covariant T route); // default true
+  ListenableMixin? canPopListenable(covariant T route);
+  FutureOr<bool?> guard(
+    covariant Coordinator coordinator,
+    covariant T route,
+  );
+}
+
+// Mixin for routes
+mixin RouteGuardRule<T extends RouteTarget> on RouteTarget
+    implements RouteGuard {
+  List<GuardRule> get guardRules;
+
+  // canPop / canPopListenable derived from rules
+  // Automatically implements RouteGuard.popGuardWith()
+}
+```
+
+| `bool?` | Meaning |
+|---------|---------|
+| `null` | Continue to next rule |
+| `true` | Allow pop; stop chain |
+| `false` | Block pop; stop chain |
+
+If every rule returns `null` (or the list is empty), the pop is allowed.
+
+#### Example: Unsaved Changes Rule
+
+```dart
+class UnsavedChangesRule extends GuardRule<AppRoute> {
+  @override
+  bool canPop(AppRoute route) =>
+      route is! EditableRoute || !route.hasUnsavedChanges;
+
+  @override
+  ListenableMixin? canPopListenable(AppRoute route) =>
+      route is EditableRoute ? route.dirty.toListenableMixin() : null;
+
+  @override
+  FutureOr<bool?> guard(
+    Coordinator coordinator,
+    AppRoute route,
+  ) async {
+    if (route is! EditableRoute || !route.hasUnsavedChanges) {
+      return null; // Not applicable → next rule
+    }
+    final shouldDiscard = await showDialog<bool>(/* ... */);
+    return shouldDiscard ?? false;
+  }
+}
+
+class EditorRoute extends AppRoute
+    with EditableRoute, RouteGuardRule<AppRoute> {
+  @override
+  List<GuardRule> get guardRules => [
+    UnsavedChangesRule(),
+    ConfirmLeaveRule(), // runs only if unsaved rule returned null
+  ];
+
+  @override
+  Uri toUri() => Uri.parse('/editor');
+
+  @override
+  Widget build(AppCoordinator coordinator, BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Editor')),
+      body: TextField(onChanged: (_) => markDirty()),
+    );
+  }
+}
+```
+
+For a full multi-rule walkthrough (upload + unsaved + audit), see
+[Composable Route Guard Rules](../recipes/route-guard-rules.md).
+
+#### When to Use RouteGuardRule vs RouteGuard
+
+| Use Case | Use RouteGuard | Use RouteGuardRule |
+|----------|----------------|-------------------|
+| Single, route-specific check | ✓ | |
+| Same logic on many routes | | ✓ |
+| Chain multiple leave checks | | ✓ |
+| Independent unit tests per rule | | ✓ |
 
 ---
 

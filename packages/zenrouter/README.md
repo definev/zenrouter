@@ -424,7 +424,7 @@ class MyApp extends StatelessWidget {
 > [!IMPORTANT]
 > State restoration requires routes to be parsed **synchronously** during startup. If `parseRouteFromUri` is asynchronous, override `parseRouteFromUriSync` to provide a synchronous fallback.
 
-→ [Full coordinator example](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/example/lib/main_coordinator.dart) · [Modular coordinator example](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/example/lib/main_coordinator_module.dart) · [State restoration example](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/example/lib/main_restoration.dart)
+→ [Full coordinator example](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/example/lib/main_coordinator.dart) · [Modular coordinator example](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/example/lib/main_coordinator_module.dart) · [Guard rules example](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/example/lib/main_guard_rules.dart) · [State restoration example](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/example/lib/main_restoration.dart)
 
 ---
 

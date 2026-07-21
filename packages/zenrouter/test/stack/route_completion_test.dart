@@ -442,6 +442,26 @@ void main() {
       expect(outerRedirect.resultCompleted, isTrue);
       expect(innerRedirect.resultCompleted, isTrue);
     });
+
+    test(
+      'throws StateError when redirect returns wrong type for resolve T',
+      () async {
+        final redirectRoute = RedirectRoute(redirectToId: 'target');
+
+        // redirect() returns TestRoute, which is not a RedirectRoute.
+        await expectLater(
+          () => RouteRedirect.resolve<RedirectRoute>(redirectRoute, null),
+          throwsA(
+            isA<StateError>().having(
+              (e) => e.message,
+              'message',
+              allOf(contains('TestRoute'), contains('expected RedirectRoute')),
+            ),
+          ),
+        );
+        expect(redirectRoute.resultCompleted, isTrue);
+      },
+    );
   });
 
   group('pushOrMoveToTop with RouteRedirect', () {
