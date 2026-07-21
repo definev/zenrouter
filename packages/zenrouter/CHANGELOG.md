@@ -1,3 +1,23 @@
+## 2.2.0
+
+### 🚀 New Features
+
+#### `RouteGuardRule` — composable pop guards
+- New `GuardRule` / `RouteGuardRule` API (via `zenrouter_core` 2.1.0) for reusable leave-confirmation chains — first non-null `bool` wins (`null` = continue).
+- `RouteGuard.canPop` / `canPopListenable` drive Flutter `PopScope`; programmatic `pop` still always consults `popGuard` / `popGuardWith`.
+- Flutter bridges: [`toListenableMixin()`](lib/src/internal/reactive.dart) / `toFlutterListenable()`; `NavigationStack` rebuilds `PopScope` via `ListenableBuilder` when a listenable is present.
+
+### ⚠️ Breaking Changes
+
+- **`CoordinatorCore.pop`**: Pops only the nearest eligible path (no longer multi-path in one call). Bumped `zenrouter_core` to `2.1.0`.
+- **`RouteRedirect.resolve`**: Throws `StateError` on redirect type mismatch.
+
+### 📖 Documentation
+
+- **New Recipe**: [Composable Route Guard Rules](doc/recipes/route-guard-rules.md)
+- **Example**: `example/lib/main_guard_rules.dart`
+- **API**: [Mixins](doc/api/mixins.md) — guard rules section
+
 ## 2.1.1
 
 - Bump `zenrouter_core` version to `2.0.3`
