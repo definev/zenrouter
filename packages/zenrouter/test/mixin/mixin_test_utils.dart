@@ -241,6 +241,12 @@ class ReactiveCanPopRoute extends TestAppRoute with RouteGuard {
       body: Text('Reactive CanPop'),
     );
   }
+
+  @override
+  void onDiscard() {
+    dirty.dispose();
+    super.onDiscard();
+  }
 }
 
 /// Route with guard that shows confirmation dialog
