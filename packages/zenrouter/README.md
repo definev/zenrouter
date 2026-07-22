@@ -6,7 +6,7 @@
 
 [![pub package](https://img.shields.io/pub/v/zenrouter.svg)](https://pub.dev/packages/zenrouter)
 [![Test](https://github.com/definev/zenrouter/actions/workflows/test.yml/badge.svg)](https://github.com/definev/zenrouter/actions/workflows/test.yml)
-[![Codecov - zenrouter](https://codecov.io/gh/definev/zenrouter/branch/main/graph/badge.svg?flag=zenrouter)](https://app.codecov.io/gh/definev/zenrouter?branch=main&flags=zenrouter)
+[![codecov](https://codecov.io/gh/definev/zenrouter/graph/badge.svg?token=VIGRHSK3R6)](https://codecov.io/gh/definev/zenrouter)
 
 </div>
 
