@@ -591,7 +591,7 @@ class LoginRoute extends RouteTarget with RouteUnique {
           onPressed: () async {
             await authService.login();
             if (redirectTo != null) {
-              coordinator.recoverRouteFromUri(Uri.parse(redirectTo!));
+              coordinator.recoverUri(Uri.parse(redirectTo!));
             } else {
               coordinator.replace(DashboardRoute());
             }

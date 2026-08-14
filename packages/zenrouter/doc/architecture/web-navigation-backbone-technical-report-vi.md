@@ -352,8 +352,7 @@ Thay đổi này đảm bảo:
 ### 5.10 Declarative Route Manifest
 
 `zenrouter_core` cung cấp `RouteManifest` bất biến và không phụ thuộc Flutter.
-Manifest chứa route/layout ID, URI pattern, parent relationship, query metadata,
-deep-link strategy và deferred-load hint. Module này sở hữu:
+Manifest chứa route/layout ID, URI pattern và parent relationship. Module này sở hữu:
 
 - Deterministic matching cho literal, dynamic và rest parameters.
 - Duplicate/equally-specific ambiguous pattern detection.
@@ -361,6 +360,18 @@ deep-link strategy và deferred-load hint. Module này sở hữu:
 - Reverse routing không cần tạo presentation route.
 - Versioned JSON encode/decode cho tooling và devtools.
 - Composition của các manifest độc lập.
+
+`RouteManifestFragment<I>` là contribution seam cho `RouteModule`. Fragment chỉ
+validate local shape và ID uniqueness; `CoordinatorModular` flatten fragment
+của nested module rồi tạo một root manifest duy nhất. Parent/layout reference,
+indexed child, cycle và ambiguous URI pattern được validate sau composition,
+khi toàn bộ application graph đã hiện diện.
+
+Typed ID không bị đổi thành string khi compose. Root graph dùng `Object` như
+union type ở interface, nhưng giá trị vẫn là enum/domain object ban đầu nên Dart
+object pattern và reverse routing tiếp tục hoạt động. Nếu mọi fragment có
+`RouteIdCodec`, composite codec scope wire ID theo fragment name để JSON có thể
+round-trip qua SSR/tooling seam.
 
 ID trong memory được generic hóa qua `RouteManifest<I>`. Handwritten
 coordinator có thể dùng enum hoặc domain value và destructure trực tiếp bằng
@@ -373,6 +384,24 @@ route ID sang `RouteTarget` cụ thể, và sinh static `{route}Location()` help
 Widget, `BuildContext`, transition và constructor closure không đi vào manifest.
 Hand-written coordinator vẫn tương thích qua `RouteManifest.empty` và có thể
 override `routeManifest` khi muốn khai báo topology tĩnh.
+
+### 5.11 Runtime Route Binding Registry
+
+`RouteBinding<I, T>` ánh xạ một manifest ID sang factory tạo `Route Target` từ
+`RouteManifestMatch`. `RouteBindingRegistry<I, T>` snapshot và validate toàn bộ
+binding set khi khởi tạo:
+
+- Reject duplicate binding ID.
+- Reject ID không tồn tại hoặc trỏ vào layout.
+- Reject manifest route chưa có binding.
+- Hỗ trợ sync/async factory và optional not-found binding.
+- Compose an toàn các binding có feature-owned typed ID vào root registry dùng
+  `Object` ID view.
+
+`CoordinatorRouteBinding<T, I>` là adapter tại Coordinator seam: nó expose
+manifest từ registry và implement `parseRouteFromUri()` bằng manifest matching
+rồi binding. `RouteModuleBinding<T, I>` cung cấp cùng behavior cho module. Code
+cũ tự override parser tiếp tục hoạt động vì hai mixin đều opt-in.
 
 ## 6. SPA flow sau thay đổi
 
@@ -453,8 +482,11 @@ Future<HttpResponse> handle(HttpRequest httpRequest) async {
 - `RouteCancellationToken`
 - `RouteHydrationPayload`
 - `RouteManifest`, `RouteManifestRoute`, `RouteManifestLayout`
+- `RouteManifestFragment`
 - `RoutePattern` và `RouteManifestMatch`
 - `RouteIdCodec<I>`
+- `RouteBinding<I, T>` và `RouteBindingRegistry<I, T>`
+- `CoordinatorRouteBinding<T, I>` và `RouteModuleBinding<T, I>`
 - `NavigationCommit`
 - `NavigationHistoryIntent`
 - `CoordinatorCore.withHistoryIntent()`
@@ -544,7 +576,7 @@ hiện là source of truth cho generated URI matching và link generation:
 
 - Generator validate duplicate/ambiguous patterns trước khi emit code.
 - Static link helpers không cần presentation route instance.
-- Layout topology và deferred metadata có thể được SSR/tooling đọc.
+- Layout topology có thể được SSR/tooling đọc.
 - Manifest có versioned JSON representation cho devtools.
 
 Phần chưa triển khai là UI visualization trong `zenrouter_devtools` và executor

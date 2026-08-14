@@ -754,12 +754,12 @@ extension AppCoordinatorNav on AppCoordinator {
   // Push, Replace, Recover methods for each route
   Future<dynamic> pushAbout() => push(AboutRoute());
   void replaceAbout() => replace(AboutRoute());
-  void recoverAbout() => recoverRouteFromUri(AboutRoute().toUri());
+  void recoverAbout() => recoverUri(AboutRoute().toUri());
   
   // Routes with parameters
   Future<dynamic> pushProfileId(String id) => push(ProfileIdRoute(id: id));
   void replaceProfileId(String id) => replace(ProfileIdRoute(id: id));
-  void recoverProfileId(String id) => recoverRouteFromUri(ProfileIdRoute(id: id).toUri());
+  void recoverProfileId(String id) => recoverUri(ProfileIdRoute(id: id).toUri());
 }
 ```
 
@@ -811,7 +811,7 @@ coordinator.replaceTabProfile();
 // Restore complete navigation state from a URI
 // This rebuilds the entire navigation stack to reach the target route
 coordinator.recoverProfileId('user-123');
-// Equivalent to: coordinator.recoverRouteFromUri(Uri.parse('/profile/user-123'));
+// Equivalent to: coordinator.recoverUri(Uri.parse('/profile/user-123'));
 
 // Use for:
 // - Deep links from external sources

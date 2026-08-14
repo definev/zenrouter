@@ -594,7 +594,7 @@ Tham khảo nhanh cho `Coordinator`:
 | `pop()` | Pop từ đường dẫn động (dynamic path) gần nhất |
 | `replace(T)` | Xóa stack và thay thế bằng route |
 | `pushOrMoveToTop(T)` | Đẩy hoặc di chuyển route lên đầu |
-| `recoverRouteFromUri(Uri)` | Xử lý URI deep link |
+| `recoverUri(Uri)` | Xử lý URI deep link |
 | `recover(T)` | Khôi phục từ route (chiến lược deeplink) |
 | `defineDeeplinkHandler(strategy, handler)` | Ghi đè hành vi deeplink mặc định |
 
@@ -882,7 +882,7 @@ adb shell am start -W -a android.intent.action.VIEW \\
 #### Flutter
 ```dart
 // Trong mã của bạn
-coordinator.recoverRouteFromUri(
+coordinator.recoverUri(
   Uri.parse('myapp://home/feed/123'),
 );
 ```

@@ -9,12 +9,14 @@ export 'src/routing/resolution.dart';
 export 'src/routing/cancellation.dart';
 export 'src/routing/hydration.dart';
 export 'src/routing/manifest.dart';
+export 'src/routing/binding.dart';
 
 export 'src/contracts/mutatable.dart';
 export 'src/contracts/navigatable.dart';
 
 export 'src/coordinator/base.dart';
 export 'src/coordinator/modular.dart';
+export 'src/coordinator/binding.dart';
 
 export 'src/path/base.dart';
 export 'src/path/navigatable.dart';

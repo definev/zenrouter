@@ -3,6 +3,10 @@ import 'package:zenrouter_core/zenrouter_core.dart';
 
 enum _TypedRouteId { root, profile }
 
+enum _ShellRouteId { shell }
+
+enum _AccountRouteId { profile }
+
 void main() {
   group('RoutePattern', () {
     test('parses literal, parameter, and middle rest segments', () {
@@ -227,14 +231,8 @@ void main() {
     });
 
     test('validates indexed children and freezes all collections', () {
-      final queryParameters = <String>['tab'];
       final indexedChildren = <String>['home'];
-      final route = RouteManifestRoute(
-        id: 'home',
-        path: '/',
-        parentId: 'tabs',
-        queryParameters: queryParameters,
-      );
+      final route = RouteManifestRoute(id: 'home', path: '/', parentId: 'tabs');
       final layout = RouteManifestLayout(
         id: 'tabs',
         path: '/',
@@ -246,10 +244,8 @@ void main() {
         routes: [route],
         layouts: [layout],
       );
-      queryParameters.add('changed');
       indexedChildren.add('changed');
 
-      expect(route.queryParameters, ['tab']);
       expect(layout.indexedChildIds, ['home']);
       expect(() => manifest.routes.add(route), throwsUnsupportedError);
       expect(() => manifest.nodes['other'] = route, throwsUnsupportedError);
@@ -264,11 +260,6 @@ void main() {
           id: 'profile',
           path: '/profiles/:id',
           parentId: 'account-layout',
-          queryParameters: ['tab'],
-          hasGuard: true,
-          hasRedirect: true,
-          isDeferred: true,
-          deepLinkStrategy: DeeplinkStrategy.navigate,
         ),
       ],
       layouts: [
@@ -330,6 +321,105 @@ void main() {
 
       expect(composed.match(Uri.parse('/feature'))?.route.id, 'feature-home');
       expect(composed['feature-shell'], isA<RouteManifestLayout<String>>());
+      expect(
+        RouteManifest<String>.decode(
+          composed.encode(),
+        ).match(Uri.parse('/feature'))?.id,
+        'feature-home',
+      );
+    });
+
+    test('composes fragments with cross-module layout relationships', () {
+      final shell = RouteManifestFragment<_ShellRouteId>(
+        name: 'shell',
+        idCodec: RouteIdCodec.enumValues(_ShellRouteId.values),
+        layouts: [
+          RouteManifestLayout(
+            id: _ShellRouteId.shell,
+            path: '/account',
+            kind: RouteManifestLayoutKind.stack,
+          ),
+        ],
+      );
+      final account = RouteManifestFragment<Object>(
+        name: 'account',
+        idCodec: RouteIdCodec.enumValues(_AccountRouteId.values),
+        routes: [
+          RouteManifestRoute(
+            id: _AccountRouteId.profile,
+            path: '/account/profile',
+            parentId: _ShellRouteId.shell,
+          ),
+        ],
+      );
+
+      final manifest = RouteManifest<Object>.fromFragments(
+        name: 'app',
+        fragments: [shell, account],
+      );
+
+      expect(
+        manifest.match(Uri.parse('/account/profile'))?.id,
+        _AccountRouteId.profile,
+      );
+      expect(manifest[_AccountRouteId.profile]?.parentId, _ShellRouteId.shell);
+    });
+
+    test('scopes fragment codecs for composed JSON round trips', () {
+      final first = RouteManifestFragment<_TypedRouteId>(
+        name: 'typed',
+        idCodec: RouteIdCodec.enumValues(_TypedRouteId.values),
+        routes: [RouteManifestRoute(id: _TypedRouteId.root, path: '/')],
+      );
+      final second = RouteManifestFragment<_AccountRouteId>(
+        name: 'account',
+        idCodec: RouteIdCodec.enumValues(_AccountRouteId.values),
+        routes: [
+          RouteManifestRoute(
+            id: _AccountRouteId.profile,
+            path: '/account/profile',
+          ),
+        ],
+      );
+      final manifest = RouteManifest<Object>.fromFragments(
+        name: 'app',
+        fragments: [first, second],
+      );
+
+      final json = manifest.toJson();
+      final decoded = RouteManifest<Object>.fromJson(
+        json,
+        idCodec: manifest.idCodec,
+      );
+
+      expect(json['routes'], [
+        {'id': 'typed/root', 'path': '/'},
+        {'id': 'account/profile', 'path': '/account/profile'},
+      ]);
+      expect(decoded.match(Uri.parse('/'))?.id, _TypedRouteId.root);
+      expect(
+        decoded.match(Uri.parse('/account/profile'))?.id,
+        _AccountRouteId.profile,
+      );
+    });
+
+    test('rejects conflicts that only appear after fragment composition', () {
+      final first = RouteManifestFragment<String>(
+        name: 'first',
+        routes: [RouteManifestRoute(id: 'first-id', path: '/users/:id')],
+      );
+      final second = RouteManifestFragment<String>(
+        name: 'second',
+        routes: [RouteManifestRoute(id: 'second-name', path: '/users/:name')],
+      );
+
+      expect(
+        () => RouteManifest<String>.fromFragments(
+          name: 'app',
+          fragments: [first, second],
+        ),
+        throwsA(isA<RouteManifestValidationException>()),
+      );
     });
   });
 

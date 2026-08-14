@@ -199,8 +199,56 @@ Equivalent or equally-specific overlapping patterns are rejected when the
 manifest is constructed. `encode()` and `RouteManifest.decode()` provide a
 versioned JSON representation for build tooling and devtools. `String` IDs use
 the built-in codec; enum and domain IDs use `RouteIdCodec` only at this
-serialization seam. Hand-written coordinators can override `routeManifest`;
-parser-only coordinators remain compatible through `RouteManifest.empty`.
+serialization seam. `RouteManifest.fromFragments()` composes independently
+declared module topology and validates cross-module relationships and URI
+conflicts once the complete graph is available. Hand-written coordinators can
+override `routeManifest`; parser-only coordinators remain compatible through
+`RouteManifest.empty`.
+
+### Route bindings
+
+`RouteBindingRegistry` is the runtime presentation adapter for a manifest. It
+validates that every route ID has exactly one binding, then owns URI matching
+and sync or async route construction. `CoordinatorRouteBinding` supplies
+`routeManifest` and `parseRouteFromUri`, so a coordinator no longer needs a
+handwritten parser switch. `RouteManifest.bind<T>` infers the registry ID type
+from the manifest while keeping its bindings and lookup API strongly typed.
+
+```dart
+class AppCoordinator extends Coordinator<AppRoute>
+    with CoordinatorRouteBinding<AppRoute, AppRouteId> {
+  static final manifest = RouteManifest<AppRouteId>(
+    name: 'app',
+    idCodec: RouteIdCodec.enumValues(AppRouteId.values),
+    routes: [
+      RouteManifestRoute(id: AppRouteId.home, path: '/'),
+      RouteManifestRoute(
+        id: AppRouteId.profile,
+        path: '/profiles/:profileId',
+      ),
+    ],
+  );
+
+  @override
+  late final routeBindings = manifest.bind<AppRoute>(
+    bindings: () => [
+      RouteBinding(id: AppRouteId.home, create: (_) => HomeRoute()),
+      RouteBinding(
+        id: AppRouteId.profile,
+        create: (match) => ProfileRoute(
+          match.pathParameters['profileId']!,
+        ),
+      ),
+    ],
+    notFound: NotFoundRoute.new,
+  );
+}
+```
+
+Use `RouteModuleBinding` for a complete manifest owned by a `RouteModule`.
+Parser-based coordinators and modules remain supported without either mixin.
+For typed 404 resolution, the `notFound` factory should return a route mixing
+in `RouteNotFound`.
 
 ---
 
@@ -518,6 +566,63 @@ class AppCoordinator extends CoordinatorModular<AppRoute> {
 - `paths` - Nested navigation paths
 - `defineLayout` - Layout constructors
 - `defineConverter` - State restoration
+- `routeManifest` - Complete module-local topology
+- `routeManifestFragment` - Topology with references resolved after composition
+
+`CoordinatorModular.routeManifest` is created lazily from its local fragment
+and every nested module fragment. Typed IDs remain their original enum or
+domain values in memory, so object patterns and reverse routing remain usable
+through the root graph. When all fragments provide codecs, JSON wire IDs are
+scoped by fragment name.
+
+```dart
+enum AppRouteId { shell, profile }
+
+class ShellModule extends RouteModule<AppRoute> {
+  ShellModule(super.coordinator);
+
+  @override
+  AppRoute? parseRouteFromUri(Uri uri) => null;
+
+  @override
+  RouteManifestFragment<AppRouteId> get routeManifestFragment =>
+      RouteManifestFragment(
+        name: 'shell',
+        idCodec: RouteIdCodec.enumValues(AppRouteId.values),
+        layouts: [
+          RouteManifestLayout(
+            id: AppRouteId.shell,
+            path: '/account',
+            kind: RouteManifestLayoutKind.stack,
+          ),
+        ],
+      );
+}
+
+class AccountModule extends RouteModule<AppRoute> {
+  AccountModule(super.coordinator);
+
+  @override
+  AppRoute? parseRouteFromUri(Uri uri) => null;
+
+  @override
+  RouteManifestFragment<AppRouteId> get routeManifestFragment =>
+      RouteManifestFragment(
+        name: 'account',
+        idCodec: RouteIdCodec.enumValues(AppRouteId.values),
+        routes: [
+          RouteManifestRoute(
+            id: AppRouteId.profile,
+            path: '/account/profile',
+            parentId: AppRouteId.shell,
+          ),
+        ],
+      );
+}
+```
+
+For topology owned directly by a modular coordinator, override
+`localRouteManifestFragment`; do not override its composed `routeManifest`.
 
 ---
 
@@ -560,9 +665,11 @@ zenrouter_core is **renderer-agnostic**. To use with a platform:
 // Core
 export 'src/coordinator/base.dart';       // CoordinatorCore
 export 'src/coordinator/modular.dart';   // CoordinatorModular, RouteModule
+export 'src/coordinator/binding.dart';   // Coordinator/RouteModule bindings
 export 'src/path/base.dart';             // StackPath, PathKey, StackMutatable
 export 'src/path/navigatable.dart';       // StackNavigatable, NavigationPath
 export 'src/routing/manifest.dart';       // RouteManifest, RoutePattern
+export 'src/routing/binding.dart';        // RouteBindingRegistry
 
 // Mixins
 export 'src/mixin/target.dart';           // RouteTarget

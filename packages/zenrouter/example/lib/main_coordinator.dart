@@ -233,7 +233,7 @@ class SettingsTab extends AppRoute {
         const SizedBox(height: 8),
         ElevatedButton(
           onPressed: () =>
-              coordinator.recoverRouteFromUri(Uri.parse('/home/feed/3221')),
+              coordinator.recoverUri(Uri.parse('/home/feed/3221')),
           child: const Text('Recover Route'),
         ),
       ],

@@ -418,6 +418,11 @@ class MyApp extends StatelessWidget {
 }
 ```
 
+For a manifest-backed Coordinator without code generation, use
+`CoordinatorRouteBinding` and `RouteBindingRegistry` instead of overriding
+`parseRouteFromUri`. See the runnable
+[`main_route_manifest.dart`](example/lib/main_route_manifest.dart) example.
+
 > [!IMPORTANT]
 > The `build()` method on `RouteUnique` routes receives the **concrete coordinator type** (e.g. `AppCoordinator`), not the generic `Coordinator`. This is because `Coordinator` is covariant — giving you type-safe access to custom paths and methods.
 

@@ -350,10 +350,10 @@ void main() {
       coordinator.root.reset();
     });
 
-    test('recoverRouteFromUri throws when parse returns null', () async {
+    test('recoverUri throws when parse returns null', () async {
       final coordinator = _NullParseCoordinator();
       expect(
-        () => coordinator.recoverRouteFromUri(Uri.parse('/missing')),
+        () => coordinator.recoverUri(Uri.parse('/missing')),
         throwsA(
           isA<StateError>().having(
             (e) => e.message,
@@ -364,11 +364,112 @@ void main() {
       );
     });
 
-    test('recoverRouteFromUri parses then recovers', () async {
+    test('recoverUri parses then recovers', () async {
       final coordinator = FullCapabilityCoordinator();
-      await coordinator.recoverRouteFromUri(Uri.parse('/from-uri'));
+      await coordinator.recoverUri(Uri.parse('/from-uri'));
       await pumpEventQueue();
       expect(coordinator.root.activeRoute?.id, 'from-uri');
+      coordinator.root.reset();
+    });
+  });
+
+  group('Coordinator URI actions', () {
+    test('navigateUri parses then navigates', () async {
+      final coordinator = FullCapabilityCoordinator();
+
+      await coordinator.navigateUri(Uri.parse('/navigated'));
+
+      expect(coordinator.root.activeRoute?.id, 'navigated');
+      coordinator.root.reset();
+    });
+
+    test('pushUri waits for the parsed route result', () async {
+      final coordinator = FullCapabilityCoordinator();
+      await coordinator.pushSilently(ComposeRoute('base'));
+
+      final result = coordinator.pushUri<String>(Uri.parse('/pushed'));
+      await pumpEventQueue();
+      final pushedRoute = coordinator.root.activeRoute!;
+      expect(pushedRoute.id, 'pushed');
+
+      await coordinator.pop('done');
+      pushedRoute.completeOnResult(pushedRoute.resultValue, coordinator);
+      expect(await result, 'done');
+      coordinator.root.reset();
+    });
+
+    test('pushSilentlyUri completes after commit', () async {
+      final coordinator = FullCapabilityCoordinator();
+
+      await coordinator.pushSilentlyUri(Uri.parse('/silent'));
+
+      final route = coordinator.root.activeRoute!;
+      expect(route.id, 'silent');
+      expect(route.onResult.isCompleted, isFalse);
+      coordinator.root.reset();
+    });
+
+    test('replaceUri parses then replaces', () async {
+      final coordinator = FullCapabilityCoordinator();
+      await coordinator.pushSilently(ComposeRoute('old'));
+
+      await coordinator.replaceUri(Uri.parse('/replacement'));
+
+      expect(coordinator.root.stack.map((route) => route.id), ['replacement']);
+      coordinator.root.reset();
+    });
+
+    test('recoverUri parses then applies deep-link behavior', () async {
+      final coordinator = FullCapabilityCoordinator();
+      await coordinator.pushSilently(ComposeRoute('old'));
+
+      await coordinator.recoverUri(Uri.parse('/recovered'));
+
+      expect(coordinator.root.stack.map((route) => route.id), ['recovered']);
+      coordinator.root.reset();
+    });
+
+    test('throws when no route matches the location', () async {
+      final coordinator = _NullParseCoordinator();
+
+      await expectLater(
+        coordinator.pushSilentlyUri(Uri.parse('/missing')),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            contains('parseRouteFromUri'),
+          ),
+        ),
+      );
+    });
+
+    test('pushReplacementUri replaces the current route', () async {
+      final coordinator = FullCapabilityCoordinator();
+      await coordinator.pushSilently(ComposeRoute('old'));
+
+      final replacement = coordinator.pushReplacementUri<Object, String>(
+        Uri.parse('/replacement'),
+        result: 'done',
+      );
+      await pumpEventQueue();
+
+      expect(coordinator.root.stack.map((route) => route.id), ['replacement']);
+      coordinator.root.reset();
+      await replacement;
+    });
+
+    test('pushOrMoveToTopUri moves an existing route to the top', () async {
+      final coordinator = FullCapabilityCoordinator();
+      await coordinator.pushSilently(ComposeRoute('first'));
+      await coordinator.pushSilently(ComposeRoute('second'));
+
+      await coordinator.pushOrMoveToTopUri(Uri.parse('/first'));
+
+      expect(coordinator.root.stack.map((route) => route.id), [
+        'second',
+        'first',
+      ]);
       coordinator.root.reset();
     });
   });
