@@ -17,7 +17,8 @@ abstract class _$DeferredImportsRoute extends DocsRoute {
   Type? get layout => DocsLayout;
 
   @override
-  Uri toUri() => Uri.parse('/docs/file-routing/deferred-imports');
+  Uri toUri() =>
+      Uri(pathSegments: ['', 'docs', 'file-routing', 'deferred-imports']);
 
   @override
   List<Object?> get props => [];

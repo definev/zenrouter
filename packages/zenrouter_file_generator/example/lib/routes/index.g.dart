@@ -13,7 +13,7 @@ abstract class _$IndexRoute extends AppRoute {
   _$IndexRoute();
 
   @override
-  Uri toUri() => Uri.parse('/');
+  Uri toUri() => Uri(path: '/');
 
   @override
   List<Object?> get props => [];

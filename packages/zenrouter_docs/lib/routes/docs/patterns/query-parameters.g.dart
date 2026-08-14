@@ -23,7 +23,7 @@ abstract class _$QueryParametersRoute extends DocsRoute
 
   @override
   Uri toUri() {
-    final uri = Uri.parse('/docs/patterns/query-parameters');
+    final uri = Uri(pathSegments: ['', 'docs', 'patterns', 'query-parameters']);
     if (queries.isEmpty) return uri;
     return uri.replace(queryParameters: queries);
   }

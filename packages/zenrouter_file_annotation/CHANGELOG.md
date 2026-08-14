@@ -1,7 +1,9 @@
 ## Unreleased
 
-- Generate route URIs with `Uri(pathSegments: ...)` so dynamic and catch-all
-  parameters round-trip reserved characters without changing URL structure.
+- Generate absolute route URIs with `Uri(pathSegments: ...)` so dynamic and
+  catch-all parameters round-trip reserved characters without changing URL
+  structure.
+- Normalize dynamic and catch-all parameters in generated layout patterns.
 
 ## 1.0.1
 - **Fix**: Publish `PathParser.parseDirParts` used by `zenrouter_file_generator` 1.1.x to prevent build script compilation failures.

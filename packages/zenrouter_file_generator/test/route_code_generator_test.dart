@@ -14,7 +14,7 @@ void main() {
 
     final generated = RouteCodeGenerator.generate(route, config);
 
-    expect(generated, contains("Uri(pathSegments: ['users', userId])"));
+    expect(generated, contains("Uri(pathSegments: ['', 'users', userId])"));
     expect(generated, isNot(contains('Uri.parse')));
   });
 
@@ -30,7 +30,7 @@ void main() {
 
     final generated = RouteCodeGenerator.generate(route, config);
 
-    expect(generated, contains("Uri(pathSegments: ['docs', ...slugs])"));
+    expect(generated, contains("Uri(pathSegments: ['', 'docs', ...slugs])"));
   });
 
   test('keeps root canonical and applies declared queries afterward', () {
@@ -50,9 +50,10 @@ void main() {
 
   test('Uri pathSegments round-trip reserved characters in one parameter', () {
     const parameter = 'a/b?c#d% e';
-    final uri = Uri(pathSegments: ['users', parameter]);
+    final uri = Uri(pathSegments: ['', 'users', parameter]);
 
     expect(uri.pathSegments, ['users', parameter]);
+    expect(uri.path, startsWith('/'));
     expect(uri.path, isNot(contains('/a/b')));
   });
 }

@@ -4,6 +4,7 @@ import 'package:zenrouter_core/src/coordinator/base.dart';
 import 'package:zenrouter_core/src/mixin/target.dart';
 import 'package:zenrouter_core/src/mixin/uri.dart';
 import 'package:zenrouter_core/src/path/base.dart';
+import 'package:zenrouter_core/src/routing/manifest.dart';
 
 /// Base class for route modules that handle a subset of application routes.
 ///
@@ -42,6 +43,12 @@ abstract class RouteModule<T extends RouteUri> {
   ///
   /// Override to provide paths for nested navigation within this module.
   List<StackPath> get paths => [];
+
+  /// Declarative topology exposed by this module.
+  ///
+  /// Hand-written modules may remain parser-only during migration. Generated
+  /// modules override this getter with their immutable route manifest.
+  RouteManifest<Object> get routeManifest => RouteManifest.empty;
 
   /// Parses a URI and returns a route if this module handles it.
   ///

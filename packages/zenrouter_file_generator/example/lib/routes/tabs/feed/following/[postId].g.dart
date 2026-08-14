@@ -20,7 +20,7 @@ abstract class _$FeedPostRoute extends AppRoute with RouteGuard, RouteDeepLink {
   Type? get layout => FollowingLayout;
 
   @override
-  Uri toUri() => Uri.parse('/tabs/feed/following/$postId');
+  Uri toUri() => Uri(pathSegments: ['', 'tabs', 'feed', 'following', postId]);
 
   @override
   List<Object?> get props => [postId];

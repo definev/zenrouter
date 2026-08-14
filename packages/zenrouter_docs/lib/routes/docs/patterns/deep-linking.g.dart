@@ -17,7 +17,7 @@ abstract class _$DeepLinkingRoute extends DocsRoute {
   Type? get layout => DocsLayout;
 
   @override
-  Uri toUri() => Uri.parse('/docs/patterns/deep-linking');
+  Uri toUri() => Uri(pathSegments: ['', 'docs', 'patterns', 'deep-linking']);
 
   @override
   List<Object?> get props => [];

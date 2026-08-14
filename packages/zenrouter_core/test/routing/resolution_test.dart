@@ -144,4 +144,156 @@ void main() {
       throwsUnsupportedError,
     );
   });
+
+  group('redirect continuation', () {
+    test('normalizes request methods and rejects an empty method', () {
+      expect(
+        RouteRequest(uri: Uri.parse('/'), method: ' post ').method,
+        'POST',
+      );
+      expect(
+        () => RouteRequest(uri: Uri.parse('/'), method: '  '),
+        throwsArgumentError,
+      );
+    });
+
+    for (final statusCode in [301, 302]) {
+      test('$statusCode converts POST to GET and drops body headers', () {
+        final token = RouteCancellationToken();
+        final state = Object();
+        final request = RouteRequest(
+          uri: Uri.parse('https://example.test/orders/current'),
+          method: 'POST',
+          headers: const {
+            'Content-Type': ['application/json'],
+            'Content-Length': ['12'],
+            'X-Trace': ['trace-1'],
+          },
+          body: '{"ok":true}',
+          state: state,
+          cancellationToken: token,
+        );
+        final redirect = RedirectRouteResolution<TestRoute>(
+          request: request,
+          location: Uri.parse('../next'),
+          statusCode: statusCode,
+        );
+
+        final followUp = redirect.createRedirectRequest();
+
+        expect(followUp.uri, Uri.parse('https://example.test/next'));
+        expect(followUp.method, 'GET');
+        expect(followUp.body, isNull);
+        expect(followUp.headers, {
+          'x-trace': ['trace-1'],
+        });
+        expect(followUp.state, same(state));
+        expect(followUp.cancellationToken, same(token));
+      });
+    }
+
+    test('303 converts non-HEAD methods to GET', () {
+      final put = RouteRequest(
+        uri: Uri.parse('/submit'),
+        method: 'PUT',
+        body: 'payload',
+      );
+      final head = RouteRequest(uri: Uri.parse('/submit'), method: 'HEAD');
+
+      expect(
+        RedirectRouteResolution<TestRoute>(
+          request: put,
+          location: Uri.parse('/result'),
+          statusCode: 303,
+        ).createRedirectRequest(),
+        isA<RouteRequest>()
+            .having((request) => request.method, 'method', 'GET')
+            .having((request) => request.body, 'body', isNull),
+      );
+      expect(
+        RedirectRouteResolution<TestRoute>(
+          request: head,
+          location: Uri.parse('/result'),
+          statusCode: 303,
+        ).createRedirectRequest().method,
+        'HEAD',
+      );
+    });
+
+    for (final statusCode in [307, 308]) {
+      test('$statusCode preserves method, body, and body headers', () {
+        final request = RouteRequest(
+          uri: Uri.parse('/submit'),
+          method: 'PATCH',
+          headers: const {
+            'Content-Type': ['application/json'],
+          },
+          body: 'payload',
+        );
+
+        final followUp = RedirectRouteResolution<TestRoute>(
+          request: request,
+          location: Uri.parse('/other'),
+          statusCode: statusCode,
+        ).createRedirectRequest();
+
+        expect(followUp.method, 'PATCH');
+        expect(followUp.body, 'payload');
+        expect(followUp.headers['content-type'], ['application/json']);
+      });
+    }
+
+    test('rejects status codes without redirect method semantics', () {
+      final request = RouteRequest.navigation(Uri.parse('/'));
+
+      for (final statusCode in [300, 304, 305, 306, 309]) {
+        expect(
+          () => RedirectRouteResolution<TestRoute>(
+            request: request,
+            location: Uri.parse('/other'),
+            statusCode: statusCode,
+          ),
+          throwsArgumentError,
+        );
+      }
+    });
+  });
+
+  group('route resolution cancellation', () {
+    test('token is idempotent and exposes its reason', () async {
+      final token = RouteCancellationToken();
+
+      expect(token.cancel('newer navigation'), isTrue);
+      expect(token.cancel('ignored'), isFalse);
+      expect(await token.whenCancelled, 'newer navigation');
+      expect(
+        token.throwIfCancelled,
+        throwsA(
+          isA<RouteResolutionCancelled>().having(
+            (error) => error.reason,
+            'reason',
+            'newer navigation',
+          ),
+        ),
+      );
+    });
+
+    test(
+      'default resolver propagates cancellation instead of creating 500',
+      () async {
+        final token = RouteCancellationToken()..cancel('disconnected');
+        final coordinator = TestCoordinator(TestRoute.new);
+
+        await expectLater(
+          coordinator.resolveRoute(
+            RouteRequest.navigation(
+              Uri.parse('/cancelled'),
+              cancellationToken: token,
+            ),
+          ),
+          throwsA(isA<RouteResolutionCancelled>()),
+        );
+      },
+    );
+  });
 }

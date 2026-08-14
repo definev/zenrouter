@@ -46,6 +46,219 @@ abstract class DocsRoute extends RouteTarget with RouteUnique {}
 
 /// Generated coordinator managing all routes.
 class DocsCoordinator extends Coordinator<DocsRoute> {
+  /// Immutable application route topology.
+  static final RouteManifest<String> manifest = RouteManifest<String>(
+    name: 'DocsCoordinator',
+    routes: [
+      RouteManifestRoute(
+        id: 'RoutesAndPathsRoute',
+        path: '/docs/concepts/routes-and-paths',
+        parentId: 'DocsLayout',
+        isDeferred: true,
+        deepLinkStrategy: DeeplinkStrategy.replace,
+      ),
+      RouteManifestRoute(
+        id: 'StackManagementRoute',
+        path: '/docs/concepts/stack-management',
+        parentId: 'DocsLayout',
+        isDeferred: true,
+        deepLinkStrategy: DeeplinkStrategy.replace,
+      ),
+      RouteManifestRoute(
+        id: 'UriParsingRoute',
+        path: '/docs/concepts/uri-parsing',
+        parentId: 'DocsLayout',
+        isDeferred: true,
+      ),
+      RouteManifestRoute(
+        id: 'ExamplesSlugRoute',
+        path: '/docs/examples/:slug',
+        parentId: 'ExamplesLayout',
+        isDeferred: true,
+        deepLinkStrategy: DeeplinkStrategy.replace,
+      ),
+      RouteManifestRoute(
+        id: 'ConventionsRoute',
+        path: '/docs/file-routing/conventions',
+        parentId: 'DocsLayout',
+        isDeferred: true,
+        deepLinkStrategy: DeeplinkStrategy.push,
+      ),
+      RouteManifestRoute(
+        id: 'DeferredImportsRoute',
+        path: '/docs/file-routing/deferred-imports',
+        parentId: 'DocsLayout',
+      ),
+      RouteManifestRoute(
+        id: 'DynamicRoutesRoute',
+        path: '/docs/file-routing/dynamic-routes',
+        parentId: 'DocsLayout',
+        isDeferred: true,
+        deepLinkStrategy: DeeplinkStrategy.push,
+      ),
+      RouteManifestRoute(
+        id: 'GettingStartedRoute',
+        path: '/docs/file-routing/getting-started',
+        parentId: 'DocsLayout',
+        isDeferred: true,
+        deepLinkStrategy: DeeplinkStrategy.push,
+      ),
+      RouteManifestRoute(
+        id: 'DocsIndexRoute',
+        path: '/docs',
+        parentId: 'DocsLayout',
+        isDeferred: true,
+      ),
+      RouteManifestRoute(
+        id: 'ChoosingRoute',
+        path: '/docs/paradigms/choosing',
+        parentId: 'DocsLayout',
+        isDeferred: true,
+      ),
+      RouteManifestRoute(
+        id: 'CoordinatorRoute',
+        path: '/docs/paradigms/coordinator',
+        parentId: 'DocsLayout',
+        isDeferred: true,
+        deepLinkStrategy: DeeplinkStrategy.replace,
+      ),
+      RouteManifestRoute(
+        id: 'DeclarativeRoute',
+        path: '/docs/paradigms/declarative',
+        parentId: 'DocsLayout',
+        isDeferred: true,
+      ),
+      RouteManifestRoute(
+        id: 'ImperativeRoute',
+        path: '/docs/paradigms/imperative',
+        parentId: 'DocsLayout',
+        isDeferred: true,
+        deepLinkStrategy: DeeplinkStrategy.push,
+      ),
+      RouteManifestRoute(
+        id: 'DeepLinkingRoute',
+        path: '/docs/patterns/deep-linking',
+        parentId: 'DocsLayout',
+        isDeferred: true,
+        deepLinkStrategy: DeeplinkStrategy.replace,
+      ),
+      RouteManifestRoute(
+        id: 'GuardsRedirectsRoute',
+        path: '/docs/patterns/guards-redirects',
+        parentId: 'DocsLayout',
+        hasGuard: true,
+        hasRedirect: true,
+        isDeferred: true,
+      ),
+      RouteManifestRoute(
+        id: 'LayoutsRoute',
+        path: '/docs/patterns/layouts',
+        parentId: 'DocsLayout',
+        isDeferred: true,
+        deepLinkStrategy: DeeplinkStrategy.push,
+      ),
+      RouteManifestRoute(
+        id: 'QueryParametersRoute',
+        path: '/docs/patterns/query-parameters',
+        parentId: 'DocsLayout',
+        queryParameters: ['*'],
+        isDeferred: true,
+      ),
+      RouteManifestRoute(
+        id: 'IndexRoute',
+        path: '/',
+        isDeferred: true,
+        deepLinkStrategy: DeeplinkStrategy.push,
+      ),
+    ],
+    layouts: [
+      RouteManifestLayout(
+        id: 'RootLayout',
+        path: '/',
+        kind: RouteManifestLayoutKind.stack,
+      ),
+      RouteManifestLayout(
+        id: 'DocsLayout',
+        path: '/docs',
+        kind: RouteManifestLayoutKind.stack,
+      ),
+      RouteManifestLayout(
+        id: 'ExamplesLayout',
+        path: '/docs/examples',
+        parentId: 'DocsLayout',
+        kind: RouteManifestLayoutKind.stack,
+      ),
+    ],
+  );
+
+  @override
+  RouteManifest<String> get routeManifest => manifest;
+
+  /// Type-safe reverse routing without constructing presentation routes.
+  static Uri routesAndPathsLocation({String? fragment}) =>
+      manifest.location('RoutesAndPathsRoute', fragment: fragment);
+
+  static Uri stackManagementLocation({String? fragment}) =>
+      manifest.location('StackManagementRoute', fragment: fragment);
+
+  static Uri uriParsingLocation({String? fragment}) =>
+      manifest.location('UriParsingRoute', fragment: fragment);
+
+  static Uri examplesSlugLocation({required String slug, String? fragment}) =>
+      manifest.location(
+        'ExamplesSlugRoute',
+        pathParameters: {'slug': slug},
+        fragment: fragment,
+      );
+
+  static Uri conventionsLocation({String? fragment}) =>
+      manifest.location('ConventionsRoute', fragment: fragment);
+
+  static Uri deferredImportsLocation({String? fragment}) =>
+      manifest.location('DeferredImportsRoute', fragment: fragment);
+
+  static Uri dynamicRoutesLocation({String? fragment}) =>
+      manifest.location('DynamicRoutesRoute', fragment: fragment);
+
+  static Uri gettingStartedLocation({String? fragment}) =>
+      manifest.location('GettingStartedRoute', fragment: fragment);
+
+  static Uri docsIndexLocation({String? fragment}) =>
+      manifest.location('DocsIndexRoute', fragment: fragment);
+
+  static Uri choosingLocation({String? fragment}) =>
+      manifest.location('ChoosingRoute', fragment: fragment);
+
+  static Uri coordinatorLocation({String? fragment}) =>
+      manifest.location('CoordinatorRoute', fragment: fragment);
+
+  static Uri declarativeLocation({String? fragment}) =>
+      manifest.location('DeclarativeRoute', fragment: fragment);
+
+  static Uri imperativeLocation({String? fragment}) =>
+      manifest.location('ImperativeRoute', fragment: fragment);
+
+  static Uri deepLinkingLocation({String? fragment}) =>
+      manifest.location('DeepLinkingRoute', fragment: fragment);
+
+  static Uri guardsRedirectsLocation({String? fragment}) =>
+      manifest.location('GuardsRedirectsRoute', fragment: fragment);
+
+  static Uri layoutsLocation({String? fragment}) =>
+      manifest.location('LayoutsRoute', fragment: fragment);
+
+  static Uri queryParametersLocation({
+    Map<String, String> queries = const {},
+    String? fragment,
+  }) => manifest.location(
+    'QueryParametersRoute',
+    queryParameters: queries,
+    fragment: fragment,
+  );
+
+  static Uri indexLocation({String? fragment}) =>
+      manifest.location('IndexRoute', fragment: fragment);
+
   late final rootPath = NavigationPath<DocsRoute>.createWith(
     coordinator: this,
     label: 'Root',
@@ -69,77 +282,83 @@ class DocsCoordinator extends Coordinator<DocsRoute> {
 
   @override
   Future<DocsRoute> parseRouteFromUri(Uri uri) async {
-    return switch (uri.pathSegments) {
-      [] => await () async {
-        await index.loadLibrary();
-        return index.IndexRoute();
-      }(),
-      ['docs', 'concepts', 'routes-and-paths'] => await () async {
+    final match = routeManifest.match(uri);
+    if (match == null) {
+      return NotFoundRoute(uri: uri, queries: uri.queryParameters);
+    }
+    return switch (match.id) {
+      'RoutesAndPathsRoute' => await () async {
         await docs_concepts_routesandpaths.loadLibrary();
         return docs_concepts_routesandpaths.RoutesAndPathsRoute();
       }(),
-      ['docs', 'concepts', 'stack-management'] => await () async {
+      'StackManagementRoute' => await () async {
         await docs_concepts_stackmanagement.loadLibrary();
         return docs_concepts_stackmanagement.StackManagementRoute();
       }(),
-      ['docs', 'concepts', 'uri-parsing'] => await () async {
+      'UriParsingRoute' => await () async {
         await docs_concepts_uriparsing.loadLibrary();
         return docs_concepts_uriparsing.UriParsingRoute();
       }(),
-      ['docs', 'file-routing', 'conventions'] => await () async {
+      'ConventionsRoute' => await () async {
         await docs_filerouting_conventions.loadLibrary();
         return docs_filerouting_conventions.ConventionsRoute();
       }(),
-      ['docs', 'file-routing', 'deferred-imports'] => DeferredImportsRoute(),
-      ['docs', 'file-routing', 'dynamic-routes'] => await () async {
+      'DeferredImportsRoute' => DeferredImportsRoute(),
+      'DynamicRoutesRoute' => await () async {
         await docs_filerouting_dynamicroutes.loadLibrary();
         return docs_filerouting_dynamicroutes.DynamicRoutesRoute();
       }(),
-      ['docs', 'file-routing', 'getting-started'] => await () async {
+      'GettingStartedRoute' => await () async {
         await docs_filerouting_gettingstarted.loadLibrary();
         return docs_filerouting_gettingstarted.GettingStartedRoute();
       }(),
-      ['docs', 'paradigms', 'choosing'] => await () async {
+      'ChoosingRoute' => await () async {
         await docs_paradigms_choosing.loadLibrary();
         return docs_paradigms_choosing.ChoosingRoute();
       }(),
-      ['docs', 'paradigms', 'coordinator'] => await () async {
+      'CoordinatorRoute' => await () async {
         await docs_paradigms_coordinator.loadLibrary();
         return docs_paradigms_coordinator.CoordinatorRoute();
       }(),
-      ['docs', 'paradigms', 'declarative'] => await () async {
+      'DeclarativeRoute' => await () async {
         await docs_paradigms_declarative.loadLibrary();
         return docs_paradigms_declarative.DeclarativeRoute();
       }(),
-      ['docs', 'paradigms', 'imperative'] => await () async {
+      'ImperativeRoute' => await () async {
         await docs_paradigms_imperative.loadLibrary();
         return docs_paradigms_imperative.ImperativeRoute();
       }(),
-      ['docs', 'patterns', 'deep-linking'] => await () async {
+      'DeepLinkingRoute' => await () async {
         await docs_patterns_deeplinking.loadLibrary();
         return docs_patterns_deeplinking.DeepLinkingRoute();
       }(),
-      ['docs', 'patterns', 'guards-redirects'] => await () async {
+      'GuardsRedirectsRoute' => await () async {
         await docs_patterns_guardsredirects.loadLibrary();
         return docs_patterns_guardsredirects.GuardsRedirectsRoute();
       }(),
-      ['docs', 'patterns', 'layouts'] => await () async {
+      'LayoutsRoute' => await () async {
         await docs_patterns_layouts.loadLibrary();
         return docs_patterns_layouts.LayoutsRoute();
       }(),
-      ['docs', 'patterns', 'query-parameters'] => await () async {
+      'QueryParametersRoute' => await () async {
         await docs_patterns_queryparameters.loadLibrary();
         return docs_patterns_queryparameters.QueryParametersRoute(
           queries: uri.queryParameters,
         );
       }(),
-      ['docs', 'examples', final slug] => await () async {
+      'ExamplesSlugRoute' => await () async {
         await docs_examples__slug_index.loadLibrary();
-        return docs_examples__slug_index.ExamplesSlugRoute(slug: slug);
+        return docs_examples__slug_index.ExamplesSlugRoute(
+          slug: match.pathParameters['slug']!,
+        );
       }(),
-      ['docs'] => await () async {
+      'DocsIndexRoute' => await () async {
         await docs_index.loadLibrary();
         return docs_index.DocsIndexRoute();
+      }(),
+      'IndexRoute' => await () async {
+        await index.loadLibrary();
+        return index.IndexRoute();
       }(),
       _ => NotFoundRoute(uri: uri, queries: uri.queryParameters),
     };

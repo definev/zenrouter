@@ -297,6 +297,17 @@ void main() {
 
         expect(segments, ['settings', 'profile']);
       });
+
+      test('normalizes dynamic and rest segments in layout paths', () {
+        expect(PathParser.parseLayoutPath('teams/[teamId]/_layout.dart'), [
+          'teams',
+          ':teamId',
+        ]);
+        expect(PathParser.parseLayoutPath('docs/[...slugs]/_layout.dart'), [
+          'docs',
+          '...:slugs',
+        ]);
+      });
     });
   });
 }

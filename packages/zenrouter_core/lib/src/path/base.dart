@@ -2,7 +2,7 @@
 
 import 'dart:async';
 
-import 'package:meta/meta.dart' show protected, mustCallSuper;
+import 'package:meta/meta.dart' show internal, protected, mustCallSuper;
 import 'package:zenrouter_core/src/contracts/mutatable.dart';
 import 'package:zenrouter_core/src/coordinator/base.dart';
 import 'package:zenrouter_core/src/internal/reactive.dart';

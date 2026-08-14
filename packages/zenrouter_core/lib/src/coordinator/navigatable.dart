@@ -11,7 +11,7 @@ mixin CoordinatorNavigatable<T extends RouteUri> on CoordinatorLayoutCore<T>
   /// If route exists in stack, pops back to it. Otherwise pushes new route.
   /// Used for browser back/forward navigation.
   @override
-  Future<void> navigate(T route) async {
+  Future<void> navigate(T route) => runNavigationTransaction(() async {
     final target = await RouteRedirect.resolve(route, this);
     if (target == null) return;
 
@@ -41,5 +41,5 @@ mixin CoordinatorNavigatable<T extends RouteUri> on CoordinatorLayoutCore<T>
       recordHistoryIntent(intent);
       await parentPath.navigate(target);
     }
-  }
+  });
 }

@@ -16,7 +16,7 @@ abstract class _$ProfileIdRoute extends AppRoute {
   _$ProfileIdRoute({required this.profileId});
 
   @override
-  Uri toUri() => Uri.parse('/profile/$profileId');
+  Uri toUri() => Uri(pathSegments: ['', 'profile', profileId]);
 
   @override
   List<Object?> get props => [profileId];

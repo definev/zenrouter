@@ -2,6 +2,7 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:glob/glob.dart';
+import 'package:zenrouter_core/zenrouter_core.dart';
 
 import 'package:zenrouter_file_annotation/zenrouter_file_annotation.dart';
 
@@ -11,10 +12,11 @@ typedef FileImportPath = (String path, bool isDeferred);
 ///
 /// This generator runs after all individual route generators and produces:
 /// - The AppRoute base class
-/// - The AppCoordinator class with parseRouteFromUri
+/// - The immutable RouteManifest and manifest-backed URI parser
 /// - Navigation path definitions
 /// - Layout registrations
 /// - Type-safe navigation extensions
+/// - Type-safe reverse-routing methods
 class CoordinatorGenerator implements Builder {
   /// Global deferred import configuration.
   /// When true, all routes will use deferred imports unless explicitly disabled.
@@ -150,13 +152,13 @@ class CoordinatorGenerator implements Builder {
     // Build the route tree
     var tree = _buildRouteTree(routes, layouts);
 
-    // Validate and enforce IndexedStack routes to be non-deferred
+    // Validate and enforce IndexedStack routes to be non-deferred.
     // This must happen BEFORE we build allFilePaths
-    _validateRouteConflicts(tree.routes);
     tree = RouteTreeInfo(
       routes: _validateIndexedStackDeferredImports(tree.routes, tree.layouts),
       layouts: tree.layouts,
     );
+    _validateRouteManifest(tree, coordinatorName);
 
     // Now build allFilePaths with correct deferred import flags
     final allFilePaths = <FileImportPath>[];
@@ -189,7 +191,6 @@ class CoordinatorGenerator implements Builder {
       coordinatorName,
       routeBaseName,
       routeBasePath,
-      routeFileMap,
     );
 
     // Format the generated code
@@ -486,36 +487,59 @@ class CoordinatorGenerator implements Builder {
     return true;
   }
 
-  /// Validate routes for duplicates and throw descriptive errors.
-  ///
-  /// Checks for duplicate routes (same path pattern).
-  /// Note: Static routes can coexist with dynamic routes - they will be
-  /// automatically ordered correctly (static before dynamic) by the sorting logic.
-  void _validateRouteConflicts(List<RouteInfo> routes) {
-    final pathPatterns = <String, List<RouteInfo>>{};
+  RouteManifest<String> _createRouteManifest(RouteTreeInfo tree, String name) {
+    return RouteManifest<String>(
+      name: name,
+      routes: [
+        for (final route in tree.routes)
+          RouteManifestRoute(
+            id: route.className,
+            path: _routePattern(route.pathSegments),
+            parentId: route.parentLayoutType,
+            queryParameters: route.queries ?? const [],
+            hasGuard: route.hasGuard,
+            hasRedirect: route.hasRedirect,
+            isDeferred: route.hasDeferredImport,
+            deepLinkStrategy: switch (route.deepLinkStrategy) {
+              DeeplinkStrategyType.replace => DeeplinkStrategy.replace,
+              DeeplinkStrategyType.push => DeeplinkStrategy.push,
+              DeeplinkStrategyType.custom => DeeplinkStrategy.custom,
+              null => null,
+            },
+          ),
+      ],
+      layouts: [
+        for (final layout in tree.layouts)
+          RouteManifestLayout(
+            id: layout.className,
+            path: _routePattern(layout.pathSegments),
+            parentId: layout.parentLayoutType,
+            kind: switch (layout.layoutType) {
+              LayoutType.stack => RouteManifestLayoutKind.stack,
+              LayoutType.indexed => RouteManifestLayoutKind.indexed,
+            },
+            indexedChildIds: layout.indexedRouteTypes,
+          ),
+      ],
+    );
+  }
 
-    // Group routes by path pattern
-    for (final route in routes) {
-      final pattern = route.pathSegments.join('/');
-      pathPatterns.putIfAbsent(pattern, () => []).add(route);
-    }
+  String _routePattern(List<String> segments) =>
+      segments.isEmpty ? '/' : '/${segments.join('/')}';
 
-    // Check for duplicate routes (same path pattern)
-    for (final entry in pathPatterns.entries) {
-      if (entry.value.length > 1) {
-        final duplicates = entry.value;
-        final filePaths = duplicates
-            .map((r) => r.filePath ?? 'unknown')
-            .join(', ');
-        final classNames = duplicates.map((r) => r.className).join(', ');
-        throw ArgumentError(
-          'Duplicate route pattern detected: /${entry.key}\n'
-          'Found ${duplicates.length} routes with the same path:\n'
-          '  Classes: $classNames\n'
-          '  Files: $filePaths\n'
-          'Please ensure each route has a unique path pattern.',
-        );
-      }
+  void _validateRouteManifest(RouteTreeInfo tree, String name) {
+    try {
+      _createRouteManifest(tree, name);
+    } on RouteManifestValidationException<String> catch (error) {
+      final routeSources = [
+        for (final route in tree.routes)
+          if (error.nodeIds.contains(route.className) && route.filePath != null)
+            '${route.className}: ${route.filePath}',
+      ];
+      throw StateError(
+        '${error.message}'
+        '${routeSources.isEmpty ? '' : '\n${routeSources.join('\n')}'}',
+      );
     }
   }
 
@@ -608,7 +632,6 @@ class CoordinatorGenerator implements Builder {
     String coordinatorName,
     String routeBaseName,
     String? routeBasePath,
-    Map<String, String> routeFileMap,
   ) {
     final deferredImports = allFilePaths.where((f) => f.$2);
 
@@ -678,6 +701,8 @@ class CoordinatorGenerator implements Builder {
       'class $coordinatorName extends Coordinator<$routeBaseName> {',
     );
 
+    _writeRouteManifest(buffer, tree, coordinatorName);
+
     // Generate navigation paths for layouts
     for (final layout in tree.layouts) {
       final pathFieldName = _getPathFieldName(layout.className);
@@ -720,13 +745,13 @@ class CoordinatorGenerator implements Builder {
     } else {
       buffer.writeln('  $routeBaseName parseRouteFromUri(Uri uri) {');
     }
-    buffer.writeln('    return switch (uri.pathSegments) {');
-
-    // Validate routes for conflicts before sorting
-    // Validate routes for duplicates (static/dynamic conflicts are allowed)
-    _validateRouteConflicts(tree.routes);
-    // Validate that routes in IndexedStack layouts cannot be deferred imports
-    _validateIndexedStackDeferredImports(tree.routes, tree.layouts);
+    buffer.writeln('    final match = routeManifest.match(uri);');
+    buffer.writeln('    if (match == null) {');
+    buffer.writeln(
+      '      return NotFoundRoute(uri: uri, queries: uri.queryParameters);',
+    );
+    buffer.writeln('    }');
+    buffer.writeln('    return switch (match.id) {');
 
     // Sort routes by specificity (more segments first, static before dynamic)
     // This ensures static routes come before dynamic routes, allowing both to coexist
@@ -750,31 +775,10 @@ class CoordinatorGenerator implements Builder {
         return a.dynamicSegmentCount - b.dynamicSegmentCount;
       });
 
-    // Root route
-    final rootRoute = sortedRoutes
-        .where((r) => r.pathSegments.isEmpty)
-        .firstOrNull;
-    if (rootRoute != null) {
-      final routeInstance = rootRoute.hasQueries
-          ? '${rootRoute.className}(queries: uri.queryParameters)'
-          : '${rootRoute.className}()';
-      if (rootRoute.hasDeferredImport) {
-        final relativePath = routeFileMap[rootRoute.className] ?? 'index.dart';
-        buffer.writeln(
-          '      [] => ${_wrapDeferredImportLoad(relativePath, routeInstance)},',
-        );
-      } else {
-        buffer.writeln('      [] => $routeInstance,');
-      }
-    }
-
-    // Other routes
+    // Manifest matching owns precedence; this switch only binds IDs to routes.
     for (final route in sortedRoutes) {
-      if (route.pathSegments.isEmpty) continue;
-
-      final pattern = _generateSwitchPattern(route);
-      final constructor = _generateConstructor(route);
-      buffer.writeln('      $pattern => $constructor,');
+      final constructor = _generateConstructorFromMatch(route);
+      buffer.writeln('      ${_dartString(route.className)} => $constructor,');
     }
 
     // Default not found
@@ -961,6 +965,123 @@ class CoordinatorGenerator implements Builder {
     return buffer.toString();
   }
 
+  void _writeRouteManifest(
+    StringBuffer buffer,
+    RouteTreeInfo tree,
+    String coordinatorName,
+  ) {
+    buffer.writeln('  /// Immutable application route topology.');
+    buffer.writeln(
+      '  static final RouteManifest<String> manifest = RouteManifest<String>(',
+    );
+    buffer.writeln('    name: ${_dartString(coordinatorName)},');
+    buffer.writeln('    routes: [');
+    for (final route in tree.routes) {
+      buffer.writeln('      RouteManifestRoute(');
+      buffer.writeln('        id: ${_dartString(route.className)},');
+      buffer.writeln(
+        '        path: ${_dartString(_routePattern(route.pathSegments))},',
+      );
+      if (route.parentLayoutType != null) {
+        buffer.writeln(
+          '        parentId: ${_dartString(route.parentLayoutType!)},',
+        );
+      }
+      if (route.hasQueries) {
+        buffer.writeln(
+          '        queryParameters: ${_dartStringList(route.queries!)},',
+        );
+      }
+      if (route.hasGuard) buffer.writeln('        hasGuard: true,');
+      if (route.hasRedirect) buffer.writeln('        hasRedirect: true,');
+      if (route.hasDeferredImport) {
+        buffer.writeln('        isDeferred: true,');
+      }
+      if (route.deepLinkStrategy != null) {
+        buffer.writeln(
+          '        deepLinkStrategy: '
+          'DeeplinkStrategy.${route.deepLinkStrategy!.name},',
+        );
+      }
+      buffer.writeln('      ),');
+    }
+    buffer.writeln('    ],');
+    buffer.writeln('    layouts: [');
+    for (final layout in tree.layouts) {
+      buffer.writeln('      RouteManifestLayout(');
+      buffer.writeln('        id: ${_dartString(layout.className)},');
+      buffer.writeln(
+        '        path: ${_dartString(_routePattern(layout.pathSegments))},',
+      );
+      if (layout.parentLayoutType != null) {
+        buffer.writeln(
+          '        parentId: ${_dartString(layout.parentLayoutType!)},',
+        );
+      }
+      buffer.writeln(
+        '        kind: RouteManifestLayoutKind.${layout.layoutType.name},',
+      );
+      if (layout.indexedRouteTypes.isNotEmpty) {
+        buffer.writeln(
+          '        indexedChildIds: '
+          '${_dartStringList(layout.indexedRouteTypes)},',
+        );
+      }
+      buffer.writeln('      ),');
+    }
+    buffer.writeln('    ],');
+    buffer.writeln('  );');
+    buffer.writeln();
+    buffer.writeln('  @override');
+    buffer.writeln('  RouteManifest<String> get routeManifest => manifest;');
+    buffer.writeln();
+
+    _writeRouteLinkMethods(buffer, tree);
+  }
+
+  void _writeRouteLinkMethods(StringBuffer buffer, RouteTreeInfo tree) {
+    buffer.writeln(
+      '  /// Type-safe reverse routing without constructing presentation routes.',
+    );
+    for (final route in tree.routes) {
+      final methodBase = _getBaseMethodName(route.className);
+      final methodName =
+          '${methodBase[0].toLowerCase()}${methodBase.substring(1)}Location';
+      final parameters = <String>[];
+      final pathEntries = <String>[];
+      final restEntries = <String>[];
+      for (final parameter in route.parameters) {
+        if (parameter.isRest) {
+          parameters.add('required List<String> ${parameter.name}');
+          restEntries.add('${_dartString(parameter.name)}: ${parameter.name}');
+        } else {
+          parameters.add('required String ${parameter.name}');
+          pathEntries.add('${_dartString(parameter.name)}: ${parameter.name}');
+        }
+      }
+      if (route.hasQueries) {
+        parameters.add('Map<String, String> queries = const {}');
+      }
+      parameters.add('String? fragment');
+
+      buffer.writeln('  static Uri $methodName({${parameters.join(', ')}}) =>');
+      buffer.writeln('      manifest.location(');
+      buffer.writeln('        ${_dartString(route.className)},');
+      if (pathEntries.isNotEmpty) {
+        buffer.writeln('        pathParameters: {${pathEntries.join(', ')}},');
+      }
+      if (restEntries.isNotEmpty) {
+        buffer.writeln('        restParameters: {${restEntries.join(', ')}},');
+      }
+      if (route.hasQueries) {
+        buffer.writeln('        queryParameters: queries,');
+      }
+      buffer.writeln('        fragment: fragment,');
+      buffer.writeln('      );');
+      buffer.writeln();
+    }
+  }
+
   String _getPathFieldName(String className) {
     var name = className;
     if (name.endsWith('Layout')) {
@@ -970,31 +1091,16 @@ class CoordinatorGenerator implements Builder {
     return '${name}Path';
   }
 
-  String _generateSwitchPattern(RouteInfo route) {
-    final parts = route.pathSegments
-        .map((segment) {
-          if (segment.startsWith('...:')) {
-            final paramName = segment.substring(4);
-            return '...final $paramName';
-          }
-          if (segment.startsWith(':')) {
-            final paramName = segment.substring(1);
-            return 'final $paramName';
-          }
-          return "'$segment'";
-        })
-        .join(', ');
-
-    return '[$parts]';
-  }
-
-  String _generateConstructor(RouteInfo route) {
+  String _generateConstructorFromMatch(RouteInfo route) {
     final args = <String>[];
     String routeInstance = '';
 
     // Add path parameters
     for (final param in route.parameters) {
-      args.add('${param.name}: ${param.name}');
+      final parameterMap = param.isRest ? 'restParameters' : 'pathParameters';
+      args.add(
+        '${param.name}: match.$parameterMap[${_dartString(param.name)}]!',
+      );
     }
 
     // Add query parameters only if route expects them
@@ -1014,6 +1120,19 @@ class CoordinatorGenerator implements Builder {
       return _wrapDeferredImportLoad(relativePath, routeInstance);
     }
     return routeInstance;
+  }
+
+  String _dartStringList(Iterable<String> values) =>
+      '[${values.map(_dartString).join(', ')}]';
+
+  String _dartString(String value) {
+    final escaped = value
+        .replaceAll(r'\', r'\\')
+        .replaceAll("'", r"\'")
+        .replaceAll(r'$', r'\$')
+        .replaceAll('\n', r'\n')
+        .replaceAll('\r', r'\r');
+    return "'$escaped'";
   }
 
   String _getBaseMethodName(String className) {

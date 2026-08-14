@@ -17,7 +17,8 @@ abstract class _$GuardsRedirectsRoute extends DocsRoute {
   Type? get layout => DocsLayout;
 
   @override
-  Uri toUri() => Uri.parse('/docs/patterns/guards-redirects');
+  Uri toUri() =>
+      Uri(pathSegments: ['', 'docs', 'patterns', 'guards-redirects']);
 
   @override
   List<Object?> get props => [];

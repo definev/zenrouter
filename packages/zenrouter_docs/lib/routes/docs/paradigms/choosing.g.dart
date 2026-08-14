@@ -17,7 +17,7 @@ abstract class _$ChoosingRoute extends DocsRoute {
   Type? get layout => DocsLayout;
 
   @override
-  Uri toUri() => Uri.parse('/docs/paradigms/choosing');
+  Uri toUri() => Uri(pathSegments: ['', 'docs', 'paradigms', 'choosing']);
 
   @override
   List<Object?> get props => [];

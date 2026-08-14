@@ -130,8 +130,8 @@ final resolution = await coordinator.resolveRoute(
 );
 
 switch (resolution) {
-  case MatchedRouteResolution(:final route, :final data):
-    // Render route with the server adapter and serialize data for hydration.
+  case MatchedRouteResolution(:final route, :final hydration):
+    // Render route and embed hydration?.encode() in the server response.
   case RedirectRouteResolution(:final location, :final statusCode):
     // Return an HTTP redirect.
   case NotFoundRouteResolution(:final route):
@@ -144,6 +144,63 @@ switch (resolution) {
 Generated not-found routes implement `RouteNotFound`, preserve the originally
 requested URI, and therefore resolve with status 404 rather than becoming an
 ordinary `/not-found` navigation.
+
+`RouteRequest.cancellationToken` lets server loaders stop on client disconnect
+and lets the Flutter Router supersede unresolved route information. Redirect
+outcomes expose `createRedirectRequest()`, which applies the method/body rules
+for 301, 302, 303, 307, and 308 while preserving the cancellation token.
+
+Use `RouteHydrationPayload` for loader data that crosses the server/client seam.
+It validates and deep-freezes JSON-compatible values and carries a stable
+schema, version, and route URI.
+
+Coordinator mutations run through `runNavigationTransaction`. Nested path and
+layout changes publish one `NavigationCommit`; concurrent top-level mutations
+are serialized. `lastNavigationCommit` exposes the revision, previous/final
+URI, and browser-history intent to adapters and observability code.
+
+### Declarative route manifest
+
+`RouteManifest` is the adapter-neutral, immutable route graph shared by
+Flutter bindings, server adapters, tooling, and link generation. It owns path
+validation, deterministic matching, layout relationships, JSON serialization,
+and reverse routing.
+
+```dart
+enum AppRouteId { home, profile }
+
+final manifest = RouteManifest<AppRouteId>(
+  name: 'app',
+  idCodec: RouteIdCodec.enumValues(AppRouteId.values),
+  routes: [
+    RouteManifestRoute(id: AppRouteId.home, path: '/'),
+    RouteManifestRoute(
+      id: AppRouteId.profile,
+      path: '/profiles/:profileId',
+    ),
+  ],
+);
+
+final location = manifest.location(
+  AppRouteId.profile,
+  pathParameters: {'profileId': '42'},
+);
+
+final route = switch (manifest.match(location)) {
+  RouteManifestMatch(
+    id: AppRouteId.profile,
+    pathParameters: {'profileId': final profileId},
+  ) => ProfileRoute(profileId),
+  _ => NotFoundRoute(location),
+};
+```
+
+Equivalent or equally-specific overlapping patterns are rejected when the
+manifest is constructed. `encode()` and `RouteManifest.decode()` provide a
+versioned JSON representation for build tooling and devtools. `String` IDs use
+the built-in codec; enum and domain IDs use `RouteIdCodec` only at this
+serialization seam. Hand-written coordinators can override `routeManifest`;
+parser-only coordinators remain compatible through `RouteManifest.empty`.
 
 ---
 
@@ -505,6 +562,7 @@ export 'src/coordinator/base.dart';       // CoordinatorCore
 export 'src/coordinator/modular.dart';   // CoordinatorModular, RouteModule
 export 'src/path/base.dart';             // StackPath, PathKey, StackMutatable
 export 'src/path/navigatable.dart';       // StackNavigatable, NavigationPath
+export 'src/routing/manifest.dart';       // RouteManifest, RoutePattern
 
 // Mixins
 export 'src/mixin/target.dart';           // RouteTarget

@@ -17,7 +17,7 @@ abstract class _$LoginRoute extends AppRoute {
   Type? get layout => AuthLayout;
 
   @override
-  Uri toUri() => Uri.parse('/login');
+  Uri toUri() => Uri(pathSegments: ['', 'login']);
 
   @override
   List<Object?> get props => [];

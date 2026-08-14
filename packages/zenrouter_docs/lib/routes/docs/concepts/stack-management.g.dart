@@ -17,7 +17,8 @@ abstract class _$StackManagementRoute extends DocsRoute {
   Type? get layout => DocsLayout;
 
   @override
-  Uri toUri() => Uri.parse('/docs/concepts/stack-management');
+  Uri toUri() =>
+      Uri(pathSegments: ['', 'docs', 'concepts', 'stack-management']);
 
   @override
   List<Object?> get props => [];

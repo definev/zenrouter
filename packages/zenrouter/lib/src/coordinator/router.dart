@@ -57,7 +57,9 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
 
   final Coordinator<RouteUnique> coordinator;
 
-  Future<void> _routePathQueue = Future<void>.value();
+  Future<void> _commitQueue = Future<void>.value();
+  RouteCancellationToken? _pendingResolution;
+  int _routeGeneration = 0;
 
   @override
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -104,22 +106,47 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
   /// - Route layouts are determined at creation and don't change
   /// - Path types (NavigationPath vs IndexedStackPath) are static
   @override
-  Future<void> setNewRoutePath(Uri configuration) {
-    final operation = _routePathQueue.then(
-      (_) => _applyNewRoutePath(configuration),
+  Future<void> setNewRoutePath(Uri configuration) async {
+    final generation = ++_routeGeneration;
+    final cancellationToken = RouteCancellationToken();
+    _pendingResolution?.cancel(
+      'Superseded by route generation $generation ($configuration)',
     );
-    _routePathQueue = operation.then<void>((_) {}, onError: (_, _) {});
-    return operation;
+    _pendingResolution = cancellationToken;
+
+    try {
+      final resolved = await _resolveConfiguration(
+        configuration,
+        cancellationToken,
+      );
+      cancellationToken.throwIfCancelled();
+
+      final operation = _commitQueue.then((_) async {
+        cancellationToken.throwIfCancelled();
+        if (identical(_pendingResolution, cancellationToken)) {
+          _pendingResolution = null;
+        }
+        await _applyResolvedRoutePath(configuration, resolved);
+      });
+      _commitQueue = operation.then<void>((_) {}, onError: (_, _) {});
+      await operation;
+    } on RouteResolutionCancelled {
+      // Superseded route information is expected control flow, not a Router
+      // failure. The newest generation owns the next commit.
+    } finally {
+      if (identical(_pendingResolution, cancellationToken)) {
+        _pendingResolution = null;
+      }
+    }
   }
 
-  Future<void> _applyNewRoutePath(Uri configuration) async {
-    final resolved = await _resolveConfiguration(configuration);
+  Future<void> _applyResolvedRoutePath(
+    Uri configuration,
+    ({RouteUnique? route, bool redirected}) resolved,
+  ) async {
     final route = resolved.route;
 
-    await coordinator.withHistoryIntent(
-      resolved.redirected
-          ? NavigationHistoryIntent.replace
-          : NavigationHistoryIntent.traverse,
+    await coordinator.runNavigationTransaction(
       () async {
         assert(
           () {
@@ -148,28 +175,40 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
         );
         await coordinator.navigate(route!);
       },
+      historyIntent: resolved.redirected
+          ? NavigationHistoryIntent.replace
+          : NavigationHistoryIntent.traverse,
     );
   }
 
   Future<({RouteUnique? route, bool redirected})> _resolveConfiguration(
     Uri configuration,
+    RouteCancellationToken cancellationToken,
   ) async {
-    var current = configuration;
+    var request = RouteRequest.navigation(
+      configuration,
+      cancellationToken: cancellationToken,
+    );
     var redirected = false;
     final visited = <Uri>{};
 
-    while (visited.add(current)) {
-      final resolution = await coordinator.resolveRoute(
-        RouteRequest.navigation(current),
-      );
+    while (visited.add(request.uri)) {
+      cancellationToken.throwIfCancelled();
+      final resolution = await Future.any<RouteResolution<RouteUnique>>([
+        coordinator.resolveRoute(request),
+        cancellationToken.whenCancelled.then(
+          (reason) => throw RouteResolutionCancelled(reason),
+        ),
+      ]);
+      cancellationToken.throwIfCancelled();
       switch (resolution) {
         case MatchedRouteResolution(:final route):
           return (route: route, redirected: redirected);
         case NotFoundRouteResolution(:final route):
           return (route: route, redirected: redirected);
-        case RedirectRouteResolution(:final location):
+        case final RedirectRouteResolution resolution:
           redirected = true;
-          current = location;
+          request = resolution.createRedirectRequest();
         case ErrorRouteResolution(:final error, :final stackTrace):
           Error.throwWithStackTrace(error, stackTrace);
       }
@@ -190,6 +229,8 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
 
   @override
   void dispose() {
+    _pendingResolution?.cancel('Router delegate disposed');
+    _pendingResolution = null;
     coordinator.removeListener(notifyListeners);
     super.dispose();
   }
