@@ -496,16 +496,6 @@ class CoordinatorGenerator implements Builder {
             id: route.className,
             path: _routePattern(route.pathSegments),
             parentId: route.parentLayoutType,
-            queryParameters: route.queries ?? const [],
-            hasGuard: route.hasGuard,
-            hasRedirect: route.hasRedirect,
-            isDeferred: route.hasDeferredImport,
-            deepLinkStrategy: switch (route.deepLinkStrategy) {
-              DeeplinkStrategyType.replace => DeeplinkStrategy.replace,
-              DeeplinkStrategyType.push => DeeplinkStrategy.push,
-              DeeplinkStrategyType.custom => DeeplinkStrategy.custom,
-              null => null,
-            },
           ),
       ],
       layouts: [
@@ -985,22 +975,6 @@ class CoordinatorGenerator implements Builder {
       if (route.parentLayoutType != null) {
         buffer.writeln(
           '        parentId: ${_dartString(route.parentLayoutType!)},',
-        );
-      }
-      if (route.hasQueries) {
-        buffer.writeln(
-          '        queryParameters: ${_dartStringList(route.queries!)},',
-        );
-      }
-      if (route.hasGuard) buffer.writeln('        hasGuard: true,');
-      if (route.hasRedirect) buffer.writeln('        hasRedirect: true,');
-      if (route.hasDeferredImport) {
-        buffer.writeln('        isDeferred: true,');
-      }
-      if (route.deepLinkStrategy != null) {
-        buffer.writeln(
-          '        deepLinkStrategy: '
-          'DeeplinkStrategy.${route.deepLinkStrategy!.name},',
         );
       }
       buffer.writeln('      ),');

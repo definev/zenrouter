@@ -27,6 +27,7 @@ import 'package:zenrouter_core/src/routing/manifest.dart';
 /// - Define paths: Override [paths] for nested navigation
 /// - Register layouts: Override [defineLayout] for layout constructors
 /// - Register converters: Override [defineConverter] for restorable converters
+/// - Contribute topology: Override [routeManifest] or [routeManifestFragment]
 abstract class RouteModule<T extends RouteUri> {
   RouteModule._(this.coordinator);
 
@@ -49,6 +50,15 @@ abstract class RouteModule<T extends RouteUri> {
   /// Hand-written modules may remain parser-only during migration. Generated
   /// modules override this getter with their immutable route manifest.
   RouteManifest<Object> get routeManifest => RouteManifest.empty;
+
+  /// Declarative topology contributed to an owning modular coordinator.
+  ///
+  /// Complete module manifests are exposed as fragments automatically.
+  /// Override this getter directly when the contribution references layouts or
+  /// indexed children declared by another module; the owning coordinator will
+  /// validate those relationships after composing the application graph.
+  RouteManifestFragment<Object> get routeManifestFragment =>
+      routeManifest.fragment;
 
   /// Parses a URI and returns a route if this module handles it.
   ///
@@ -77,12 +87,47 @@ abstract class RouteModule<T extends RouteUri> {
 /// 2. Route parsing: Modules are checked in order until one matches
 /// 3. Path aggregation: All module paths are combined into coordinator paths
 /// 4. Layout/converter delegation: Each module's define methods are called
+/// 5. Manifest composition: Nested fragments are flattened and validated once
 mixin CoordinatorModular<T extends RouteUri> on CoordinatorCore<T> {
   late final List<RouteModule<T>> _moduleList = List.unmodifiable(
     defineModules(),
   );
 
   late final Map<Type, RouteModule<T>> _modules = _indexModules(_moduleList);
+
+  /// Stable diagnostic name for the composed application manifest.
+  ///
+  /// Override when a specific name is required in serialized tooling output.
+  String get routeManifestName => runtimeType.toString();
+
+  /// Topology owned directly by this coordinator, excluding child modules.
+  ///
+  /// Modular coordinators should override this seam instead of
+  /// [routeManifest], which is the fully composed graph.
+  RouteManifestFragment<Object> get localRouteManifestFragment =>
+      super.routeManifest.fragment;
+
+  Iterable<RouteManifestFragment<Object>> get _routeManifestFragments sync* {
+    final local = localRouteManifestFragment;
+    if (!local.isEmpty) yield local;
+    for (final module in _moduleList) {
+      if (module case CoordinatorModular modular) {
+        yield* modular._routeManifestFragments.cast();
+      } else {
+        final fragment = module.routeManifestFragment;
+        if (!fragment.isEmpty) yield fragment;
+      }
+    }
+  }
+
+  /// Fully composed route topology for this coordinator and all nested
+  /// modules. Graph relationships and ambiguous paths are validated here.
+  @override
+  late final RouteManifest<Object> routeManifest =
+      RouteManifest<Object>.fromFragments(
+        name: routeManifestName,
+        fragments: _routeManifestFragments,
+      );
 
   Map<Type, RouteModule<T>> _indexModules(Iterable<RouteModule<T>> modules) {
     final indexed = <Type, RouteModule<T>>{};

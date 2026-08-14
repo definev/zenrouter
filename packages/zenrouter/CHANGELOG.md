@@ -22,12 +22,18 @@
   `RouteTarget` instances without putting Flutter types in the manifest.
 - **Typed handwritten manifests**: coordinators may narrow the manifest ID to
   an enum or domain type and bind routes with Dart object patterns.
+- **Modular manifest composition**: `CoordinatorModular` now exposes one root
+  graph assembled from local and nested `RouteModule` manifests. Cross-module
+  layout relationships and URI conflicts are validated after composition.
+- **Codegen-free Coordinator bindings**: `CoordinatorRouteBinding` connects a
+  validated `RouteBindingRegistry` to `routeManifest`, URI parsing, Flutter
+  Router resolution, and typed not-found handling.
 - **Compose-your-own coordinator** (via `zenrouter_core`): mix only the
   capabilities you need. `CoordinatorView.initialUri` asserts in debug when
   the host lacks `CoordinatorNavigatable`.
 - **`defineDeeplinkHandler`**: pluggable deep-link strategy handlers on
   `CoordinatorRecoverable`.
-- **`recoverRouteFromUri`**: restored as a method on `CoordinatorRecoverable`
+- **`recoverUri`**: parses a URI and recovers it on `CoordinatorRecoverable`
   (`parseRouteFromUri` → `recover`).
 - **Correct browser history intent**: push/replace/traversal is mapped to
   Flutter's navigate/neglect/automatic reporting by

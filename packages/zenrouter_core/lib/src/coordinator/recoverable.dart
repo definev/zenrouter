@@ -90,17 +90,64 @@ mixin CoordinatorRecoverable<T extends RouteUri>
     }
   }
 
-  /// Parses [uri] via [parseRouteFromUri] then calls [recover].
-  ///
-  /// Throws [StateError] if [parseRouteFromUri] returns `null`.
-  Future<void> recoverRouteFromUri(Uri uri) async {
+}
+
+/// Location-based convenience operations for a fully capable coordinator.
+///
+/// Each operation parses [location] into a route before delegating to the
+/// corresponding route-based coordinator operation. This keeps locations
+/// adapter-neutral while allowing route bindings to perform asynchronous work,
+/// including deferred-library loading, before navigation mutates the stack.
+extension CoordinatorUriActions<T extends RouteUri>
+    on CoordinatorRecoverable<T> {
+  Future<T> _requireRouteFromUri(Uri uri) async {
     final route = await parseRouteFromUri(uri);
     if (route == null) {
       throw StateError(
-        'If you want to use coordinator deeplink feature, you must return '
-        'route from [parseRouteFromUri]',
+        'Cannot navigate to $uri because [parseRouteFromUri] returned null',
       );
     }
-    return recover(route);
+    return route;
+  }
+
+  /// Parses [uri] and navigates to the resulting route.
+  Future<void> navigateUri(Uri uri) async {
+    await navigate(await _requireRouteFromUri(uri));
+  }
+
+  /// Parses [uri], pushes the resulting route, and waits for its result.
+  Future<R?> pushUri<R extends Object>(Uri uri) async {
+    return push<R>(await _requireRouteFromUri(uri));
+  }
+
+  /// Parses [uri] and pushes the resulting route without waiting for pop.
+  Future<void> pushSilentlyUri(Uri uri) async {
+    await pushSilently(await _requireRouteFromUri(uri));
+  }
+
+  /// Parses [uri] and replaces the current navigation state with it.
+  Future<void> replaceUri(Uri uri) async {
+    await replace(await _requireRouteFromUri(uri));
+  }
+
+  /// Parses [uri] and recovers it using its deep-link strategy.
+  Future<void> recoverUri(Uri uri) async {
+    await recover(await _requireRouteFromUri(uri));
+  }
+
+  /// Parses [uri] and replaces the current route with the resulting route.
+  Future<R?> pushReplacementUri<R extends Object, RO extends Object>(
+    Uri uri, {
+    RO? result,
+  }) async {
+    return pushReplacement<R, RO>(
+      await _requireRouteFromUri(uri),
+      result: result,
+    );
+  }
+
+  /// Parses [uri] and pushes the route, or moves it to the top if present.
+  Future<void> pushOrMoveToTopUri(Uri uri) async {
+    await pushOrMoveToTop(await _requireRouteFromUri(uri));
   }
 }

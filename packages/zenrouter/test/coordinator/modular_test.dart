@@ -91,12 +91,34 @@ class NotFoundRoute extends AppRoute {
   List<Object?> get props => [uri];
 }
 
+enum AppManifestId { home }
+
+enum AuthManifestId { login, register }
+
+enum ShopManifestId { home, product }
+
+enum SettingsManifestId { settings }
+
+enum SharedFragmentId { shell, account }
+
 // ============================================================================
 // Test Modules
 // ============================================================================
 
 class AuthModule extends RouteModule<AppRoute> {
   AuthModule(super.coordinator);
+
+  static final manifest = RouteManifest<AuthManifestId>(
+    name: 'auth',
+    idCodec: RouteIdCodec.enumValues(AuthManifestId.values),
+    routes: [
+      RouteManifestRoute(id: AuthManifestId.login, path: '/auth/login'),
+      RouteManifestRoute(id: AuthManifestId.register, path: '/auth/register'),
+    ],
+  );
+
+  @override
+  RouteManifest<AuthManifestId> get routeManifest => manifest;
 
   @override
   FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
@@ -115,6 +137,21 @@ class AuthModule extends RouteModule<AppRoute> {
 
 class ShopModule extends RouteModule<AppRoute> {
   ShopModule(super.coordinator);
+
+  static final manifest = RouteManifest<ShopManifestId>(
+    name: 'shop',
+    idCodec: RouteIdCodec.enumValues(ShopManifestId.values),
+    routes: [
+      RouteManifestRoute(id: ShopManifestId.home, path: '/shop'),
+      RouteManifestRoute(
+        id: ShopManifestId.product,
+        path: '/shop/products/:id',
+      ),
+    ],
+  );
+
+  @override
+  RouteManifest<ShopManifestId> get routeManifest => manifest;
 
   late final NavigationPath<AppRoute> shopPath = NavigationPath.createWith(
     label: 'shop',
@@ -136,6 +173,17 @@ class ShopModule extends RouteModule<AppRoute> {
 
 class SettingsModule extends RouteModule<AppRoute> {
   SettingsModule(super.coordinator);
+
+  static final manifest = RouteManifest<SettingsManifestId>(
+    name: 'settings',
+    idCodec: RouteIdCodec.enumValues(SettingsManifestId.values),
+    routes: [
+      RouteManifestRoute(id: SettingsManifestId.settings, path: '/settings'),
+    ],
+  );
+
+  @override
+  RouteManifest<SettingsManifestId> get routeManifest => manifest;
 
   late final NavigationPath<AppRoute> settingsPath = NavigationPath.createWith(
     label: 'settings',
@@ -211,6 +259,74 @@ class ErrorModule extends RouteModule<AppRoute> {
   void defineLayout() {}
 }
 
+class ShellFragmentModule extends RouteModule<AppRoute> {
+  ShellFragmentModule(super.coordinator);
+
+  @override
+  RouteManifestFragment<SharedFragmentId> get routeManifestFragment =>
+      RouteManifestFragment(
+        name: 'shell-fragment',
+        idCodec: RouteIdCodec.enumValues(SharedFragmentId.values),
+        layouts: [
+          RouteManifestLayout(
+            id: SharedFragmentId.shell,
+            path: '/account',
+            kind: RouteManifestLayoutKind.stack,
+          ),
+        ],
+      );
+
+  @override
+  FutureOr<AppRoute?> parseRouteFromUri(Uri uri) => null;
+}
+
+class AccountFragmentModule extends RouteModule<AppRoute> {
+  AccountFragmentModule(super.coordinator);
+
+  @override
+  RouteManifestFragment<SharedFragmentId> get routeManifestFragment =>
+      RouteManifestFragment(
+        name: 'account-fragment',
+        idCodec: RouteIdCodec.enumValues(SharedFragmentId.values),
+        routes: [
+          RouteManifestRoute(
+            id: SharedFragmentId.account,
+            path: '/account/profile',
+            parentId: SharedFragmentId.shell,
+          ),
+        ],
+      );
+
+  @override
+  FutureOr<AppRoute?> parseRouteFromUri(Uri uri) => null;
+}
+
+class FirstConflictingManifestModule extends RouteModule<AppRoute> {
+  FirstConflictingManifestModule(super.coordinator);
+
+  @override
+  RouteManifest<String> get routeManifest => RouteManifest(
+    name: 'first-conflict',
+    routes: [RouteManifestRoute(id: 'first-id', path: '/users/:id')],
+  );
+
+  @override
+  FutureOr<AppRoute?> parseRouteFromUri(Uri uri) => null;
+}
+
+class SecondConflictingManifestModule extends RouteModule<AppRoute> {
+  SecondConflictingManifestModule(super.coordinator);
+
+  @override
+  RouteManifest<String> get routeManifest => RouteManifest(
+    name: 'second-conflict',
+    routes: [RouteManifestRoute(id: 'second-name', path: '/users/:name')],
+  );
+
+  @override
+  FutureOr<AppRoute?> parseRouteFromUri(Uri uri) => null;
+}
+
 // ============================================================================
 // Test Layouts
 // ============================================================================
@@ -234,6 +350,14 @@ class ShopLayout extends AppRoute with RouteLayout<AppRoute> {
 
 class AppCoordinator extends Coordinator<AppRoute>
     with CoordinatorModular<AppRoute> {
+  @override
+  RouteManifestFragment<AppManifestId> get localRouteManifestFragment =>
+      RouteManifestFragment(
+        name: 'app',
+        idCodec: RouteIdCodec.enumValues(AppManifestId.values),
+        routes: [RouteManifestRoute(id: AppManifestId.home, path: '/')],
+      );
+
   @override
   Set<RouteModule<AppRoute>> defineModules() => {
     AuthModule(this),
@@ -294,6 +418,30 @@ class DuplicateModulesCoordinator extends Coordinator<AppRoute>
     AuthModule(this),
     AuthModule(this),
   ];
+
+  @override
+  AppRoute notFoundRoute(Uri uri) => NotFoundRoute(uri: uri);
+}
+
+class FragmentModulesCoordinator extends Coordinator<AppRoute>
+    with CoordinatorModular<AppRoute> {
+  @override
+  Set<RouteModule<AppRoute>> defineModules() => {
+    ShellFragmentModule(this),
+    AccountFragmentModule(this),
+  };
+
+  @override
+  AppRoute notFoundRoute(Uri uri) => NotFoundRoute(uri: uri);
+}
+
+class ConflictingManifestCoordinator extends Coordinator<AppRoute>
+    with CoordinatorModular<AppRoute> {
+  @override
+  Set<RouteModule<AppRoute>> defineModules() => {
+    FirstConflictingManifestModule(this),
+    SecondConflictingManifestModule(this),
+  };
 
   @override
   AppRoute notFoundRoute(Uri uri) => NotFoundRoute(uri: uri);
@@ -445,6 +593,88 @@ void main() {
         expect(
           () => coordinator.parseRouteFromUri(Uri.parse('/any')),
           throwsA(isA<Exception>()),
+        );
+      });
+    });
+
+    group('Route Manifest Composition', () {
+      test('composes local and module manifests into the root graph', () {
+        final coordinator = AppCoordinator();
+
+        expect(coordinator.routeManifest.nodes.length, 6);
+        expect(
+          coordinator.routeManifest.match(Uri.parse('/auth/login'))?.id,
+          AuthManifestId.login,
+        );
+        expect(
+          coordinator.routeManifest.match(Uri.parse('/shop/products/42'))?.id,
+          ShopManifestId.product,
+        );
+        expect(
+          coordinator.routeManifest.location(
+            ShopManifestId.product,
+            pathParameters: {'id': '42'},
+          ),
+          Uri.parse('/shop/products/42'),
+        );
+      });
+
+      test('keeps typed IDs ergonomic through the Object root graph', () {
+        final match = AppCoordinator().routeManifest.match(
+          Uri.parse('/auth/register'),
+        );
+
+        final isRegister = switch (match) {
+          RouteManifestMatch(id: AuthManifestId.register) => true,
+          _ => false,
+        };
+
+        expect(isRegister, isTrue);
+      });
+
+      test('round-trips the composed graph with scoped module codecs', () {
+        final manifest = AppCoordinator().routeManifest;
+        final decoded = RouteManifest<Object>.decode(
+          manifest.encode(),
+          idCodec: manifest.idCodec,
+        );
+
+        expect(decoded.match(Uri.parse('/'))?.id, AppManifestId.home);
+        expect(
+          decoded.match(Uri.parse('/settings'))?.id,
+          SettingsManifestId.settings,
+        );
+      });
+
+      test('preserves each module local typed manifest', () {
+        final coordinator = AppCoordinator();
+        final auth = coordinator.getModule<AuthModule>();
+
+        expect(
+          auth.routeManifest.match(Uri.parse('/auth/login'))?.id,
+          AuthManifestId.login,
+        );
+      });
+
+      test('resolves graph relationships declared across module fragments', () {
+        final manifest = FragmentModulesCoordinator().routeManifest;
+
+        expect(
+          manifest[SharedFragmentId.account]?.parentId,
+          SharedFragmentId.shell,
+        );
+        expect(
+          manifest.match(Uri.parse('/account/profile'))?.id,
+          SharedFragmentId.account,
+        );
+      });
+
+      test('rejects ambiguous patterns declared by different modules', () {
+        final coordinator = ConflictingManifestCoordinator();
+
+        expect(
+          () => coordinator.routeManifest,
+          throwsA(isA<RouteManifestValidationException>()),
         );
       });
     });

@@ -1239,7 +1239,7 @@ void main() {
       );
     });
 
-    testWidgets('recoverRouteFromUri navigates to parsed route', (
+    testWidgets('recoverUri navigates to parsed route', (
       tester,
     ) async {
       final coordinator = TestCoordinator();

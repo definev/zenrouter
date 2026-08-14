@@ -9,9 +9,10 @@ import 'package:zenrouter/zenrouter.dart';
 /// flutter run -t lib/main_route_manifest.dart
 /// ```
 ///
-/// This example is intentionally codegen-free. The manifest describes static
-/// topology, while [ManualManifestCoordinator.parseRouteFromUri] is the
-/// Flutter binding from manifest IDs to concrete route instances.
+/// This example is intentionally codegen-free. Three independently owned
+/// features contribute [RouteManifestFragment]s, then the coordinator composes
+/// them into one validated [RouteManifest]. The coordinator is the Flutter
+/// binding from manifest IDs to concrete route instances.
 void main() => runApp(const ManualManifestApp());
 
 final manualManifestCoordinator = ManualManifestCoordinator();
@@ -29,56 +30,91 @@ class ManualManifestApp extends StatelessWidget {
   }
 }
 
-enum ManualRouteId { home, profile, docs }
+/// In a real application these IDs and fragments can live in separate feature
+/// packages. Keeping their enum types separate prevents accidental coupling
+/// between feature-owned routes.
+enum AppShellRouteId { home }
 
-class ManualManifestCoordinator extends Coordinator<ManualManifestRoute> {
-  /// The graph is pure routing data: no Widget, BuildContext, or route factory.
-  static final manifest = RouteManifest<ManualRouteId>(
+enum AccountsRouteId { profile }
+
+enum KnowledgeBaseRouteId { article }
+
+final appShellManifestFragment = RouteManifestFragment<AppShellRouteId>(
+  name: 'app-shell',
+  idCodec: RouteIdCodec.enumValues(AppShellRouteId.values),
+  routes: [RouteManifestRoute(id: AppShellRouteId.home, path: '/')],
+);
+
+final accountsManifestFragment = RouteManifestFragment<AccountsRouteId>(
+  name: 'accounts',
+  idCodec: RouteIdCodec.enumValues(AccountsRouteId.values),
+  routes: [
+    RouteManifestRoute(
+      id: AccountsRouteId.profile,
+      path: '/profiles/:profileId',
+    ),
+  ],
+);
+
+final knowledgeBaseManifestFragment =
+    RouteManifestFragment<KnowledgeBaseRouteId>(
+      name: 'knowledge-base',
+      idCodec: RouteIdCodec.enumValues(KnowledgeBaseRouteId.values),
+      routes: [
+        RouteManifestRoute(
+          id: KnowledgeBaseRouteId.article,
+          path: '/docs/...:slugs',
+        ),
+      ],
+    );
+
+class ManualManifestCoordinator extends Coordinator<ManualManifestRoute>
+    with CoordinatorRouteBinding<ManualManifestRoute, Object> {
+  /// Composition validates duplicate IDs, ambiguous paths, and graph
+  /// relationships across all feature boundaries in one place.
+  static final manifest = RouteManifest<Object>.fromFragments(
     name: 'manual-manifest-example',
-    idCodec: RouteIdCodec.enumValues(ManualRouteId.values),
-    routes: [
-      RouteManifestRoute(id: ManualRouteId.home, path: '/'),
-      RouteManifestRoute(
-        id: ManualRouteId.profile,
-        path: '/profiles/:profileId',
-      ),
-      RouteManifestRoute(id: ManualRouteId.docs, path: '/docs/...:slugs'),
+    fragments: [
+      appShellManifestFragment,
+      accountsManifestFragment,
+      knowledgeBaseManifestFragment,
     ],
   );
 
+  /// Runtime presentation bindings replace a handwritten parser switch.
   @override
-  RouteManifest<ManualRouteId> get routeManifest => manifest;
-
-  /// Manual presentation binding. Codegen generates an equivalent switch.
-  @override
-  ManualManifestRoute parseRouteFromUri(Uri uri) {
-    return switch (routeManifest.match(uri)) {
-      RouteManifestMatch(id: ManualRouteId.home) => ManualHomeRoute(),
-      RouteManifestMatch(
-        id: ManualRouteId.profile,
-        pathParameters: {'profileId': final profileId},
-      ) =>
-        ManualProfileRoute(profileId: profileId),
-      RouteManifestMatch(
-        id: ManualRouteId.docs,
-        restParameters: {'slugs': final slugs},
-      ) =>
-        ManualDocsRoute(slugs: slugs),
-      null => ManualNotFoundRoute(uri),
-      _ => ManualNotFoundRoute(uri),
-    };
-  }
+  late final routeBindings = manifest.bind<ManualManifestRoute>(
+    bindings: () => <RouteBinding<Object, ManualManifestRoute>>[
+      RouteBinding<AppShellRouteId, ManualManifestRoute>(
+        id: AppShellRouteId.home,
+        create: (_) => ManualHomeRoute(),
+      ),
+      RouteBinding<AccountsRouteId, ManualManifestRoute>(
+        id: AccountsRouteId.profile,
+        create: (match) =>
+            ManualProfileRoute(profileId: match.pathParameters['profileId']!),
+      ),
+      RouteBinding<KnowledgeBaseRouteId, ManualManifestRoute>(
+        id: KnowledgeBaseRouteId.article,
+        create: (match) =>
+            ManualDocsRoute(slugs: match.restParameters['slugs']!),
+      ),
+    ],
+    notFound: ManualNotFoundRoute.new,
+  );
 
   /// Reverse routing uses the same patterns as forward matching.
-  static Uri homeLocation() => manifest.location(ManualRouteId.home);
+  static Uri homeLocation() => manifest.location(AppShellRouteId.home);
 
   static Uri profileLocation(String profileId) => manifest.location(
-    ManualRouteId.profile,
+    AccountsRouteId.profile,
     pathParameters: {'profileId': profileId},
   );
 
-  static Uri docsLocation(List<String> slugs) =>
-      manifest.location(ManualRouteId.docs, restParameters: {'slugs': slugs});
+  static Uri docsLocation(List<String> slugs) => manifest.location(
+    KnowledgeBaseRouteId.article,
+    restParameters: {'slugs': slugs},
+  );
 }
 
 abstract class ManualManifestRoute extends RouteTarget with RouteUnique {}
@@ -106,24 +142,23 @@ class ManualHomeRoute extends ManualManifestRoute {
         padding: const EdgeInsets.all(24),
         children: [
           const Text(
-            'No annotations, part files, or build_runner are used. Each button '
-            'builds a URI from the manifest, then resolves it through the same '
-            'manifest before creating a Flutter route.',
+            'The app shell, accounts, and knowledge-base features own separate '
+            'manifest fragments. The app composes them once, builds each URI '
+            'from the resulting manifest, and resolves it through that same '
+            'graph before creating a Flutter route.',
           ),
           const SizedBox(height: 24),
           ListTile(
             title: const Text('Dynamic profile route'),
             subtitle: Text(profileLocation.toString()),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () =>
-                unawaited(coordinator.recoverRouteFromUri(profileLocation)),
+            onTap: () => unawaited(coordinator.recoverUri(profileLocation)),
           ),
           ListTile(
             title: const Text('Catch-all documentation route'),
             subtitle: Text(docsLocation.toString()),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () =>
-                unawaited(coordinator.recoverRouteFromUri(docsLocation)),
+            onTap: () => unawaited(coordinator.recoverUri(docsLocation)),
           ),
           const Divider(),
           Text(

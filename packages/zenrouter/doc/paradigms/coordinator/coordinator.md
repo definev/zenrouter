@@ -594,7 +594,7 @@ Quick reference for `Coordinator`:
 | `pop()` | Pop from nearest dynamic path |
 | `replace(T)` | Wipe stack and replace with route |
 | `pushOrMoveToTop(T)` | Push or move route to top |
-| `recoverRouteFromUri(Uri)` | Handle deep link URI |
+| `recoverUri(Uri)` | Handle deep link URI |
 | `recover(T)` | Recover from a route (deeplink strategy) |
 | `defineDeeplinkHandler(strategy, handler)` | Override built-in deeplink behaviour |
 
@@ -883,7 +883,7 @@ adb shell am start -W -a android.intent.action.VIEW \\
 #### Flutter
 ```dart
 // In your code
-coordinator.recoverRouteFromUri(
+coordinator.recoverUri(
   Uri.parse('myapp://home/feed/123'),
 );
 ```

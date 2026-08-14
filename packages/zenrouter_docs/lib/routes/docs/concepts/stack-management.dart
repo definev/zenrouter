@@ -107,14 +107,14 @@ void onLogout() {
 
 ## recover: Deep Link Handling
 
-`recoverRouteFromUri` handles deep links. It parses a URI, constructs the navigation stack, and navigates to the target. This is what gets called when your app receives an external deep link.
+`recoverUri` handles deep links. It parses a URI, constructs the navigation stack, and navigates to the target. This is what gets called when your app receives an external deep link.
 
 The difference from `push` is that `recover` may reconstruct the entire navigation hierarchy to reach the target, ensuring that back navigation makes sense.
 
 ```dart
 // When app receives deep link: myapp://profile/user-123
 void handleDeepLink(Uri uri) {
-  coordinator.recoverRouteFromUri(uri);
+  coordinator.recoverUri(uri);
 }
 
 // The coordinator:
@@ -124,7 +124,7 @@ void handleDeepLink(Uri uri) {
 // 4. Navigates to the route
 
 // You can also recover programmatically
-coordinator.recoverRouteFromUri(
+coordinator.recoverUri(
   Uri.parse('/shop/product/abc123'),
 );
 ```

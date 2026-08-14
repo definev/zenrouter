@@ -14,11 +14,24 @@ validation, deterministic URI matching, serialization, and reverse routing.
 Route IDs are strongly typed in memory. A Route ID Codec maps them to stable
 string wire IDs only when the graph crosses the JSON seam.
 
+## Route Manifest Fragment
+
+An immutable contribution from one Route Module to the application Route
+Manifest. A fragment validates its local shape and ID uniqueness, while the
+owning modular coordinator validates cross-module parents, indexed children,
+cycles, and URI conflicts after composing the complete graph.
+
 ## Route Binding
 
 An adapter that maps a Route Manifest ID and matched parameters to a concrete
 Route Target. File-based routing generates Flutter bindings; future server
 adapters may bind the same manifest without importing Flutter.
+
+## Route Binding Registry
+
+The immutable, complete set of Route Bindings for one Route Manifest and Route
+Target type. Construction rejects duplicate, unknown, layout, and unbound route
+IDs. It owns manifest matching followed by sync or async Route Target creation.
 
 ## Navigation Commit
 

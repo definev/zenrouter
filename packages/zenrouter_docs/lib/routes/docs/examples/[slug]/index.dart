@@ -340,7 +340,7 @@ class LoginRoute extends AppRoute {
   void onLoginSuccess(AppCoordinator coordinator) {
     if (redirectTo != null) {
       // Return to intended destination
-      coordinator.recoverRouteFromUri(Uri.parse(redirectTo!));
+      coordinator.recoverUri(Uri.parse(redirectTo!));
     } else {
       // Default to home
       coordinator.replace(HomeRoute());

@@ -109,6 +109,10 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
   @override
   RouteManifest<Object> get routeManifest => RouteManifest.empty;
 
+  @override
+  RouteManifestFragment<Object> get routeManifestFragment =>
+      routeManifest.fragment;
+
   /// Defines the layout structure for this coordinator.
   ///
   /// This method is called during initialization. Override this to register
@@ -385,7 +389,8 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
 
   /// Parses a [Uri] into a route object.
   ///
-  /// Required override - this is how deep links and web URLs become routes.
+  /// Override directly for parser-based routing, or use a route-binding adapter
+  /// to derive parsing from a manifest and binding registry.
   @override
   FutureOr<T?> parseRouteFromUri(Uri uri);
 

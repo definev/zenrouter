@@ -2,6 +2,9 @@
 
 ### Breaking Changes
 
+- **Route manifests now describe topology only.** `RouteManifestRoute` no
+  longer duplicates query, guard, redirect, deferred-loading, or deep-link
+  metadata from concrete route implementations.
 - **Navigation operations moved out of `CoordinatorCore`** into composable
   capability mixins. `CoordinatorCore` is now a state container only
   (paths, URI parsing, layout-parent hooks).
@@ -11,7 +14,7 @@
   | `CoordinatorLayoutCore` | Layout-parent registration / hierarchy activation |
   | `CoordinatorNavigatable` | `navigate` |
   | `CoordinatorMutatable` | `push`, `pop`, `replace`, `pushReplacement`, `pushOrMoveToTop`, `tryPop` |
-  | `CoordinatorRecoverable` | `recover`, `recoverRouteFromUri`, `defineDeeplinkHandler` |
+  | `CoordinatorRecoverable` | `recover`, `recoverUri`, `defineDeeplinkHandler` |
 
   Flutter `Coordinator` still mixes all of them — existing apps that extend
   `Coordinator` need no code changes. Custom `CoordinatorCore` subclasses must
@@ -34,15 +37,26 @@
 - **Strongly typed manifest IDs** via `RouteManifest<I>` and
   `RouteIdCodec<I>`. `RouteManifestMatch.id` supports concise Dart object
   patterns while codecs keep strings isolated to the JSON seam.
-- **Manifest seam for route modules** via `RouteModule.routeManifest`.
-  Hand-written coordinators default to `RouteManifest.empty` for compatibility.
+- **Manifest seam for route modules** via `RouteModule.routeManifest` and
+  `RouteManifestFragment`. `CoordinatorModular` automatically flattens nested
+  fragments, validates the complete graph, preserves typed in-memory IDs, and
+  composes fragment-scoped JSON codecs. Hand-written parser-only coordinators
+  still default to `RouteManifest.empty` for compatibility.
+- **Runtime Route Bindings** via the validated `RouteBindingRegistry`.
+  `CoordinatorRouteBinding` and `RouteModuleBinding` provide manifest-backed
+  URI parsing without handwritten parser switches while supporting sync,
+  async, not-found, and heterogeneous typed-ID bindings.
+  `RouteManifest.bind<T>` builds a registry while inferring its ID type from
+  the manifest.
 - **Shared contracts** `Navigatable<T>` and `Mutatable<T>` implemented by both
   stack paths and coordinator mixins.
 - **`defineDeeplinkHandler`**: override built-in `DeeplinkStrategy` behaviour
   (`navigate` / `push` / `replace`). `custom` still uses
   `RouteDeepLink.deeplinkHandler`.
-- **`recoverRouteFromUri`**: convenience on `CoordinatorRecoverable` (parses
-  then recovers; throws if `parseRouteFromUri` returns null).
+- **URI-based coordinator actions**: `navigateUri`, `pushUri`,
+  `pushSilentlyUri`, `replaceUri`, `recoverUri`, `pushReplacementUri`, and
+  `pushOrMoveToTopUri` parse a URI before delegating to the corresponding route
+  operation.
 - **`markNeedRebuild`** on `CoordinatorCore`.
 - **`CoordinatorMutatable.pushOrMoveToTop`** now returns `Future<void>`
   (aligned with `StackMutatable`).

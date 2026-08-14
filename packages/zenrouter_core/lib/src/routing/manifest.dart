@@ -1,8 +1,6 @@
 import 'dart:collection';
 import 'dart:convert';
 
-import 'package:zenrouter_core/src/mixin/deeplink.dart';
-
 /// The navigation behavior of a layout declared in a [RouteManifest].
 enum RouteManifestLayoutKind { stack, indexed }
 
@@ -308,42 +306,15 @@ sealed class RouteManifestNode<I extends Object> {
   Map<String, Object?> toJson(RouteIdCodec<I> idCodec);
 }
 
-/// Static topology and routing metadata for one routable destination.
+/// Static topology for one routable destination.
 final class RouteManifestRoute<I extends Object> extends RouteManifestNode<I> {
-  RouteManifestRoute({
-    required super.id,
-    required super.path,
-    super.parentId,
-    Iterable<String> queryParameters = const [],
-    this.hasGuard = false,
-    this.hasRedirect = false,
-    this.isDeferred = false,
-    this.deepLinkStrategy,
-  }) : queryParameters = List.unmodifiable(queryParameters) {
-    final duplicates = _duplicates(this.queryParameters);
-    if (duplicates.isNotEmpty) {
-      throw ArgumentError(
-        'Duplicate query parameters: ${duplicates.join(', ')}',
-      );
-    }
-  }
-
-  final List<String> queryParameters;
-  final bool hasGuard;
-  final bool hasRedirect;
-  final bool isDeferred;
-  final DeeplinkStrategy? deepLinkStrategy;
+  RouteManifestRoute({required super.id, required super.path, super.parentId});
 
   @override
   Map<String, Object?> toJson(RouteIdCodec<I> idCodec) => {
     'id': _encodeId(idCodec, id),
     'path': path,
     if (parentId != null) 'parentId': _encodeId(idCodec, parentId as I),
-    if (queryParameters.isNotEmpty) 'queryParameters': queryParameters,
-    if (hasGuard) 'hasGuard': true,
-    if (hasRedirect) 'hasRedirect': true,
-    if (isDeferred) 'isDeferred': true,
-    if (deepLinkStrategy != null) 'deepLinkStrategy': deepLinkStrategy!.name,
   };
 }
 
@@ -387,12 +358,14 @@ final class RouteManifestLayout<I extends Object> extends RouteManifestNode<I> {
   };
 }
 
-/// Immutable declarative graph of every route and layout known to a router.
+/// An immutable contribution to a larger [RouteManifest].
 ///
-/// The manifest owns matching precedence, graph validation and reverse routing.
-/// Presentation adapters bind route IDs to concrete route/page constructors.
-final class RouteManifest<I extends Object> {
-  factory RouteManifest({
+/// A fragment validates its own shape and ID uniqueness, but deliberately
+/// leaves parent, indexed-child, and route-conflict validation to the composed
+/// manifest. This allows one route module to reference a layout declared by
+/// another module without weakening validation of the final application graph.
+final class RouteManifestFragment<I extends Object> {
+  factory RouteManifestFragment({
     required String name,
     Iterable<RouteManifestRoute<I>> routes = const [],
     Iterable<RouteManifestLayout<I>> layouts = const [],
@@ -404,17 +377,58 @@ final class RouteManifest<I extends Object> {
 
     final routeList = List<RouteManifestRoute<I>>.unmodifiable(routes);
     final layoutList = List<RouteManifestLayout<I>>.unmodifiable(layouts);
-    final nodes = <I, RouteManifestNode<I>>{};
-    for (final node in <RouteManifestNode<I>>[...layoutList, ...routeList]) {
-      final previous = nodes[node.id];
-      if (previous != null) {
-        throw RouteManifestValidationException(
-          'Duplicate route manifest ID ${node.id}',
-          nodeIds: [node.id],
-        );
-      }
-      nodes[node.id] = node;
-    }
+    final nodes = _indexManifestNodes(routeList, layoutList);
+    return RouteManifestFragment._(
+      name,
+      routeList,
+      layoutList,
+      UnmodifiableMapView(nodes),
+      _resolveIdCodec(idCodec),
+    );
+  }
+
+  RouteManifestFragment._(
+    this.name,
+    this.routes,
+    this.layouts,
+    this.nodes,
+    this.idCodec,
+  ) : _encodeObjectId = idCodec == null ? null : _eraseIdEncoder(idCodec),
+      _decodeObjectId = idCodec == null ? null : _eraseIdDecoder(idCodec);
+
+  final String name;
+  final List<RouteManifestRoute<I>> routes;
+  final List<RouteManifestLayout<I>> layouts;
+  final Map<I, RouteManifestNode<I>> nodes;
+
+  /// Codec for this fragment's local IDs when it crosses the JSON seam.
+  final RouteIdCodec<I>? idCodec;
+  final String Function(Object id)? _encodeObjectId;
+  final Object Function(String wireId)? _decodeObjectId;
+
+  bool get isEmpty => nodes.isEmpty;
+}
+
+/// Immutable declarative graph of every route and layout known to a router.
+///
+/// The manifest owns matching precedence, graph validation and reverse routing.
+/// Presentation adapters bind route IDs to concrete route/page constructors.
+final class RouteManifest<I extends Object> {
+  factory RouteManifest({
+    required String name,
+    Iterable<RouteManifestRoute<I>> routes = const [],
+    Iterable<RouteManifestLayout<I>> layouts = const [],
+    RouteIdCodec<I>? idCodec,
+  }) {
+    final fragment = RouteManifestFragment<I>(
+      name: name,
+      routes: routes,
+      layouts: layouts,
+      idCodec: idCodec,
+    );
+    final routeList = fragment.routes;
+    final layoutList = fragment.layouts;
+    final nodes = fragment.nodes;
 
     _validateRelationships(nodes, layoutList);
     _validateRouteConflicts(routeList);
@@ -425,9 +439,9 @@ final class RouteManifest<I extends Object> {
       name,
       routeList,
       layoutList,
-      UnmodifiableMapView(nodes),
+      nodes,
       List.unmodifiable(matchOrder),
-      _resolveIdCodec(idCodec),
+      fragment.idCodec,
     );
   }
 
@@ -444,17 +458,39 @@ final class RouteManifest<I extends Object> {
     required String name,
     required Iterable<RouteManifest<I>> manifests,
     RouteIdCodec<I>? idCodec,
+  }) => RouteManifest<I>.fromFragments(
+    name: name,
+    fragments: manifests.map((manifest) => manifest.fragment),
+    idCodec: idCodec,
+  );
+
+  /// Builds and validates one application graph from independently declared
+  /// fragments.
+  ///
+  /// Empty fragments are ignored. When every non-empty fragment has a codec,
+  /// the resulting manifest receives a composite codec. Non-String graphs
+  /// scope wire IDs by fragment name from the first fragment onward;
+  /// homogeneous String graphs preserve their existing wire IDs. Callers can
+  /// provide [idCodec] to use an application-specific wire format instead.
+  factory RouteManifest.fromFragments({
+    required String name,
+    required Iterable<RouteManifestFragment<I>> fragments,
+    RouteIdCodec<I>? idCodec,
   }) {
-    final manifestList = manifests.toList(growable: false);
-    RouteIdCodec<I>? inheritedIdCodec;
-    for (final manifest in manifestList) {
-      inheritedIdCodec ??= manifest._idCodec;
-    }
+    final fragmentList = fragments
+        .where((fragment) => !fragment.isEmpty)
+        .toList(growable: false);
     return RouteManifest<I>(
       name: name,
-      routes: [for (final manifest in manifestList) ...manifest.routes],
-      layouts: [for (final manifest in manifestList) ...manifest.layouts],
-      idCodec: idCodec ?? inheritedIdCodec,
+      routes: [
+        for (final fragment in fragmentList)
+          for (final route in fragment.routes) _copyManifestRoute<I>(route),
+      ],
+      layouts: [
+        for (final fragment in fragmentList)
+          for (final layout in fragment.layouts) _copyManifestLayout<I>(layout),
+      ],
+      idCodec: idCodec ?? _composeFragmentCodecs(fragmentList),
     );
   }
 
@@ -519,6 +555,13 @@ final class RouteManifest<I extends Object> {
   final Map<I, RouteManifestNode<I>> nodes;
   final List<RouteManifestRoute<I>> _matchOrder;
   final RouteIdCodec<I>? _idCodec;
+
+  /// Codec used by this graph at the JSON serialization seam, when available.
+  RouteIdCodec<I>? get idCodec => _idCodec;
+
+  /// A contribution view that can be composed into a larger application graph.
+  RouteManifestFragment<I> get fragment =>
+      RouteManifestFragment._(name, routes, layouts, nodes, _idCodec);
 
   RouteManifestNode<I>? operator [](I id) => nodes[id];
 
@@ -633,6 +676,42 @@ final class UnsupportedRouteManifestVersion implements Exception {
   @override
   String toString() => 'Unsupported route manifest version: $version';
 }
+
+Map<I, RouteManifestNode<I>> _indexManifestNodes<I extends Object>(
+  List<RouteManifestRoute<I>> routes,
+  List<RouteManifestLayout<I>> layouts,
+) {
+  final nodes = <I, RouteManifestNode<I>>{};
+  for (final node in <RouteManifestNode<I>>[...layouts, ...routes]) {
+    final previous = nodes[node.id];
+    if (previous != null) {
+      throw RouteManifestValidationException(
+        'Duplicate route manifest ID ${node.id}',
+        nodeIds: [node.id],
+      );
+    }
+    nodes[node.id] = node;
+  }
+  return nodes;
+}
+
+RouteManifestRoute<I> _copyManifestRoute<I extends Object>(
+  RouteManifestRoute<I> route,
+) => RouteManifestRoute<I>(
+  id: route.id,
+  path: route.path,
+  parentId: route.parentId,
+);
+
+RouteManifestLayout<I> _copyManifestLayout<I extends Object>(
+  RouteManifestLayout<I> layout,
+) => RouteManifestLayout<I>(
+  id: layout.id,
+  path: layout.path,
+  parentId: layout.parentId,
+  kind: layout.kind,
+  indexedChildIds: layout.indexedChildIds,
+);
 
 final class _RoutePatternMatch {
   const _RoutePatternMatch(this.parameters, this.restParameters);
@@ -850,28 +929,10 @@ String? _optionalString(Map<String, Object?> json, String key) {
   return value;
 }
 
-bool _optionalBool(Map<String, Object?> json, String key) {
-  final value = json[key];
-  if (value == null) return false;
-  if (value is! bool) {
-    throw FormatException('Route manifest $key must be a boolean');
-  }
-  return value;
-}
-
 RouteManifestRoute<I> _routeFromJson<I extends Object>(
   Map<String, Object?> json,
   RouteIdCodec<I> idCodec,
 ) {
-  final strategyName = _optionalString(json, 'deepLinkStrategy');
-  DeeplinkStrategy? strategy;
-  if (strategyName != null) {
-    try {
-      strategy = DeeplinkStrategy.values.byName(strategyName);
-    } on ArgumentError {
-      throw FormatException('Unknown deep-link strategy: $strategyName');
-    }
-  }
   return RouteManifestRoute<I>(
     id: idCodec.decode(_requiredString(json, 'id')),
     path: _requiredString(json, 'path'),
@@ -879,11 +940,6 @@ RouteManifestRoute<I> _routeFromJson<I extends Object>(
       final parentId? => idCodec.decode(parentId),
       null => null,
     },
-    queryParameters: _stringList(json, 'queryParameters'),
-    hasGuard: _optionalBool(json, 'hasGuard'),
-    hasRedirect: _optionalBool(json, 'hasRedirect'),
-    isDeferred: _optionalBool(json, 'isDeferred'),
-    deepLinkStrategy: strategy,
   );
 }
 
@@ -914,6 +970,77 @@ RouteIdCodec<I>? _resolveIdCodec<I extends Object>(RouteIdCodec<I>? idCodec) {
   if (idCodec != null) return idCodec;
   if (I == String) return RouteIdCodec.string as RouteIdCodec<I>;
   return null;
+}
+
+String Function(Object id) _eraseIdEncoder<I extends Object>(
+  RouteIdCodec<I> idCodec,
+) =>
+    (id) => _encodeId(idCodec, id as I);
+
+Object Function(String wireId) _eraseIdDecoder<I extends Object>(
+  RouteIdCodec<I> idCodec,
+) => idCodec.decode;
+
+RouteIdCodec<I>? _composeFragmentCodecs<I extends Object>(
+  List<RouteManifestFragment<I>> fragments,
+) {
+  if (fragments.isEmpty) return _resolveIdCodec<I>(null);
+  if (I == String) return RouteIdCodec.string as RouteIdCodec<I>;
+  if (fragments.any((fragment) => fragment.idCodec == null)) return null;
+
+  final fragmentsByScope = <String, RouteManifestFragment<I>>{};
+  final fragmentById = <I, RouteManifestFragment<I>>{};
+  for (final fragment in fragments) {
+    final previousScope = fragmentsByScope[fragment.name];
+    if (previousScope != null) {
+      throw RouteManifestValidationException(
+        'Duplicate route manifest fragment name ${fragment.name}',
+        nodeIds: [...previousScope.nodes.keys, ...fragment.nodes.keys],
+      );
+    }
+    fragmentsByScope[fragment.name] = fragment;
+    for (final id in fragment.nodes.keys) {
+      final previous = fragmentById[id];
+      if (previous != null) {
+        throw RouteManifestValidationException(
+          'Duplicate route manifest ID $id',
+          nodeIds: [id],
+        );
+      }
+      fragmentById[id] = fragment;
+    }
+  }
+
+  return RouteIdCodec<I>(
+    encode: (id) {
+      final fragment = fragmentById[id];
+      if (fragment == null) {
+        throw StateError('Unknown composed route manifest ID: $id');
+      }
+      final localWireId = fragment._encodeObjectId!(id);
+      return '${Uri.encodeComponent(fragment.name)}/'
+          '${Uri.encodeComponent(localWireId)}';
+    },
+    decode: (wireId) {
+      final separator = wireId.indexOf('/');
+      if (separator <= 0 || separator == wireId.length - 1) {
+        throw FormatException('Invalid scoped route manifest ID: $wireId');
+      }
+      final scope = Uri.decodeComponent(wireId.substring(0, separator));
+      final localWireId = Uri.decodeComponent(wireId.substring(separator + 1));
+      final fragment = fragmentsByScope[scope];
+      if (fragment == null) {
+        throw FormatException('Unknown route manifest fragment: $scope');
+      }
+      final id = fragment._decodeObjectId!(localWireId) as I;
+      if (!fragment.nodes.containsKey(id)) {
+        throw FormatException(
+          'Unknown route manifest ID $localWireId in fragment $scope',
+        );
+      }
+      return id;
+    },
+  );
 }
 
 String _encodeId<I extends Object>(RouteIdCodec<I> idCodec, I id) {
