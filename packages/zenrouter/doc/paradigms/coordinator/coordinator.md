@@ -595,6 +595,17 @@ Quick reference for `Coordinator`:
 | `replace(T)` | Wipe stack and replace with route |
 | `pushOrMoveToTop(T)` | Push or move route to top |
 | `recoverRouteFromUri(Uri)` | Handle deep link URI |
+| `recover(T)` | Recover from a route (deeplink strategy) |
+| `defineDeeplinkHandler(strategy, handler)` | Override built-in deeplink behaviour |
+
+Capability mixins (from `zenrouter_core`; `Coordinator` includes all of them):
+
+| Mixin | Role |
+|-------|------|
+| `CoordinatorLayoutCore` | Layout-parent activation |
+| `CoordinatorNavigatable` | `navigate` |
+| `CoordinatorMutatable` | `push` / `pop` / `replace` / … |
+| `CoordinatorRecoverable` | `recover` / deep links |
 
 | Property | Description |
 |----------|-------------|

@@ -33,7 +33,7 @@ zenrouter_core provides the **core abstractions** for implementing arbitrary rou
 
 ```yaml
 dependencies:
-  zenrouter_core: ^2.0.0
+  zenrouter_core: ^3.0.0
 ```
 
 ## Architecture
@@ -110,6 +110,40 @@ class AppCoordinator extends CoordinatorCore<AppRoute> {
 | `replace(route)` | Clears stack, sets single route |
 | `navigate(route)` | Smart navigation - pops to existing or pushes new |
 | `recover(route)` | Deep link handling with RouteDeepLink strategy |
+
+---
+
+### Route resolution for browser and server adapters
+
+`CoordinatorCore` implements `RouteResolver`. Existing coordinators are adapted
+through `parseRouteFromUri`, while applications that need SSR can override
+`resolveRoute` to use the full request and return status, headers, redirects,
+errors, and hydration data without importing Flutter.
+
+```dart
+final resolution = await coordinator.resolveRoute(
+  RouteRequest(
+    uri: request.uri,
+    method: request.method,
+    headers: request.headers,
+  ),
+);
+
+switch (resolution) {
+  case MatchedRouteResolution(:final route, :final data):
+    // Render route with the server adapter and serialize data for hydration.
+  case RedirectRouteResolution(:final location, :final statusCode):
+    // Return an HTTP redirect.
+  case NotFoundRouteResolution(:final route):
+    // Return HTTP 404 and optionally render route.
+  case ErrorRouteResolution(:final error, :final statusCode):
+    // Return an error response or render an error route.
+}
+```
+
+Generated not-found routes implement `RouteNotFound`, preserve the originally
+requested URI, and therefore resolve with status 404 rather than becoming an
+ordinary `/not-found` navigation.
 
 ---
 

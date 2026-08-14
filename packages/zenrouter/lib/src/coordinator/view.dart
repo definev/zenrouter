@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:zenrouter/src/coordinator/layout.dart';
 import 'package:zenrouter/zenrouter.dart';
 
 /// Headless coordinator host: builds [coordinator.layoutBuilder] without a
@@ -39,7 +38,17 @@ class _CoordinatorViewState<T extends RouteUri>
       widget.initialUri!,
     );
     if (route == null) return;
-    await widget.coordinator.navigate(route);
+
+    // coverage:ignore-start
+    assert(
+      widget.coordinator is CoordinatorNavigatable<T>,
+      'CoordinatorView.initialUri requires a coordinator that mixes in '
+      'CoordinatorNavigatable (e.g. Coordinator). Received '
+      '${widget.coordinator.runtimeType}.',
+    );
+    // coverage:ignore-end
+    final coordinator = widget.coordinator as CoordinatorNavigatable<T>;
+    await coordinator.navigate(route);
     // coverage:ignore-start
     if (mounted) setState(() {});
     // coverage:ignore-end

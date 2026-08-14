@@ -152,7 +152,7 @@ class TestCoordinator extends Coordinator<AppRoute> {
   List<StackPath> get paths => [...super.paths, tabStack];
 
   @override
-  AppRoute parseRouteFromUri(Uri uri) {
+  FutureOr<AppRoute> parseRouteFromUri(Uri uri) {
     final segments = uri.pathSegments;
     if (segments.isEmpty) return HomeRoute();
 
@@ -164,6 +164,37 @@ class TestCoordinator extends Coordinator<AppRoute> {
       ['tabs', 'home'] => HomeTab(),
       ['tabs', 'search'] => SearchTab(),
       _ => HomeRoute(),
+    };
+  }
+}
+
+class QueuedTestCoordinator extends TestCoordinator {
+  final firstParseGate = Completer<void>();
+  final parseOrder = <String>[];
+
+  @override
+  Future<AppRoute> parseRouteFromUri(Uri uri) async {
+    parseOrder.add(uri.path);
+    if (uri.path == '/settings') await firstParseGate.future;
+    return super.parseRouteFromUri(uri);
+  }
+}
+
+class ResolutionTestCoordinator extends TestCoordinator {
+  @override
+  Future<RouteResolution<AppRoute>> resolveRoute(RouteRequest request) async {
+    return switch (request.uri.path) {
+      '/legacy' => RedirectRouteResolution(
+        request: request,
+        location: Uri.parse('/settings'),
+        statusCode: 308,
+      ),
+      '/broken' => ErrorRouteResolution(
+        request: request,
+        error: StateError('resolution failed'),
+        stackTrace: StackTrace.current,
+      ),
+      _ => super.resolveRoute(request),
     };
   }
 }
@@ -321,6 +352,67 @@ void main() {
       expect(coordinator.root.stack.length, 2);
       expect(coordinator.root.stack.last, isA<SettingsRoute>());
       expect(find.text('Settings'), findsOneWidget);
+    });
+
+    test('serializes concurrent route-path commits in arrival order', () async {
+      final queuedCoordinator = QueuedTestCoordinator();
+
+      final first = queuedCoordinator.routerDelegate.setNewRoutePath(
+        Uri.parse('/settings'),
+      );
+      await pumpEventQueue();
+      final second = queuedCoordinator.routerDelegate.setNewRoutePath(
+        Uri.parse('/profile/2'),
+      );
+      await pumpEventQueue();
+
+      expect(queuedCoordinator.parseOrder, ['/settings']);
+
+      queuedCoordinator.firstParseGate.complete();
+      await first;
+      expect(queuedCoordinator.root.activeRoute, isA<SettingsRoute>());
+
+      await second;
+      expect(queuedCoordinator.parseOrder, ['/settings', '/profile/2']);
+      expect(
+        queuedCoordinator.root.activeRoute,
+        isA<ProfileRoute>().having((route) => route.id, 'id', '2'),
+      );
+
+      queuedCoordinator.dispose();
+    });
+
+    test('applies typed redirects with replace history intent', () async {
+      final resolutionCoordinator = ResolutionTestCoordinator();
+
+      await resolutionCoordinator.routerDelegate.setNewRoutePath(
+        Uri.parse('/legacy'),
+      );
+
+      expect(resolutionCoordinator.root.activeRoute, isA<SettingsRoute>());
+      expect(
+        resolutionCoordinator.consumeHistoryIntent(),
+        NavigationHistoryIntent.replace,
+      );
+      resolutionCoordinator.dispose();
+    });
+
+    test('propagates typed routing failures with their stack trace', () async {
+      final resolutionCoordinator = ResolutionTestCoordinator();
+
+      await expectLater(
+        resolutionCoordinator.routerDelegate.setNewRoutePath(
+          Uri.parse('/broken'),
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            'resolution failed',
+          ),
+        ),
+      );
+      resolutionCoordinator.dispose();
     });
   });
 

@@ -804,7 +804,9 @@ class CoordinatorGenerator implements Builder {
       buffer.writeln(
         '/// You can customize this by creating your own NotFoundRoute class.',
       );
-      buffer.writeln('class NotFoundRoute extends $routeBaseName {');
+      buffer.writeln(
+        'class NotFoundRoute extends $routeBaseName with RouteNotFound {',
+      );
       buffer.writeln('  final Uri uri;');
       buffer.writeln('  final Map<String, String> queries;');
       buffer.writeln();
@@ -817,7 +819,7 @@ class CoordinatorGenerator implements Builder {
       buffer.writeln('  String? query(String name) => queries[name];');
       buffer.writeln();
       buffer.writeln('  @override');
-      buffer.writeln("  Uri toUri() => Uri.parse('/not-found');");
+      buffer.writeln('  Uri toUri() => uri;');
       buffer.writeln();
       buffer.writeln('  @override');
       buffer.writeln('  List<Object?> get props => [uri, queries];');

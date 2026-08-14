@@ -51,6 +51,7 @@ Coming from another router? We have dedicated migration guides:
 4. [Coordinator as RouteModule Guide](guides/coordinator-as-module.md)
 5. [URL Strategies Recipe](recipes/url-strategies.md)
 6. [Route Versioning Recipe](recipes/route-versioning.md)
+7. [Web Navigation Backbone Technical Report](architecture/web-navigation-backbone-technical-report-vi.md)
 
 ### Embedded / Multi-Surface Apps
 1. [CoordinatorView Guide](guides/coordinator-view.md) — headless coordinator embeds (mini-apps, parallel panels)
@@ -98,6 +99,10 @@ Complete technical documentation:
 - [Navigation Paths](api/navigation-paths.md) - NavigationPath, IndexedStackPath
 - [Route Mixins](api/mixins.md) - Guards, redirects, transitions
 - [Coordinator API](api/coordinator.md) - Deep linking reference
+
+### 🏗️ Architecture Reports
+Design analysis, implementation decisions, and remaining technical risks:
+- [Web Navigation Backbone Technical Report](architecture/web-navigation-backbone-technical-report-vi.md) - SPA/SSR routing kernel, browser history, identity, URL, and lifecycle contracts
 
 ### 🎓 Paradigm Guides (Understanding-Oriented)
 Deep dives into each pattern:
@@ -149,6 +154,9 @@ zenrouter/
     │   ├── navigation-paths.md
     │   ├── mixins.md
     │   └── coordinator.md
+    │
+    ├── architecture/          # Design and technical reports
+    │   └── web-navigation-backbone-technical-report-vi.md
     │
     └── paradigms/             # Pattern deep dives
         ├── imperative.md

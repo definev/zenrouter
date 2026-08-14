@@ -65,6 +65,66 @@ void main() {
       expect(provider, isA<PlatformRouteInformationProvider>());
       expect(provider, isA<RouteInformationProvider>());
     });
+
+    test('maps coordinator history intent to Flutter reporting type', () {
+      expect(
+        CoordinatorRouteInformationProvider.resolveReportingType(
+          NavigationHistoryIntent.push,
+          RouteInformationReportingType.none,
+        ),
+        RouteInformationReportingType.navigate,
+      );
+      expect(
+        CoordinatorRouteInformationProvider.resolveReportingType(
+          NavigationHistoryIntent.replace,
+          RouteInformationReportingType.none,
+        ),
+        RouteInformationReportingType.neglect,
+      );
+      expect(
+        CoordinatorRouteInformationProvider.resolveReportingType(
+          NavigationHistoryIntent.traverse,
+          RouteInformationReportingType.navigate,
+        ),
+        RouteInformationReportingType.none,
+      );
+      expect(
+        CoordinatorRouteInformationProvider.resolveReportingType(
+          NavigationHistoryIntent.automatic,
+          RouteInformationReportingType.navigate,
+        ),
+        RouteInformationReportingType.navigate,
+      );
+    });
+
+    test('push and replace record explicit history intent', () async {
+      final coordinator = TestCoordinator();
+
+      await coordinator.replace(HomeRoute());
+      expect(
+        coordinator.consumeHistoryIntent(),
+        NavigationHistoryIntent.replace,
+      );
+
+      await coordinator.pushSilently(HomeRoute());
+      expect(coordinator.consumeHistoryIntent(), NavigationHistoryIntent.push);
+      coordinator.root.reset();
+    });
+
+    test('history intent scope overrides inner stack mutations', () async {
+      final coordinator = TestCoordinator();
+
+      await coordinator.withHistoryIntent(
+        NavigationHistoryIntent.traverse,
+        () => coordinator.pushSilently(HomeRoute()),
+      );
+
+      expect(
+        coordinator.consumeHistoryIntent(),
+        NavigationHistoryIntent.traverse,
+      );
+      coordinator.root.reset();
+    });
   });
 
   group('resolveInitialUri', () {

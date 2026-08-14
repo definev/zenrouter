@@ -589,15 +589,12 @@ void main() {
       expect(route1 == route3, isFalse);
     });
 
-    test('RouteTarget hashCode uses mapPropsToHashCode', () {
+    test('equal RouteTargets have equal hash codes', () {
       final route1 = TestRoute('home');
       final route2 = TestRoute('home');
 
-      // Hash codes include instance-specific fields (_path, _onResult)
-      // so different instances will have different hash codes
       expect(route1 == route2, isTrue);
-      // Different props should contribute to different hashes
-      expect(route1.hashCode, isNot(equals(route2.hashCode)));
+      expect(route1.hashCode, equals(route2.hashCode));
     });
 
     test('MultiPropRoute equality works correctly', () {
@@ -821,14 +818,13 @@ void main() {
     });
 
     group('hashCode', () {
-      test('combines internalProps and props', () {
+      test('excludes internalProps from value hashing', () {
         final a = InternalPropEquatable('id1', internalTag: 'tagA');
         final b = InternalPropEquatable('id1', internalTag: 'tagB');
 
         // Same props → equal via ==
         expect(a == b, isTrue);
-        // Different internalProps → different hashCode
-        expect(a.hashCode, isNot(equals(b.hashCode)));
+        expect(a.hashCode, equals(b.hashCode));
       });
 
       test('is consistent across calls', () {
@@ -896,11 +892,11 @@ void main() {
         expect(a == b, isTrue);
       });
 
-      test('does affect hashCode', () {
+      test('does not affect hashCode', () {
         final a = InternalPropEquatable('id1', internalTag: 'tagA');
         final b = InternalPropEquatable('id1', internalTag: 'tagB');
 
-        expect(a.hashCode, isNot(equals(b.hashCode)));
+        expect(a.hashCode, equals(b.hashCode));
       });
     });
   });

@@ -62,11 +62,14 @@ void main() {
       expect(route.resultValue, 'test-result');
     });
 
-    test('deepEquals compares hashCode', () {
+    test('deepEquals compares lifecycle identity', () {
       final route1 = TestRoute('1');
       final route2 = route1;
+      final equalButDistinctRoute = TestRoute('1');
 
       expect(route1.deepEquals(route2), isTrue);
+      expect(route1 == equalButDistinctRoute, isTrue);
+      expect(route1.deepEquals(equalButDistinctRoute), isFalse);
     });
 
     test('onDiscard completes onResult', () async {

@@ -148,7 +148,6 @@ String mapPropsToString(Type runtimeType, List<Object?> props) {
 /// ## Why ZenRouter has its own Equatable
 ///
 /// While similar to the `equatable` package, this implementation:
-/// - Integrates with ZenRouter's internal state ([internalProps])
 /// - Provides [compareWith] for controlled equality checks
 /// - Avoids external dependencies
 ///
@@ -157,7 +156,7 @@ String mapPropsToString(Type runtimeType, List<Object?> props) {
 /// | Property       | Purpose                                    | When to override? |
 /// |----------------|-------------------------------------------|-------------------|
 /// | [props]        | User-defined equality (route parameters)   | **Yes** - always  |
-/// | [internalProps]| Framework state (path, completer, etc.)    | **Never**         |
+/// | [internalProps]| Legacy framework state; not identity      | **Never**         |
 ///
 /// **Example:**
 /// ```dart
@@ -181,9 +180,9 @@ String mapPropsToString(Type runtimeType, List<Object?> props) {
 /// 1. Same [runtimeType] (e.g., both are `ProductRoute`)
 /// 2. Same [props] values (e.g., same `productId`)
 ///
-/// [internalProps] are NOT compared in [compareWith] but ARE used for:
-/// - Hash code generation
-/// - Internal framework identity checks
+/// [internalProps] are deliberately excluded from both equality and hashing.
+/// Framework lifecycle state is mutable and therefore cannot safely participate
+/// in a value object's hash code.
 abstract class Equatable {
   const Equatable();
 
@@ -195,8 +194,9 @@ abstract class Equatable {
   /// - Path binding (`_path`)
   /// - Result completer (`_onResult`)
   ///
-  /// These are combined with [props] for hash code generation but are
-  /// NOT compared in [compareWith] / `==` operator.
+  /// These values are not compared and are not used for hashing. The getter is
+  /// retained for compatibility with existing subclasses; new code should keep
+  /// lifecycle identity separate from value identity.
   List<Object?> get internalProps => [];
   // coverage:ignore-end
 
@@ -252,8 +252,7 @@ abstract class Equatable {
   }
 
   @override
-  int get hashCode =>
-      mapPropsToHashCode(internalProps) ^ mapPropsToHashCode(props);
+  int get hashCode => runtimeType.hashCode ^ mapPropsToHashCode(props);
 
   @override
   String toString() {

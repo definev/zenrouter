@@ -1,3 +1,10 @@
+## Unreleased
+
+- Generated not-found routes preserve the requested URI and implement
+  `RouteNotFound`, allowing core resolution and SSR adapters to retain HTTP 404
+  semantics.
+- Generated dynamic route URIs encode each path segment independently.
+
 ## 1.1.3
 - **Chore**: Bump `analyzer: ^12.0.0`, `build: ^4.0.6`, `source_gen: ^4.2.3`, `dart_style: ^3.1.8`
 

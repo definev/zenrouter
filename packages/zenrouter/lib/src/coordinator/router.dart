@@ -18,7 +18,7 @@ import 'package:zenrouter/zenrouter.dart';
 class CoordinatorRouteParser extends RouteInformationParser<Uri> {
   const CoordinatorRouteParser({required this.coordinator});
 
-  final Coordinator coordinator;
+  final Coordinator<RouteUnique> coordinator;
 
   /// Converts [RouteInformation] to a [Uri] configuration.
   @override
@@ -55,7 +55,9 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
     coordinator.addListener(notifyListeners);
   }
 
-  final Coordinator coordinator;
+  final Coordinator<RouteUnique> coordinator;
+
+  Future<void> _routePathQueue = Future<void>.value();
 
   @override
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -102,35 +104,78 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
   /// - Route layouts are determined at creation and don't change
   /// - Path types (NavigationPath vs IndexedStackPath) are static
   @override
-  Future<void> setNewRoutePath(Uri configuration) async {
-    final route = await coordinator.parseRouteFromUri(configuration);
-    assert(
-      () {
-        try {
-          final _ = coordinator.coordinator;
-          return true;
-        } on UnimplementedError catch (err) {
-          if (err.message?.contains('This coordinator is standalone') == true) {
-            return route != null;
-          }
-          return true;
-        }
-      }(),
-      'If you want to use coordinator as [RouterConfig], you must return route from [parseRouteFromUri]',
+  Future<void> setNewRoutePath(Uri configuration) {
+    final operation = _routePathQueue.then(
+      (_) => _applyNewRoutePath(configuration),
     );
+    _routePathQueue = operation.then<void>((_) {}, onError: (_, _) {});
+    return operation;
+  }
 
-    if (route case RouteDeepLink()) {
-      // Not awaited: recover → push/navigate futures complete on pop.
-      coordinator.recover(route!);
-      return;
+  Future<void> _applyNewRoutePath(Uri configuration) async {
+    final resolved = await _resolveConfiguration(configuration);
+    final route = resolved.route;
+
+    await coordinator.withHistoryIntent(
+      resolved.redirected
+          ? NavigationHistoryIntent.replace
+          : NavigationHistoryIntent.traverse,
+      () async {
+        assert(
+          () {
+            try {
+              final _ = coordinator.coordinator;
+              return true;
+            } on UnimplementedError catch (err) {
+              if (err.message?.contains('This coordinator is standalone') ==
+                  true) {
+                return route != null;
+              }
+              return true;
+            }
+          }(),
+          'If you want to use coordinator as [RouterConfig], you must return route from [parseRouteFromUri]',
+        );
+
+        if (route case RouteDeepLink()) {
+          await coordinator.recover(route!);
+          return;
+        }
+
+        assert(
+          route != null,
+          'You must to provide a parse route for $configuration in [parseRouteFromUri] to use deeplink to it',
+        );
+        await coordinator.navigate(route!);
+      },
+    );
+  }
+
+  Future<({RouteUnique? route, bool redirected})> _resolveConfiguration(
+    Uri configuration,
+  ) async {
+    var current = configuration;
+    var redirected = false;
+    final visited = <Uri>{};
+
+    while (visited.add(current)) {
+      final resolution = await coordinator.resolveRoute(
+        RouteRequest.navigation(current),
+      );
+      switch (resolution) {
+        case MatchedRouteResolution(:final route):
+          return (route: route, redirected: redirected);
+        case NotFoundRouteResolution(:final route):
+          return (route: route, redirected: redirected);
+        case RedirectRouteResolution(:final location):
+          redirected = true;
+          current = location;
+        case ErrorRouteResolution(:final error, :final stackTrace):
+          Error.throwWithStackTrace(error, stackTrace);
+      }
     }
 
-    assert(
-      route != null,
-      'You must to provide a parse route for $configuration in [parseRouteFromUri] to use deeplink to it',
-    );
-    // Not awaited: navigate → push future completes when the route is popped.
-    coordinator.navigate(route!);
+    throw StateError('Redirect loop detected while resolving $configuration');
   }
 
   /// Dont need to handle restored route since it handled in [CoordinatorRestorable]

@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:zenrouter/src/coordinator/base.dart';
+import 'package:zenrouter_core/zenrouter_core.dart'
+    show NavigationHistoryIntent;
 
 import 'unique.dart';
 
@@ -91,7 +93,9 @@ mixin RouteQueryParameters on RouteUnique {
     if (coordinator.activePath.activeRoute != this) {
       coordinator.navigate(this);
     }
-    coordinator.markNeedRebuild(); // Sync browser URL
+    coordinator.markNeedRebuild(
+      historyIntent: NavigationHistoryIntent.replace,
+    ); // Sync browser URL without adding a history entry.
   }
 
   @override

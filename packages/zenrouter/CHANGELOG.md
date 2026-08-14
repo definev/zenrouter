@@ -1,3 +1,48 @@
+## 3.0.0
+
+### ⚠️ Breaking Changes
+
+- **Coordinator capability mixins live in `zenrouter_core` 3.0.0.** Flutter
+  `Coordinator` still composes the full set (`LayoutCore` + `Navigatable` +
+  `Mutatable` + `Recoverable` + Flutter `CoordinatorLayout`). Apps that only
+  extend `Coordinator` are unaffected.
+
+- **`Coordinator.pushOrMoveToTop` returns `Future<void>`** (was incorrectly
+  typed as `void` while being `async`). Call sites that ignored the return
+  value keep working; prefer `await` when sequencing.
+
+- **`PageCallback` receives `LocalKey`** instead of `ValueKey<RouteTarget>`.
+  Custom page builders normally require no change unless they explicitly typed
+  the callback parameter.
+
+### 🚀 New Features
+
+- **Compose-your-own coordinator** (via `zenrouter_core`): mix only the
+  capabilities you need. `CoordinatorView.initialUri` asserts in debug when
+  the host lacks `CoordinatorNavigatable`.
+- **`defineDeeplinkHandler`**: pluggable deep-link strategy handlers on
+  `CoordinatorRecoverable`.
+- **`recoverRouteFromUri`**: restored as a method on `CoordinatorRecoverable`
+  (`parseRouteFromUri` → `recover`).
+- **Correct browser history intent**: push/replace/traversal is mapped to
+  Flutter's navigate/neglect/automatic reporting by
+  `CoordinatorRouteInformationProvider`.
+- **Serialized Router commits**: overlapping route-path events are applied in
+  arrival order and `setNewRoutePath` completes only after state commits.
+- **Typed route resolution**: Flutter Router consumes core match, redirect,
+  not-found, and error outcomes; redirects replace the current history entry.
+- **Stable page-entry identity**: equal semantic routes can coexist in a stack
+  without duplicate Navigator page keys.
+- **Reset cleanup**: `NavigationPath.reset` discards route-owned resources and
+  publishes its notification asynchronously, including in headless use where
+  no Flutter binding exists.
+- **Atomic declarative diffs**: inserting/replacing routes no longer exposes an
+  intermediate empty stack or rebuilds retained pages.
+
+### 📖 Documentation
+
+- Architecture docs updated for the capability-mixin split.
+
 ## 2.3.0
 
 ### ⚠️ Breaking Changes
