@@ -337,6 +337,76 @@ void main() {
     });
   });
 
+  group('StackMutatable - pushSilently()', () {
+    test('pushes a route without awaiting pop result', () async {
+      final path = NavigationPath<MutatableTestRoute>.create();
+      final route = SimpleRoute('1');
+
+      await path.pushSilently(route);
+
+      expect(path.stack.length, 1);
+      expect(path.stack.first, route);
+      expect(route.stackPath, path);
+      expect(route.isPopByPath, false);
+      expect(route.onResult.isCompleted, false);
+    });
+
+    test('do nothing when redirectWith return null', () async {
+      final path = NavigationPath<MutatableTestRoute>.createWith(
+        coordinator: MutatableTestCoordinator(),
+        label: 'test-navigation',
+      );
+
+      await path.pushSilently(RedirectNullRoute());
+
+      expect(path.stack.isEmpty, true);
+    });
+
+    test('follows redirect when pushing redirect route', () async {
+      final path = NavigationPath<MutatableTestRoute>.create();
+      final target = SimpleRoute('target');
+      final redirect = RedirectRoute('redirect', target);
+
+      await path.pushSilently(redirect);
+
+      expect(path.stack.length, 1);
+      expect(path.stack.first, target);
+      expect(path.stack.first, isNot(redirect));
+    });
+
+    test('notifies listeners when route is pushed', () async {
+      final path = NavigationPath<MutatableTestRoute>.create();
+      final route = SimpleRoute('1');
+
+      var notified = false;
+      path.addListener(() => notified = true);
+
+      await path.pushSilently(route);
+
+      expect(notified, true);
+    });
+
+    test('reset discards route resources and notifies listeners', () async {
+      final path = NavigationPath<MutatableTestRoute>.create();
+      final route = QueryRoute('query');
+      await path.pushSilently(route);
+      var notifyCount = 0;
+      path.addListener(() => notifyCount++);
+
+      path.reset();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(path.stack, isEmpty);
+      expect(route.stackPath, isNull);
+      expect(route.onResult.isCompleted, isTrue);
+      expect(notifyCount, 1);
+      expect(
+        () => route.queryNotifier.addListener(() {}),
+        throwsA(isA<FlutterError>()),
+      );
+    });
+  });
+
   group('StackMutatable - pushReplacement()', () {
     testWidgets('pushes to empty stack', (tester) async {
       final path = NavigationPath<MutatableTestRoute>.create();

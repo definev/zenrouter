@@ -3,6 +3,12 @@ library;
 export 'src/internal/diff.dart';
 export 'src/internal/reactive.dart' show ListenableMixin, ListenableObject;
 
+export 'src/history/intent.dart';
+export 'src/routing/resolution.dart';
+
+export 'src/contracts/mutatable.dart';
+export 'src/contracts/navigatable.dart';
+
 export 'src/coordinator/base.dart';
 export 'src/coordinator/modular.dart';
 

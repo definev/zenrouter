@@ -97,8 +97,8 @@ typedef RestoratableConverterConstructor<T extends Object> =
 ///
 /// **Parameters:**
 /// - `context`: The build context for the page.
-/// - `routeKey`: A unique key identifying this route instance. Typically derived
-///   from the route's identity.
+/// - `routeKey`: A unique key identifying this stack entry. It is intentionally
+///   distinct from semantic route equality so equal routes may coexist.
 /// - `child`: The widget content to be wrapped by the page.
 ///
 /// **Returns:**
@@ -117,11 +117,7 @@ typedef RestoratableConverterConstructor<T extends Object> =
 /// See also:
 /// - [StackTransition], which provides different page transition styles.
 typedef PageCallback<T> =
-    Page<void> Function(
-      BuildContext context,
-      ValueKey<T> routeKey,
-      Widget child,
-    );
+    Page<void> Function(BuildContext context, LocalKey routeKey, Widget child);
 
 /// Callback that maps routes to their [StackTransition].
 ///

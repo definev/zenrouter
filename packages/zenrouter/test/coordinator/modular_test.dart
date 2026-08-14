@@ -287,6 +287,18 @@ class ErrorModulesCoordinator extends Coordinator<AppRoute>
   AppRoute notFoundRoute(Uri uri) => NotFoundRoute(uri: uri);
 }
 
+class DuplicateModulesCoordinator extends Coordinator<AppRoute>
+    with CoordinatorModular<AppRoute> {
+  @override
+  Iterable<RouteModule<AppRoute>> defineModules() => [
+    AuthModule(this),
+    AuthModule(this),
+  ];
+
+  @override
+  AppRoute notFoundRoute(Uri uri) => NotFoundRoute(uri: uri);
+}
+
 // ============================================================================
 // Tests
 // ============================================================================
@@ -300,6 +312,19 @@ void main() {
         expect(coordinator.getModule<AuthModule>(), isA<AuthModule>());
         expect(coordinator.getModule<ShopModule>(), isA<ShopModule>());
         expect(coordinator.getModule<SettingsModule>(), isA<SettingsModule>());
+      });
+
+      test('rejects duplicate module types instead of silently replacing', () {
+        expect(
+          DuplicateModulesCoordinator.new,
+          throwsA(
+            isA<StateError>().having(
+              (error) => error.message,
+              'message',
+              contains('Duplicate route module type'),
+            ),
+          ),
+        );
       });
 
       test('throws when accessing non-existent module', () {

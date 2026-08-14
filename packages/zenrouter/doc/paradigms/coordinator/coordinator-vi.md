@@ -595,6 +595,17 @@ Tham khảo nhanh cho `Coordinator`:
 | `replace(T)` | Xóa stack và thay thế bằng route |
 | `pushOrMoveToTop(T)` | Đẩy hoặc di chuyển route lên đầu |
 | `recoverRouteFromUri(Uri)` | Xử lý URI deep link |
+| `recover(T)` | Khôi phục từ route (chiến lược deeplink) |
+| `defineDeeplinkHandler(strategy, handler)` | Ghi đè hành vi deeplink mặc định |
+
+Capability mixins (từ `zenrouter_core`; `Coordinator` gồm tất cả):
+
+| Mixin | Vai trò |
+|-------|---------|
+| `CoordinatorLayoutCore` | Kích hoạt layout-parent |
+| `CoordinatorNavigatable` | `navigate` |
+| `CoordinatorMutatable` | `push` / `pop` / `replace` / … |
+| `CoordinatorRecoverable` | `recover` / deep links |
 
 | Thuộc tính | Mô tả |
 |----------|-------------|

@@ -77,8 +77,8 @@ void main() {
       expect(coordinator.root.stack.length, greaterThan(1));
 
       // Use recoverRouteFromUri for replace behavior
-      await coordinator.recoverRouteFromUri(
-        Uri.parse('/deeplink/replace/replaced'),
+      await coordinator.recover(
+        coordinator.parseRouteFromUri(Uri.parse('/deeplink/replace/replaced')),
       );
       await tester.pumpAndSettle();
 

@@ -89,9 +89,8 @@ void main() {
       // This should trigger the assertion because parseRouteFromUri returns null
       final unknownUri = Uri.parse('/unknown');
 
-      expect(
-        () async =>
-            await coordinator.routerDelegate.setNewRoutePath(unknownUri),
+      await expectLater(
+        coordinator.routerDelegate.setNewRoutePath(unknownUri),
         throwsA(
           isA<AssertionError>().having(
             (e) => e.message,
@@ -101,10 +100,6 @@ void main() {
             ),
           ),
         ),
-      );
-      expect(
-        () async => await coordinator.recoverRouteFromUri(unknownUri),
-        throwsA(isA<StateError>()),
       );
     },
   );

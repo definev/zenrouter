@@ -3,6 +3,7 @@
 import 'dart:async';
 
 import 'package:meta/meta.dart' show protected, mustCallSuper;
+import 'package:zenrouter_core/src/contracts/mutatable.dart';
 import 'package:zenrouter_core/src/coordinator/base.dart';
 import 'package:zenrouter_core/src/internal/reactive.dart';
 import 'package:zenrouter_core/src/mixin/guard.dart';
@@ -110,7 +111,7 @@ abstract class StackPath<T extends RouteTarget> with ListenableObject {
   /// use [StackMutatable.pop] which respects guards.
   void clear() {
     for (final route in _stack) {
-      route.completeOnResult(null, null, true);
+      route.onDiscard();
       route.clearStackPath();
     }
     _stack.clear();

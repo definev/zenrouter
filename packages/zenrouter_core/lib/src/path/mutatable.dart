@@ -6,22 +6,68 @@ part of 'base.dart';
 ///
 /// Provides push/pop functionality for navigating between routes.
 /// This mixin is applied to paths that need dynamic navigation.
+///
+/// Implements the shared [Mutatable] contract also used by
+/// [CoordinatorMutatable].
 mixin StackMutatable<T extends RouteTarget> on StackPath<T>
-    implements StackNavigatable<T> {
+    implements StackNavigatable<T>, Mutatable<T> {
+  /// Replaces the entire stack as one observable mutation.
+  ///
+  /// Route instances retained by identity keep their lifecycle. Removed
+  /// instances are discarded, while incoming instances are rebound to this
+  /// path. This is intended for declarative adapters that must not expose an
+  /// intermediate empty stack while applying a diff.
+  void replaceAll(Iterable<T> routes) {
+    final nextStack = List<T>.of(routes);
+    final retainedRoutes = Set<T>.identity()..addAll(nextStack);
+
+    for (final route in _stack) {
+      if (retainedRoutes.contains(route)) continue;
+      route.onDiscard();
+      route.clearStackPath();
+    }
+
+    for (final route in nextStack) {
+      route.isPopByPath = false;
+      route.bindStackPath(this);
+    }
+
+    _stack
+      ..clear()
+      ..addAll(nextStack);
+    notifyListeners();
+  }
+
   /// Adds a new route to the top of the stack.
   ///
   /// Resolves redirects via [RouteRedirect.resolve] before pushing.
   /// Returns a future that completes when the popped route provides a result.
+  @override
   Future<R?> push<R extends Object>(T element) async {
     T? target = await RouteRedirect.resolve(element, coordinator);
     if (target == null) return null;
 
+    _addRouteToStack(target);
+    // ignore: invalid_use_of_visible_for_testing_member
+    return await target.onResult.future as R?;
+  }
+
+  /// Adds a route to the stack without subscribing to its pop result.
+  ///
+  /// Same stack mutation as [push], but the returned future completes once
+  /// the route is on the stack instead of when it is later popped.
+  Future<void> pushSilently(T element) async {
+    T? target = await RouteRedirect.resolve(element, coordinator);
+    if (target == null) return;
+
+    _addRouteToStack(target);
+  }
+
+  void _addRouteToStack(T target) {
     target.isPopByPath = false;
     target.bindStackPath(this);
     _stack.add(target);
     notifyListeners();
-    // ignore: invalid_use_of_visible_for_testing_member
-    return await target.onResult.future as R?;
   }
 
   /// Replaces the current route with a new one.
@@ -32,6 +78,7 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
   /// - Multiple elements: Pops top route (respecting guards), then pushes new route
   ///
   /// Returns null if redirect resolution fails or guard blocks the pop.
+  @override
   Future<R?> pushReplacement<R extends Object, RO extends Object>(
     T element, {
     RO? result,
@@ -43,7 +90,6 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
     if (activeRoute case final activeRoute?) {
       if (stack.length == 1) {
         activeRoute.completeOnResult(result, coordinator);
-        activeRoute.onDiscard();
         reset();
         return push(target);
       }
@@ -62,6 +108,7 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
   ///
   /// If the route exists in the stack, it's moved to the top position.
   /// If not, it's pushed as a new entry. Useful for tab navigation.
+  @override
   Future<void> pushOrMoveToTop(T element) async {
     T? target = await RouteRedirect.resolve(element, coordinator);
     if (target == null) return;
@@ -155,7 +202,7 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
         target.onDiscard();
       }
     } else {
-      await push(target);
+      await pushSilently(target);
     }
   }
 }

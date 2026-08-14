@@ -77,8 +77,12 @@ abstract class RouteTarget extends Equatable {
   @override
   List<Object?> get props => [];
 
-  /// Checks deep equality with another route.
-  bool deepEquals(RouteTarget other) => hashCode == other.hashCode;
+  /// Whether [other] is the same lifecycle entry as this route.
+  ///
+  /// Route value equality is provided by `operator ==`. Lifecycle identity is
+  /// intentionally reference-based so mutable path/result state never leaks
+  /// into `hashCode` or keyed collections.
+  bool deepEquals(RouteTarget other) => identical(this, other);
 
   /// Called when the route is popped from the navigation stack.
   ///

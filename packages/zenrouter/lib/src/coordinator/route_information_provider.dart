@@ -12,20 +12,43 @@ import 'package:zenrouter/zenrouter.dart';
 /// can be parsed the URI defaults to `/`.
 class CoordinatorRouteInformationProvider
     extends PlatformRouteInformationProvider {
-  CoordinatorRouteInformationProvider({required Coordinator coordinator})
-    : _coordinator = coordinator,
-      super(
-        initialRouteInformation: RouteInformation(
-          uri: resolveInitialUri(
-            WidgetsBinding.instance.platformDispatcher.defaultRouteName,
-            coordinator.initialRoutePath,
-          ),
-        ),
-      );
+  CoordinatorRouteInformationProvider({
+    required Coordinator<RouteUnique> coordinator,
+  }) : _coordinator = coordinator,
+       super(
+         initialRouteInformation: RouteInformation(
+           uri: resolveInitialUri(
+             WidgetsBinding.instance.platformDispatcher.defaultRouteName,
+             coordinator.initialRoutePath,
+           ),
+         ),
+       );
 
-  final Coordinator _coordinator;
+  final Coordinator<RouteUnique> _coordinator;
 
-  Coordinator get coordinator => _coordinator;
+  Coordinator<RouteUnique> get coordinator => _coordinator;
+
+  @visibleForTesting
+  static RouteInformationReportingType resolveReportingType(
+    NavigationHistoryIntent intent,
+    RouteInformationReportingType fallback,
+  ) => switch (intent) {
+    NavigationHistoryIntent.automatic => fallback,
+    NavigationHistoryIntent.push => RouteInformationReportingType.navigate,
+    NavigationHistoryIntent.replace => RouteInformationReportingType.neglect,
+    NavigationHistoryIntent.traverse => RouteInformationReportingType.none,
+  };
+
+  @override
+  void routerReportsNewRouteInformation(
+    RouteInformation routeInformation, {
+    RouteInformationReportingType type = RouteInformationReportingType.none,
+  }) {
+    super.routerReportsNewRouteInformation(
+      routeInformation,
+      type: resolveReportingType(coordinator.consumeHistoryIntent(), type),
+    );
+  }
 
   @visibleForTesting
   static Uri resolveInitialUri(String? platformRouteName, Uri? initialUri) {

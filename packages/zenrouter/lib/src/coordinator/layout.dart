@@ -1,5 +1,4 @@
-import 'package:flutter/widgets.dart';
-import 'package:zenrouter/zenrouter.dart';
+part of 'base.dart';
 
 /// Ensures [coordinatorCore] is a Flutter [Coordinator] for default path builders.
 ///
@@ -32,10 +31,8 @@ Coordinator requireFlutterCoordinator(
 ///
 /// Both entries call [requireFlutterCoordinator] — they are not valid for a
 /// bare [CoordinatorCore] that is not a [Coordinator].
-final kDefaultLayoutBuilderTable = Map.unmodifiable(<
-  PathKey,
-  RouteLayoutBuilder
->{
+final Map<PathKey, RouteLayoutBuilder>
+kDefaultLayoutBuilderTable = Map.unmodifiable(<PathKey, RouteLayoutBuilder>{
   NavigationPath.key: (coordinatorCore, path, layout) {
     final coordinator = requireFlutterCoordinator(
       coordinatorCore,
@@ -100,72 +97,21 @@ final kDefaultLayoutBuilderTable = Map.unmodifiable(<
   },
 });
 
-/// Mixin that provides layout builder and parent constructor management for [Coordinator].
+/// Mixin that provides Flutter layout builders for [Coordinator].
 ///
-/// ## Role in Navigation Flow
-///
-/// [CoordinatorLayout] enables the coordinator to:
-/// 1. Register layout builders that render [StackPath] contents
-/// 2. Create layout parent instances for nested navigation
-/// 3. Bind routes to their appropriate layout containers
-///
-/// When a route is pushed:
-/// 1. [Coordinator] resolves the route's parent layout
-/// 2. [createLayoutParent] instantiates the layout if needed
-/// 3. [getLayoutBuilder] provides the widget that renders the path's stack
-///
-/// This mixin is automatically applied to [Coordinator] and handles:
-/// - [defineLayoutBuilder]: Register layout builders for different path types
-/// - [defineLayoutParentConstructor]: Register constructors for layout parents
-/// - [getLayoutBuilder]: Retrieve the builder for a specific [PathKey]
-/// - [getLayoutParentConstructor]: Retrieve the constructor for a layout key
-///
-/// Layout builders control how [StackPath]s render their pages:
-/// - [NavigationPath]: Uses [NavigationStack] widget
-/// - [IndexedStackPath]: Uses [IndexedStackPathBuilder] widget
-///
-/// Default builders are provided via the top-level [kDefaultLayoutBuilderTable].
-mixin CoordinatorLayout<T extends RouteUnique> on CoordinatorCore<T>
+/// Layout-parent registration and hierarchy activation live in
+/// [CoordinatorLayoutCore] (`zenrouter_core`). This mixin only owns the
+/// widget builder table used by [NavigationStack] / [IndexedStackPathBuilder].
+mixin CoordinatorLayout<T extends RouteUnique> on CoordinatorLayoutCore<T>
     implements CoordinatorLayoutBuilder<T> {
-  final _layoutParentConstructorTable =
-      <Object, RouteLayoutParentConstructor>{};
-  late final layoutParentConstructorTable = isRouteModule
-      ? (coordinator as CoordinatorLayout)._layoutParentConstructorTable
-      : _layoutParentConstructorTable;
-  late final _layoutBuilderTable = switch (isRouteModule) {
-    true => <PathKey, RouteLayoutBuilder>{},
-    false => <PathKey, RouteLayoutBuilder>{...kDefaultLayoutBuilderTable},
-  };
-  late final layoutBuilderTable = isRouteModule
+  late final Map<PathKey, RouteLayoutBuilder> _layoutBuilderTable =
+      switch (isRouteModule) {
+        true => <PathKey, RouteLayoutBuilder>{},
+        false => <PathKey, RouteLayoutBuilder>{...kDefaultLayoutBuilderTable},
+      };
+  late final Map<PathKey, RouteLayoutBuilder> layoutBuilderTable = isRouteModule
       ? (coordinator as CoordinatorLayout)._layoutBuilderTable
       : _layoutBuilderTable;
-
-  /// Registers a constructor function for a layout parent identified by [layoutKey].
-  ///
-  /// The constructor is called by [createLayoutParent] to instantiate layout
-  /// parent widgets (e.g., shell routes with nested navigation).
-  ///
-  /// [layoutKey]: Unique identifier for the layout (typically the layout class itself)
-  /// [constructor]: Function that returns a new [RouteLayoutParent] instance
-  @override
-  void defineLayoutParentConstructor(
-    Object layoutKey,
-    RouteLayoutParentConstructor constructor,
-  ) => layoutParentConstructorTable[layoutKey] = constructor;
-
-  /// Retrieves the constructor function for a layout parent identified by [layoutKey].
-  ///
-  /// Returns `null` if no constructor was registered for the given [layoutKey].
-  RouteLayoutParentConstructor? getLayoutParentConstructor(Object layoutKey) =>
-      layoutParentConstructorTable[layoutKey];
-
-  /// Creates a new layout parent instance using the registered constructor.
-  ///
-  /// Calls the constructor registered via [defineLayoutParentConstructor] for
-  /// the given [layoutKey]. Returns `null` if no constructor was registered.
-  @override
-  RouteLayoutParent? createLayoutParent(Object layoutKey) =>
-      layoutParentConstructorTable[layoutKey]?.call(layoutKey);
 
   /// Registers a layout builder for a specific [PathKey].
   ///
@@ -189,7 +135,6 @@ mixin CoordinatorLayout<T extends RouteUnique> on CoordinatorCore<T>
 
   @override
   void dispose() {
-    _layoutParentConstructorTable.clear();
     _layoutBuilderTable.clear();
     super.dispose();
   }

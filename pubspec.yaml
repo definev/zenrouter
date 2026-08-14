@@ -3,6 +3,7 @@ publish_to: none
 environment:
   sdk: ^3.6.0
 workspace:
+  - benchmark/zenrouter/current
   - packages/zenrouter
   - packages/zenrouter_core
   - packages/zenrouter/example
