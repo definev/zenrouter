@@ -166,6 +166,99 @@ void main() {
     });
   });
 
+  group('Navigation transactions', () {
+    test(
+      'serializes concurrent top-level mutations without merging them',
+      () async {
+        final coordinator = MutatableOnlyCoordinator();
+        final first = coordinator.push<Object>(ComposeRoute('a'));
+        final second = coordinator.push<Object>(ComposeRoute('b'));
+
+        await pumpEventQueue();
+
+        expect(coordinator.root.stack.map((route) => route.id), ['a', 'b']);
+        coordinator.root.reset();
+        await Future.wait([first, second]);
+      },
+    );
+
+    test('publishes one commit for nested coordinator mutations', () async {
+      final coordinator = MutatableOnlyCoordinator();
+      var notifications = 0;
+      coordinator.addListener(() => notifications++);
+
+      await coordinator.runNavigationTransaction(() async {
+        await coordinator.pushSilently(ComposeRoute('a'));
+        await coordinator.pushSilently(ComposeRoute('b'));
+      }, historyIntent: NavigationHistoryIntent.replace);
+
+      expect(notifications, 1);
+      expect(coordinator.root.stack.length, 2);
+      expect(
+        coordinator.lastNavigationCommit,
+        isA<NavigationCommit>()
+            .having((commit) => commit.revision, 'revision', 1)
+            .having(
+              (commit) => commit.previousUri,
+              'previousUri',
+              Uri.parse('/'),
+            )
+            .having(
+              (commit) => commit.currentUri,
+              'currentUri',
+              Uri.parse('/b'),
+            )
+            .having(
+              (commit) => commit.historyIntent,
+              'historyIntent',
+              NavigationHistoryIntent.replace,
+            ),
+      );
+      coordinator.root.reset();
+    });
+
+    test('a no-op transaction does not publish or leak intent', () async {
+      final coordinator = MutatableOnlyCoordinator();
+      var notifications = 0;
+      coordinator.addListener(() => notifications++);
+
+      await coordinator.runNavigationTransaction(
+        () {},
+        historyIntent: NavigationHistoryIntent.push,
+      );
+
+      expect(notifications, 0);
+      expect(coordinator.lastNavigationCommit, isNull);
+      expect(
+        coordinator.consumeHistoryIntent(),
+        NavigationHistoryIntent.automatic,
+      );
+    });
+
+    test('publishes changed state before rethrowing an error', () async {
+      final coordinator = MutatableOnlyCoordinator();
+      var notifications = 0;
+      coordinator.addListener(() => notifications++);
+
+      await expectLater(
+        coordinator.runNavigationTransaction(() async {
+          await (coordinator.root as ComposeStackPath).pushSilently(
+            ComposeRoute('committed-before-error'),
+          );
+          throw StateError('transaction failed');
+        }, historyIntent: NavigationHistoryIntent.replace),
+        throwsA(isA<StateError>()),
+      );
+
+      expect(notifications, 1);
+      expect(
+        coordinator.lastNavigationCommit?.currentUri,
+        Uri.parse('/committed-before-error'),
+      );
+      coordinator.root.reset();
+    });
+  });
+
   group('CoordinatorRecoverable.defineDeeplinkHandler', () {
     test('overrides replace strategy', () async {
       final coordinator = FullCapabilityCoordinator();

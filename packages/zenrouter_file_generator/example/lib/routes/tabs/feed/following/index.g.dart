@@ -17,7 +17,7 @@ abstract class _$FollowingRoute extends AppRoute {
   Type? get layout => FollowingLayout;
 
   @override
-  Uri toUri() => Uri.parse('/tabs/feed/following');
+  Uri toUri() => Uri(pathSegments: ['', 'tabs', 'feed', 'following']);
 
   @override
   List<Object?> get props => [];

@@ -44,12 +44,26 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
   /// Returns a future that completes when the popped route provides a result.
   @override
   Future<R?> push<R extends Object>(T element) async {
-    T? target = await RouteRedirect.resolve(element, coordinator);
+    final target = await commitRoute(element);
     if (target == null) return null;
 
-    _addRouteToStack(target);
     // ignore: invalid_use_of_visible_for_testing_member
     return await target.onResult.future as R?;
+  }
+
+  /// Resolves redirects and commits a route, returning the actual stack entry.
+  @internal
+  Future<T?> commitRoute(T element) async {
+    final target = await RouteRedirect.resolve(element, coordinator);
+    if (target == null) return null;
+    return commitResolvedRoute(target);
+  }
+
+  /// Commits a route whose redirect and layout have already been resolved.
+  @internal
+  T commitResolvedRoute(T target) {
+    _addRouteToStack(target);
+    return target;
   }
 
   /// Adds a route to the stack without subscribing to its pop result.
@@ -57,10 +71,7 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
   /// Same stack mutation as [push], but the returned future completes once
   /// the route is on the stack instead of when it is later popped.
   Future<void> pushSilently(T element) async {
-    T? target = await RouteRedirect.resolve(element, coordinator);
-    if (target == null) return;
-
-    _addRouteToStack(target);
+    await commitRoute(element);
   }
 
   void _addRouteToStack(T target) {
@@ -83,25 +94,46 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
     T element, {
     RO? result,
   }) async {
-    T? target = await RouteRedirect.resolve(element, coordinator);
+    final target = await commitReplacement(element, result: result);
     if (target == null) return null;
 
+    // ignore: invalid_use_of_visible_for_testing_member
+    return await target.onResult.future as R?;
+  }
+
+  /// Resolves and commits a replacement without waiting for its later result.
+  @internal
+  Future<T?> commitReplacement<RO extends Object>(
+    T element, {
+    RO? result,
+  }) async {
+    final target = await RouteRedirect.resolve(element, coordinator);
+    if (target == null) return null;
+    return commitResolvedReplacement(target, result: result);
+  }
+
+  /// Commits an already-resolved replacement route.
+  @internal
+  Future<T?> commitResolvedReplacement<RO extends Object>(
+    T target, {
+    RO? result,
+  }) async {
     final activeRoute = this.activeRoute;
     if (activeRoute case final activeRoute?) {
       if (stack.length == 1) {
         activeRoute.completeOnResult(result, coordinator);
         reset();
-        return push(target);
+        return commitResolvedRoute(target);
       }
 
       final popped = await pop(result);
       if (popped == null || !popped) return null;
       // ignore: invalid_use_of_visible_for_testing_member
       await activeRoute.onResult.future;
-      return push(target);
+      return commitResolvedRoute(target);
     }
 
-    return push(target);
+    return commitResolvedRoute(target);
   }
 
   /// Adds a route to the top, or moves it to the top if already in stack.

@@ -17,6 +17,11 @@
 
 ### 🚀 New Features
 
+- **Flutter route-manifest adapter**: coordinators expose the core
+  `RouteManifest` seam; generated coordinators bind matched IDs to concrete
+  `RouteTarget` instances without putting Flutter types in the manifest.
+- **Typed handwritten manifests**: coordinators may narrow the manifest ID to
+  an enum or domain type and bind routes with Dart object patterns.
 - **Compose-your-own coordinator** (via `zenrouter_core`): mix only the
   capabilities you need. `CoordinatorView.initialUri` asserts in debug when
   the host lacks `CoordinatorNavigatable`.
@@ -27,8 +32,11 @@
 - **Correct browser history intent**: push/replace/traversal is mapped to
   Flutter's navigate/neglect/automatic reporting by
   `CoordinatorRouteInformationProvider`.
-- **Serialized Router commits**: overlapping route-path events are applied in
-  arrival order and `setNewRoutePath` completes only after state commits.
+- **Superseding Router resolution**: newer route information cooperatively
+  cancels unresolved older work. Commits remain serialized and atomic once
+  started; cancelled Router futures complete normally.
+- **Atomic coordinator commits**: nested layout/path mutations publish one
+  final URI/history update with a monotonic `NavigationCommit` revision.
 - **Typed route resolution**: Flutter Router consumes core match, redirect,
   not-found, and error outcomes; redirects replace the current history entry.
 - **Stable page-entry identity**: equal semantic routes can coexist in a stack

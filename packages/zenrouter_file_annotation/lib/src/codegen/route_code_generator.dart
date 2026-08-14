@@ -232,7 +232,7 @@ class RouteCodeGenerator {
         })
         .join(', ');
 
-    return 'Uri(pathSegments: [$segments])';
+    return "Uri(pathSegments: ['', $segments])";
   }
 
   static String _dartStringLiteral(String value) {

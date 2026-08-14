@@ -1,4 +1,12 @@
 import 'package:zenrouter_core/src/mixin/uri.dart';
+import 'package:zenrouter_core/src/routing/cancellation.dart';
+import 'package:zenrouter_core/src/routing/hydration.dart';
+
+const _noHydrationData = _NoHydrationData();
+
+final class _NoHydrationData {
+  const _NoHydrationData();
+}
 
 Map<String, List<String>> _freezeHeaders(Map<String, List<String>> headers) =>
     Map<String, List<String>>.unmodifiable({
@@ -6,21 +14,46 @@ Map<String, List<String>> _freezeHeaders(Map<String, List<String>> headers) =>
         entry.key.toLowerCase(): List<String>.unmodifiable(entry.value),
     });
 
+String _normalizeMethod(String method) {
+  final normalized = method.trim().toUpperCase();
+  if (normalized.isEmpty) {
+    throw ArgumentError.value(method, 'method', 'Must not be empty');
+  }
+  return normalized;
+}
+
+Map<String, List<String>> _withoutBodyHeaders(
+  Map<String, List<String>> headers,
+) => Map<String, List<String>>.from(headers)
+  ..remove('content-encoding')
+  ..remove('content-language')
+  ..remove('content-length')
+  ..remove('content-location')
+  ..remove('content-type')
+  ..remove('transfer-encoding');
+
 /// Request-scoped input shared by navigation and server rendering adapters.
 final class RouteRequest {
   RouteRequest({
     required this.uri,
-    this.method = 'GET',
+    String method = 'GET',
     Map<String, List<String>> headers = const {},
     this.body,
     this.state,
-  }) : headers = _freezeHeaders(headers);
+    RouteCancellationToken? cancellationToken,
+  }) : method = _normalizeMethod(method),
+       headers = _freezeHeaders(headers),
+       cancellationToken = cancellationToken ?? RouteCancellationToken();
 
   /// Convenience request for client-side navigation.
-  RouteRequest.navigation(this.uri, {this.state})
-    : method = 'GET',
-      headers = const {},
-      body = null;
+  RouteRequest.navigation(
+    this.uri, {
+    this.state,
+    RouteCancellationToken? cancellationToken,
+  }) : method = 'GET',
+       headers = const {},
+       body = null,
+       cancellationToken = cancellationToken ?? RouteCancellationToken();
 
   final Uri uri;
   final String method;
@@ -29,6 +62,9 @@ final class RouteRequest {
 
   /// Adapter-owned state such as a browser history entry or request context.
   final Object? state;
+
+  /// Cooperative cancellation shared across redirects for this request.
+  final RouteCancellationToken cancellationToken;
 }
 
 /// Marker for a route that renders a not-found result while preserving the
@@ -41,16 +77,30 @@ sealed class RouteResolution<T extends RouteUri> {
     required this.request,
     required this.statusCode,
     Map<String, List<String>> headers = const {},
-    this.data,
+    RouteHydrationPayload? hydration,
+    @Deprecated('Use hydration') Object? data = _noHydrationData,
   }) : assert(statusCode >= 100 && statusCode <= 599),
-       headers = _freezeHeaders(headers);
+       headers = _freezeHeaders(headers),
+       hydration =
+           hydration ??
+           (identical(data, _noHydrationData)
+               ? null
+               : RouteHydrationPayload(routeUri: request.uri, data: data)) {
+    if (hydration != null && !identical(data, _noHydrationData)) {
+      throw ArgumentError('Provide either hydration or legacy data, not both');
+    }
+  }
 
   final RouteRequest request;
   final int statusCode;
   final Map<String, List<String>> headers;
 
-  /// Loader or adapter-neutral hydration data associated with this resolution.
-  final Object? data;
+  /// Versioned, serializable loader data associated with this resolution.
+  final RouteHydrationPayload? hydration;
+
+  /// Compatibility view of [RouteHydrationPayload.data].
+  @Deprecated('Use hydration?.data')
+  Object? get data => hydration?.data;
 }
 
 /// A successfully matched route.
@@ -61,6 +111,7 @@ final class MatchedRouteResolution<T extends RouteUri>
     required this.route,
     super.statusCode = 200,
     super.headers,
+    super.hydration,
     super.data,
   });
 
@@ -75,6 +126,7 @@ final class NotFoundRouteResolution<T extends RouteUri>
     this.route,
     super.statusCode = 404,
     super.headers,
+    super.hydration,
     super.data,
   });
 
@@ -84,15 +136,55 @@ final class NotFoundRouteResolution<T extends RouteUri>
 /// A redirect outcome that an HTTP or browser adapter can apply correctly.
 final class RedirectRouteResolution<T extends RouteUri>
     extends RouteResolution<T> {
+  static const supportedStatusCodes = <int>{301, 302, 303, 307, 308};
+
   RedirectRouteResolution({
     required super.request,
     required this.location,
     super.statusCode = 302,
     super.headers,
+    super.hydration,
     super.data,
-  }) : assert(statusCode >= 300 && statusCode <= 399);
+  }) {
+    if (!supportedStatusCodes.contains(statusCode)) {
+      throw ArgumentError.value(
+        statusCode,
+        'statusCode',
+        'Supported redirect statuses are 301, 302, 303, 307, and 308',
+      );
+    }
+  }
 
   final Uri location;
+
+  /// Builds the follow-up request using RFC-compatible redirect semantics.
+  ///
+  /// - 307/308 preserve method and body.
+  /// - 303 changes every method except HEAD to GET.
+  /// - 301/302 change POST to GET for historical user-agent compatibility.
+  RouteRequest createRedirectRequest() {
+    final previousMethod = request.method;
+    final redirectedMethod = switch (statusCode) {
+      303 when previousMethod != 'HEAD' => 'GET',
+      301 || 302 when previousMethod == 'POST' => 'GET',
+      _ => previousMethod,
+    };
+    final preservesBody = switch (statusCode) {
+      303 => false,
+      _ => redirectedMethod == previousMethod,
+    };
+
+    return RouteRequest(
+      uri: request.uri.resolveUri(location),
+      method: redirectedMethod,
+      headers: preservesBody
+          ? request.headers
+          : _withoutBodyHeaders(request.headers),
+      body: preservesBody ? request.body : null,
+      state: request.state,
+      cancellationToken: request.cancellationToken,
+    );
+  }
 }
 
 /// A typed routing failure suitable for an error page or HTTP 5xx response.
@@ -104,6 +196,7 @@ final class ErrorRouteResolution<T extends RouteUri>
     required this.stackTrace,
     super.statusCode = 500,
     super.headers,
+    super.hydration,
     super.data,
   });
 

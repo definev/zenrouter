@@ -17,7 +17,8 @@ abstract class _$GettingStartedRoute extends DocsRoute {
   Type? get layout => DocsLayout;
 
   @override
-  Uri toUri() => Uri.parse('/docs/file-routing/getting-started');
+  Uri toUri() =>
+      Uri(pathSegments: ['', 'docs', 'file-routing', 'getting-started']);
 
   @override
   List<Object?> get props => [];

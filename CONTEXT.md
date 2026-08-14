@@ -1,0 +1,38 @@
+# ZenRouter Domain Context
+
+## Route Target
+
+A presentation-capable destination stored in a navigation path. Route targets
+may be constructed by Flutter bindings but are not the source of truth for the
+application's static route topology.
+
+## Route Manifest
+
+The immutable, adapter-neutral graph of route and layout IDs, URI patterns,
+parent relationships, matching metadata, and preload hints. It owns graph
+validation, deterministic URI matching, serialization, and reverse routing.
+Route IDs are strongly typed in memory. A Route ID Codec maps them to stable
+string wire IDs only when the graph crosses the JSON seam.
+
+## Route Binding
+
+An adapter that maps a Route Manifest ID and matched parameters to a concrete
+Route Target. File-based routing generates Flutter bindings; future server
+adapters may bind the same manifest without importing Flutter.
+
+## Navigation Commit
+
+The atomic publication of a completed navigation transaction, including its
+monotonic revision, previous/final URI, and browser-history intent.
+
+## Invariants
+
+- Static route topology lives in a Route Manifest, never in Flutter widgets.
+- Route Manifest IDs are unique across routes and layouts.
+- Route Manifest IDs are generic domain values, not intrinsically strings.
+- String wire IDs are introduced only by a Route ID Codec during serialization.
+- Overlapping URI patterns must have deterministic specificity or fail graph
+  construction.
+- Reverse routing and forward matching use the same route pattern.
+- Flutter and server behavior attach through Route Bindings at the manifest
+  seam.

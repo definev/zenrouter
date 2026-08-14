@@ -19,7 +19,7 @@ abstract class _$CollectionListRoute extends AppRoute
 
   @override
   Uri toUri() {
-    final uri = Uri.parse('/collection/list');
+    final uri = Uri(pathSegments: ['', 'collection', 'list']);
     if (queries.isEmpty) return uri;
     return uri.replace(queryParameters: queries);
   }

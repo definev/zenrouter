@@ -22,9 +22,20 @@
   `RouteTarget.deepEquals` now means same lifecycle entry (reference identity).
 - **`CoordinatorModular.defineModules` now returns `Iterable`** and snapshots
   its deterministic iteration order. Duplicate module runtime types throw.
+- **`RouteResolution.data` is deprecated** in favor of the versioned
+  `RouteResolution.hydration` payload. Legacy JSON-compatible data is wrapped
+  automatically for migration.
 
 ### New Features
 
+- **Declarative route graph** via the immutable, versioned `RouteManifest`,
+  with deterministic URI matching, layout relationship validation, ambiguous
+  pattern detection, composition, JSON serialization, and reverse routing.
+- **Strongly typed manifest IDs** via `RouteManifest<I>` and
+  `RouteIdCodec<I>`. `RouteManifestMatch.id` supports concise Dart object
+  patterns while codecs keep strings isolated to the JSON seam.
+- **Manifest seam for route modules** via `RouteModule.routeManifest`.
+  Hand-written coordinators default to `RouteManifest.empty` for compatibility.
 - **Shared contracts** `Navigatable<T>` and `Mutatable<T>` implemented by both
   stack paths and coordinator mixins.
 - **`defineDeeplinkHandler`**: override built-in `DeeplinkStrategy` behaviour
@@ -44,6 +55,15 @@
 - **Adapter-neutral route resolution**: `RouteRequest`, `RouteResolver`, and
   typed match/redirect/not-found/error outcomes with status, headers, and
   hydration data.
+- **Atomic coordinator transactions**: nested mutations publish one
+  `NavigationCommit`; concurrent top-level mutations serialize without being
+  mistaken for nested work.
+- **Cooperative route cancellation** via `RouteCancellationToken`, propagated
+  across redirect requests and kept distinct from typed 500 failures.
+- **Redirect continuation semantics** for 301, 302, 303, 307, and 308,
+  including method/body/header handling and relative-location resolution.
+- **Versioned hydration envelope** via `RouteHydrationPayload`, with immutable
+  JSON-compatible data, schema validation, and encode/decode support.
 
 ## 2.3.0
 

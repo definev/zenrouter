@@ -4,7 +4,11 @@ export 'src/internal/diff.dart';
 export 'src/internal/reactive.dart' show ListenableMixin, ListenableObject;
 
 export 'src/history/intent.dart';
+export 'src/history/commit.dart';
 export 'src/routing/resolution.dart';
+export 'src/routing/cancellation.dart';
+export 'src/routing/hydration.dart';
+export 'src/routing/manifest.dart';
 
 export 'src/contracts/mutatable.dart';
 export 'src/contracts/navigatable.dart';

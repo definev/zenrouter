@@ -22,7 +22,7 @@ Thay đổi hiện tại đã tạo một routing kernel adapter-neutral trong `
 
 Kết luận kỹ thuật:
 
-> ZenRouter hiện có thể đóng vai trò routing backbone cho SPA và làm kernel cho SSR adapter. Tuy nhiên, repository chưa cung cấp HTTP server adapter, HTML renderer hoặc hydration serializer hoàn chỉnh, nên chưa thể được gọi là một SSR framework production-ready.
+> ZenRouter hiện có thể đóng vai trò routing backbone cho SPA và làm kernel cho SSR adapter. Kernel đã có versioned hydration envelope, nhưng repository chưa cung cấp HTTP server adapter, HTML renderer hoặc application-specific hydration schema, nên chưa thể được gọi là một SSR framework production-ready.
 
 ## 2. Mục tiêu và non-goals
 
@@ -41,9 +41,9 @@ Kết luận kỹ thuật:
 
 - Không xây HTTP server hoặc reverse proxy integration.
 - Không render Flutter widget thành HTML phía server.
-- Không định nghĩa hydration wire format/versioning hoàn chỉnh.
+- Không định nghĩa application-specific hydration schema cho từng domain.
 - Không triển khai loader cache, revalidation, action/mutation hoặc streaming SSR.
-- Không thay toàn bộ route model hiện tại bằng một declarative route graph mới.
+- Không thay `RouteTarget` hoặc navigation stack runtime bằng route graph.
 
 ## 3. Vấn đề thiết kế ban đầu
 
@@ -59,7 +59,7 @@ Kết luận kỹ thuật:
 | D8 | Generated 404 đổi sang `/not-found` | Address bar mất requested URI | HTTP 404 không canonical | Đã xử lý |
 | D9 | Reset/diff không atomic và cleanup không đầy đủ | Flicker, mất state, build-phase error | State snapshot không ổn định | Đã xử lý ở path layer |
 | D10 | Module order dựa trên collection không được contract hóa | Match phụ thuộc iteration order | Request routing không deterministic | Đã xử lý |
-| D11 | Route graph vẫn implicit trong parser/layout hooks | Tooling và prefetch khó | Static manifest khó tạo | Mới xử lý một phần |
+| D11 | Route graph vẫn implicit trong parser/layout hooks | Tooling và prefetch khó | Static manifest khó tạo | Đã xử lý bằng `RouteManifest` |
 | D12 | Presentation route vẫn gắn Flutter ở package UI | Không vấn đề | Server không thể phụ thuộc package UI | Có seam; cần SSR adapter riêng |
 
 ## 4. Kiến trúc sau thay đổi
@@ -105,6 +105,7 @@ Contract mới nằm tại:
 - immutable, lowercase `headers`
 - optional `body`
 - adapter-owned `state`
+- cooperative `cancellationToken`
 
 `RouteResolution<T>` là sealed hierarchy:
 
@@ -128,7 +129,7 @@ Mỗi outcome có thể mang:
 
 - `statusCode`
 - immutable response `headers`
-- adapter-neutral `data` cho loader hoặc hydration
+- versioned `RouteHydrationPayload` cho loader/hydration data
 - route, redirect location hoặc error tùy outcome
 
 Backward compatibility được giữ bằng default implementation:
@@ -161,10 +162,15 @@ Future<RouteResolution<AppRoute>> resolveRoute(RouteRequest request) async {
   return MatchedRouteResolution(
     request: request,
     route: route,
-    data: loaderData,
+    hydration: RouteHydrationPayload(
+      routeUri: request.uri,
+      data: loaderData,
+    ),
   );
 }
 ```
+
+`RouteHydrationPayload` chỉ chấp nhận JSON-compatible values, deep-freeze toàn bộ collection, và encode envelope gồm `schema`, `version`, `route`, `data`. Payload version không được runtime hỗ trợ sẽ bị reject thay vì hydrate âm thầm sai schema.
 
 ### 5.2 Navigation commit và pop result
 
@@ -186,23 +192,27 @@ Giải pháp là giữ `push()` cho result semantics và thêm `pushSilently()` 
 
 ### 5.3 Serialize browser navigation
 
-`CoordinatorRouterDelegate` duy trì `_routePathQueue`. Mỗi `setNewRoutePath()` nối vào queue trước đó:
+`CoordinatorRouterDelegate` dùng generation và `RouteCancellationToken` cho resolution, sau đó serialize riêng commit phase:
 
 ```text
-/slow ── resolve ── commit
-                    │
-                    └── /next ── resolve ── commit
+/slow ── resolve ── cancelled
+/next ───── resolve ── atomic commit
 ```
 
 Đặc tính hiện tại:
 
-- Apply theo arrival order.
-- Failure của một operation không làm hỏng queue cho operation kế tiếp.
+- Request mới supersede resolution cũ chưa commit.
+- Resolver/loader có thể dừng sớm qua `cancellationToken`.
+- Failure của một operation không làm hỏng commit queue cho operation kế tiếp.
 - Future chỉ hoàn tất sau khi resolution và navigation state đã commit.
 - Redirect loop được phát hiện bằng tập URI đã đi qua.
 - Typed errors được rethrow với stack trace gốc.
 
-Queue chưa thực hiện cancellation hoặc latest-wins. Đây là quyết định an toàn cho compatibility, nhưng có thể được mở rộng bằng navigation generation/token trong tương lai.
+Một commit đã bắt đầu không bị hủy giữa chừng; request mới sẽ chờ commit atomically rồi áp dụng state mới. Cancellation là control flow bình thường và không bị chuyển thành typed 500.
+
+### 5.3.1 Coordinator transaction boundary
+
+Mọi coordinator mutation chạy qua `runNavigationTransaction()`. Nested transaction join outer transaction; concurrent top-level transaction được serialize bằng queue và Zone ownership. Listener của coordinator nhận một `NavigationCommit` gồm revision tăng đơn điệu, URI trước/sau và history intent. No-op không phát commit; mutation đã xảy ra trước exception vẫn được publish trước khi error gốc được rethrow.
 
 ### 5.4 Browser history intent
 
@@ -226,7 +236,7 @@ Flutter adapter ánh xạ:
 | `traverse` | `none` | Không tạo entry khi back/forward |
 | `automatic` | Fallback từ Flutter | Compatibility |
 
-Browser-originated navigation chạy trong `withHistoryIntent(traverse, ...)`. Typed redirect đổi scope sang replace, tránh tạo thêm history entry cho URL trung gian.
+Browser-originated navigation chạy trong `runNavigationTransaction(..., historyIntent: traverse)`. Typed redirect đổi outer transaction scope sang replace, tránh tạo thêm history entry cho URL trung gian.
 
 ```mermaid
 sequenceDiagram
@@ -339,6 +349,31 @@ Thay đổi này đảm bảo:
 - Cùng input luôn chọn cùng module.
 - Duplicate module runtime type ném `StateError` thay vì âm thầm overwrite trong Map.
 
+### 5.10 Declarative Route Manifest
+
+`zenrouter_core` cung cấp `RouteManifest` bất biến và không phụ thuộc Flutter.
+Manifest chứa route/layout ID, URI pattern, parent relationship, query metadata,
+deep-link strategy và deferred-load hint. Module này sở hữu:
+
+- Deterministic matching cho literal, dynamic và rest parameters.
+- Duplicate/equally-specific ambiguous pattern detection.
+- Layout reference và parent-cycle validation.
+- Reverse routing không cần tạo presentation route.
+- Versioned JSON encode/decode cho tooling và devtools.
+- Composition của các manifest độc lập.
+
+ID trong memory được generic hóa qua `RouteManifest<I>`. Handwritten
+coordinator có thể dùng enum hoặc domain value và destructure trực tiếp bằng
+Dart object pattern trên `RouteManifestMatch.id`. `RouteIdCodec<I>` chỉ chuyển
+ID typed sang stable string khi encode/decode JSON; serialization concern không
+còn rò vào matching hoặc reverse-routing interface.
+
+File generator sinh `Coordinator.manifest`, dùng manifest match trước khi binding
+route ID sang `RouteTarget` cụ thể, và sinh static `{route}Location()` helpers.
+Widget, `BuildContext`, transition và constructor closure không đi vào manifest.
+Hand-written coordinator vẫn tương thích qua `RouteManifest.empty` và có thể
+override `routeManifest` khi muốn khai báo topology tĩnh.
+
 ## 6. SPA flow sau thay đổi
 
 ### 6.1 Programmatic push
@@ -386,17 +421,17 @@ Future<HttpResponse> handle(HttpRequest httpRequest) async {
   return switch (resolution) {
     RedirectRouteResolution(:final location, :final statusCode) =>
       redirectResponse(location, statusCode),
-    MatchedRouteResolution(:final route, :final data) =>
-      renderResponse(route, data, statusCode: resolution.statusCode),
-    NotFoundRouteResolution(:final route, :final data) =>
-      renderNotFound(route, data, statusCode: resolution.statusCode),
+    MatchedRouteResolution(:final route, :final hydration) =>
+      renderResponse(route, hydration, statusCode: resolution.statusCode),
+    NotFoundRouteResolution(:final route, :final hydration) =>
+      renderNotFound(route, hydration, statusCode: resolution.statusCode),
     ErrorRouteResolution(:final error, :final stackTrace) =>
       renderError(error, stackTrace, statusCode: resolution.statusCode),
   };
 }
 ```
 
-Đoạn trên minh họa integration point; `HttpResponse`, HTML renderer và hydration encoder chưa được cung cấp bởi repository.
+Đoạn trên minh họa integration point; `HttpResponse`, HTML renderer và cách embed payload an toàn vào HTML chưa được cung cấp bởi repository. JSON hydration envelope và codec đã nằm trong core.
 
 ## 8. API và compatibility impact
 
@@ -415,11 +450,18 @@ Future<HttpResponse> handle(HttpRequest httpRequest) async {
 - `RouteResolver<T>`
 - `RouteResolution<T>` hierarchy
 - `RouteNotFound`
+- `RouteCancellationToken`
+- `RouteHydrationPayload`
+- `RouteManifest`, `RouteManifestRoute`, `RouteManifestLayout`
+- `RoutePattern` và `RouteManifestMatch`
+- `RouteIdCodec<I>`
+- `NavigationCommit`
 - `NavigationHistoryIntent`
 - `CoordinatorCore.withHistoryIntent()`
 - `StackMutatable.pushSilently()`
 - `CoordinatorMutatable.pushSilently()`
 - `StackMutatable.replaceAll()`
+- `CoordinatorCore.runNavigationTransaction()`
 
 ### 8.3 Compatibility bridge
 
@@ -438,7 +480,7 @@ fvm flutter test \
   packages/zenrouter/test \
   packages/zenrouter_file_generator/test
 
-922 tests passed, 5 skipped
+968 tests passed, 5 skipped
 ```
 
 Test coverage mới bao gồm:
@@ -448,9 +490,17 @@ Test coverage mới bao gồm:
 - Commit-only navigation không chờ pop result.
 - Deep-link push strategy hoàn tất sau commit.
 - Browser history intent mapping và scoped traversal.
-- Concurrent route paths được serialize theo arrival order.
+- Unresolved route information bị supersede; cooperative cancellation đến resolver.
+- Concurrent coordinator mutations serialize, nested mutations chỉ phát một commit.
 - Typed redirect và error propagation với stack trace gốc.
+- Redirect method/body semantics cho 301, 302, 303, 307 và 308.
 - Match, 404, 500 và immutable headers trong core resolution.
+- Versioned hydration round-trip, deep immutability và schema rejection.
+- Route manifest matching, reverse routing, graph validation, composition và
+  versioned JSON round-trip.
+- Enum/domain route IDs, object-pattern binding và wire-codec collision
+  rejection.
+- Generated Flutter parser/binding và static reverse links dùng chung manifest.
 - URL generation cho dynamic, catch-all, root, query và reserved characters.
 - Atomic diff giữ page instance và chỉ notify một lần.
 - Reset cleanup resource, result completer và stack binding.
@@ -466,16 +516,14 @@ Chưa có package chịu trách nhiệm:
 - Chuyển `dart:io` hoặc framework-specific HTTP request thành `RouteRequest`.
 - Chuyển resolution thành HTTP response.
 - Render HTML hoặc streaming output.
-- Encode/decode hydration data.
+- Embed hydration JSON an toàn vào HTML response.
 - Bảo đảm CSP, cache-control và security headers.
 
 ### 10.2 Hydration contract
 
-`RouteResolution.data` hiện là `Object?`, phù hợp làm seam nhưng chưa đủ làm wire protocol. Production SSR cần:
+`RouteHydrationPayload` hiện cung cấp immutable JSON envelope với schema version và route identity. Production SSR vẫn cần:
 
-- Serializable data contract.
-- Schema/version identifier.
-- Route identity trong payload.
+- Domain schema cho data của từng route.
 - Error redaction giữa server và browser.
 - XSS-safe JSON embedding.
 
@@ -487,36 +535,40 @@ Chưa có first-class concepts cho:
 - Form action/mutation.
 - Cache key và stale policy.
 - Revalidation sau mutation.
-- Abort/cancellation khi navigation mới supersede navigation cũ.
+- Timeout và cancellation adapter cho remote I/O không hỗ trợ token trực tiếp.
 
 ### 10.4 Declarative route graph
 
-Module order đã deterministic, nhưng toàn bộ route graph vẫn chủ yếu được mã hóa trong generated parser và layout hooks. Một manifest tĩnh sẽ giúp:
+Route graph không còn chỉ tồn tại ngầm trong generated parser. `RouteManifest`
+hiện là source of truth cho generated URI matching và link generation:
 
-- SSR build-time validation.
-- Prefetch và preload planning.
-- Link generation không cần route instance.
-- Duplicate/ambiguous path detection.
-- Devtools visualization.
+- Generator validate duplicate/ambiguous patterns trước khi emit code.
+- Static link helpers không cần presentation route instance.
+- Layout topology và deferred metadata có thể được SSR/tooling đọc.
+- Manifest có versioned JSON representation cho devtools.
 
-### 10.5 Transaction boundary ở coordinator layer
+Phần chưa triển khai là UI visualization trong `zenrouter_devtools` và executor
+cho prefetch/preload plan; manifest đã cung cấp dữ liệu cần thiết cho hai adapter
+này.
 
-Path-level declarative diff đã atomic. Tuy nhiên, một navigation qua nhiều nested layout paths vẫn có thể tạo nhiều path notifications cho custom listeners. Flutter adapter đọc final `currentUri`, nhưng một explicit coordinator transaction/commit object sẽ làm contract mạnh hơn cho analytics, SSR state snapshots và external stores.
+### 10.5 Direct path listeners
+
+Coordinator listeners hiện nhận atomic `NavigationCommit`. Consumer đăng ký trực tiếp vào từng `StackPath` vẫn quan sát path-level mutations; loại listener này nên dành cho renderer nội bộ. Analytics, external stores và SSR snapshots nên nghe coordinator commit seam.
 
 ## 11. Đề xuất roadmap
 
 ### Phase 1 — Hoàn thiện routing kernel
 
-- Thêm navigation transaction boundary.
-- Thêm cancellation token/generation cho Router queue.
-- Chuẩn hóa redirect method semantics: 301, 302, 303, 307, 308.
-- Định nghĩa serializable hydration payload.
+- [x] Thêm navigation transaction boundary.
+- [x] Thêm cancellation token/generation cho Router queue.
+- [x] Chuẩn hóa redirect method semantics: 301, 302, 303, 307, 308.
+- [x] Định nghĩa serializable hydration payload.
 
 ### Phase 2 — Route manifest
 
-- Generator xuất immutable route graph.
-- Validate ambiguous routes và duplicate patterns tại build time.
-- Expose reverse routing/link builder không phụ thuộc presentation route.
+- [x] Generator xuất immutable route graph.
+- [x] Validate ambiguous routes và duplicate patterns tại build time.
+- [x] Expose reverse routing/link builder không phụ thuộc presentation route.
 
 ### Phase 3 — SSR adapter
 
@@ -543,4 +595,8 @@ Các lỗi contract quan trọng nhất ngăn ZenRouter làm web navigation back
 - Redirect, 404 và error là typed outcomes.
 - Identity, URL và lifecycle tuân theo invariant ổn định.
 
-ZenRouter hiện đủ nền tảng để làm SPA routing backbone và core resolver cho SSR. Bước tiếp theo không nên tiếp tục nhồi server behavior vào Flutter `Coordinator`; nên xây một SSR adapter riêng trên `RouteResolver` và một route manifest/hydration contract có version.
+ZenRouter hiện đủ nền tảng để làm SPA routing backbone và core resolver cho SSR.
+Phase 1 của routing kernel và Phase 2 Route Manifest đã hoàn tất. Bước tiếp theo
+không nên tiếp tục nhồi server behavior vào Flutter `Coordinator`; nên tạo SSR
+adapter riêng trên `RouteResolver`, `RouteManifest` và
+`RouteHydrationPayload`.

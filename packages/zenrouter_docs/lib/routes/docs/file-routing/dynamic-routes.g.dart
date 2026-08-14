@@ -17,7 +17,8 @@ abstract class _$DynamicRoutesRoute extends DocsRoute {
   Type? get layout => DocsLayout;
 
   @override
-  Uri toUri() => Uri.parse('/docs/file-routing/dynamic-routes');
+  Uri toUri() =>
+      Uri(pathSegments: ['', 'docs', 'file-routing', 'dynamic-routes']);
 
   @override
   List<Object?> get props => [];

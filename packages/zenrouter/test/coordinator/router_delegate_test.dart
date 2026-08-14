@@ -199,6 +199,20 @@ class ResolutionTestCoordinator extends TestCoordinator {
   }
 }
 
+class CancellationAwareCoordinator extends TestCoordinator {
+  bool cancellationObserved = false;
+
+  @override
+  Future<RouteResolution<AppRoute>> resolveRoute(RouteRequest request) async {
+    if (request.uri.path == '/slow') {
+      await request.cancellationToken.whenCancelled;
+      cancellationObserved = true;
+      request.cancellationToken.throwIfCancelled();
+    }
+    return super.resolveRoute(request);
+  }
+}
+
 // ============================================================================
 // Tests
 // ============================================================================
@@ -354,7 +368,7 @@ void main() {
       expect(find.text('Settings'), findsOneWidget);
     });
 
-    test('serializes concurrent route-path commits in arrival order', () async {
+    test('new route information supersedes unresolved work', () async {
       final queuedCoordinator = QueuedTestCoordinator();
 
       final first = queuedCoordinator.routerDelegate.setNewRoutePath(
@@ -364,13 +378,6 @@ void main() {
       final second = queuedCoordinator.routerDelegate.setNewRoutePath(
         Uri.parse('/profile/2'),
       );
-      await pumpEventQueue();
-
-      expect(queuedCoordinator.parseOrder, ['/settings']);
-
-      queuedCoordinator.firstParseGate.complete();
-      await first;
-      expect(queuedCoordinator.root.activeRoute, isA<SettingsRoute>());
 
       await second;
       expect(queuedCoordinator.parseOrder, ['/settings', '/profile/2']);
@@ -379,7 +386,35 @@ void main() {
         isA<ProfileRoute>().having((route) => route.id, 'id', '2'),
       );
 
+      await first;
+      expect(queuedCoordinator.firstParseGate.isCompleted, isFalse);
+      expect(
+        queuedCoordinator.root.activeRoute,
+        isA<ProfileRoute>().having((route) => route.id, 'id', '2'),
+      );
+
+      queuedCoordinator.firstParseGate.complete();
+      await pumpEventQueue();
+
       queuedCoordinator.dispose();
+    });
+
+    test('passes cooperative cancellation to route resolvers', () async {
+      final cancellationCoordinator = CancellationAwareCoordinator();
+
+      final slow = cancellationCoordinator.routerDelegate.setNewRoutePath(
+        Uri.parse('/slow'),
+      );
+      await pumpEventQueue();
+      final latest = cancellationCoordinator.routerDelegate.setNewRoutePath(
+        Uri.parse('/settings'),
+      );
+
+      await Future.wait([slow, latest]);
+
+      expect(cancellationCoordinator.cancellationObserved, isTrue);
+      expect(cancellationCoordinator.root.activeRoute, isA<SettingsRoute>());
+      cancellationCoordinator.dispose();
     });
 
     test('applies typed redirects with replace history intent', () async {

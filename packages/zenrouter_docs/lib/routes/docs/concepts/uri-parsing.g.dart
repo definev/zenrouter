@@ -17,7 +17,7 @@ abstract class _$UriParsingRoute extends DocsRoute {
   Type? get layout => DocsLayout;
 
   @override
-  Uri toUri() => Uri.parse('/docs/concepts/uri-parsing');
+  Uri toUri() => Uri(pathSegments: ['', 'docs', 'concepts', 'uri-parsing']);
 
   @override
   List<Object?> get props => [];

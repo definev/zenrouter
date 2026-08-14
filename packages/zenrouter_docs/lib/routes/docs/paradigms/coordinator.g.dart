@@ -17,7 +17,7 @@ abstract class _$CoordinatorRoute extends DocsRoute {
   Type? get layout => DocsLayout;
 
   @override
-  Uri toUri() => Uri.parse('/docs/paradigms/coordinator');
+  Uri toUri() => Uri(pathSegments: ['', 'docs', 'paradigms', 'coordinator']);
 
   @override
   List<Object?> get props => [];

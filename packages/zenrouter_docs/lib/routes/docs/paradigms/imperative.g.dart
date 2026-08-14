@@ -17,7 +17,7 @@ abstract class _$ImperativeRoute extends DocsRoute {
   Type? get layout => DocsLayout;
 
   @override
-  Uri toUri() => Uri.parse('/docs/paradigms/imperative');
+  Uri toUri() => Uri(pathSegments: ['', 'docs', 'paradigms', 'imperative']);
 
   @override
   List<Object?> get props => [];

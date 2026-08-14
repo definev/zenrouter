@@ -23,7 +23,8 @@ abstract class _$FeedDynamicIdRoute extends AppRoute {
   Type? get layout => FollowingLayout;
 
   @override
-  Uri toUri() => Uri.parse('/tabs/feed/following/${slugs.join('/')}/$id');
+  Uri toUri() =>
+      Uri(pathSegments: ['', 'tabs', 'feed', 'following', ...slugs, id]);
 
   @override
   List<Object?> get props => [slugs, id];

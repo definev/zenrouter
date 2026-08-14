@@ -17,7 +17,7 @@ abstract class _$RegisterRoute extends AppRoute {
   Type? get layout => AuthLayout;
 
   @override
-  Uri toUri() => Uri.parse('/register');
+  Uri toUri() => Uri(pathSegments: ['', 'register']);
 
   @override
   List<Object?> get props => [];

@@ -20,7 +20,7 @@ abstract class _$ExamplesSlugRoute extends DocsRoute {
   Type? get layout => ExamplesLayout;
 
   @override
-  Uri toUri() => Uri.parse('/docs/examples/$slug');
+  Uri toUri() => Uri(pathSegments: ['', 'docs', 'examples', slug]);
 
   @override
   List<Object?> get props => [slug];

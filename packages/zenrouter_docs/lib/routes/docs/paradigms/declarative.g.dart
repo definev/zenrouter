@@ -17,7 +17,7 @@ abstract class _$DeclarativeRoute extends DocsRoute {
   Type? get layout => DocsLayout;
 
   @override
-  Uri toUri() => Uri.parse('/docs/paradigms/declarative');
+  Uri toUri() => Uri(pathSegments: ['', 'docs', 'paradigms', 'declarative']);
 
   @override
   List<Object?> get props => [];

@@ -22,6 +22,7 @@ This package is part of the [ZenRouter](https://github.com/definev/zenrouter/blo
 - 🌟 **Catch-all routes** - `[...params].dart` files capture multiple path segments
 - 📦 **Route groups** - `(name)/` folders wrap routes in layouts without affecting URLs
 - 🎯 **Type-safe navigation** - Generated extension methods for type-safe navigation
+- 🧭 **Declarative route graph** - Generated manifest, conflict validation, and reverse routing
 - 📱 **Full ZenRouter support** - Deep linking, guards, redirects, transitions, and more
 - 🚀 **Zero boilerplate** - Routes are generated from your file structure
 - 🕸️ **Lazy loading** - Routes can be lazy loaded using the `deferredImport` option in the `@ZenCoordinator` annotation. Improves app startup time and reduces initial bundle size.
@@ -700,8 +701,10 @@ lib/routes/
 The generator creates `routes.zen.dart` with:
 
 - `AppRoute` base class (or custom name via `@ZenCoordinator`)
-- `AppCoordinator` class with `parseRouteFromUri` implementation
+- `AppCoordinator.manifest`, an immutable `RouteManifest`
+- `parseRouteFromUri`, backed by manifest matching and generated Flutter bindings
 - Navigation path definitions for layouts
+- Static, type-safe `{route}Location()` reverse-routing methods
 - Type-safe navigation extension methods (push/replace/recover)
 
 ```dart
@@ -709,6 +712,18 @@ The generator creates `routes.zen.dart` with:
 abstract class AppRoute extends RouteTarget with RouteUnique {}
 
 class AppCoordinator extends Coordinator<AppRoute> {
+  static final RouteManifest<String> manifest = RouteManifest<String>(
+    name: 'AppCoordinator',
+    routes: [
+      RouteManifestRoute(id: 'IndexRoute', path: '/'),
+      RouteManifestRoute(id: 'AboutRoute', path: '/about'),
+      RouteManifestRoute(id: 'ProfileIdRoute', path: '/profile/:id'),
+    ],
+  );
+
+  @override
+  RouteManifest<String> get routeManifest => manifest;
+
   final IndexedStackPath<AppRoute> tabsPath = IndexedStackPath([...]);
   
   @override
@@ -716,13 +731,22 @@ class AppCoordinator extends Coordinator<AppRoute> {
   
   @override
   AppRoute parseRouteFromUri(Uri uri) {
-    return switch (uri.pathSegments) {
-      [] => IndexRoute(),
-      ['about'] => AboutRoute(),
-      ['profile', final id] => ProfileIdRoute(id: id),
+    final match = routeManifest.match(uri);
+    if (match == null) return NotFoundRoute(uri: uri);
+    return switch (match.route.id) {
+      'IndexRoute' => IndexRoute(),
+      'AboutRoute' => AboutRoute(),
+      'ProfileIdRoute' => ProfileIdRoute(
+        id: match.pathParameters['id']!,
+      ),
       _ => NotFoundRoute(uri: uri),
     };
   }
+
+  static Uri profileIdLocation({required String id}) => manifest.location(
+    'ProfileIdRoute',
+    pathParameters: {'id': id},
+  );
 }
 
 // Type-safe navigation extensions
@@ -738,6 +762,17 @@ extension AppCoordinatorNav on AppCoordinator {
   void recoverProfileId(String id) => recoverRouteFromUri(ProfileIdRoute(id: id).toUri());
 }
 ```
+
+The same path pattern drives parsing and link generation:
+
+```dart
+final uri = AppCoordinator.profileIdLocation(id: 'core team');
+// /profile/core%20team
+```
+
+The generator rejects duplicate or equally-specific ambiguous patterns before
+emitting the coordinator. Widget builders, transitions, and route constructors
+remain in generated Flutter bindings rather than entering the manifest.
 
 ### Navigation Methods: Push / Replace / Recover
 

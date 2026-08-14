@@ -4,6 +4,7 @@ import 'package:meta/meta.dart';
 import 'package:zenrouter_core/src/contracts/mutatable.dart';
 import 'package:zenrouter_core/src/contracts/navigatable.dart';
 import 'package:zenrouter_core/src/coordinator/modular.dart';
+import 'package:zenrouter_core/src/history/commit.dart';
 import 'package:zenrouter_core/src/history/intent.dart';
 import 'package:zenrouter_core/src/internal/equatable.dart';
 import 'package:zenrouter_core/src/internal/reactive.dart';
@@ -14,6 +15,8 @@ import 'package:zenrouter_core/src/mixin/uri.dart';
 import 'package:zenrouter_core/src/path/base.dart';
 import 'package:zenrouter_core/src/path/navigatable.dart';
 import 'package:zenrouter_core/src/routing/resolution.dart';
+import 'package:zenrouter_core/src/routing/cancellation.dart';
+import 'package:zenrouter_core/src/routing/manifest.dart';
 
 part 'layout.dart';
 part 'mutatable.dart';
@@ -36,10 +39,14 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
     with ListenableObject
     implements RouteModule<T>, RouteResolver<T> {
   CoordinatorCore({this.initialRoutePath}) {
-    for (final path in paths) {
-      path.addListener(notifyListeners);
+    if (!isRouteModule) {
+      for (final path in paths) {
+        path.addListener(_handlePathChanged);
+      }
     }
+    _publishedUri = currentUri;
     init();
+    _publishedUri = currentUri;
   }
 
   /// {@macro zenrouter.coordinator.modular.coordinator}
@@ -60,9 +67,11 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
   @override
   @mustCallSuper
   void dispose() {
-    for (final path in paths) {
-      path.removeListener(notifyListeners);
-      path.dispose();
+    if (!isRouteModule) {
+      for (final path in paths) {
+        path.removeListener(_handlePathChanged);
+        path.dispose();
+      }
     }
     super.dispose();
   }
@@ -94,6 +103,12 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
   @mustCallSuper
   List<StackPath> get paths => isRouteModule ? [] : [root];
 
+  /// Static route topology exposed to tooling and routing adapters.
+  ///
+  /// Hand-written coordinators remain parser-compatible without a manifest.
+  @override
+  RouteManifest<Object> get routeManifest => RouteManifest.empty;
+
   /// Defines the layout structure for this coordinator.
   ///
   /// This method is called during initialization. Override this to register
@@ -123,12 +138,138 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
       NavigationHistoryIntent.automatic;
   final List<NavigationHistoryIntent> _historyIntentScopes = [];
 
+  late Uri _publishedUri;
+  int _transactionDepth = 0;
+  bool _transactionChanged = false;
+  int _navigationRevision = 0;
+  final Object _transactionZoneKey = Object();
+  Future<void> _transactionQueue = Future<void>.value();
+  bool _transactionQueueIdle = true;
+
+  /// The most recently published atomic navigation commit.
+  NavigationCommit? get lastNavigationCommit => isRouteModule
+      ? rootCoordinator.lastNavigationCommit
+      : _lastNavigationCommit;
+  NavigationCommit? _lastNavigationCommit;
+
+  void _handlePathChanged() {
+    if (_transactionDepth > 0) {
+      _transactionChanged = true;
+      return;
+    }
+
+    _publishNavigationCommit(_publishedUri);
+  }
+
+  void _publishNavigationCommit(Uri previousUri) {
+    final current = currentUri;
+    _publishedUri = current;
+    _lastNavigationCommit = NavigationCommit(
+      revision: ++_navigationRevision,
+      previousUri: previousUri,
+      currentUri: current,
+      historyIntent: _pendingHistoryIntent,
+    );
+    notifyListeners();
+  }
+
+  /// Runs path mutations as one coordinator-level navigation commit.
+  ///
+  /// Nested transactions join the outer transaction. Path listeners may fire
+  /// many times internally, but coordinator listeners observe one final state.
+  /// If [operation] changes state and then throws, the changed state is still
+  /// published before the original error is rethrown.
+  ///
+  /// [operation] must finish at the commit boundary. Do not await a route's
+  /// later pop-result future inside a transaction; use `pushSilently` for
+  /// commit-only work. A long-running outer transaction intentionally blocks
+  /// later top-level mutations to preserve ordering.
+  Future<R> runNavigationTransaction<R>(
+    FutureOr<R> Function() operation, {
+    NavigationHistoryIntent historyIntent = NavigationHistoryIntent.automatic,
+  }) {
+    if (isRouteModule) {
+      return rootCoordinator.runNavigationTransaction(
+        operation,
+        historyIntent: historyIntent,
+      );
+    }
+
+    if (Zone.current[_transactionZoneKey] == true) {
+      return _runNavigationTransaction(operation, historyIntent: historyIntent);
+    }
+
+    Future<R> startTransaction() => runZoned(
+      () => _runNavigationTransaction(operation, historyIntent: historyIntent),
+      zoneValues: {_transactionZoneKey: true},
+    );
+
+    final transaction = _transactionQueueIdle
+        ? startTransaction()
+        : _transactionQueue.then<R>((_) => startTransaction());
+    _transactionQueueIdle = false;
+    final tail = transaction.then<void>((_) {}, onError: (_, _) {});
+    _transactionQueue = tail;
+    tail.whenComplete(() {
+      if (identical(_transactionQueue, tail)) {
+        _transactionQueueIdle = true;
+      }
+    });
+    return transaction;
+  }
+
+  Future<R> _runNavigationTransaction<R>(
+    FutureOr<R> Function() operation, {
+    required NavigationHistoryIntent historyIntent,
+  }) async {
+    final isOutermost = _transactionDepth == 0;
+    final previousIntent = _pendingHistoryIntent;
+    final previousUri = _publishedUri;
+    final hasHistoryScope = historyIntent != NavigationHistoryIntent.automatic;
+
+    if (isOutermost) _transactionChanged = false;
+    _transactionDepth++;
+
+    if (hasHistoryScope) {
+      _historyIntentScopes.add(historyIntent);
+      recordHistoryIntent(historyIntent);
+    }
+
+    try {
+      return await operation();
+    } finally {
+      if (isOutermost) {
+        // NavigationPath.reset publishes in a microtask so it remains safe
+        // during Flutter builds and in headless use. Drain those callbacks
+        // before deciding whether this transaction changed state.
+        await Future<void>.microtask(() {});
+      }
+
+      if (hasHistoryScope) _historyIntentScopes.removeLast();
+      _transactionDepth--;
+
+      if (isOutermost) {
+        if (_transactionChanged) {
+          _publishNavigationCommit(previousUri);
+        } else {
+          _pendingHistoryIntent = previousIntent;
+        }
+        _transactionChanged = false;
+      }
+    }
+  }
+
   /// Records how the next committed URI should affect external history.
   ///
   void recordHistoryIntent(NavigationHistoryIntent intent) {
+    if (isRouteModule) {
+      rootCoordinator.recordHistoryIntent(intent);
+      return;
+    }
+
     final effectiveIntent = _historyIntentScopes.isEmpty
         ? intent
-        : _historyIntentScopes.last;
+        : _historyIntentScopes.first;
     if (effectiveIntent == NavigationHistoryIntent.automatic) return;
     _pendingHistoryIntent = effectiveIntent;
   }
@@ -142,6 +283,10 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
     NavigationHistoryIntent intent,
     FutureOr<R> Function() operation,
   ) async {
+    if (isRouteModule) {
+      return rootCoordinator.withHistoryIntent(intent, operation);
+    }
+
     final previousIntent = _pendingHistoryIntent;
     _historyIntentScopes.add(intent);
     recordHistoryIntent(intent);
@@ -160,13 +305,17 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
   /// Intended for history adapters such as Flutter's
   /// `RouteInformationProvider`.
   NavigationHistoryIntent consumeHistoryIntent() {
+    if (isRouteModule) return rootCoordinator.consumeHistoryIntent();
+
     final intent = _pendingHistoryIntent;
     _pendingHistoryIntent = NavigationHistoryIntent.automatic;
     return intent;
   }
 
   /// Returns the current URI based on the active route.
-  Uri get currentUri => activePath.activeRoute?.identifier ?? Uri.parse('/');
+  Uri get currentUri => isRouteModule
+      ? rootCoordinator.currentUri
+      : activePath.activeRoute?.identifier ?? Uri.parse('/');
 
   /// Returns the deepest active [RouteLayout] in the navigation hierarchy.
   ///
@@ -248,7 +397,9 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
   @override
   Future<RouteResolution<T>> resolveRoute(RouteRequest request) async {
     try {
+      request.cancellationToken.throwIfCancelled();
       final route = await parseRouteFromUri(request.uri);
+      request.cancellationToken.throwIfCancelled();
       if (route == null) {
         return NotFoundRouteResolution(request: request);
       }
@@ -256,6 +407,8 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
         return NotFoundRouteResolution(request: request, route: route);
       }
       return MatchedRouteResolution(request: request, route: route);
+    } on RouteResolutionCancelled {
+      rethrow;
     } catch (error, stackTrace) {
       return ErrorRouteResolution(
         request: request,
@@ -282,7 +435,12 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
   void markNeedRebuild({
     NavigationHistoryIntent historyIntent = NavigationHistoryIntent.automatic,
   }) {
+    if (isRouteModule) {
+      rootCoordinator.markNeedRebuild(historyIntent: historyIntent);
+      return;
+    }
+
     recordHistoryIntent(historyIntent);
-    notifyListeners();
+    _handlePathChanged();
   }
 }

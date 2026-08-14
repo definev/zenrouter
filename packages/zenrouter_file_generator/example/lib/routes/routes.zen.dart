@@ -50,6 +50,284 @@ export '_route.dart';
 
 /// Generated coordinator managing all routes.
 class AppCoordinator extends Coordinator<AppRoute> {
+  /// Immutable application route topology.
+  static final RouteManifest<String> manifest = RouteManifest<String>(
+    name: 'AppCoordinator',
+    routes: [
+      RouteManifestRoute(
+        id: 'ForgotPasswordRoute',
+        path: '/forgot-password',
+        parentId: 'AuthLayout',
+        isDeferred: true,
+        deepLinkStrategy: DeeplinkStrategy.push,
+      ),
+      RouteManifestRoute(
+        id: 'LoginRoute',
+        path: '/login',
+        parentId: 'AuthLayout',
+        isDeferred: true,
+        deepLinkStrategy: DeeplinkStrategy.replace,
+      ),
+      RouteManifestRoute(
+        id: 'RegisterRoute',
+        path: '/register',
+        parentId: 'AuthLayout',
+        isDeferred: true,
+        deepLinkStrategy: DeeplinkStrategy.replace,
+      ),
+      RouteManifestRoute(id: 'AboutRoute', path: '/about', isDeferred: true),
+      RouteManifestRoute(
+        id: 'BlogSlugsRoute',
+        path: '/blog/...:slugs',
+        isDeferred: true,
+      ),
+      RouteManifestRoute(
+        id: 'CollectionListRoute',
+        path: '/collection/list',
+        queryParameters: ['page', 'sortOrder', 'filter'],
+        isDeferred: true,
+      ),
+      RouteManifestRoute(
+        id: 'IndexRoute',
+        path: '/',
+        isDeferred: true,
+        deepLinkStrategy: DeeplinkStrategy.push,
+      ),
+      RouteManifestRoute(
+        id: 'ProfileIdRoute',
+        path: '/profile/:profileId',
+        isDeferred: true,
+      ),
+      RouteManifestRoute(
+        id: 'ProfileGeneralRoute',
+        path: '/profile/general',
+        isDeferred: true,
+      ),
+      RouteManifestRoute(
+        id: 'SettingsAccountIndexRoute',
+        path: '/settings/account',
+        isDeferred: true,
+      ),
+      RouteManifestRoute(
+        id: 'ShopProductsProductIdReviewsRoute',
+        path: '/shop/products/:productId/reviews',
+        isDeferred: true,
+      ),
+      RouteManifestRoute(
+        id: 'FeedDynamicIdRoute',
+        path: '/tabs/feed/following/...:slugs/:id',
+        parentId: 'FollowingLayout',
+        isDeferred: true,
+      ),
+      RouteManifestRoute(
+        id: 'FeedDynamicAboutRoute',
+        path: '/tabs/feed/following/...:slugs/about',
+        parentId: 'FollowingLayout',
+        isDeferred: true,
+      ),
+      RouteManifestRoute(
+        id: 'FeedDynamicRoute',
+        path: '/tabs/feed/following/...:slugs',
+        parentId: 'FollowingLayout',
+        isDeferred: true,
+      ),
+      RouteManifestRoute(
+        id: 'FeedPostRoute',
+        path: '/tabs/feed/following/:postId',
+        parentId: 'FollowingLayout',
+        hasGuard: true,
+        isDeferred: true,
+        deepLinkStrategy: DeeplinkStrategy.push,
+      ),
+      RouteManifestRoute(
+        id: 'FollowingRoute',
+        path: '/tabs/feed/following',
+        parentId: 'FollowingLayout',
+        isDeferred: true,
+        deepLinkStrategy: DeeplinkStrategy.push,
+      ),
+      RouteManifestRoute(
+        id: 'ForYouRoute',
+        path: '/tabs/feed/for-you',
+        parentId: 'ForYouLayout',
+        queryParameters: ['*'],
+        isDeferred: true,
+        deepLinkStrategy: DeeplinkStrategy.push,
+      ),
+      RouteManifestRoute(
+        id: 'ForYouSheetRoute',
+        path: '/tabs/feed/for-you/sheet',
+        parentId: 'ForYouLayout',
+        isDeferred: true,
+        deepLinkStrategy: DeeplinkStrategy.replace,
+      ),
+      RouteManifestRoute(
+        id: 'TabProfileRoute',
+        path: '/tabs/profile',
+        parentId: 'TabsLayout',
+        deepLinkStrategy: DeeplinkStrategy.push,
+      ),
+      RouteManifestRoute(
+        id: 'TabSettingsRoute',
+        path: '/tabs/settings',
+        parentId: 'TabsLayout',
+        deepLinkStrategy: DeeplinkStrategy.push,
+      ),
+    ],
+    layouts: [
+      RouteManifestLayout(
+        id: 'AuthLayout',
+        path: '/',
+        kind: RouteManifestLayoutKind.stack,
+      ),
+      RouteManifestLayout(
+        id: 'TabsLayout',
+        path: '/tabs',
+        kind: RouteManifestLayoutKind.indexed,
+        indexedChildIds: [
+          'FeedTabLayout',
+          'TabProfileRoute',
+          'TabSettingsRoute',
+        ],
+      ),
+      RouteManifestLayout(
+        id: 'FeedTabLayout',
+        path: '/tabs/feed',
+        parentId: 'TabsLayout',
+        kind: RouteManifestLayoutKind.indexed,
+        indexedChildIds: ['FollowingLayout', 'ForYouLayout'],
+      ),
+      RouteManifestLayout(
+        id: 'FollowingLayout',
+        path: '/tabs/feed/following',
+        parentId: 'FeedTabLayout',
+        kind: RouteManifestLayoutKind.stack,
+      ),
+      RouteManifestLayout(
+        id: 'ForYouLayout',
+        path: '/tabs/feed/for-you',
+        parentId: 'FeedTabLayout',
+        kind: RouteManifestLayoutKind.stack,
+      ),
+    ],
+  );
+
+  @override
+  RouteManifest<String> get routeManifest => manifest;
+
+  /// Type-safe reverse routing without constructing presentation routes.
+  static Uri forgotPasswordLocation({String? fragment}) =>
+      manifest.location('ForgotPasswordRoute', fragment: fragment);
+
+  static Uri loginLocation({String? fragment}) =>
+      manifest.location('LoginRoute', fragment: fragment);
+
+  static Uri registerLocation({String? fragment}) =>
+      manifest.location('RegisterRoute', fragment: fragment);
+
+  static Uri aboutLocation({String? fragment}) =>
+      manifest.location('AboutRoute', fragment: fragment);
+
+  static Uri blogSlugsLocation({
+    required List<String> slugs,
+    String? fragment,
+  }) => manifest.location(
+    'BlogSlugsRoute',
+    restParameters: {'slugs': slugs},
+    fragment: fragment,
+  );
+
+  static Uri collectionListLocation({
+    Map<String, String> queries = const {},
+    String? fragment,
+  }) => manifest.location(
+    'CollectionListRoute',
+    queryParameters: queries,
+    fragment: fragment,
+  );
+
+  static Uri indexLocation({String? fragment}) =>
+      manifest.location('IndexRoute', fragment: fragment);
+
+  static Uri profileIdLocation({required String profileId, String? fragment}) =>
+      manifest.location(
+        'ProfileIdRoute',
+        pathParameters: {'profileId': profileId},
+        fragment: fragment,
+      );
+
+  static Uri profileGeneralLocation({String? fragment}) =>
+      manifest.location('ProfileGeneralRoute', fragment: fragment);
+
+  static Uri settingsAccountIndexLocation({String? fragment}) =>
+      manifest.location('SettingsAccountIndexRoute', fragment: fragment);
+
+  static Uri shopProductsProductIdReviewsLocation({
+    required String productId,
+    String? fragment,
+  }) => manifest.location(
+    'ShopProductsProductIdReviewsRoute',
+    pathParameters: {'productId': productId},
+    fragment: fragment,
+  );
+
+  static Uri feedDynamicIdLocation({
+    required List<String> slugs,
+    required String id,
+    String? fragment,
+  }) => manifest.location(
+    'FeedDynamicIdRoute',
+    pathParameters: {'id': id},
+    restParameters: {'slugs': slugs},
+    fragment: fragment,
+  );
+
+  static Uri feedDynamicAboutLocation({
+    required List<String> slugs,
+    String? fragment,
+  }) => manifest.location(
+    'FeedDynamicAboutRoute',
+    restParameters: {'slugs': slugs},
+    fragment: fragment,
+  );
+
+  static Uri feedDynamicLocation({
+    required List<String> slugs,
+    String? fragment,
+  }) => manifest.location(
+    'FeedDynamicRoute',
+    restParameters: {'slugs': slugs},
+    fragment: fragment,
+  );
+
+  static Uri feedPostLocation({required String postId, String? fragment}) =>
+      manifest.location(
+        'FeedPostRoute',
+        pathParameters: {'postId': postId},
+        fragment: fragment,
+      );
+
+  static Uri followingLocation({String? fragment}) =>
+      manifest.location('FollowingRoute', fragment: fragment);
+
+  static Uri forYouLocation({
+    Map<String, String> queries = const {},
+    String? fragment,
+  }) => manifest.location(
+    'ForYouRoute',
+    queryParameters: queries,
+    fragment: fragment,
+  );
+
+  static Uri forYouSheetLocation({String? fragment}) =>
+      manifest.location('ForYouSheetRoute', fragment: fragment);
+
+  static Uri tabProfileLocation({String? fragment}) =>
+      manifest.location('TabProfileRoute', fragment: fragment);
+
+  static Uri tabSettingsLocation({String? fragment}) =>
+      manifest.location('TabSettingsRoute', fragment: fragment);
+
   late final authPath = NavigationPath<AppRoute>.createWith(
     coordinator: this,
     label: 'Auth',
@@ -85,90 +363,101 @@ class AppCoordinator extends Coordinator<AppRoute> {
 
   @override
   Future<AppRoute> parseRouteFromUri(Uri uri) async {
-    return switch (uri.pathSegments) {
-      [] => await () async {
-        await index.loadLibrary();
-        return index.IndexRoute();
-      }(),
-      ['tabs', 'feed', 'for-you', 'sheet'] => await () async {
+    final match = routeManifest.match(uri);
+    if (match == null) {
+      return NotFoundRoute(uri: uri, queries: uri.queryParameters);
+    }
+    return switch (match.id) {
+      'ForYouSheetRoute' => await () async {
         await tabs_feed_foryou_sheet.loadLibrary();
         return tabs_feed_foryou_sheet.ForYouSheetRoute();
       }(),
-      ['shop', 'products', final productId, 'reviews'] => await () async {
+      'ShopProductsProductIdReviewsRoute' => await () async {
         await shop_products__productId_reviews.loadLibrary();
         return shop_products__productId_reviews.ShopProductsProductIdReviewsRoute(
-          productId: productId,
+          productId: match.pathParameters['productId']!,
         );
       }(),
-      ['tabs', 'feed', 'following', final postId] => await () async {
+      'FeedPostRoute' => await () async {
         await tabs_feed_following__postId.loadLibrary();
-        return tabs_feed_following__postId.FeedPostRoute(postId: postId);
+        return tabs_feed_following__postId.FeedPostRoute(
+          postId: match.pathParameters['postId']!,
+        );
       }(),
-      ['tabs', 'feed', 'following'] => await () async {
+      'FollowingRoute' => await () async {
         await tabs_feed_following_index.loadLibrary();
         return tabs_feed_following_index.FollowingRoute();
       }(),
-      ['tabs', 'feed', 'for-you'] => await () async {
+      'ForYouRoute' => await () async {
         await tabs_feed_foryou_index.loadLibrary();
         return tabs_feed_foryou_index.ForYouRoute(queries: uri.queryParameters);
       }(),
-      ['collection', 'list'] => await () async {
+      'CollectionListRoute' => await () async {
         await collection_list.loadLibrary();
         return collection_list.CollectionListRoute(
           queries: uri.queryParameters,
         );
       }(),
-      ['profile', 'general'] => await () async {
+      'ProfileGeneralRoute' => await () async {
         await profile_general.loadLibrary();
         return profile_general.ProfileGeneralRoute();
       }(),
-      ['settings', 'account'] => await () async {
+      'SettingsAccountIndexRoute' => await () async {
         await settings_account_index.loadLibrary();
         return settings_account_index.SettingsAccountIndexRoute();
       }(),
-      ['tabs', 'profile'] => TabProfileRoute(),
-      ['tabs', 'settings'] => TabSettingsRoute(),
-      ['profile', final profileId] => await () async {
+      'TabProfileRoute' => TabProfileRoute(),
+      'TabSettingsRoute' => TabSettingsRoute(),
+      'ProfileIdRoute' => await () async {
         await profile__profileId_index.loadLibrary();
-        return profile__profileId_index.ProfileIdRoute(profileId: profileId);
+        return profile__profileId_index.ProfileIdRoute(
+          profileId: match.pathParameters['profileId']!,
+        );
       }(),
-      ['forgot-password'] => await () async {
+      'ForgotPasswordRoute' => await () async {
         await _auth_forgotpassword.loadLibrary();
         return _auth_forgotpassword.ForgotPasswordRoute();
       }(),
-      ['login'] => await () async {
+      'LoginRoute' => await () async {
         await _auth_login.loadLibrary();
         return _auth_login.LoginRoute();
       }(),
-      ['register'] => await () async {
+      'RegisterRoute' => await () async {
         await _auth_register.loadLibrary();
         return _auth_register.RegisterRoute();
       }(),
-      ['about'] => await () async {
+      'AboutRoute' => await () async {
         await about.loadLibrary();
         return about.AboutRoute();
       }(),
-      ['tabs', 'feed', 'following', ...final slugs, 'about'] => await () async {
+      'IndexRoute' => await () async {
+        await index.loadLibrary();
+        return index.IndexRoute();
+      }(),
+      'FeedDynamicAboutRoute' => await () async {
         await tabs_feed_following___slugs_about.loadLibrary();
         return tabs_feed_following___slugs_about.FeedDynamicAboutRoute(
-          slugs: slugs,
+          slugs: match.restParameters['slugs']!,
         );
       }(),
-      ['tabs', 'feed', 'following', ...final slugs, final id] =>
-        await () async {
-          await tabs_feed_following___slugs__id.loadLibrary();
-          return tabs_feed_following___slugs__id.FeedDynamicIdRoute(
-            slugs: slugs,
-            id: id,
-          );
-        }(),
-      ['tabs', 'feed', 'following', ...final slugs] => await () async {
-        await tabs_feed_following___slugs_index.loadLibrary();
-        return tabs_feed_following___slugs_index.FeedDynamicRoute(slugs: slugs);
+      'FeedDynamicIdRoute' => await () async {
+        await tabs_feed_following___slugs__id.loadLibrary();
+        return tabs_feed_following___slugs__id.FeedDynamicIdRoute(
+          slugs: match.restParameters['slugs']!,
+          id: match.pathParameters['id']!,
+        );
       }(),
-      ['blog', ...final slugs] => await () async {
+      'FeedDynamicRoute' => await () async {
+        await tabs_feed_following___slugs_index.loadLibrary();
+        return tabs_feed_following___slugs_index.FeedDynamicRoute(
+          slugs: match.restParameters['slugs']!,
+        );
+      }(),
+      'BlogSlugsRoute' => await () async {
         await blog___slugs.loadLibrary();
-        return blog___slugs.BlogSlugsRoute(slugs: slugs);
+        return blog___slugs.BlogSlugsRoute(
+          slugs: match.restParameters['slugs']!,
+        );
       }(),
       _ => NotFoundRoute(uri: uri, queries: uri.queryParameters),
     };

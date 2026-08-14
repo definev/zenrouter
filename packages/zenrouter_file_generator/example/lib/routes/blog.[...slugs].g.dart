@@ -16,7 +16,7 @@ abstract class _$BlogSlugsRoute extends AppRoute {
   _$BlogSlugsRoute({required this.slugs});
 
   @override
-  Uri toUri() => Uri.parse('/blog/${slugs.join('/')}');
+  Uri toUri() => Uri(pathSegments: ['', 'blog', ...slugs]);
 
   @override
   List<Object?> get props => [slugs];

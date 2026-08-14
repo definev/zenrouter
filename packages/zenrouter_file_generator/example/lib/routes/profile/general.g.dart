@@ -13,7 +13,7 @@ abstract class _$ProfileGeneralRoute extends AppRoute {
   _$ProfileGeneralRoute();
 
   @override
-  Uri toUri() => Uri.parse('/profile/general');
+  Uri toUri() => Uri(pathSegments: ['', 'profile', 'general']);
 
   @override
   List<Object?> get props => [];

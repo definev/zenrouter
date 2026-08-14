@@ -17,7 +17,8 @@ abstract class _$RoutesAndPathsRoute extends DocsRoute {
   Type? get layout => DocsLayout;
 
   @override
-  Uri toUri() => Uri.parse('/docs/concepts/routes-and-paths');
+  Uri toUri() =>
+      Uri(pathSegments: ['', 'docs', 'concepts', 'routes-and-paths']);
 
   @override
   List<Object?> get props => [];
