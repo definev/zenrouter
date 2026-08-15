@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:zenrouter/zenrouter.dart';
 
@@ -61,6 +63,13 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   /// provide more human-readable names for your paths in the debug overlay.
   String debugLabel(StackPath path) => path.debugLabel ?? path.toString();
 
+  /// Whether Observed flow should capture memory-only route screenshots.
+  ///
+  /// Capture is enabled by default in this debug-only tool. Override this with
+  /// `false` when the app can display sensitive information or when screenshot
+  /// capture is too expensive for the target device.
+  bool get debugCaptureRouteScreenshots => true;
+
   // ===========================================================================
   // STATE
   // ===========================================================================
@@ -69,9 +78,19 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   NavigationFlowRecorder<Object>? _debugNavigationFlow;
   bool _debugNavigationFlowAttached = false;
   String? _debugFlowActionLabel;
+  final GlobalKey _debugAppBoundaryKey = GlobalKey(
+    debugLabel: 'zenrouter-debug-app-boundary',
+  );
+  bool? _debugScreenCaptureEnabled;
+  int? _scheduledScreenCaptureRevision;
+  bool _debugDisposed = false;
 
   /// Whether the debug overlay is currently open.
   bool get debugOverlayOpen => _debugOverlayOpen;
+
+  /// Whether automatic Observed-flow screen previews are currently enabled.
+  bool get debugScreenCaptureEnabled =>
+      _debugScreenCaptureEnabled ?? debugCaptureRouteScreenshots;
 
   /// Runtime route transitions observed after the debug UI is attached.
   ///
@@ -88,6 +107,11 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
       addListener(_recordDebugNavigationCommit);
       _debugNavigationFlowAttached = true;
     }
+    _scheduleDebugScreenCapture(
+      recorder,
+      revision: lastNavigationCommit?.revision ?? -1,
+      uri: currentUri,
+    );
     return recorder;
   }
 
@@ -145,6 +169,28 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   /// Clears the observed flow and seeds it at the current route.
   void clearDebugNavigationFlow() {
     debugNavigationFlow.clear(initialUri: currentUri);
+    _scheduleDebugScreenCapture(
+      debugNavigationFlow,
+      revision: lastNavigationCommit?.revision ?? -1,
+      uri: currentUri,
+    );
+  }
+
+  /// Enables or disables automatic screen previews for the Observed graph.
+  ///
+  /// Existing in-memory previews are retained until the flow is cleared.
+  void setDebugScreenCaptureEnabled(bool enabled) {
+    if (debugScreenCaptureEnabled == enabled) return;
+    _debugScreenCaptureEnabled = enabled;
+    _scheduledScreenCaptureRevision = null;
+    if (enabled) {
+      _scheduleDebugScreenCapture(
+        debugNavigationFlow,
+        revision: lastNavigationCommit?.revision ?? -1,
+        uri: currentUri,
+      );
+    }
+    notifyListeners();
   }
 
   void _recordDebugNavigationCommit() {
@@ -157,10 +203,95 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
     final actionLabel = _debugFlowActionLabel;
     _debugFlowActionLabel = null;
     recorder.record(commit, actionLabel: actionLabel);
+    _scheduleDebugScreenCapture(
+      recorder,
+      revision: commit.revision,
+      uri: commit.currentUri,
+    );
+  }
+
+  void _scheduleDebugScreenCapture(
+    NavigationFlowRecorder<Object> recorder, {
+    required int revision,
+    required Uri uri,
+  }) {
+    if (_debugDisposed || !debugScreenCaptureEnabled) return;
+    final routeId = routeManifest.match(uri)?.id;
+    if (routeId == null) return;
+    final preview = recorder.nodes[routeId]?.screenPreview;
+    if (preview?.revision == revision ||
+        _scheduledScreenCaptureRevision == revision) {
+      return;
+    }
+    _scheduledScreenCaptureRevision = revision;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _captureDebugScreen(
+        recorder,
+        routeId: routeId,
+        revision: revision,
+        uri: uri,
+      );
+    });
+  }
+
+  Future<void> _captureDebugScreen(
+    NavigationFlowRecorder<Object> recorder, {
+    required Object routeId,
+    required int revision,
+    required Uri uri,
+  }) async {
+    if (_debugDisposed ||
+        !debugScreenCaptureEnabled ||
+        _scheduledScreenCaptureRevision != revision ||
+        currentUri != uri) {
+      return;
+    }
+
+    final renderObject =
+        _debugAppBoundaryKey.currentContext?.findRenderObject();
+    if (renderObject is! RenderRepaintBoundary) {
+      _scheduledScreenCaptureRevision = null;
+      return;
+    }
+    if (renderObject.debugNeedsPaint) {
+      _scheduledScreenCaptureRevision = null;
+      _scheduleDebugScreenCapture(recorder, revision: revision, uri: uri);
+      return;
+    }
+
+    ui.Image? image;
+    try {
+      image = await renderObject.toImage(pixelRatio: 0.25);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null ||
+          _debugDisposed ||
+          !debugScreenCaptureEnabled ||
+          _scheduledScreenCaptureRevision != revision ||
+          currentUri != uri) {
+        return;
+      }
+      final bytes = Uint8List.fromList(
+        byteData.buffer.asUint8List(
+          byteData.offsetInBytes,
+          byteData.lengthInBytes,
+        ),
+      );
+      recorder.attachScreenPreview(routeId, bytes, revision: revision);
+    } catch (_) {
+      // Some platform views and cross-origin web images cannot be rasterized.
+      // The flow remains usable without a preview in those cases.
+    } finally {
+      image?.dispose();
+      if (_scheduledScreenCaptureRevision == revision) {
+        _scheduledScreenCaptureRevision = null;
+      }
+    }
   }
 
   @override
   void dispose() {
+    _debugDisposed = true;
+    _scheduledScreenCaptureRevision = null;
     if (_debugNavigationFlowAttached) {
       removeListener(_recordDebugNavigationCommit);
     }
@@ -184,7 +315,10 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
 
     return Stack(
       children: [
-        Builder(builder: (context) => super.layoutBuilder(context)),
+        RepaintBoundary(
+          key: _debugAppBoundaryKey,
+          child: Builder(builder: (context) => super.layoutBuilder(context)),
+        ),
         Overlay(
           initialEntries: [
             OverlayEntry(

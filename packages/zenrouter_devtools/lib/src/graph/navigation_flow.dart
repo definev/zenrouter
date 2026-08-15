@@ -11,6 +11,7 @@ final class NavigationFlowNode<I extends Object> {
     required this.lastSeenRevision,
     required this.lastUri,
     required this.visitCount,
+    this.screenPreview,
   });
 
   final I id;
@@ -18,6 +19,23 @@ final class NavigationFlowNode<I extends Object> {
   final int lastSeenRevision;
   final Uri lastUri;
   final int visitCount;
+
+  /// Latest in-memory screenshot captured for this route.
+  final NavigationFlowScreenPreview? screenPreview;
+}
+
+/// A memory-only screenshot associated with an observed route.
+final class NavigationFlowScreenPreview {
+  NavigationFlowScreenPreview({
+    required Uint8List bytes,
+    required this.revision,
+    required this.capturedAt,
+  }) : bytes = Uint8List.fromList(bytes);
+
+  /// PNG-encoded image bytes.
+  final Uint8List bytes;
+  final int revision;
+  final DateTime capturedAt;
 }
 
 /// One committed transition in chronological order.
@@ -87,6 +105,7 @@ final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
     required this.manifest,
     required Uri initialUri,
     this.maxTransitions = 500,
+    this.maxScreenPreviews = 24,
     int initialRevision = -1,
     DateTime Function()? clock,
   }) : _clock = clock ?? DateTime.now,
@@ -105,16 +124,25 @@ final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
         'must be at least -1',
       );
     }
+    if (maxScreenPreviews < 0) {
+      throw ArgumentError.value(
+        maxScreenPreviews,
+        'maxScreenPreviews',
+        'must not be negative',
+      );
+    }
     _observeInitialUri(initialUri);
   }
 
   final RouteManifest<I> manifest;
   final int maxTransitions;
+  final int maxScreenPreviews;
   final DateTime Function() _clock;
 
   final Map<I, NavigationFlowNode<I>> _nodes = {};
   final Map<_NavigationFlowEdgeKey<I>, NavigationFlowEdge<I>> _edges = {};
   final List<NavigationFlowTransition<I>> _transitions = [];
+  final LinkedHashSet<I> _screenPreviewOrder = LinkedHashSet();
   int _lastRecordedRevision;
   int _ignoredTransitionCount = 0;
   I? _entryNodeId;
@@ -212,11 +240,45 @@ final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
     return true;
   }
 
+  /// Stores the latest PNG preview for [id] and evicts older previews.
+  ///
+  /// Screenshots remain in memory only and are discarded by [clear].
+  bool attachScreenPreview(I id, Uint8List pngBytes, {required int revision}) {
+    final node = _nodes[id];
+    if (node == null || pngBytes.isEmpty || maxScreenPreviews == 0) {
+      return false;
+    }
+
+    _nodes[id] = _copyNode(
+      node,
+      screenPreview: NavigationFlowScreenPreview(
+        bytes: pngBytes,
+        revision: revision,
+        capturedAt: _clock(),
+      ),
+    );
+    _screenPreviewOrder
+      ..remove(id)
+      ..add(id);
+
+    while (_screenPreviewOrder.length > maxScreenPreviews) {
+      final evictedId = _screenPreviewOrder.first;
+      _screenPreviewOrder.remove(evictedId);
+      final evictedNode = _nodes[evictedId];
+      if (evictedNode != null) {
+        _nodes[evictedId] = _copyNode(evictedNode, clearScreenPreview: true);
+      }
+    }
+    notifyListeners();
+    return true;
+  }
+
   /// Clears observed edges while keeping revision deduplication intact.
   void clear({required Uri initialUri}) {
     _nodes.clear();
     _edges.clear();
     _transitions.clear();
+    _screenPreviewOrder.clear();
     _ignoredTransitionCount = 0;
     _entryNodeId = null;
     _observeInitialUri(initialUri);
@@ -244,9 +306,24 @@ final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
       lastSeenRevision: revision,
       lastUri: uri,
       visitCount: (previous?.visitCount ?? 0) + (shouldIncrement ? 1 : 0),
+      screenPreview: previous?.screenPreview,
     );
     _entryNodeId ??= id;
   }
+
+  NavigationFlowNode<I> _copyNode(
+    NavigationFlowNode<I> node, {
+    NavigationFlowScreenPreview? screenPreview,
+    bool clearScreenPreview = false,
+  }) => NavigationFlowNode<I>(
+    id: node.id,
+    firstSeenRevision: node.firstSeenRevision,
+    lastSeenRevision: node.lastSeenRevision,
+    lastUri: node.lastUri,
+    visitCount: node.visitCount,
+    screenPreview:
+        clearScreenPreview ? null : screenPreview ?? node.screenPreview,
+  );
 }
 
 final class _NavigationFlowEdgeKey<I extends Object> {

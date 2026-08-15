@@ -4,8 +4,8 @@ version: 3.0.0
 homepage: https://github.com/definev/zenrouter/tree/main/packages/zenrouter_devtools
 
 environment:
-  sdk: ^3.7.0
-  flutter: ">=3.0.0"
+  sdk: ^3.9.0
+  flutter: ">=3.32.0"
 
 topics:
   - router
@@ -20,6 +20,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter:
     sdk: flutter
+  vyuh_node_flow: ^0.31.0
   zenrouter: ^3.0.0
 
 dev_dependencies:

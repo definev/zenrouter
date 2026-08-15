@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zenrouter/zenrouter.dart';
 import 'package:zenrouter_devtools/zenrouter_devtools.dart';
@@ -112,6 +114,46 @@ void main() {
 
       expect(recorder.transitions.map((item) => item.revision), [2, 3]);
       expect(recorder.edges, hasLength(3));
+    });
+
+    test('stores bounded memory-only screen previews', () {
+      final recorder = NavigationFlowRecorder<String>(
+        manifest: _manifest,
+        initialUri: Uri.parse('/'),
+        maxScreenPreviews: 2,
+      );
+      addTearDown(recorder.dispose);
+      recorder.record(
+        _commit(1, '/', '/profile', NavigationHistoryIntent.push),
+      );
+      recorder.record(
+        _commit(2, '/profile', '/settings', NavigationHistoryIntent.push),
+      );
+
+      final homeBytes = Uint8List.fromList([1, 2, 3]);
+      expect(
+        recorder.attachScreenPreview('home', homeBytes, revision: 0),
+        isTrue,
+      );
+      homeBytes[0] = 9;
+      expect(recorder.nodes['home']!.screenPreview!.bytes, [1, 2, 3]);
+      recorder.attachScreenPreview(
+        'profile',
+        Uint8List.fromList([4]),
+        revision: 1,
+      );
+      recorder.attachScreenPreview(
+        'settings',
+        Uint8List.fromList([5]),
+        revision: 2,
+      );
+
+      expect(recorder.nodes['home']!.screenPreview, isNull);
+      expect(recorder.nodes['profile']!.screenPreview!.bytes, [4]);
+      expect(recorder.nodes['settings']!.screenPreview!.bytes, [5]);
+
+      recorder.clear(initialUri: Uri.parse('/settings'));
+      expect(recorder.nodes['settings']!.screenPreview, isNull);
     });
   });
 }
