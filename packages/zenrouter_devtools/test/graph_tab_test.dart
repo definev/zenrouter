@@ -1,10 +1,54 @@
+import 'dart:convert';
+
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vyuh_node_flow/vyuh_node_flow.dart';
 import 'package:zenrouter/zenrouter.dart';
 import 'package:zenrouter_devtools/src/debug_overlay.dart';
 import 'package:zenrouter_devtools/zenrouter_devtools.dart';
 
 void main() {
+  testWidgets('coordinator captures the app layer for an observed screen', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(400, 300);
+    addTearDown(() {
+      tester.view.resetDevicePixelRatio();
+      tester.view.resetPhysicalSize();
+    });
+
+    final coordinator = _TestCoordinator();
+    addTearDown(coordinator.dispose);
+    await tester.pumpWidget(
+      CupertinoApp(
+        home: CoordinatorView<_TestRoute>(
+          coordinator: coordinator,
+          initialUri: Uri.parse('/'),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    for (var attempt = 0; attempt < 5; attempt += 1) {
+      await tester.pump();
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 10)),
+      );
+      if (coordinator.debugNavigationFlow.nodes['home']?.screenPreview !=
+          null) {
+        break;
+      }
+    }
+
+    final preview =
+        coordinator.debugNavigationFlow.nodes['home']?.screenPreview;
+    expect(preview, isNotNull);
+    expect(preview!.bytes, isNotEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('collapsed launcher moves freely and still opens the panel', (
     tester,
   ) async {
@@ -130,14 +174,63 @@ void main() {
     await tester.tap(find.text('Graph'));
     await tester.pump();
 
+    expect(find.byKey(const ValueKey('topology-node-flow')), findsOneWidget);
+    expect(find.byKey(const ValueKey('minimap-graph')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('topology-layout-group-shell')),
+      findsOneWidget,
+    );
+    final topologyEditor = tester.widget<NodeFlowEditor<dynamic, Object?>>(
+      find.byKey(const ValueKey('topology-node-flow')),
+    );
+    expect(topologyEditor.behavior, NodeFlowBehavior.preview);
+    expect(
+      topologyEditor.controller.nodes.values.every((node) => !node.locked),
+      isTrue,
+    );
+    final rootGroups = topologyEditor.controller.nodes.values
+        .whereType<GroupNode<dynamic>>()
+        .toList(growable: false);
+    expect(rootGroups, hasLength(2));
+    expect(
+      _nodeRect(rootGroups[0]).overlaps(_nodeRect(rootGroups[1])),
+      isFalse,
+    );
     expect(find.textContaining('WidgetGraph'), findsOneWidget);
     expect(find.textContaining('Current: home'), findsOneWidget);
     expect(find.text('profile'), findsOneWidget);
 
+    final allTopologyRoutes = topologyEditor.controller.nodes.values
+        .where((node) => node is! GroupNode<dynamic>)
+        .toList(growable: false);
+    final profileNode = allTopologyRoutes.singleWhere(
+      (node) => (node.data as dynamic).id == 'profile',
+    );
+    final topologyRoutes = [
+      profileNode,
+      allTopologyRoutes.firstWhere((node) => node != profileNode),
+    ];
     await tester.tap(find.text('profile'));
     await tester.pump();
 
     expect(find.textContaining('Selected: profile'), findsOneWidget);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.tap(
+      find.byKey(const ValueKey('topology-route-node-home')),
+      warnIfMissed: false,
+    );
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pump();
+    final topologyPositions = [
+      for (final node in topologyRoutes) node.position.value,
+    ];
+    expect(topologyEditor.controller.selectedNodeIds, hasLength(2));
+    topologyEditor.controller
+      ..startNodeDrag(topologyRoutes.first.id)
+      ..moveNodeDrag(const Offset(30, 24))
+      ..endNodeDrag();
+    await tester.pump();
+    _expectNodesMovedTogether(topologyRoutes, topologyPositions);
 
     await coordinator.debugFlowAction(
       'Open profile',
@@ -149,21 +242,96 @@ void main() {
         ..toggleDebugOverlay();
       await coordinator.pushSilently(_HomeRoute());
     });
+    coordinator.debugNavigationFlow.attachScreenPreview(
+      'profile',
+      base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4'
+        '2mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+      ),
+      revision: coordinator.lastNavigationCommit!.revision,
+    );
     await tester.pump();
     await tester.tap(find.text('Observed'));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
+    expect(find.byKey(const ValueKey('observed-node-flow')), findsOneWidget);
+    expect(find.byKey(const ValueKey('minimap-graph')), findsOneWidget);
+    final observedEditor = tester.widget<NodeFlowEditor<dynamic, Object?>>(
+      find.byKey(const ValueKey('observed-node-flow')),
+    );
+    expect(observedEditor.behavior, NodeFlowBehavior.preview);
+    expect(
+      observedEditor.controller.nodes.values.every((node) => !node.locked),
+      isTrue,
+    );
+    final observedNodes = observedEditor.controller.nodes.values.toList(
+      growable: false,
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('observed-flow-node-home')),
+      warnIfMissed: false,
+    );
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.tap(
+      find.byKey(const ValueKey('observed-flow-node-profile')),
+      warnIfMissed: false,
+    );
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pump();
+    final observedPositions = [
+      for (final node in observedNodes) node.position.value,
+    ];
+    expect(observedEditor.controller.selectedNodeIds, hasLength(2));
+    observedEditor.controller
+      ..startNodeDrag(observedNodes.first.id)
+      ..moveNodeDrag(const Offset(24, 30))
+      ..endNodeDrag();
+    await tester.pump();
+    _expectNodesMovedTogether(observedNodes, observedPositions);
     expect(find.textContaining('2 paths'), findsOneWidget);
     expect(find.text('Open profile ×1'), findsOneWidget);
     expect(find.text('Back home ×1'), findsOneWidget);
+    final profilePreview = find.byKey(
+      const ValueKey('observed-screen-preview-profile'),
+    );
+    expect(
+      find.descendant(of: profilePreview, matching: find.byType(Image)),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('observed-screen-capture-toggle')),
+    );
+    await tester.pump();
+    expect(coordinator.debugScreenCaptureEnabled, isFalse);
+    expect(find.text('SCREEN CAPTURE OFF'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+}
+
+Rect _nodeRect(Node<dynamic> node) => node.position.value & node.size.value;
+
+void _expectNodesMovedTogether(
+  List<Node<dynamic>> nodes,
+  List<Offset> originalPositions,
+) {
+  final firstDelta = nodes.first.position.value - originalPositions.first;
+  expect(firstDelta.distance, greaterThan(0));
+  for (var index = 1; index < nodes.length; index += 1) {
+    final delta = nodes[index].position.value - originalPositions[index];
+    expect(delta.dx, closeTo(firstDelta.dx, 0.001));
+    expect(delta.dy, closeTo(firstDelta.dy, 0.001));
+  }
 }
 
 abstract class _TestRoute extends RouteTarget with RouteUnique {
   @override
   Widget build(covariant _TestCoordinator coordinator, BuildContext context) =>
-      const SizedBox();
+      ColoredBox(
+        color: this is _ProfileRoute
+            ? const Color(0xFF2563EB)
+            : const Color(0xFF059669),
+      );
 }
 
 final class _HomeRoute extends _TestRoute {
@@ -181,8 +349,22 @@ final class _TestCoordinator extends Coordinator<_TestRoute>
   static final manifest = RouteManifest<String>(
     name: 'WidgetGraph',
     routes: [
-      RouteManifestRoute(id: 'home', path: '/'),
-      RouteManifestRoute(id: 'profile', path: '/profile'),
+      RouteManifestRoute(id: 'home', path: '/', parentId: 'shell'),
+      RouteManifestRoute(id: 'profile', path: '/profile', parentId: 'shell'),
+      RouteManifestRoute(id: 'login', path: '/login', parentId: 'auth'),
+    ],
+    layouts: [
+      RouteManifestLayout(
+        id: 'shell',
+        path: '/',
+        kind: RouteManifestLayoutKind.indexed,
+        indexedChildIds: ['home', 'profile'],
+      ),
+      RouteManifestLayout(
+        id: 'auth',
+        path: '/auth',
+        kind: RouteManifestLayoutKind.stack,
+      ),
     ],
   );
 

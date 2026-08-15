@@ -5,6 +5,8 @@
 - **Feat**: Add an observed runtime flow recorder with directed edges, visit counts, action labels, and a Graph mode switcher.
 - **Feat**: Make the debug panel resizable with fullscreen/restore controls and responsive viewport clamping.
 - **Feat**: Make the collapsed devtool launcher freely draggable, position-preserving, and safe-area aware.
+- **Feat**: Add automatic, memory-bounded app screen previews to Observed flow nodes with a capture toggle.
+- **Changed**: Render Topology and Observed graphs with `vyuh_node_flow` for consistent pan, zoom, selection, connections, and viewport fitting.
 
 ## 2.0.0
 
