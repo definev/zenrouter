@@ -33,12 +33,24 @@ LayoutElement? layoutElementFromAnnotatedElement(
     }
   }
 
+  final branchLayouts = <String>[];
+  final branchesReader = annotation.read('branches');
+  if (!branchesReader.isNull) {
+    for (final branchReader in branchesReader.listValue) {
+      final typeValue = branchReader.toTypeValue();
+      if (typeValue != null) {
+        branchLayouts.add(typeValue.getDisplayString());
+      }
+    }
+  }
+
   return LayoutElement(
     className: className,
     relativePath: relativePath,
     pathSegments: segments,
     layoutType: layoutType,
     indexedRouteTypes: indexedRoutes,
+    branchLayoutTypes: branchLayouts,
     parentLayoutType: parentLayoutType,
   );
 }

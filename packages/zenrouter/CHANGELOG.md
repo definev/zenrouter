@@ -17,6 +17,9 @@
 
 ### 🚀 New Features
 
+- **Stateful branch navigation** via `BranchedStackPath`: fixed branch layout
+  roots retain an independent child stack while branch selection and
+  restoration reuse indexed-path semantics.
 - **Flutter route-manifest adapter**: coordinators expose the core
   `RouteManifest` seam; generated coordinators bind matched IDs to concrete
   `RouteTarget` instances without putting Flutter types in the manifest.

@@ -9,7 +9,7 @@ part of '_layout.dart';
 /// Generated base class for FeedTabLayout.
 ///
 /// URI: /tabs/feed
-/// Path type: indexed
+/// Path type: branched
 /// Parent layout: TabsLayout
 abstract class _$FeedTabLayout extends AppRoute with RouteLayout<AppRoute> {
   _$FeedTabLayout();
@@ -18,7 +18,7 @@ abstract class _$FeedTabLayout extends AppRoute with RouteLayout<AppRoute> {
   Type? get layout => TabsLayout;
 
   @override
-  IndexedStackPath<AppRoute> resolvePath(
+  BranchedStackPath<AppRoute> resolvePath(
     covariant AppCoordinator coordinator,
   ) => coordinator.feedTabPath;
 

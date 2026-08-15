@@ -2,7 +2,7 @@ import 'dart:collection';
 import 'dart:convert';
 
 /// The navigation behavior of a layout declared in a [RouteManifest].
-enum RouteManifestLayoutKind { stack, indexed }
+enum RouteManifestLayoutKind { stack, indexed, branched }
 
 /// The kind of a segment in a declarative route pattern.
 enum RoutePatternSegmentKind { literal, parameter, rest }
@@ -326,24 +326,46 @@ final class RouteManifestLayout<I extends Object> extends RouteManifestNode<I> {
     super.parentId,
     required this.kind,
     Iterable<I> indexedChildIds = const [],
-  }) : indexedChildIds = List.unmodifiable(indexedChildIds) {
-    if (kind == RouteManifestLayoutKind.stack &&
+    Iterable<I> branchChildIds = const [],
+  }) : indexedChildIds = List.unmodifiable(indexedChildIds),
+       branchChildIds = List.unmodifiable(branchChildIds) {
+    if (kind != RouteManifestLayoutKind.indexed &&
         this.indexedChildIds.isNotEmpty) {
       throw ArgumentError(
-        'Stack layout $id cannot declare indexed child routes',
+        '${kind.name} layout $id cannot declare indexed child routes',
       );
     }
-    final duplicates = _duplicates(this.indexedChildIds);
-    if (duplicates.isNotEmpty) {
+    if (kind != RouteManifestLayoutKind.branched &&
+        this.branchChildIds.isNotEmpty) {
+      throw ArgumentError(
+        '${kind.name} layout $id cannot declare branch child layouts',
+      );
+    }
+    if (kind == RouteManifestLayoutKind.branched &&
+        this.branchChildIds.isEmpty) {
+      throw ArgumentError(
+        'Branched layout $id must declare at least one branch child layout',
+      );
+    }
+    final duplicateIndexedChildren = _duplicates(this.indexedChildIds);
+    if (duplicateIndexedChildren.isNotEmpty) {
       throw ArgumentError(
         'Layout $id contains duplicate indexed children: '
-        '${duplicates.join(', ')}',
+        '${duplicateIndexedChildren.join(', ')}',
+      );
+    }
+    final duplicateBranchChildren = _duplicates(this.branchChildIds);
+    if (duplicateBranchChildren.isNotEmpty) {
+      throw ArgumentError(
+        'Layout $id contains duplicate branch children: '
+        '${duplicateBranchChildren.join(', ')}',
       );
     }
   }
 
   final RouteManifestLayoutKind kind;
   final List<I> indexedChildIds;
+  final List<I> branchChildIds;
 
   @override
   Map<String, Object?> toJson(RouteIdCodec<I> idCodec) => {
@@ -355,13 +377,17 @@ final class RouteManifestLayout<I extends Object> extends RouteManifestNode<I> {
       'indexedChildIds': indexedChildIds
           .map((id) => _encodeId(idCodec, id))
           .toList(growable: false),
+    if (branchChildIds.isNotEmpty)
+      'branchChildIds': branchChildIds
+          .map((id) => _encodeId(idCodec, id))
+          .toList(growable: false),
   };
 }
 
 /// An immutable contribution to a larger [RouteManifest].
 ///
 /// A fragment validates its own shape and ID uniqueness, but deliberately
-/// leaves parent, indexed-child, and route-conflict validation to the composed
+/// leaves parent, fixed-child, and route-conflict validation to the composed
 /// manifest. This allows one route module to reference a layout declared by
 /// another module without weakening validation of the final application graph.
 final class RouteManifestFragment<I extends Object> {
@@ -711,6 +737,7 @@ RouteManifestLayout<I> _copyManifestLayout<I extends Object>(
   parentId: layout.parentId,
   kind: layout.kind,
   indexedChildIds: layout.indexedChildIds,
+  branchChildIds: layout.branchChildIds,
 );
 
 final class _RoutePatternMatch {
@@ -741,6 +768,39 @@ void _validateRelationships<I extends Object>(
         throw RouteManifestValidationException(
           'Indexed child $childId of ${layout.id} is unknown',
           nodeIds: [layout.id, childId],
+        );
+      }
+    }
+  }
+
+  for (final layout in layouts) {
+    if (layout.kind != RouteManifestLayoutKind.branched) continue;
+    final branchIds = layout.branchChildIds.toSet();
+
+    for (final branchId in layout.branchChildIds) {
+      final branch = nodes[branchId];
+      if (branch is! RouteManifestLayout<I>) {
+        throw RouteManifestValidationException(
+          'Branch child $branchId of ${layout.id} is not a known layout',
+          nodeIds: [layout.id, branchId],
+        );
+      }
+      if (branch.parentId != layout.id) {
+        throw RouteManifestValidationException(
+          'Branch child $branchId must be a direct child of ${layout.id}',
+          nodeIds: [layout.id, branchId],
+        );
+      }
+    }
+
+    for (final child in nodes.values.where(
+      (node) => node.parentId == layout.id,
+    )) {
+      if (child is! RouteManifestLayout<I> || !branchIds.contains(child.id)) {
+        throw RouteManifestValidationException(
+          'Direct child ${child.id} of branched layout ${layout.id} must be '
+          'declared as a branch layout',
+          nodeIds: [layout.id, child.id],
         );
       }
     }
@@ -963,6 +1023,7 @@ RouteManifestLayout<I> _layoutFromJson<I extends Object>(
     },
     kind: kind,
     indexedChildIds: _stringList(json, 'indexedChildIds').map(idCodec.decode),
+    branchChildIds: _stringList(json, 'branchChildIds').map(idCodec.decode),
   );
 }
 

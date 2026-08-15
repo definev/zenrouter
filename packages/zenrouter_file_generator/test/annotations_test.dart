@@ -34,8 +34,13 @@ void main() {
       expect(LayoutType.indexed.index, 1);
     });
 
-    test('has both values', () {
-      expect(LayoutType.values.length, 2);
+    test('has branched value', () {
+      expect(LayoutType.branched.name, 'branched');
+      expect(LayoutType.branched.index, 2);
+    });
+
+    test('has all three values', () {
+      expect(LayoutType.values.length, 3);
     });
   });
 
@@ -103,6 +108,7 @@ void main() {
 
       expect(layout.type, LayoutType.stack);
       expect(layout.routes, null);
+      expect(layout.branches, null);
     });
 
     test('accepts stack type', () {
@@ -125,6 +131,16 @@ void main() {
 
       expect(layout.type, LayoutType.indexed);
       expect(layout.routes, [String, int]);
+    });
+
+    test('accepts branches parameter for branched layout', () {
+      const layout = ZenLayout(
+        type: LayoutType.branched,
+        branches: [String, int],
+      );
+
+      expect(layout.type, LayoutType.branched);
+      expect(layout.branches, [String, int]);
     });
 
     test('routes can be null for stack layout', () {

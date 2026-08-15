@@ -38,6 +38,8 @@ RouteTarget (base class for all routes)
 |-----------|----------------|
 | `RouteTarget` | Base class for all routes; provides identity via `props` and lifecycle |
 | `NavigationPath` | Mutable stack container supporting `push`, `pop`, `replace`, and `reset` |
+| `IndexedStackPath` | Fixed destinations with index-based selection |
+| `BranchedStackPath` | Fixed layout branches that retain independent child stacks |
 | `NavigationStack` | Flutter widget that renders a `NavigationPath` as a `Navigator` |
 | `Coordinator<T>` | Central navigation hub orchestrating URI parsing, deep linking, layout resolution, and platform integration |
 

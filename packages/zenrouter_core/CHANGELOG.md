@@ -31,6 +31,9 @@
 
 ### New Features
 
+- **Branched manifest layouts**: `RouteManifestLayoutKind.branched` declares
+  an ordered set of direct child layout roots and validates that every direct
+  child belongs to the branch topology.
 - **Declarative route graph** via the immutable, versioned `RouteManifest`,
   with deterministic URI matching, layout relationship validation, ambiguous
   pattern detection, composition, JSON serialization, and reverse routing.

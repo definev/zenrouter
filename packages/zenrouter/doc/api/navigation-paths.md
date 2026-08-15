@@ -531,6 +531,35 @@ late final profileStack = NavigationPath<AppRoute>.createWith(
 ---
 
 
+## BranchedStackPath<T>
+
+`BranchedStackPath` represents a stateful shell with fixed branch roots. Every
+root must implement `RouteLayoutParent` and resolve its own child `StackPath`.
+The branched path owns selection; the child paths own navigation history.
+
+```dart
+late final homePath = NavigationPath<AppRoute>.createWith(
+  coordinator: this,
+  label: 'home',
+)..bindLayout(HomeBranchLayout.new);
+
+late final settingsPath = NavigationPath<AppRoute>.createWith(
+  coordinator: this,
+  label: 'settings',
+)..bindLayout(SettingsBranchLayout.new);
+
+late final shellBranches = BranchedStackPath<AppRoute>.createWith(
+  [HomeBranchLayout(), SettingsBranchLayout()],
+  coordinator: this,
+  label: 'shell-branches',
+)..bindLayout(AppShellLayout.new);
+```
+
+Use `activeBranchIndex`, `activeBranch`, and `goToBranch(index)` for shell UI.
+Navigating directly to a route under another branch activates the necessary
+branch hierarchy automatically. The active branch index and every child path
+are included in coordinator restoration.
+
 ## NavigationStack Widget
 
 A widget that renders a stack of pages based on a `NavigationPath`.

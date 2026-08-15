@@ -49,6 +49,24 @@ void main() {
 
         expect(layout.generatedBaseClassName, r'_$TabsLayout');
       });
+
+      test('generates BranchedStackPath for branched layouts', () {
+        final layout = LayoutElement(
+          className: 'ShellLayout',
+          relativePath: 'shell/_layout',
+          pathSegments: ['shell'],
+          layoutType: LayoutType.branched,
+          branchLayoutTypes: ['HomeLayout', 'SettingsLayout'],
+        );
+
+        final source = LayoutCodeGenerator.generate(
+          layout,
+          const LayoutCodeConfig(),
+        );
+
+        expect(source, contains('BranchedStackPath<AppRoute> resolvePath'));
+        expect(source, contains('/// Path type: branched'));
+      });
     });
 
     group('pathFieldName', () {
@@ -110,6 +128,19 @@ void main() {
 
         expect(layout.layoutType, LayoutType.indexed);
       });
+
+      test('stores branched layout type', () {
+        final layout = LayoutElement(
+          className: 'ShellLayout',
+          relativePath: 'shell/_layout',
+          pathSegments: ['shell'],
+          layoutType: LayoutType.branched,
+          branchLayoutTypes: ['HomeLayout', 'SettingsLayout'],
+        );
+
+        expect(layout.layoutType, LayoutType.branched);
+        expect(layout.branchLayoutTypes, ['HomeLayout', 'SettingsLayout']);
+      });
     });
 
     group('indexedRouteTypes', () {
@@ -138,6 +169,31 @@ void main() {
         );
 
         expect(layout.indexedRouteTypes, isEmpty);
+      });
+    });
+
+    group('branchLayoutTypes', () {
+      test('stores branch roots for branched layout', () {
+        final layout = LayoutElement(
+          className: 'ShellLayout',
+          relativePath: 'shell/_layout',
+          pathSegments: ['shell'],
+          layoutType: LayoutType.branched,
+          branchLayoutTypes: ['HomeLayout', 'SettingsLayout'],
+        );
+
+        expect(layout.branchLayoutTypes, ['HomeLayout', 'SettingsLayout']);
+      });
+
+      test('defaults to empty list', () {
+        final layout = LayoutElement(
+          className: 'StackLayout',
+          relativePath: 'stack/_layout',
+          pathSegments: ['stack'],
+          layoutType: LayoutType.stack,
+        );
+
+        expect(layout.branchLayoutTypes, isEmpty);
       });
     });
 
@@ -198,6 +254,22 @@ void main() {
         expect(copied.layoutType, LayoutType.indexed);
         expect(copied.indexedRouteTypes, ['HomeRoute', 'ProfileRoute']);
         expect(copied.pathSegments, ['tabs']);
+        expect(copied.parentLayoutType, 'NewParent');
+      });
+
+      test('preserves branch roots when copying', () {
+        final layout = LayoutElement(
+          className: 'ShellLayout',
+          relativePath: 'shell/_layout',
+          pathSegments: ['shell'],
+          layoutType: LayoutType.branched,
+          branchLayoutTypes: ['HomeLayout', 'SettingsLayout'],
+          parentLayoutType: 'RootLayout',
+        );
+
+        final copied = layout.copyWith(parentLayoutType: 'NewParent');
+
+        expect(copied.branchLayoutTypes, ['HomeLayout', 'SettingsLayout']);
         expect(copied.parentLayoutType, 'NewParent');
       });
 

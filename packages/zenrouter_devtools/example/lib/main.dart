@@ -135,8 +135,10 @@ class FirstTab extends AppRoute {
               'First page ${activeIndex == 0 ? '(Focused)' : '(No focused)'}',
             ),
             FilledButton(
-              onPressed: () =>
-                  coordinator.push(FirstTabChild(message: "Hello")),
+              onPressed: () => coordinator.debugFlowAction(
+                'Open Hello message',
+                () => coordinator.push(FirstTabChild(message: "Hello")),
+              ),
               child: Text('Go "Hello"'),
             ),
             FilledButton(
@@ -236,6 +238,50 @@ class NotFound extends AppRoute {
 }
 
 class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug {
+  static final manifest = RouteManifest<String>(
+    name: 'DevtoolsExample',
+    routes: [
+      RouteManifestRoute(
+        id: 'FirstTab',
+        path: '/first',
+        parentId: 'FirstLayout',
+      ),
+      RouteManifestRoute(
+        id: 'FirstTabChild',
+        path: '/first/:message',
+        parentId: 'FirstLayout',
+      ),
+      RouteManifestRoute(
+        id: 'SecondTab',
+        path: '/second',
+        parentId: 'CustomLayout',
+      ),
+      RouteManifestRoute(
+        id: 'ThirdTab',
+        path: '/third',
+        parentId: 'CustomLayout',
+      ),
+      RouteManifestRoute(id: 'NotFound', path: '/not-found'),
+    ],
+    layouts: [
+      RouteManifestLayout(
+        id: 'CustomLayout',
+        path: '/',
+        kind: RouteManifestLayoutKind.indexed,
+        indexedChildIds: ['FirstLayout', 'SecondTab', 'ThirdTab'],
+      ),
+      RouteManifestLayout(
+        id: 'FirstLayout',
+        path: '/first',
+        parentId: 'CustomLayout',
+        kind: RouteManifestLayoutKind.stack,
+      ),
+    ],
+  );
+
+  @override
+  RouteManifest<String> get routeManifest => manifest;
+
   late final customIndexed = IndexedStackPath<AppRoute>.createWith(
     coordinator: this,
     label: 'CustomIndexed',

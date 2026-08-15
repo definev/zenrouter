@@ -250,6 +250,109 @@ void main() {
       expect(() => manifest.routes.add(route), throwsUnsupportedError);
       expect(() => manifest.nodes['other'] = route, throwsUnsupportedError);
     });
+
+    test('validates branched layout roots and freezes branch order', () {
+      final branchChildren = <String>['home-branch', 'settings-branch'];
+      final shell = RouteManifestLayout(
+        id: 'shell',
+        path: '/shell',
+        kind: RouteManifestLayoutKind.branched,
+        branchChildIds: branchChildren,
+      );
+      final homeBranch = RouteManifestLayout(
+        id: 'home-branch',
+        path: '/shell/home',
+        parentId: 'shell',
+        kind: RouteManifestLayoutKind.stack,
+      );
+      final settingsBranch = RouteManifestLayout(
+        id: 'settings-branch',
+        path: '/shell/settings',
+        parentId: 'shell',
+        kind: RouteManifestLayoutKind.stack,
+      );
+
+      final manifest = RouteManifest(
+        name: 'app',
+        routes: [
+          RouteManifestRoute(
+            id: 'home',
+            path: '/shell/home',
+            parentId: 'home-branch',
+          ),
+          RouteManifestRoute(
+            id: 'settings',
+            path: '/shell/settings',
+            parentId: 'settings-branch',
+          ),
+        ],
+        layouts: [shell, homeBranch, settingsBranch],
+      );
+      branchChildren.add('changed');
+
+      expect(shell.branchChildIds, ['home-branch', 'settings-branch']);
+      expect(() => shell.branchChildIds.add('changed'), throwsUnsupportedError);
+      expect(
+        RouteManifest<String>.decode(manifest.encode()).toJson(),
+        manifest.toJson(),
+      );
+    });
+
+    test('rejects invalid branched layout topology', () {
+      expect(
+        () => RouteManifestLayout<String>(
+          id: 'empty-shell',
+          path: '/shell',
+          kind: RouteManifestLayoutKind.branched,
+        ),
+        throwsArgumentError,
+      );
+
+      expect(
+        () => RouteManifest(
+          name: 'route-as-branch',
+          routes: [
+            RouteManifestRoute(id: 'home', path: '/home', parentId: 'shell'),
+          ],
+          layouts: [
+            RouteManifestLayout(
+              id: 'shell',
+              path: '/',
+              kind: RouteManifestLayoutKind.branched,
+              branchChildIds: ['home'],
+            ),
+          ],
+        ),
+        throwsA(isA<RouteManifestValidationException>()),
+      );
+
+      expect(
+        () => RouteManifest(
+          name: 'undeclared-direct-child',
+          layouts: [
+            RouteManifestLayout(
+              id: 'shell',
+              path: '/',
+              kind: RouteManifestLayoutKind.branched,
+              branchChildIds: ['home-branch'],
+            ),
+            RouteManifestLayout(
+              id: 'home-branch',
+              path: '/home',
+              parentId: 'shell',
+              kind: RouteManifestLayoutKind.stack,
+            ),
+            RouteManifestLayout(
+              id: 'hidden-branch',
+              path: '/hidden',
+              parentId: 'shell',
+              kind: RouteManifestLayoutKind.stack,
+            ),
+          ],
+        ),
+        throwsA(isA<RouteManifestValidationException>()),
+      );
+    });
   });
 
   group('RouteManifest serialization and composition', () {

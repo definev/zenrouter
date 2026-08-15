@@ -394,12 +394,17 @@ class CoordinatorGenerator implements Builder {
     final dirParts = PathParser.parseDirParts(relativePath);
 
     // Determine layout type
-    final isIndexed = content.contains('LayoutType.indexed');
-    final layoutType = isIndexed ? LayoutType.indexed : LayoutType.stack;
+    final layoutType = switch (content) {
+      final content when content.contains('LayoutType.branched') =>
+        LayoutType.branched,
+      final content when content.contains('LayoutType.indexed') =>
+        LayoutType.indexed,
+      _ => LayoutType.stack,
+    };
 
     // Extract indexed routes if present (can be Route or Layout types)
     final indexedRoutes = <String>[];
-    if (isIndexed) {
+    if (layoutType == LayoutType.indexed) {
       final routesMatch = RegExp(r'routes:\s*\[([^\]]+)\]').firstMatch(content);
       if (routesMatch != null) {
         final routesList = routesMatch.group(1)!;
@@ -413,12 +418,28 @@ class CoordinatorGenerator implements Builder {
       }
     }
 
+    // Extract branch layout roots if present.
+    final branchLayouts = <String>[];
+    if (layoutType == LayoutType.branched) {
+      final branchesMatch = RegExp(
+        r'branches:\s*\[([^\]]+)\]',
+      ).firstMatch(content);
+      if (branchesMatch != null) {
+        final branchesList = branchesMatch.group(1)!;
+        final layoutTypes = RegExp(r'(\w+Layout)').allMatches(branchesList);
+        for (final match in layoutTypes) {
+          branchLayouts.add(match.group(1)!);
+        }
+      }
+    }
+
     return LayoutInfo(
       className: className,
       pathSegments: segments,
       dirParts: dirParts,
       layoutType: layoutType,
       indexedRouteTypes: indexedRoutes,
+      branchLayoutTypes: branchLayouts,
     );
   }
 
@@ -507,8 +528,10 @@ class CoordinatorGenerator implements Builder {
             kind: switch (layout.layoutType) {
               LayoutType.stack => RouteManifestLayoutKind.stack,
               LayoutType.indexed => RouteManifestLayoutKind.indexed,
+              LayoutType.branched => RouteManifestLayoutKind.branched,
             },
             indexedChildIds: layout.indexedRouteTypes,
+            branchChildIds: layout.branchLayoutTypes,
           ),
       ],
     );
@@ -697,22 +720,35 @@ class CoordinatorGenerator implements Builder {
     for (final layout in tree.layouts) {
       final pathFieldName = _getPathFieldName(layout.className);
       final pathName = layout.className.replaceAll('Layout', '');
-      if (layout.layoutType == LayoutType.indexed) {
-        final routeInstances = layout.indexedRouteTypes
-            .map((r) => '$r()')
-            .join(', ');
-        buffer.writeln(
-          '  late final $pathFieldName = IndexedStackPath<$routeBaseName>.createWith('
-          'coordinator: this, '
-          "label: '$pathName', "
-          '[',
-        );
-        buffer.writeln('    $routeInstances,');
-        buffer.writeln("  ],)..bindLayout(${layout.className}.new);");
-      } else {
-        buffer.writeln(
-          "  late final $pathFieldName = NavigationPath<$routeBaseName>.createWith(coordinator: this, label: '$pathName')..bindLayout(${layout.className}.new);",
-        );
+      switch (layout.layoutType) {
+        case LayoutType.stack:
+          buffer.writeln(
+            "  late final $pathFieldName = NavigationPath<$routeBaseName>.createWith(coordinator: this, label: '$pathName')..bindLayout(${layout.className}.new);",
+          );
+        case LayoutType.indexed:
+          final routeInstances = layout.indexedRouteTypes
+              .map((route) => '$route()')
+              .join(', ');
+          buffer.writeln(
+            '  late final $pathFieldName = IndexedStackPath<$routeBaseName>.createWith('
+            'coordinator: this, '
+            "label: '$pathName', "
+            '[',
+          );
+          buffer.writeln('    $routeInstances,');
+          buffer.writeln("  ],)..bindLayout(${layout.className}.new);");
+        case LayoutType.branched:
+          final branchInstances = layout.branchLayoutTypes
+              .map((branch) => '$branch()')
+              .join(', ');
+          buffer.writeln(
+            '  late final $pathFieldName = BranchedStackPath<$routeBaseName>.createWith('
+            'coordinator: this, '
+            "label: '$pathName', "
+            '[',
+          );
+          buffer.writeln('    $branchInstances,');
+          buffer.writeln("  ],)..bindLayout(${layout.className}.new);");
       }
     }
     buffer.writeln();
@@ -999,6 +1035,12 @@ class CoordinatorGenerator implements Builder {
         buffer.writeln(
           '        indexedChildIds: '
           '${_dartStringList(layout.indexedRouteTypes)},',
+        );
+      }
+      if (layout.branchLayoutTypes.isNotEmpty) {
+        buffer.writeln(
+          '        branchChildIds: '
+          '${_dartStringList(layout.branchLayoutTypes)},',
         );
       }
       buffer.writeln('      ),');
@@ -1323,6 +1365,7 @@ class LayoutInfo {
   final List<String> dirParts;
   final LayoutType layoutType;
   final List<String> indexedRouteTypes;
+  final List<String> branchLayoutTypes;
   final String? parentLayoutType;
 
   const LayoutInfo({
@@ -1331,6 +1374,7 @@ class LayoutInfo {
     required this.dirParts,
     required this.layoutType,
     this.indexedRouteTypes = const [],
+    this.branchLayoutTypes = const [],
     this.parentLayoutType,
   });
 
@@ -1340,6 +1384,7 @@ class LayoutInfo {
     List<String>? dirParts,
     LayoutType? layoutType,
     List<String>? indexedRouteTypes,
+    List<String>? branchLayoutTypes,
     String? parentLayoutType,
   }) {
     return LayoutInfo(
@@ -1348,6 +1393,7 @@ class LayoutInfo {
       dirParts: dirParts ?? this.dirParts,
       layoutType: layoutType ?? this.layoutType,
       indexedRouteTypes: indexedRouteTypes ?? this.indexedRouteTypes,
+      branchLayoutTypes: branchLayoutTypes ?? this.branchLayoutTypes,
       parentLayoutType: parentLayoutType ?? this.parentLayoutType,
     );
   }

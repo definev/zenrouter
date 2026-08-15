@@ -136,6 +136,20 @@ void main() {
       );
 
       expect(layout.indexedRouteTypes, isEmpty);
+      expect(layout.branchLayoutTypes, isEmpty);
+    });
+
+    test('stores branched layout roots', () {
+      final layout = LayoutInfo(
+        className: 'ShellLayout',
+        pathSegments: ['shell'],
+        dirParts: ['shell'],
+        layoutType: LayoutType.branched,
+        branchLayoutTypes: ['HomeLayout', 'SettingsLayout'],
+      );
+
+      expect(layout.layoutType, LayoutType.branched);
+      expect(layout.branchLayoutTypes, ['HomeLayout', 'SettingsLayout']);
     });
 
     test('allows updating parentLayoutType via copyWith', () {
