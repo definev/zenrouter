@@ -5,6 +5,8 @@ import '../widgets/debug_theme.dart';
 
 const nodeFlowInputPortId = 'input';
 const nodeFlowOutputPortId = 'output';
+const nodeFlowReturnOutPortId = 'return-out';
+const nodeFlowReturnInPortId = 'return-in';
 
 class NavigationNodeFlowAutoFit extends StatefulWidget {
   const NavigationNodeFlowAutoFit({
@@ -97,7 +99,7 @@ NodeFlowTheme createNavigationNodeFlowTheme({
     highlightBorderColor: selectedColor,
     borderWidth: 1,
     selectedBorderWidth: 1.5,
-    borderRadius: BorderRadius.circular(DebugTheme.radius),
+    borderRadius: BorderRadius.circular(DebugTheme.radiusMd),
   ),
   connectionTheme: ConnectionTheme.dark.copyWith(
     style: ConnectionStyles.bezier,
@@ -105,18 +107,18 @@ NodeFlowTheme createNavigationNodeFlowTheme({
     selectedColor: selectedColor,
     highlightColor: selectedColor,
     highlightBorderColor: selectedColor,
-    strokeWidth: 1.6,
-    selectedStrokeWidth: 2,
+    strokeWidth: 1.8,
+    selectedStrokeWidth: 2.2,
     startPoint: ConnectionEndPoint.none,
     endPoint: endPoint,
     endpointColor: connectionColor,
     endpointBorderColor: connectionColor,
     endpointBorderWidth: 0,
-    portExtension: 12,
-    backEdgeGap: 34,
+    portExtension: 16,
+    backEdgeGap: 38,
   ),
   portTheme: PortTheme.dark.copyWith(
-    size: const Size(7, 7),
+    size: const Size(6, 6),
     color: connectionColor,
     connectedColor: connectionColor,
     highlightColor: selectedColor,
@@ -127,15 +129,16 @@ NodeFlowTheme createNavigationNodeFlowTheme({
   labelTheme: LabelTheme.dark.copyWith(
     textStyle: const TextStyle(
       color: DebugTheme.textPrimary,
-      fontSize: 8,
+      fontSize: 8.5,
+      fontWeight: FontWeight.w600,
       decoration: TextDecoration.none,
     ),
     backgroundColor: DebugTheme.backgroundDark,
     border: const Border.fromBorderSide(
       BorderSide(color: DebugTheme.borderDark),
     ),
-    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-    maxWidth: 110,
+    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2.5),
+    maxWidth: 130,
     maxLines: 1,
   ),
   gridTheme: GridTheme.dark.copyWith(
@@ -149,14 +152,21 @@ List<Port> createNavigationNodeFlowPorts(
   Size nodeSize, {
   bool includeInput = true,
   bool includeOutput = true,
+  PortPosition inputPosition = PortPosition.top,
+  PortPosition outputPosition = PortPosition.bottom,
 }) => [
   if (includeInput)
     Port(
       id: nodeFlowInputPortId,
       name: 'Input',
       type: PortType.input,
-      position: PortPosition.top,
-      offset: Offset(nodeSize.width / 2, -2),
+      position: inputPosition,
+      offset: switch (inputPosition) {
+        PortPosition.top => Offset(nodeSize.width / 2, -2),
+        PortPosition.bottom => Offset(nodeSize.width / 2, 2),
+        PortPosition.left => Offset(-2, nodeSize.height / 2),
+        PortPosition.right => Offset(2, nodeSize.height / 2),
+      },
       multiConnections: true,
       isConnectable: false,
     ),
@@ -165,9 +175,53 @@ List<Port> createNavigationNodeFlowPorts(
       id: nodeFlowOutputPortId,
       name: 'Output',
       type: PortType.output,
-      position: PortPosition.bottom,
-      offset: Offset(nodeSize.width / 2, 2),
+      position: outputPosition,
+      offset: switch (outputPosition) {
+        PortPosition.top => Offset(nodeSize.width / 2, -2),
+        PortPosition.bottom => Offset(nodeSize.width / 2, 2),
+        PortPosition.left => Offset(-2, nodeSize.height / 2),
+        PortPosition.right => Offset(2, nodeSize.height / 2),
+      },
       multiConnections: true,
       isConnectable: false,
     ),
+];
+
+List<Port> createObservedNodeFlowPorts(Size nodeSize) => [
+  Port(
+    id: nodeFlowInputPortId,
+    name: 'Input',
+    type: PortType.input,
+    position: PortPosition.left,
+    offset: Offset(-2, nodeSize.height / 2),
+    multiConnections: true,
+    isConnectable: false,
+  ),
+  Port(
+    id: nodeFlowOutputPortId,
+    name: 'Output',
+    type: PortType.output,
+    position: PortPosition.right,
+    offset: Offset(2, nodeSize.height / 2),
+    multiConnections: true,
+    isConnectable: false,
+  ),
+  Port(
+    id: nodeFlowReturnOutPortId,
+    name: 'Return Out',
+    type: PortType.output,
+    position: PortPosition.bottom,
+    offset: Offset(nodeSize.width / 2, 2),
+    multiConnections: true,
+    isConnectable: false,
+  ),
+  Port(
+    id: nodeFlowReturnInPortId,
+    name: 'Return In',
+    type: PortType.input,
+    position: PortPosition.top,
+    offset: Offset(nodeSize.width / 2, -2),
+    multiConnections: true,
+    isConnectable: false,
+  ),
 ];

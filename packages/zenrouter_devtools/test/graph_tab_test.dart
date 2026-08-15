@@ -232,6 +232,13 @@ void main() {
     await tester.pump();
     _expectNodesMovedTogether(topologyRoutes, topologyPositions);
 
+    await tester.tap(find.byKey(const ValueKey('topology-auto-layout')));
+    await tester.pumpAndSettle();
+    expect(
+      topologyRoutes.first.position.value,
+      topologyPositions.first,
+    );
+
     await coordinator.debugFlowAction(
       'Open profile',
       () => coordinator.pushSilently(_ProfileRoute()),
@@ -288,6 +295,14 @@ void main() {
       ..endNodeDrag();
     await tester.pump();
     _expectNodesMovedTogether(observedNodes, observedPositions);
+
+    await tester.tap(find.byKey(const ValueKey('observed-auto-layout')));
+    await tester.pumpAndSettle();
+    expect(
+      observedNodes.first.position.value,
+      observedPositions.first,
+    );
+
     expect(find.textContaining('2 paths'), findsOneWidget);
     expect(find.text('Open profile ×1'), findsOneWidget);
     expect(find.text('Back home ×1'), findsOneWidget);
@@ -298,6 +313,26 @@ void main() {
       find.descendant(of: profilePreview, matching: find.byType(Image)),
       findsOneWidget,
     );
+
+    await tester.tap(profilePreview);
+    await tester.pumpAndSettle();
+    expect(find.text('Navigate Here'), findsOneWidget);
+    expect(find.text('Copy URI'), findsOneWidget);
+    expect(find.textContaining('Visited 1 times'), findsOneWidget);
+    await tester.tap(find.byIcon(CupertinoIcons.xmark_circle_fill));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey('observed-toggle-labels')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Open profile ×1'), findsNothing);
+
+    await tester.tap(
+      find.byKey(const ValueKey('observed-toggle-labels')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Open profile ×1'), findsOneWidget);
 
     await tester.tap(
       find.byKey(const ValueKey('observed-screen-capture-toggle')),

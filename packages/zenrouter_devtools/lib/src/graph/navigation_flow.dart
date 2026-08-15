@@ -30,12 +30,22 @@ final class NavigationFlowScreenPreview {
     required Uint8List bytes,
     required this.revision,
     required this.capturedAt,
+    this.width,
+    this.height,
   }) : bytes = Uint8List.fromList(bytes);
 
   /// PNG-encoded image bytes.
   final Uint8List bytes;
   final int revision;
   final DateTime capturedAt;
+  final int? width;
+  final int? height;
+
+  /// Aspect ratio (width / height) if dimensions are known.
+  double? get aspectRatio =>
+      (width != null && height != null && height! > 0)
+          ? width! / height!
+          : null;
 }
 
 /// One committed transition in chronological order.
@@ -243,7 +253,13 @@ final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
   /// Stores the latest PNG preview for [id] and evicts older previews.
   ///
   /// Screenshots remain in memory only and are discarded by [clear].
-  bool attachScreenPreview(I id, Uint8List pngBytes, {required int revision}) {
+  bool attachScreenPreview(
+    I id,
+    Uint8List pngBytes, {
+    required int revision,
+    int? width,
+    int? height,
+  }) {
     final node = _nodes[id];
     if (node == null || pngBytes.isEmpty || maxScreenPreviews == 0) {
       return false;
@@ -255,6 +271,8 @@ final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
         bytes: pngBytes,
         revision: revision,
         capturedAt: _clock(),
+        width: width,
+        height: height,
       ),
     );
     _screenPreviewOrder
