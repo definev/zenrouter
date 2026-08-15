@@ -188,18 +188,10 @@ List<Port> createNavigationNodeFlowPorts(
 ];
 
 List<Port> createObservedNodeFlowPorts(Size nodeSize) => [
+  ...createNavigationNodeFlowPorts(nodeSize),
   Port(
-    id: nodeFlowInputPortId,
-    name: 'Input',
-    type: PortType.input,
-    position: PortPosition.left,
-    offset: Offset(-2, nodeSize.height / 2),
-    multiConnections: true,
-    isConnectable: false,
-  ),
-  Port(
-    id: nodeFlowOutputPortId,
-    name: 'Output',
+    id: nodeFlowReturnOutPortId,
+    name: 'Return Out',
     type: PortType.output,
     position: PortPosition.right,
     offset: Offset(2, nodeSize.height / 2),
@@ -207,20 +199,11 @@ List<Port> createObservedNodeFlowPorts(Size nodeSize) => [
     isConnectable: false,
   ),
   Port(
-    id: nodeFlowReturnOutPortId,
-    name: 'Return Out',
-    type: PortType.output,
-    position: PortPosition.bottom,
-    offset: Offset(nodeSize.width / 2, 2),
-    multiConnections: true,
-    isConnectable: false,
-  ),
-  Port(
     id: nodeFlowReturnInPortId,
     name: 'Return In',
     type: PortType.input,
-    position: PortPosition.top,
-    offset: Offset(nodeSize.width / 2, -2),
+    position: PortPosition.left,
+    offset: Offset(-2, nodeSize.height / 2),
     multiConnections: true,
     isConnectable: false,
   ),

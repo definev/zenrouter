@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:vyuh_node_flow/vyuh_node_flow.dart' hide DebugTheme;
 
 import '../widgets/debug_theme.dart';
@@ -41,16 +40,11 @@ class _ObservedNavigationFlowViewState
   late _ObservedNodeFlowModel _model;
   Object? _selectedNodeId;
   Object? _zoomedNodeId;
-  bool _showEdgeLabels = true;
 
   @override
   void initState() {
     super.initState();
-    _model = _ObservedNodeFlowModel.calculate(
-      widget.graph,
-      widget.flow,
-      showLabels: _showEdgeLabels,
-    );
+    _model = _ObservedNodeFlowModel.calculate(widget.graph, widget.flow);
     _controller = NodeFlowController<_ObservedNodeData, Object?>(
       config: createNavigationNodeFlowConfig(
         minimapThumbnailBuilder: _paintMinimapNode,
@@ -75,7 +69,6 @@ class _ObservedNavigationFlowViewState
       widget.graph,
       widget.flow,
       previousPositions: previousPositions,
-      showLabels: _showEdgeLabels,
     );
     if (nextModel.signature != _model.signature) {
       _model = nextModel;
@@ -97,33 +90,6 @@ class _ObservedNavigationFlowViewState
   }
 
   void _resetView() => _controller.fitToView();
-
-  void _toggleEdgeLabels() {
-    setState(() {
-      _showEdgeLabels = !_showEdgeLabels;
-      final selectedNodeIds = <Object>{
-        for (final node in _controller.nodes.values)
-          if (_controller.isNodeSelected(node.id)) node.data.id,
-      };
-      _model = _ObservedNodeFlowModel.calculate(
-        widget.graph,
-        widget.flow,
-        previousPositions: {
-          for (final node in _controller.nodes.values)
-            node.data.id: node.position.value,
-        },
-        showLabels: _showEdgeLabels,
-      );
-      _controller.loadGraph(
-        NodeGraph<_ObservedNodeData, Object?>(
-          nodes: _model.nodes,
-          connections: _model.connections,
-          viewport: _controller.viewport,
-        ),
-      );
-      _restoreSelection(selectedNodeIds);
-    });
-  }
 
   bool _paintMinimapNode(
     Canvas canvas,
@@ -187,11 +153,7 @@ class _ObservedNavigationFlowViewState
       for (final node in _controller.nodes.values)
         if (_controller.isNodeSelected(node.id)) node.data.id,
     };
-    _model = _ObservedNodeFlowModel.calculate(
-      widget.graph,
-      widget.flow,
-      showLabels: _showEdgeLabels,
-    );
+    _model = _ObservedNodeFlowModel.calculate(widget.graph, widget.flow);
     _controller.loadGraph(
       NodeGraph<_ObservedNodeData, Object?>(
         nodes: _model.nodes,
@@ -212,10 +174,12 @@ class _ObservedNavigationFlowViewState
         : widget.graph.nodes[inspectedId];
 
     final zoomedId = _zoomedNodeId;
-    final zoomedGraphNode =
-        zoomedId == null ? null : widget.graph.nodes[zoomedId];
-    final zoomedFlowNode =
-        zoomedId == null ? null : widget.flow.nodes[zoomedId];
+    final zoomedGraphNode = zoomedId == null
+        ? null
+        : widget.graph.nodes[zoomedId];
+    final zoomedFlowNode = zoomedId == null
+        ? null
+        : widget.flow.nodes[zoomedId];
 
     return Stack(
       children: [
@@ -226,9 +190,7 @@ class _ObservedNavigationFlowViewState
               inspectedNode: inspectedNode,
               isSelected: _selectedNodeId != null,
               captureEnabled: widget.captureEnabled,
-              showLabels: _showEdgeLabels,
               onCaptureChanged: widget.onCaptureChanged,
-              onToggleLabels: _toggleEdgeLabels,
               onAutoLayout: _autoLayout,
               onReset: _resetView,
               onClear: _clearFlow,
@@ -252,13 +214,6 @@ class _ObservedNavigationFlowViewState
                             onDoubleTap: (node) => _openZoomModal(node.data.id),
                           ),
                         ),
-                        labelBuilder:
-                            (context, connection, label, position, onTap) =>
-                                _ObservedFlowEdgeLabel(
-                                  label: label.text,
-                                  size: position.size,
-                                  onTap: onTap,
-                                ),
                         nodeBuilder: (context, node) {
                           final id = node.data.id;
                           final graphNode = widget.graph.nodes[id]!;
@@ -319,9 +274,7 @@ class _FlowHeader extends StatelessWidget {
     required this.inspectedNode,
     required this.isSelected,
     required this.captureEnabled,
-    required this.showLabels,
     required this.onCaptureChanged,
-    required this.onToggleLabels,
     required this.onAutoLayout,
     required this.onReset,
     required this.onClear,
@@ -331,9 +284,7 @@ class _FlowHeader extends StatelessWidget {
   final NavigationGraphNode<Object>? inspectedNode;
   final bool isSelected;
   final bool captureEnabled;
-  final bool showLabels;
   final ValueChanged<bool> onCaptureChanged;
-  final VoidCallback onToggleLabels;
   final VoidCallback onAutoLayout;
   final VoidCallback onReset;
   final VoidCallback onClear;
@@ -406,19 +357,6 @@ class _FlowHeader extends StatelessWidget {
                 ? _ObservedFlowColors.active
                 : DebugTheme.textSecondary,
             onTap: () => onCaptureChanged(!captureEnabled),
-          ),
-          _HeaderAction(
-            key: const ValueKey('observed-toggle-labels'),
-            semanticsLabel: showLabels
-                ? 'Hide connection labels'
-                : 'Show connection labels',
-            icon: showLabels
-                ? CupertinoIcons.tag_fill
-                : CupertinoIcons.tag,
-            color: showLabels
-                ? _ObservedFlowColors.selected
-                : DebugTheme.textSecondary,
-            onTap: onToggleLabels,
           ),
           _HeaderAction(
             key: const ValueKey('observed-auto-layout'),
@@ -637,9 +575,7 @@ class _ObservedFlowNodeCard extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
               decoration: const BoxDecoration(
                 color: DebugTheme.backgroundDark,
-                border: Border(
-                  top: BorderSide(color: DebugTheme.borderDark),
-                ),
+                border: Border(top: BorderSide(color: DebugTheme.borderDark)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -879,18 +815,14 @@ class _ObservedScreenPreviewZoomModal extends StatelessWidget {
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: onClose,
-            child: Container(
-              color: const Color(0xB3000000),
-            ),
+            child: Container(color: const Color(0xB3000000)),
           ),
         ),
         // Modal Container
         Center(
           child: Container(
             width: modalWidth,
-            constraints: BoxConstraints(
-              maxHeight: mediaSize.height * 0.85,
-            ),
+            constraints: BoxConstraints(maxHeight: mediaSize.height * 0.85),
             margin: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: DebugTheme.backgroundDark,
@@ -1013,23 +945,33 @@ class _ObservedScreenPreviewZoomModal extends StatelessWidget {
                       child: Column(
                         children: [
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                'Visited ${flowNode.visitCount} times',
-                                style: const TextStyle(
-                                  color: DebugTheme.textSecondary,
-                                  fontSize: 9,
-                                ),
-                              ),
-                              if (capturedTime != null)
-                                Text(
-                                  'Captured at $capturedTime',
+                              Flexible(
+                                child: Text(
+                                  'Visited ${flowNode.visitCount} times',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                    color: DebugTheme.textMuted,
+                                    color: DebugTheme.textSecondary,
                                     fontSize: 9,
                                   ),
                                 ),
+                              ),
+                              if (capturedTime != null) ...[
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    'Captured at $capturedTime',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.end,
+                                    style: const TextStyle(
+                                      color: DebugTheme.textMuted,
+                                      fontSize: 9,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                           const SizedBox(height: 8),
@@ -1046,25 +988,29 @@ class _ObservedScreenPreviewZoomModal extends StatelessWidget {
                                       DebugTheme.radiusSm,
                                     ),
                                     onPressed: onNavigate,
-                                    child: const Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          CupertinoIcons.compass,
-                                          size: 13,
-                                          color: Color(0xFF0C2E25),
-                                        ),
-                                        SizedBox(width: 4),
-                                        Text(
-                                          'Navigate Here',
-                                          style: TextStyle(
+                                    child: const FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            CupertinoIcons.compass,
+                                            size: 13,
                                             color: Color(0xFF0C2E25),
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w700,
                                           ),
-                                        ),
-                                      ],
+                                          SizedBox(width: 4),
+                                          Text(
+                                            'Navigate Here',
+                                            style: TextStyle(
+                                              color: Color(0xFF0C2E25),
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -1080,25 +1026,29 @@ class _ObservedScreenPreviewZoomModal extends StatelessWidget {
                                       DebugTheme.radiusSm,
                                     ),
                                     onPressed: onCopy,
-                                    child: const Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          CupertinoIcons.doc_on_doc,
-                                          size: 12,
-                                          color: DebugTheme.textPrimary,
-                                        ),
-                                        SizedBox(width: 4),
-                                        Text(
-                                          'Copy URI',
-                                          style: TextStyle(
+                                    child: const FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            CupertinoIcons.doc_on_doc,
+                                            size: 12,
                                             color: DebugTheme.textPrimary,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w600,
                                           ),
-                                        ),
-                                      ],
+                                          SizedBox(width: 4),
+                                          Text(
+                                            'Copy URI',
+                                            style: TextStyle(
+                                              color: DebugTheme.textPrimary,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -1115,64 +1065,6 @@ class _ObservedScreenPreviewZoomModal extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _ObservedFlowEdgeLabel extends StatelessWidget {
-  const _ObservedFlowEdgeLabel({
-    required this.label,
-    required this.size,
-    required this.onTap,
-  });
-
-  final String label;
-  final Size size;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 16),
-            alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
-            decoration: BoxDecoration(
-              color: const Color(0xEE0F172A),
-              borderRadius: BorderRadius.circular(DebugTheme.radiusFull),
-              border: Border.all(
-                color: _ObservedFlowColors.edge.withValues(alpha: 0.45),
-                width: 0.6,
-              ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x66000000),
-                  blurRadius: 4,
-                  offset: Offset(0, 1),
-                ),
-              ],
-            ),
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: DebugTheme.textPrimary,
-                fontSize: 8,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.15,
-                decoration: TextDecoration.none,
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -1201,7 +1093,6 @@ final class _ObservedNodeFlowModel {
     NavigationGraph<Object> graph,
     NavigationFlowRecorder<Object> flow, {
     Map<Object, Offset> previousPositions = const {},
-    bool showLabels = true,
   }) {
     // 1. Detect dominant aspect ratio from captured previews
     double? detectedAspectRatio;
@@ -1231,8 +1122,8 @@ final class _ObservedNodeFlowModel {
 
     final nodeHeight = previewHeight + footerHeight;
     final nodeSize = Size(nodeWidth, nodeHeight);
-    final horizontalGap = isLandscape ? 96.0 : 84.0;
-    final verticalGap = isLandscape ? 36.0 : 28.0;
+    final flowGap = isLandscape ? 64.0 : 72.0;
+    final siblingGap = isLandscape ? 48.0 : 36.0;
     const padding = 28.0;
 
     // 2. Build Storyboard Discovery Tree (Hierarchical User Journey)
@@ -1284,50 +1175,50 @@ final class _ObservedNodeFlowModel {
       );
     }
 
-    // 3. Đo đạc chiều cao phân nhánh đệ quy (Recursive Subtree Height)
-    final subtreeHeights = <Object, double>{};
+    // 3. Đo đạc chiều rộng phân nhánh đệ quy (Recursive Subtree Width)
+    final subtreeWidths = <Object, double>{};
     double measureTree(Object u) {
       final children = discoveryChildren[u] ?? const [];
       if (children.isEmpty) {
-        subtreeHeights[u] = nodeHeight;
-        return nodeHeight;
+        subtreeWidths[u] = nodeWidth;
+        return nodeWidth;
       }
-      var totalChildHeight = 0.0;
+      var totalChildWidth = 0.0;
       for (final c in children) {
-        totalChildHeight += measureTree(c);
+        totalChildWidth += measureTree(c);
       }
-      totalChildHeight += verticalGap * (children.length - 1);
-      final h = math.max(nodeHeight, totalChildHeight);
-      subtreeHeights[u] = h;
-      return h;
+      totalChildWidth += siblingGap * (children.length - 1);
+      final w = math.max(nodeWidth, totalChildWidth);
+      subtreeWidths[u] = w;
+      return w;
     }
 
     for (final rootId in treeRoots) {
       measureTree(rootId);
     }
 
-    // 4. Định vị các Node theo Storyboard Flow (Trái sang Phải)
+    // 4. Định vị các Node theo Storyboard Flow (Trên xuống Dưới)
     final positions = <Object, Offset>{};
     void placeTree(Object u, double left, double top) {
-      final h = subtreeHeights[u]!;
-      final y = top + (h - nodeHeight) / 2;
-      positions[u] = Offset(left, y);
+      final w = subtreeWidths[u]!;
+      final x = left + (w - nodeWidth) / 2;
+      positions[u] = Offset(x, top);
 
       final children = discoveryChildren[u] ?? const [];
       if (children.isEmpty) return;
 
-      final childLeft = left + nodeWidth + horizontalGap;
-      var childTop = top;
+      final childTop = top + nodeHeight + flowGap;
+      var childLeft = left;
       for (final c in children) {
         placeTree(c, childLeft, childTop);
-        childTop += subtreeHeights[c]! + verticalGap;
+        childLeft += subtreeWidths[c]! + siblingGap;
       }
     }
 
-    var currentRootTop = padding;
+    var currentRootLeft = padding;
     for (final rootId in treeRoots) {
-      placeTree(rootId, padding, currentRootTop);
-      currentRootTop += subtreeHeights[rootId]! + verticalGap;
+      placeTree(rootId, currentRootLeft, padding);
+      currentRootLeft += subtreeWidths[rootId]! + siblingGap;
     }
 
     final orderedFlowNodes = flow.nodes.values.toList(growable: false)
@@ -1366,10 +1257,13 @@ final class _ObservedNodeFlowModel {
       );
     }
 
-    final laneUsage = <String, int>{};
+    final visiblePairKeys = <String>{};
     final connections = <Connection<Object?>>[];
     var connectionIndex = 0;
     for (final edge in flow.edges) {
+      // Self-loop and the return of an already-drawn pair stay hidden.
+      if (edge.fromId == edge.toId) continue;
+
       final sourceId = flowIds[edge.fromId];
       final targetId = flowIds[edge.toId];
       if (sourceId == null || targetId == null) continue;
@@ -1378,46 +1272,27 @@ final class _ObservedNodeFlowModel {
       final toPos = positions[edge.toId];
       if (fromPos == null || toPos == null) continue;
 
-      final isForward = toPos.dx > fromPos.dx;
+      final fromStr = edge.fromId.toString();
+      final toStr = edge.toId.toString();
+      final pairKey = fromStr.compareTo(toStr) < 0
+          ? '$fromStr|$toStr'
+          : '$toStr|$fromStr';
+      if (!visiblePairKeys.add(pairKey)) continue;
+
+      final isDownward = toPos.dy > fromPos.dy;
       final isEdgeActive = graph.activeRouteId == edge.toId;
       final edgeColor = isEdgeActive
           ? _ObservedFlowColors.active
           : _ObservedFlowColors.edge;
 
-      // Cạnh tiến: Xuất cổng Right -> Nhập cổng Left
-      // Cạnh lùi (Back): Xuất cổng Bottom -> Nhập cổng Top
-      final sourcePortId = isForward
+      // Cạnh tiến: Xuất cổng Bottom -> Nhập cổng Top
+      // Cạnh ngang/lùi: Xuất cổng Right -> Nhập cổng Left
+      final sourcePortId = isDownward
           ? nodeFlowOutputPortId
           : nodeFlowReturnOutPortId;
-      final targetPortId = isForward
+      final targetPortId = isDownward
           ? nodeFlowInputPortId
           : nodeFlowReturnInPortId;
-
-      // Tính toán vị trí nhãn so le (Staggered Label Positioning) để chống đè chữ
-      final fromStr = edge.fromId.toString();
-      final toStr = edge.toId.toString();
-      final laneKey = fromStr.compareTo(toStr) < 0
-          ? '$fromStr-$toStr'
-          : '$toStr-$fromStr';
-      final laneIndex = laneUsage[laneKey] ?? 0;
-      laneUsage[laneKey] = laneIndex + 1;
-
-      // Tính anchor (vị trí dọc theo đường nối) và offset (độ lệch vuông góc)
-      final double anchor;
-      final double offset;
-      if (isForward) {
-        // Cạnh tiến: so le 36% và lệch lên trên
-        anchor = laneIndex == 0
-            ? 0.36
-            : (0.32 + (laneIndex % 3) * 0.16).clamp(0.2, 0.8);
-        offset = laneIndex.isEven ? -10.0 : -18.0;
-      } else {
-        // Cạnh lùi: so le 64% và lệch xuống dưới
-        anchor = laneIndex == 0
-            ? 0.64
-            : (0.68 - (laneIndex % 3) * 0.16).clamp(0.2, 0.8);
-        offset = laneIndex.isEven ? 10.0 : 18.0;
-      }
 
       connections.add(
         Connection<Object?>(
@@ -1426,16 +1301,9 @@ final class _ObservedNodeFlowModel {
           sourcePortId: sourcePortId,
           targetNodeId: targetId,
           targetPortId: targetPortId,
-          label: showLabels
-              ? ConnectionLabel(
-                  text: '${edge.displayLabel} ×${edge.count}',
-                  anchor: anchor,
-                  offset: offset,
-                )
-              : null,
-          color: isForward ? edgeColor : edgeColor.withValues(alpha: 0.7),
+          color: isDownward ? edgeColor : edgeColor.withValues(alpha: 0.7),
           selectedColor: _ObservedFlowColors.selected,
-          strokeWidth: isEdgeActive ? 2.2 : (isForward ? 1.8 : 1.4),
+          strokeWidth: isEdgeActive ? 2.2 : (isDownward ? 1.8 : 1.4),
           selectedStrokeWidth: 2.4,
           startPoint: ConnectionEndPoint.none,
           endPoint: ConnectionEndPoint.triangle,
@@ -1451,7 +1319,6 @@ final class _ObservedNodeFlowModel {
       signature: Object.hashAll([
         graph.activeRouteId,
         nodeSize,
-        showLabels,
         for (final node in orderedFlowNodes) ...[
           node.id,
           node.firstSeenRevision,
