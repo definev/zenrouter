@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:vyuh_node_flow/vyuh_node_flow.dart' hide DebugTheme;
 import 'package:zenrouter/zenrouter.dart';
 
@@ -27,6 +28,24 @@ class _NavigationGraphTabState<T extends RouteUnique>
   _NavigationGraphMode _mode = _NavigationGraphMode.topology;
 
   void _resetView() => _topologyCanvasKey.currentState?.fitToView();
+
+  Future<void> _navigateToPath(String path) async {
+    if (path.isEmpty) return;
+    try {
+      final uri = Uri.parse(path);
+      final route = await widget.coordinator.parseRouteFromUri(uri);
+      if (route != null) {
+        widget.coordinator.navigate(route);
+      }
+    } catch (_) {
+      // Platform views or unresolvable path
+    }
+  }
+
+  void _copyToClipboard(String text) {
+    if (text.isEmpty) return;
+    Clipboard.setData(ClipboardData(text: text));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,6 +78,8 @@ class _NavigationGraphTabState<T extends RouteUnique>
                     onCaptureChanged:
                         widget.coordinator.setDebugScreenCaptureEnabled,
                     onClear: widget.coordinator.clearDebugNavigationFlow,
+                    onNavigate: _navigateToPath,
+                    onCopy: _copyToClipboard,
                   ),
                 },
               ),
@@ -78,7 +99,10 @@ class _NavigationGraphTabState<T extends RouteUnique>
         _GraphHeader(
           graph: graph,
           selectedNode: selectedNode,
+          onAutoLayout: _autoLayout,
           onReset: _resetView,
+          onNavigate: (path) => _navigateToPath(path),
+          onCopy: (text) => _copyToClipboard(text),
         ),
         Expanded(
           child: _TopologyNodeFlowCanvas(
@@ -88,11 +112,15 @@ class _NavigationGraphTabState<T extends RouteUnique>
             onNodeSelected: (id) => setState(() {
               _selectedNodeId = id;
             }),
+            onNavigate: _navigateToPath,
+            onCopy: _copyToClipboard,
           ),
         ),
       ],
     );
   }
+
+  void _autoLayout() => _topologyCanvasKey.currentState?.autoLayout();
 }
 
 enum _NavigationGraphMode { topology, observed }
@@ -205,12 +233,18 @@ class _GraphHeader extends StatelessWidget {
   const _GraphHeader({
     required this.graph,
     required this.selectedNode,
+    required this.onAutoLayout,
     required this.onReset,
+    required this.onNavigate,
+    required this.onCopy,
   });
 
   final NavigationGraph<Object> graph;
   final NavigationGraphNode<Object>? selectedNode;
+  final VoidCallback onAutoLayout;
   final VoidCallback onReset;
+  final ValueChanged<String> onNavigate;
+  final ValueChanged<String> onCopy;
 
   @override
   Widget build(BuildContext context) {
@@ -266,19 +300,66 @@ class _GraphHeader extends StatelessWidget {
               ],
             ),
           ),
-          GestureDetector(
-            onTap: onReset,
-            child: const SizedBox(
-              width: 32,
-              height: 32,
-              child: Icon(
-                CupertinoIcons.arrow_counterclockwise,
-                size: 14,
-                color: DebugTheme.textSecondary,
-              ),
+          if (inspectedNode != null && inspectedNode.isRoute) ...[
+            _HeaderIconButton(
+              tooltip: 'Navigate to ${inspectedNode.path}',
+              icon: CupertinoIcons.compass,
+              color: _GraphColors.active,
+              onTap: () => onNavigate(inspectedNode.path),
             ),
+            _HeaderIconButton(
+              tooltip: 'Copy URI path',
+              icon: CupertinoIcons.doc_on_doc,
+              color: DebugTheme.textSecondary,
+              onTap: () => onCopy(inspectedNode.path),
+            ),
+          ],
+          _HeaderIconButton(
+            key: const ValueKey('topology-auto-layout'),
+            tooltip: 'Auto layout graph',
+            icon: CupertinoIcons.sparkles,
+            color: _GraphColors.selected,
+            onTap: onAutoLayout,
+          ),
+          _HeaderIconButton(
+            tooltip: 'Reset view',
+            icon: CupertinoIcons.arrow_counterclockwise,
+            color: DebugTheme.textSecondary,
+            onTap: onReset,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _HeaderIconButton extends StatelessWidget {
+  const _HeaderIconButton({
+    super.key,
+    required this.tooltip,
+    required this.icon,
+    required this.onTap,
+    this.color = DebugTheme.textSecondary,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onTap;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: tooltip,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 30,
+          height: 30,
+          alignment: Alignment.center,
+          child: Icon(icon, size: 14, color: color),
+        ),
       ),
     );
   }
@@ -291,12 +372,16 @@ class _GraphNodeCard extends StatelessWidget {
     required this.isActive,
     required this.isCurrent,
     required this.isSelected,
+    this.onNavigate,
+    this.onCopy,
   });
 
   final NavigationGraphNode<Object> node;
   final bool isActive;
   final bool isCurrent;
   final bool isSelected;
+  final ValueChanged<String>? onNavigate;
+  final ValueChanged<String>? onCopy;
 
   @override
   Widget build(BuildContext context) {
@@ -312,18 +397,19 @@ class _GraphNodeCard extends StatelessWidget {
       selected: isSelected,
       label: '${node.label}, ${node.path}',
       child: Padding(
-        padding: const EdgeInsets.all(DebugTheme.spacing),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Row(
               children: [
                 Icon(
                   node.isRoute
-                      ? CupertinoIcons.arrow_right_circle
-                      : CupertinoIcons.layers,
+                      ? CupertinoIcons.arrow_right_circle_fill
+                      : CupertinoIcons.layers_alt_fill,
                   color: borderColor,
-                  size: 12,
+                  size: 13,
                 ),
                 const SizedBox(width: DebugTheme.spacingXs),
                 Expanded(
@@ -334,37 +420,118 @@ class _GraphNodeCard extends StatelessWidget {
                     style: const TextStyle(
                       color: DebugTheme.textPrimary,
                       fontSize: DebugTheme.fontSizeSm,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                       decoration: TextDecoration.none,
                     ),
                   ),
                 ),
                 if (isCurrent)
-                  const Icon(
-                    CupertinoIcons.location_fill,
-                    color: _GraphColors.active,
-                    size: 10,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 1.5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _GraphColors.activeBackground,
+                      borderRadius: BorderRadius.circular(
+                        DebugTheme.radiusFull,
+                      ),
+                      border: Border.all(
+                        color: _GraphColors.active.withValues(alpha: 0.8),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 4,
+                          height: 4,
+                          decoration: const BoxDecoration(
+                            color: _GraphColors.active,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 3),
+                        const Text(
+                          'LIVE',
+                          style: TextStyle(
+                            color: _GraphColors.active,
+                            fontSize: 7,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.4,
+                            decoration: TextDecoration.none,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
               ],
             ),
-            const Spacer(),
-            Text(
-              node.path,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: DebugTheme.textSecondary,
-                fontSize: DebugTheme.fontSizeSm,
-                decoration: TextDecoration.none,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              decoration: BoxDecoration(
+                color: DebugTheme.backgroundDark,
+                borderRadius: BorderRadius.circular(DebugTheme.radiusSm),
+                border: Border.all(color: DebugTheme.borderDark),
+              ),
+              child: Text(
+                node.path,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: DebugTheme.textSecondary,
+                  fontSize: 8.5,
+                  fontFamily: 'monospace',
+                  decoration: TextDecoration.none,
+                ),
               ),
             ),
-            const SizedBox(height: 3),
             Row(
               children: [
                 _NodeBadge(label: _kindLabel(node.kind)),
                 if (node.branchIndex case final branchIndex?) ...[
                   const SizedBox(width: 3),
-                  _NodeBadge(label: 'BRANCH ${branchIndex + 1}', branch: true),
+                  _NodeBadge(label: '#${branchIndex + 1}', branch: true),
+                ],
+                const Spacer(),
+                if (node.isRoute && onNavigate != null)
+                  GestureDetector(
+                    onTap: () => onNavigate!(node.path),
+                    child: Container(
+                      padding: const EdgeInsets.all(2.5),
+                      decoration: BoxDecoration(
+                        color: DebugTheme.backgroundDark,
+                        borderRadius: BorderRadius.circular(
+                          DebugTheme.radiusSm,
+                        ),
+                      ),
+                      child: const Icon(
+                        CupertinoIcons.compass,
+                        size: 11,
+                        color: DebugTheme.textMuted,
+                      ),
+                    ),
+                  ),
+                if (node.isRoute && onCopy != null) ...[
+                  const SizedBox(width: 3),
+                  GestureDetector(
+                    onTap: () => onCopy!(node.path),
+                    child: Container(
+                      padding: const EdgeInsets.all(2.5),
+                      decoration: BoxDecoration(
+                        color: DebugTheme.backgroundDark,
+                        borderRadius: BorderRadius.circular(
+                          DebugTheme.radiusSm,
+                        ),
+                      ),
+                      child: const Icon(
+                        CupertinoIcons.doc_on_doc,
+                        size: 11,
+                        color: DebugTheme.textMuted,
+                      ),
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -414,10 +581,10 @@ class _GraphLayoutGroupCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              height: 40,
+              height: 28,
               padding: const EdgeInsets.symmetric(
-                horizontal: DebugTheme.spacing,
-                vertical: DebugTheme.spacingXs,
+                horizontal: 8,
+                vertical: 2,
               ),
               decoration: BoxDecoration(
                 color: layoutColor.withValues(alpha: 0.13),
@@ -427,45 +594,32 @@ class _GraphLayoutGroupCard extends StatelessWidget {
                   ),
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      Icon(CupertinoIcons.layers, color: borderColor, size: 11),
-                      const SizedBox(width: DebugTheme.spacingXs),
-                      Expanded(
-                        child: Text(
-                          node.label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: DebugTheme.textPrimary,
-                            fontSize: DebugTheme.fontSizeSm,
-                            fontWeight: FontWeight.w600,
-                            decoration: TextDecoration.none,
-                          ),
-                        ),
-                      ),
-                      _NodeBadge(label: _kindLabel(node.kind)),
-                      if (node.branchIndex case final branchIndex?) ...[
-                        const SizedBox(width: 3),
-                        _NodeBadge(label: '#${branchIndex + 1}', branch: true),
-                      ],
-                    ],
+                  Icon(
+                    CupertinoIcons.layers_alt,
+                    color: borderColor,
+                    size: 11,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    node.path,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: DebugTheme.textSecondary,
-                      fontSize: 8,
-                      decoration: TextDecoration.none,
+                  const SizedBox(width: DebugTheme.spacingXs),
+                  Expanded(
+                    child: Text(
+                      node.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: DebugTheme.textPrimary,
+                        fontSize: DebugTheme.fontSizeSm,
+                        fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.none,
+                      ),
                     ),
                   ),
+                  _NodeBadge(label: _kindLabel(node.kind)),
+                  if (node.branchIndex case final branchIndex?) ...[
+                    const SizedBox(width: 3),
+                    _NodeBadge(label: '#${branchIndex + 1}', branch: true),
+                  ],
                 ],
               ),
             ),
@@ -486,19 +640,26 @@ class _NodeBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+      padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.5),
       decoration: BoxDecoration(
         color: branch
-            ? _GraphColors.branch.withValues(alpha: 0.12)
+            ? _GraphColors.branch.withValues(alpha: 0.14)
             : DebugTheme.backgroundDark,
         borderRadius: BorderRadius.circular(DebugTheme.radiusSm),
+        border: Border.all(
+          color: branch
+              ? _GraphColors.branch.withValues(alpha: 0.3)
+              : DebugTheme.borderDark,
+          width: 0.6,
+        ),
       ),
       child: Text(
         label,
         style: TextStyle(
           color: branch ? _GraphColors.branch : DebugTheme.textMuted,
-          fontSize: 7,
+          fontSize: 7.5,
           fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
           decoration: TextDecoration.none,
         ),
       ),
@@ -541,11 +702,15 @@ class _TopologyNodeFlowCanvas extends StatefulWidget {
     required this.graph,
     required this.selectedNodeId,
     required this.onNodeSelected,
+    required this.onNavigate,
+    required this.onCopy,
   });
 
   final NavigationGraph<Object> graph;
   final Object? selectedNodeId;
   final ValueChanged<Object> onNodeSelected;
+  final ValueChanged<String> onNavigate;
+  final ValueChanged<String> onCopy;
 
   @override
   State<_TopologyNodeFlowCanvas> createState() =>
@@ -621,6 +786,24 @@ class _TopologyNodeFlowCanvasState extends State<_TopologyNodeFlowCanvas> {
 
   void fitToView() => _controller.fitToView();
 
+  void autoLayout() {
+    final selectedNodeIds = <Object>{
+      for (final node in _controller.nodes.values)
+        if (_controller.isNodeSelected(node.id))
+          if (node.data is _TopologyNodeData) (node.data as _TopologyNodeData).id,
+    };
+    _model = _TopologyNodeFlowModel.calculate(widget.graph);
+    _controller.loadGraph(
+      NodeGraph<_TopologyNodeData, Object?>(
+        nodes: _model.nodes,
+        connections: _model.connections,
+        viewport: _controller.viewport,
+      ),
+    );
+    _restoreSelection(selectedNodeIds);
+    _controller.fitToView();
+  }
+
   bool _paintMinimapNode(
     Canvas canvas,
     Node<dynamic> node,
@@ -673,6 +856,8 @@ class _TopologyNodeFlowCanvasState extends State<_TopologyNodeFlowCanvas> {
             isActive: widget.graph.activeNodeIds.contains(node.id),
             isCurrent: widget.graph.activeRouteId == node.id,
             isSelected: widget.selectedNodeId == node.id,
+            onNavigate: widget.onNavigate,
+            onCopy: widget.onCopy,
           );
         },
       ),
@@ -686,6 +871,13 @@ final class _TopologyNodeData {
   final Object id;
 }
 
+final class _SubtreeMetrics {
+  const _SubtreeMetrics({required this.width, required this.height});
+
+  final double width;
+  final double height;
+}
+
 final class _TopologyNodeFlowModel {
   const _TopologyNodeFlowModel({
     required this.nodes,
@@ -694,12 +886,12 @@ final class _TopologyNodeFlowModel {
     required this.signature,
   });
 
-  static const _nodeWidth = 156.0;
-  static const _nodeHeight = 74.0;
-  static const _horizontalGap = 28.0;
-  static const _verticalGap = 54.0;
-  static const _padding = 24.0;
-  static const _groupPadding = EdgeInsets.fromLTRB(20, 48, 20, 20);
+  static const _nodeWidth = 152.0;
+  static const _nodeHeight = 68.0;
+  static const _horizontalGap = 16.0;
+  static const _verticalGap = 18.0;
+  static const _padding = 16.0;
+  static const _groupPadding = EdgeInsets.fromLTRB(10, 34, 10, 10);
 
   factory _TopologyNodeFlowModel.calculate(
     NavigationGraph<Object> graph, {
@@ -712,61 +904,256 @@ final class _TopologyNodeFlowModel {
       flowIds[id] = 'topology-node-${nodeIndex++}';
     }
 
-    final subtreeWidths = <Object, double>{};
+    final subtreeMetrics = <Object, _SubtreeMetrics>{};
 
-    double measure(Object id) {
+    _SubtreeMetrics measure(Object id) {
       final node = graph.nodes[id]!;
-      final childWidths = <double>[
-        for (final childId in node.childIds) measure(childId),
-      ];
-      final ownWidth = node.isLayout
-          ? _nodeWidth + _groupPadding.horizontal
-          : _nodeWidth;
-      final childrenWidth = childWidths.isEmpty
+      if (node.childIds.isEmpty) {
+        final size = node.isLayout
+            ? Size(
+                _nodeWidth + _groupPadding.horizontal,
+                _nodeHeight + _groupPadding.vertical,
+              )
+            : const Size(_nodeWidth, _nodeHeight);
+        final metrics = _SubtreeMetrics(width: size.width, height: size.height);
+        subtreeMetrics[id] = metrics;
+        return metrics;
+      }
+
+      for (final childId in node.childIds) {
+        measure(childId);
+      }
+
+      final childRouteIds = node.childIds
+          .where((childId) => graph.nodes[childId]!.isRoute)
+          .toList(growable: false);
+      final childLayoutIds = node.childIds
+          .where((childId) => graph.nodes[childId]!.isLayout)
+          .toList(growable: false);
+
+      // 1. Các Route con (node đơn lẻ) -> luôn bố cục NGANG
+      final routesRowWidth = childRouteIds.isEmpty
           ? 0.0
-          : childWidths.reduce((left, right) => left + right) +
-                _horizontalGap * (childWidths.length - 1);
-      final width = childWidths.isEmpty
-          ? ownWidth
-          : node.isLayout
-          ? math.max(ownWidth, childrenWidth + _groupPadding.horizontal)
-          : math.max(ownWidth, childrenWidth);
-      subtreeWidths[id] = width;
-      return width;
+          : childRouteIds.fold<double>(
+                0.0,
+                (sum, childId) => sum + subtreeMetrics[childId]!.width,
+              ) +
+              _horizontalGap * (childRouteIds.length - 1);
+      final routesRowHeight = childRouteIds.isEmpty
+          ? 0.0
+          : childRouteIds.fold<double>(
+              0.0,
+              (maxH, childId) =>
+                  math.max(maxH, subtreeMetrics[childId]!.height),
+            );
+
+      // 2. Các Layout con (layout trong layout) -> luôn bố cục DỌC
+      final layoutsWidth = childLayoutIds.isEmpty
+          ? 0.0
+          : childLayoutIds.fold<double>(
+              0.0,
+              (maxW, childId) =>
+                  math.max(maxW, subtreeMetrics[childId]!.width),
+            );
+      final layoutsHeight = childLayoutIds.isEmpty
+          ? 0.0
+          : childLayoutIds.fold<double>(
+                0.0,
+                (sum, childId) => sum + subtreeMetrics[childId]!.height,
+              ) +
+              _verticalGap * (childLayoutIds.length - 1);
+
+      final innerContentWidth = math.max(routesRowWidth, layoutsWidth);
+      final innerContentHeight =
+          (childRouteIds.isNotEmpty ? routesRowHeight : 0.0) +
+          (childLayoutIds.isNotEmpty ? layoutsHeight : 0.0) +
+          (childRouteIds.isNotEmpty && childLayoutIds.isNotEmpty
+              ? _verticalGap
+              : 0.0);
+
+      double finalWidth;
+      double finalHeight;
+
+      if (node.isLayout) {
+        finalWidth = math.max(
+          innerContentWidth + _groupPadding.horizontal,
+          _nodeWidth + _groupPadding.horizontal,
+        );
+        finalHeight = math.max(
+          innerContentHeight + _groupPadding.vertical,
+          _nodeHeight + _groupPadding.vertical,
+        );
+      } else {
+        finalWidth = math.max(_nodeWidth, innerContentWidth);
+        finalHeight = _nodeHeight +
+            (innerContentHeight > 0 ? innerContentHeight + _verticalGap : 0.0);
+      }
+
+      final metrics = _SubtreeMetrics(width: finalWidth, height: finalHeight);
+      subtreeMetrics[id] = metrics;
+      return metrics;
     }
 
-    void place(Object id, double left) {
+    void place(Object id, double left, double top) {
       final node = graph.nodes[id]!;
-      final width = subtreeWidths[id]!;
-      final ownWidth = node.isLayout
-          ? _nodeWidth + _groupPadding.horizontal
-          : _nodeWidth;
-      positions[id] = Offset(
-        left + (width - ownWidth) / 2,
-        _padding + node.depth * (_nodeHeight + _verticalGap),
-      );
+      final metrics = subtreeMetrics[id]!;
 
-      if (node.childIds.isEmpty) return;
-      final childrenWidth =
-          node.childIds.fold<double>(
-            0,
-            (sum, childId) => sum + subtreeWidths[childId]!,
-          ) +
-          _horizontalGap * (node.childIds.length - 1);
-      var childLeft = left + (width - childrenWidth) / 2;
-      for (final childId in node.childIds) {
-        place(childId, childLeft);
-        childLeft += subtreeWidths[childId]! + _horizontalGap;
+      final childRouteIds = node.childIds
+          .where((childId) => graph.nodes[childId]!.isRoute)
+          .toList(growable: false);
+      final childLayoutIds = node.childIds
+          .where((childId) => graph.nodes[childId]!.isLayout)
+          .toList(growable: false);
+
+      final routesRowWidth = childRouteIds.isEmpty
+          ? 0.0
+          : childRouteIds.fold<double>(
+                0.0,
+                (sum, childId) => sum + subtreeMetrics[childId]!.width,
+              ) +
+              _horizontalGap * (childRouteIds.length - 1);
+      final routesRowHeight = childRouteIds.isEmpty
+          ? 0.0
+          : childRouteIds.fold<double>(
+              0.0,
+              (maxH, childId) =>
+                  math.max(maxH, subtreeMetrics[childId]!.height),
+            );
+
+      final layoutsHeight = childLayoutIds.isEmpty
+          ? 0.0
+          : childLayoutIds.fold<double>(
+                0.0,
+                (sum, childId) => sum + subtreeMetrics[childId]!.height,
+              ) +
+              _verticalGap * (childLayoutIds.length - 1);
+
+      if (node.isLayout) {
+        positions[id] = Offset(left, top);
+        if (node.childIds.isEmpty) return;
+
+        final innerLeft = left + _groupPadding.left;
+        final innerTop = top + _groupPadding.top;
+        final availableWidth = metrics.width - _groupPadding.horizontal;
+        final availableHeight = metrics.height - _groupPadding.vertical;
+
+        final totalInnerContentHeight =
+            (childRouteIds.isNotEmpty ? routesRowHeight : 0.0) +
+            (childLayoutIds.isNotEmpty ? layoutsHeight : 0.0) +
+            (childRouteIds.isNotEmpty && childLayoutIds.isNotEmpty
+                ? _verticalGap
+                : 0.0);
+
+        var currentY =
+            innerTop + (availableHeight - totalInnerContentHeight) / 2;
+
+        // 1. Đặt các Route con (node đơn lẻ) theo chiều NGANG
+        if (childRouteIds.isNotEmpty) {
+          var currentX = innerLeft + (availableWidth - routesRowWidth) / 2;
+          for (final routeId in childRouteIds) {
+            final childM = subtreeMetrics[routeId]!;
+            final childY = currentY + (routesRowHeight - childM.height) / 2;
+            place(routeId, currentX, childY);
+            currentX += childM.width + _horizontalGap;
+          }
+          currentY += routesRowHeight + _verticalGap;
+        }
+
+        // 2. Đặt các Layout con (layout trong layout) theo chiều DỌC
+        for (final layoutId in childLayoutIds) {
+          final childM = subtreeMetrics[layoutId]!;
+          final layoutX = innerLeft + (availableWidth - childM.width) / 2;
+          place(layoutId, layoutX, currentY);
+          currentY += childM.height + _verticalGap;
+        }
+      } else {
+        final ownWidth = _nodeWidth;
+        positions[id] = Offset(
+          left + (metrics.width - ownWidth) / 2,
+          top,
+        );
+
+        if (node.childIds.isNotEmpty) {
+          var currentY = top + _nodeHeight + _verticalGap;
+          if (childRouteIds.isNotEmpty) {
+            var currentX = left + (metrics.width - routesRowWidth) / 2;
+            for (final routeId in childRouteIds) {
+              final childM = subtreeMetrics[routeId]!;
+              place(
+                routeId,
+                currentX,
+                currentY + (routesRowHeight - childM.height) / 2,
+              );
+              currentX += childM.width + _horizontalGap;
+            }
+            currentY += routesRowHeight + _verticalGap;
+          }
+          for (final layoutId in childLayoutIds) {
+            final childM = subtreeMetrics[layoutId]!;
+            place(
+              layoutId,
+              left + (metrics.width - childM.width) / 2,
+              currentY,
+            );
+            currentY += childM.height + _verticalGap;
+          }
+        }
       }
     }
 
     for (final rootId in graph.rootIds) {
       measure(rootId);
     }
-    var rootLeft = _padding;
-    for (final rootId in graph.rootIds) {
-      place(rootId, rootLeft);
-      rootLeft += subtreeWidths[rootId]! + _horizontalGap;
+
+    final rootLayoutIds = graph.rootIds
+        .where((id) => graph.nodes[id]!.isLayout)
+        .toList(growable: false);
+    final rootRouteIds = graph.rootIds
+        .where((id) => graph.nodes[id]!.isRoute)
+        .toList(growable: false);
+
+    // Tính tổng kích thước cho hàng các node đơn lẻ (layout ngang)
+    final standaloneRowWidth = rootRouteIds.isEmpty
+        ? 0.0
+        : rootRouteIds.fold<double>(
+              0.0,
+              (sum, id) => sum + subtreeMetrics[id]!.width,
+            ) +
+            _horizontalGap * (rootRouteIds.length - 1);
+    final standaloneRowHeight = rootRouteIds.isEmpty
+        ? 0.0
+        : rootRouteIds.fold<double>(
+            0.0,
+            (maxH, id) => math.max(maxH, subtreeMetrics[id]!.height),
+          );
+
+    // Chiều rộng tối đa bao gồm cả hàng node đơn lẻ và các layout group
+    var maxTotalWidth = standaloneRowWidth;
+    for (final layoutId in rootLayoutIds) {
+      final w = subtreeMetrics[layoutId]!.width;
+      if (w > maxTotalWidth) maxTotalWidth = w;
+    }
+
+    var currentTop = _padding;
+
+    // 1. Các node đơn lẻ -> layout ngang thành một hàng side-by-side
+    if (rootRouteIds.isNotEmpty) {
+      var currentX = _padding + (maxTotalWidth - standaloneRowWidth) / 2;
+      for (final routeId in rootRouteIds) {
+        final m = subtreeMetrics[routeId]!;
+        final currentY = currentTop + (standaloneRowHeight - m.height) / 2;
+        place(routeId, currentX, currentY);
+        currentX += m.width + _horizontalGap;
+      }
+      currentTop += standaloneRowHeight + _verticalGap;
+    }
+
+    // 2. Các Layout -> layout dọc từ trên xuống dưới
+    for (final layoutId in rootLayoutIds) {
+      final m = subtreeMetrics[layoutId]!;
+      final layoutLeft = _padding + (maxTotalWidth - m.width) / 2;
+      place(layoutId, layoutLeft, currentTop);
+      currentTop += m.height + _verticalGap;
     }
 
     final routeInputIds = <Object>{};

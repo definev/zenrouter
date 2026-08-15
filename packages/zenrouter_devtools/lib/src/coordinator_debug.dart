@@ -70,6 +70,13 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   /// capture is too expensive for the target device.
   bool get debugCaptureRouteScreenshots => true;
 
+  /// Maximum duration to wait for route transition animations to settle
+  /// before taking a screenshot preview.
+  ///
+  /// Defaults to 500ms to cover standard Material / Cupertino route transitions.
+  Duration get debugScreenCaptureSettleTimeout =>
+      const Duration(milliseconds: 500);
+
   // ===========================================================================
   // STATE
   // ===========================================================================
@@ -224,12 +231,52 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
       return;
     }
     _scheduledScreenCaptureRevision = revision;
+    final startTime = DateTime.now();
+    _settleAndCaptureDebugScreen(
+      recorder,
+      routeId: routeId,
+      revision: revision,
+      uri: uri,
+      startTime: startTime,
+    );
+  }
+
+  void _settleAndCaptureDebugScreen(
+    NavigationFlowRecorder<Object> recorder, {
+    required Object routeId,
+    required int revision,
+    required Uri uri,
+    required DateTime startTime,
+  }) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_debugDisposed ||
+          !debugScreenCaptureEnabled ||
+          _scheduledScreenCaptureRevision != revision ||
+          currentUri != uri) {
+        return;
+      }
+
+      final elapsed = DateTime.now().difference(startTime);
+      final isSettled = WidgetsBinding.instance.transientCallbackCount == 0;
+      final timedOut = elapsed >= debugScreenCaptureSettleTimeout;
+
+      if (!isSettled && !timedOut) {
+        _settleAndCaptureDebugScreen(
+          recorder,
+          routeId: routeId,
+          revision: revision,
+          uri: uri,
+          startTime: startTime,
+        );
+        return;
+      }
+
       _captureDebugScreen(
         recorder,
         routeId: routeId,
         revision: revision,
         uri: uri,
+        startTime: startTime,
       );
     });
   }
@@ -239,6 +286,7 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
     required Object routeId,
     required int revision,
     required Uri uri,
+    required DateTime startTime,
   }) async {
     if (_debugDisposed ||
         !debugScreenCaptureEnabled ||
@@ -254,8 +302,13 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
       return;
     }
     if (renderObject.debugNeedsPaint) {
-      _scheduledScreenCaptureRevision = null;
-      _scheduleDebugScreenCapture(recorder, revision: revision, uri: uri);
+      _settleAndCaptureDebugScreen(
+        recorder,
+        routeId: routeId,
+        revision: revision,
+        uri: uri,
+        startTime: startTime,
+      );
       return;
     }
 
@@ -276,7 +329,13 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
           byteData.lengthInBytes,
         ),
       );
-      recorder.attachScreenPreview(routeId, bytes, revision: revision);
+      recorder.attachScreenPreview(
+        routeId,
+        bytes,
+        revision: revision,
+        width: image.width,
+        height: image.height,
+      );
     } catch (_) {
       // Some platform views and cross-origin web images cannot be rasterized.
       // The flow remains usable without a preview in those cases.
