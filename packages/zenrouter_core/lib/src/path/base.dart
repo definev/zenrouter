@@ -37,6 +37,8 @@ extension type const PathKey(String key) {}
 ///
 /// - [NavigationPath]: Mutable stack for standard push/pop navigation
 /// - [IndexedStackPath]: Fixed stack for tab-based navigation
+/// - `BranchedStackPath`: Fixed layout roots with an independent child stack
+///   per branch (provided by the Flutter package)
 abstract class StackPath<T extends RouteTarget> with ListenableObject {
   StackPath(this._stack, {this.debugLabel, CoordinatorCore? coordinator})
     : _proxyCoordinator = coordinator?.isRouteModule == true

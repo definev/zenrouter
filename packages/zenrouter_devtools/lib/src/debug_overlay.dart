@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/gestures.dart';
 import 'package:zenrouter/zenrouter.dart';
 
 import 'coordinator_debug.dart';
@@ -21,21 +24,48 @@ class DebugOverlay<T extends RouteUnique> extends StatefulWidget {
 }
 
 class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
-  final TextEditingController _uriController = TextEditingController();
+  static const _desktopPanelSize = Size(420, 500);
+  static const _mobilePanelHeight = 400.0;
+  static const _minimumPanelSize = Size(340, 320);
+  static const _launcherMargin = DebugTheme.spacingLg;
 
-  // 0: Inspect, 1: Routes
-  int _selectedTabIndex = 0;
+  final TextEditingController _uriController = TextEditingController();
+  final GlobalKey _collapsedViewportKey = GlobalKey();
+  final GlobalKey _launcherKey = GlobalKey();
+
+  _DebugTab _selectedTab = _DebugTab.problems;
+  Size? _customPanelSize;
+  bool _panelMaximized = false;
+  bool _resizingPanel = false;
+  Offset? _resizeStartPosition;
+  Size? _resizeStartSize;
+  Offset? _launcherPosition;
+  Offset? _launcherDragStartPosition;
+  Offset? _launcherDragStartPointer;
+  Rect _launcherBounds = Rect.zero;
+
+  List<_DebugTab> get _availableTabs => [
+    _DebugTab.problems,
+    _DebugTab.inspect,
+    _DebugTab.active,
+    if (widget.coordinator.routeManifest.nodes.isNotEmpty) _DebugTab.graph,
+    if (widget.coordinator.debugRoutes.isNotEmpty) _DebugTab.routes,
+  ];
 
   void _handleUriChanged() {
     final newPath = widget.coordinator.currentUri.toString();
     if (newPath != _uriController.text) {
       _uriController.text = newPath;
     }
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
   void initState() {
     super.initState();
+    _handleUriChanged();
     widget.coordinator.addListener(_handleUriChanged);
   }
 
@@ -59,59 +89,189 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
   // ===========================================================================
 
   Widget _buildCollapsedView() {
-    return Align(
-      alignment: Alignment.bottomRight,
-      child: SafeArea(
-        child: IntrinsicWidth(
-          child: Padding(
-            padding: const EdgeInsets.all(DebugTheme.spacingLg),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                ListenableBuilder(
-                  listenable: _uriController,
-                  builder:
-                      (context, child) => Expanded(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Color(0xFF000000).withValues(alpha: 0.6),
-                            borderRadius: BorderRadius.circular(
-                              DebugTheme.radiusFull,
-                            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final mediaSize = MediaQuery.sizeOf(context);
+        final viewportSize = Size(
+          constraints.hasBoundedWidth ? constraints.maxWidth : mediaSize.width,
+          constraints.hasBoundedHeight
+              ? constraints.maxHeight
+              : mediaSize.height,
+        );
+        final safePadding = MediaQuery.paddingOf(context);
+        _launcherBounds = Rect.fromLTRB(
+          safePadding.left + _launcherMargin,
+          safePadding.top + _launcherMargin,
+          math.max(
+            safePadding.left + _launcherMargin,
+            viewportSize.width - safePadding.right - _launcherMargin,
+          ),
+          math.max(
+            safePadding.top + _launcherMargin,
+            viewportSize.height - safePadding.bottom - _launcherMargin,
+          ),
+        );
+
+        final launcher = _buildDraggableLauncher(
+          math.max(40.0, _launcherBounds.width),
+        );
+        final launcherSize = _launcherSize;
+        final resolvedPosition =
+            _launcherPosition == null
+                ? null
+                : _clampLauncherPosition(
+                  _launcherPosition!,
+                  launcherSize,
+                  _launcherBounds,
+                );
+
+        return SizedBox.expand(
+          key: _collapsedViewportKey,
+          child: Stack(
+            children: [
+              if (resolvedPosition == null)
+                Positioned(
+                  right: safePadding.right + _launcherMargin,
+                  bottom: safePadding.bottom + _launcherMargin,
+                  child: launcher,
+                )
+              else
+                Positioned(
+                  left: resolvedPosition.dx,
+                  top: resolvedPosition.dy,
+                  child: launcher,
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Size get _launcherSize {
+    final renderObject = _launcherKey.currentContext?.findRenderObject();
+    return renderObject is RenderBox ? renderObject.size : const Size(40, 40);
+  }
+
+  Widget _buildDraggableLauncher(double maxWidth) {
+    return MouseRegion(
+      key: const ValueKey('zenrouter-debug-launcher'),
+      cursor: SystemMouseCursors.move,
+      child: Semantics(
+        button: true,
+        label: 'Open ZenRouter devtools',
+        child: GestureDetector(
+          dragStartBehavior: DragStartBehavior.down,
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.coordinator.toggleDebugOverlay,
+          onPanStart: _startLauncherDrag,
+          onPanUpdate: _updateLauncherDrag,
+          onPanEnd: (_) => _endLauncherDrag(),
+          onPanCancel: _endLauncherDrag,
+          child: ListenableBuilder(
+            listenable: _uriController,
+            builder: (context, child) {
+              const fabFootprint = 40.0 + DebugTheme.spacingXs;
+              final maximumPillWidth = math.max(0.0, maxWidth - fabFootprint);
+              final textPainter = TextPainter(
+                text: TextSpan(
+                  text: _uriController.text,
+                  style: const TextStyle(fontSize: DebugTheme.fontSizeMd),
+                ),
+                textDirection: TextDirection.ltr,
+                maxLines: 1,
+              )..layout(maxWidth: maximumPillWidth);
+              final pillWidth = math.min(
+                maximumPillWidth,
+                math.max(80.0, textPainter.width + DebugTheme.spacingMd * 2),
+              );
+
+              return SizedBox(
+                key: _launcherKey,
+                width: pillWidth + fabFootprint,
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: pillWidth,
+                      child: Container(
+                        height: 40,
+                        margin: const EdgeInsets.only(
+                          right: DebugTheme.spacingXs,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DebugTheme.spacingMd,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF000000).withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(
+                            DebugTheme.radiusFull,
                           ),
-                          height: 40,
-                          margin: const EdgeInsets.only(
-                            right: DebugTheme.spacingXs,
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: DebugTheme.spacingMd,
-                          ),
-                          child: Center(
-                            child: Text(
-                              _uriController.text,
-                              style: const TextStyle(
-                                color: Color(0xFFFFFFFF),
-                                decoration: TextDecoration.none,
-                                fontWeight: FontWeight.normal,
-                                fontSize: DebugTheme.fontSizeMd,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          _uriController.text,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFFFFFFFF),
+                            decoration: TextDecoration.none,
+                            fontWeight: FontWeight.normal,
+                            fontSize: DebugTheme.fontSizeMd,
                           ),
                         ),
                       ),
+                    ),
+                    _DebugFab(
+                      key: const ValueKey('zenrouter-debug-launcher-button'),
+                      problems: widget.coordinator.problems,
+                    ),
+                  ],
                 ),
-                _DebugFab(
-                  problems: widget.coordinator.problems,
-                  onTap: widget.coordinator.toggleDebugOverlay,
-                ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ),
     );
+  }
+
+  Offset _clampLauncherPosition(Offset requested, Size size, Rect bounds) {
+    final maximumLeft = math.max(bounds.left, bounds.right - size.width);
+    final maximumTop = math.max(bounds.top, bounds.bottom - size.height);
+    return Offset(
+      requested.dx.clamp(bounds.left, maximumLeft).toDouble(),
+      requested.dy.clamp(bounds.top, maximumTop).toDouble(),
+    );
+  }
+
+  void _startLauncherDrag(DragStartDetails details) {
+    final launcherBox = _launcherKey.currentContext?.findRenderObject();
+    final viewportBox =
+        _collapsedViewportKey.currentContext?.findRenderObject();
+    if (launcherBox is! RenderBox || viewportBox is! RenderBox) return;
+    _launcherDragStartPointer = details.globalPosition;
+    _launcherDragStartPosition = viewportBox.globalToLocal(
+      launcherBox.localToGlobal(Offset.zero),
+    );
+  }
+
+  void _updateLauncherDrag(DragUpdateDetails details) {
+    final startPointer = _launcherDragStartPointer;
+    final startPosition = _launcherDragStartPosition;
+    if (startPointer == null || startPosition == null) return;
+    final requested = startPosition + details.globalPosition - startPointer;
+    setState(() {
+      _launcherPosition = _clampLauncherPosition(
+        requested,
+        _launcherSize,
+        _launcherBounds,
+      );
+    });
+  }
+
+  void _endLauncherDrag() {
+    _launcherDragStartPointer = null;
+    _launcherDragStartPosition = null;
   }
 
   // ===========================================================================
@@ -121,58 +281,112 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
   Widget _buildExpandedView() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isMobile = constraints.maxWidth < 600;
-        final width = isMobile ? constraints.maxWidth : 420.0;
-        final height = isMobile ? 400.0 : 500.0;
-        final bottom = isMobile ? 0.0 : 16.0;
-        final horizontal = isMobile ? 0.0 : 16.0;
+        final mediaSize = MediaQuery.sizeOf(context);
+        final viewportSize = Size(
+          constraints.hasBoundedWidth ? constraints.maxWidth : mediaSize.width,
+          constraints.hasBoundedHeight
+              ? constraints.maxHeight
+              : mediaSize.height,
+        );
+        final isMobile = viewportSize.width < 600;
+        final panelMargin = switch ((isMobile, _panelMaximized)) {
+          (_, true) => EdgeInsets.zero,
+          (true, false) => EdgeInsets.zero,
+          (false, false) => const EdgeInsets.all(DebugTheme.spacingLg),
+        };
+        final availableSize = Size(
+          math.max(0, viewportSize.width - panelMargin.horizontal),
+          math.max(0, viewportSize.height - panelMargin.vertical),
+        );
+        final defaultSize = Size(
+          isMobile ? availableSize.width : _desktopPanelSize.width,
+          isMobile ? _mobilePanelHeight : _desktopPanelSize.height,
+        );
+        final panelSize =
+            _panelMaximized
+                ? availableSize
+                : _clampPanelSize(
+                  _customPanelSize ?? defaultSize,
+                  availableSize,
+                );
 
         return Align(
           alignment: Alignment.bottomRight,
-          child: Container(
-            height: height,
-            width: width,
-            padding: EdgeInsets.only(
-              bottom: bottom,
-              right: horizontal,
-              left: horizontal,
-            ),
-            child: Container(
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                color: DebugTheme.background,
-                borderRadius: BorderRadius.circular(
-                  isMobile ? 0 : DebugTheme.radiusLg,
-                ),
-                border: Border.all(color: DebugTheme.border),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF000000).withAlpha(50),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
+          child: Padding(
+            padding: panelMargin,
+            child: AnimatedContainer(
+              key: const ValueKey('zenrouter-debug-panel'),
+              duration:
+                  _resizingPanel
+                      ? Duration.zero
+                      : const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              width: panelSize.width,
+              height: panelSize.height,
+              child: Stack(
                 children: [
-                  _buildHeader(),
-                  const _Divider(),
-                  _buildTabBar(),
-                  const _Divider(),
-                  Expanded(
-                    child: switch (_selectedTabIndex) {
-                      0 => ProblemsTab<T>(coordinator: widget.coordinator),
-                      1 => PathListView<T>(coordinator: widget.coordinator),
-                      2 => ActiveLayoutsListView<T>(
-                        coordinator: widget.coordinator,
+                  Positioned.fill(
+                    child: Container(
+                      clipBehavior: Clip.antiAlias,
+                      decoration: BoxDecoration(
+                        color: DebugTheme.background,
+                        borderRadius: BorderRadius.circular(
+                          isMobile || _panelMaximized ? 0 : DebugTheme.radiusLg,
+                        ),
+                        border: Border.all(color: DebugTheme.border),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF000000).withAlpha(50),
+                            blurRadius: 24,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
                       ),
-                      _ => DebugRoutesListView<T>(
-                        coordinator: widget.coordinator,
+                      child: Column(
+                        children: [
+                          _buildHeader(),
+                          const _Divider(),
+                          _buildTabBar(),
+                          const _Divider(),
+                          Expanded(
+                            child: switch (_selectedTab) {
+                              _DebugTab.problems => ProblemsTab<T>(
+                                coordinator: widget.coordinator,
+                              ),
+                              _DebugTab.inspect => PathListView<T>(
+                                coordinator: widget.coordinator,
+                              ),
+                              _DebugTab.active => ActiveLayoutsListView<T>(
+                                coordinator: widget.coordinator,
+                              ),
+                              _DebugTab.graph => NavigationGraphTab<T>(
+                                coordinator: widget.coordinator,
+                              ),
+                              _DebugTab.routes => DebugRoutesListView<T>(
+                                coordinator: widget.coordinator,
+                              ),
+                            },
+                          ),
+                          const _Divider(),
+                          _buildInputArea(),
+                        ],
                       ),
-                    },
+                    ),
                   ),
-                  const _Divider(),
-                  _buildInputArea(),
+                  if (!_panelMaximized)
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      child: _PanelResizeHandle(
+                        onPanStart:
+                            (details) => _startPanelResize(details, panelSize),
+                        onPanUpdate:
+                            (details) =>
+                                _updatePanelResize(details, availableSize),
+                        onPanEnd: (_) => _endPanelResize(),
+                        onPanCancel: _endPanelResize,
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -191,42 +405,87 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
       height: 40,
       color: DebugTheme.backgroundDark,
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Row(
-            children: [
-              SizedBox(width: DebugTheme.spacing),
-              ConnectionIndicator(),
-              SizedBox(width: DebugTheme.spacing),
-              Text(
-                'ZenRouter Devtools',
-                style: TextStyle(
-                  color: DebugTheme.textPrimary,
-                  fontSize: DebugTheme.fontSizeLg,
-                  fontWeight: FontWeight.w600,
-                  decoration: TextDecoration.none,
-                ),
-              ),
-            ],
-          ),
-          GestureDetector(
-            onTap: widget.coordinator.toggleDebugOverlay,
-            child: Container(
-              height: 32,
-              width: 32,
-              alignment: Alignment.center,
-              color: DebugTheme.backgroundDark,
-              margin: EdgeInsets.only(right: DebugTheme.spacing),
-              child: const Icon(
-                CupertinoIcons.xmark,
-                color: DebugTheme.textDisabled,
-                size: 16,
+          const SizedBox(width: 28),
+          const ConnectionIndicator(),
+          const SizedBox(width: DebugTheme.spacing),
+          const Expanded(
+            child: Text(
+              'ZenRouter Devtools',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: DebugTheme.textPrimary,
+                fontSize: DebugTheme.fontSizeLg,
+                fontWeight: FontWeight.w600,
+                decoration: TextDecoration.none,
               ),
             ),
+          ),
+          _HeaderIconButton(
+            key: const ValueKey('zenrouter-debug-panel-maximize'),
+            semanticsLabel:
+                _panelMaximized
+                    ? 'Restore debug panel'
+                    : 'Maximize debug panel',
+            icon:
+                _panelMaximized
+                    ? CupertinoIcons.fullscreen_exit
+                    : CupertinoIcons.fullscreen,
+            onTap:
+                () => setState(() {
+                  _panelMaximized = !_panelMaximized;
+                  _resizingPanel = false;
+                  _resizeStartPosition = null;
+                  _resizeStartSize = null;
+                }),
+          ),
+          _HeaderIconButton(
+            semanticsLabel: 'Close debug panel',
+            icon: CupertinoIcons.xmark,
+            onTap: widget.coordinator.toggleDebugOverlay,
+            margin: const EdgeInsets.only(right: DebugTheme.spacingXs),
           ),
         ],
       ),
     );
+  }
+
+  Size _clampPanelSize(Size requested, Size available) {
+    final minimumWidth = math.min(_minimumPanelSize.width, available.width);
+    final minimumHeight = math.min(_minimumPanelSize.height, available.height);
+    return Size(
+      requested.width.clamp(minimumWidth, available.width).toDouble(),
+      requested.height.clamp(minimumHeight, available.height).toDouble(),
+    );
+  }
+
+  void _startPanelResize(DragStartDetails details, Size panelSize) {
+    _resizeStartPosition = details.globalPosition;
+    _resizeStartSize = panelSize;
+    setState(() => _resizingPanel = true);
+  }
+
+  void _updatePanelResize(DragUpdateDetails details, Size availableSize) {
+    final startPosition = _resizeStartPosition;
+    final startSize = _resizeStartSize;
+    if (startPosition == null || startSize == null) return;
+    final delta = details.globalPosition - startPosition;
+    setState(() {
+      _customPanelSize = _clampPanelSize(
+        Size(startSize.width - delta.dx, startSize.height - delta.dy),
+        availableSize,
+      );
+    });
+  }
+
+  void _endPanelResize() {
+    if (!_resizingPanel) return;
+    setState(() {
+      _resizingPanel = false;
+      _resizeStartPosition = null;
+      _resizeStartSize = null;
+    });
   }
 
   // ===========================================================================
@@ -239,37 +498,20 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
       color: DebugTheme.background,
       child: Row(
         children: [
-          Expanded(
-            child: TabButton(
-              label: 'Problems',
-              count: widget.coordinator.problems,
-              isSelected: _selectedTabIndex == 0,
-              onTap: () => setState(() => _selectedTabIndex = 0),
-            ),
-          ),
-          const _VerticalDivider(),
-          Expanded(
-            child: TabButton(
-              label: 'Inspect',
-              isSelected: _selectedTabIndex == 1,
-              onTap: () => setState(() => _selectedTabIndex = 1),
-            ),
-          ),
-          const _VerticalDivider(),
-          Expanded(
-            child: TabButton(
-              label: 'Active',
-              isSelected: _selectedTabIndex == 2,
-              onTap: () => setState(() => _selectedTabIndex = 2),
-            ),
-          ),
-          if (widget.coordinator.debugRoutes.isNotEmpty) ...[
-            const _VerticalDivider(),
+          for (var index = 0; index < _availableTabs.length; index++) ...[
+            if (index > 0) const _VerticalDivider(),
             Expanded(
               child: TabButton(
-                label: 'Routes',
-                isSelected: _selectedTabIndex == 3,
-                onTap: () => setState(() => _selectedTabIndex = 3),
+                label: _availableTabs[index].label,
+                count:
+                    _availableTabs[index] == _DebugTab.problems
+                        ? widget.coordinator.problems
+                        : 0,
+                isSelected: _selectedTab == _availableTabs[index],
+                onTap:
+                    () => setState(() {
+                      _selectedTab = _availableTabs[index];
+                    }),
               ),
             ),
           ],
@@ -403,15 +645,26 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
   }
 }
 
+enum _DebugTab {
+  problems('Problems'),
+  inspect('Inspect'),
+  active('Active'),
+  graph('Graph'),
+  routes('Routes');
+
+  const _DebugTab(this.label);
+
+  final String label;
+}
+
 // =============================================================================
 // DEBUG FAB (Custom, no Material)
 // =============================================================================
 
 class _DebugFab extends StatefulWidget {
-  const _DebugFab({required this.problems, required this.onTap});
+  const _DebugFab({super.key, required this.problems});
 
   final int problems;
-  final VoidCallback onTap;
 
   @override
   State<_DebugFab> createState() => _DebugFabState();
@@ -425,32 +678,28 @@ class _DebugFabState extends State<_DebugFab> {
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: Container(
-          width: 40,
-          height: 40,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color:
-                _isHovered ? const Color(0xFF222222) : const Color(0xFF000000),
-            shape: BoxShape.circle,
-            border: Border.all(color: const Color(0x3DFFFFFF)),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF000000).withAlpha(100),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: CountBadge(
-            count: widget.problems,
-            child: const Icon(
-              CupertinoIcons.ant,
-              color: Color(0xFFFFFFFF),
-              size: 20,
+      child: Container(
+        width: 40,
+        height: 40,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: _isHovered ? const Color(0xFF222222) : const Color(0xFF000000),
+          shape: BoxShape.circle,
+          border: Border.all(color: const Color(0x3DFFFFFF)),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF000000).withAlpha(100),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
+          ],
+        ),
+        child: CountBadge(
+          count: widget.problems,
+          child: const Icon(
+            CupertinoIcons.ant,
+            color: Color(0xFFFFFFFF),
+            size: 20,
           ),
         ),
       ),
@@ -477,5 +726,86 @@ class _VerticalDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(width: 1, color: DebugTheme.border);
+  }
+}
+
+class _HeaderIconButton extends StatelessWidget {
+  const _HeaderIconButton({
+    super.key,
+    required this.semanticsLabel,
+    required this.icon,
+    required this.onTap,
+    this.margin = EdgeInsets.zero,
+  });
+
+  final String semanticsLabel;
+  final IconData icon;
+  final VoidCallback onTap;
+  final EdgeInsets margin;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: semanticsLabel,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          width: 32,
+          height: 32,
+          margin: margin,
+          alignment: Alignment.center,
+          child: Icon(icon, color: DebugTheme.textDisabled, size: 15),
+        ),
+      ),
+    );
+  }
+}
+
+class _PanelResizeHandle extends StatelessWidget {
+  const _PanelResizeHandle({
+    required this.onPanStart,
+    required this.onPanUpdate,
+    required this.onPanEnd,
+    required this.onPanCancel,
+  });
+
+  final GestureDragStartCallback onPanStart;
+  final GestureDragUpdateCallback onPanUpdate;
+  final GestureDragEndCallback onPanEnd;
+  final VoidCallback onPanCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeUpLeftDownRight,
+      child: Semantics(
+        label: 'Resize debug panel',
+        child: GestureDetector(
+          key: const ValueKey('zenrouter-debug-panel-resize-handle'),
+          behavior: HitTestBehavior.opaque,
+          onPanStart: onPanStart,
+          onPanUpdate: onPanUpdate,
+          onPanEnd: onPanEnd,
+          onPanCancel: onPanCancel,
+          child: const SizedBox(
+            width: 28,
+            height: 28,
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: Padding(
+                padding: EdgeInsets.all(4),
+                child: Icon(
+                  CupertinoIcons.resize,
+                  color: DebugTheme.textMuted,
+                  size: 12,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

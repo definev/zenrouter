@@ -39,6 +39,12 @@ class MyRoute extends _$MyRoute { ... }
 @ZenLayout(type: LayoutType.stack)
 class MyLayout extends _$MyLayout { ... }
 
+@ZenLayout(
+  type: LayoutType.branched,
+  branches: [HomeLayout, SettingsLayout],
+)
+class AppShellLayout extends _$AppShellLayout { ... }
+
 // With query parameters
 @ZenRoute(queries: ['search', 'page'])
 class SearchRoute extends _$SearchRoute { ... }

@@ -69,10 +69,32 @@ mixin RouteUnique on RouteTarget implements RouteUri {
   RouteLayout? resolveParentLayout(coordinator) {
     final layout = _proxy.resolveParentLayout(coordinator) as RouteLayout?;
 
-    // Validate that routes using IndexedStackPath are in the initial stack
+    // Validate that routes using fixed-membership paths are declared upfront.
     // Using assert with closure to ensure all validation logic is removed in production
     assert(() {
       final p = layout?.resolvePath(coordinator);
+      if (p is BranchedStackPath) {
+        final path = p as BranchedStackPath;
+        final routeInBranches = path.stack.any(
+          (route) => route.runtimeType == runtimeType,
+        );
+        if (!routeInBranches) {
+          throw AssertionError(
+            'Layout [$runtimeType] resolves under a BranchedStackPath but is '
+            'not declared as a branch root.\n'
+            'BranchedStackPath: ${path.debugLabel ?? 'unlabeled'}\n'
+            'Current branches: '
+            '${path.stack.map((route) => route.runtimeType).toList()}\n\n'
+            'Fix: add [$runtimeType] as a branch layout when creating the path:\n'
+            '  BranchedStackPath.createWith(\n'
+            '    [...existing branches..., $runtimeType()],\n'
+            '    coordinator: this,\n'
+            "    label: '${path.debugLabel ?? 'your-label'}',\n"
+            '  )',
+          );
+        }
+        return true;
+      }
       if (p is IndexedStackPath) {
         final path = p as IndexedStackPath;
         final routeInStack = path.stack.any(

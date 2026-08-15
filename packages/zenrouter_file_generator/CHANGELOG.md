@@ -1,5 +1,7 @@
 ## Unreleased
 
+- Generate `BranchedStackPath` fields, branched manifest topology, and typed
+  layout base classes from `@ZenLayout(type: LayoutType.branched, branches: ...)`.
 - Generate `Coordinator.manifest` as the static route topology used by the
   generated URI parser.
 - Emit `RouteManifest<String>` explicitly while handwritten coordinators may

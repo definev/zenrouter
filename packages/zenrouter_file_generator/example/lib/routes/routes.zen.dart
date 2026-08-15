@@ -3,6 +3,7 @@
 
 import 'package:flutter/widgets.dart';
 import 'package:zenrouter/zenrouter.dart';
+import 'package:zenrouter_devtools/zenrouter_devtools.dart';
 import '_route.dart';
 
 import '(auth).forgot-password.dart' deferred as _auth_forgotpassword;
@@ -49,7 +50,7 @@ export 'tabs/settings.dart';
 export '_route.dart';
 
 /// Generated coordinator managing all routes.
-class AppCoordinator extends Coordinator<AppRoute> {
+class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug {
   /// Immutable application route topology.
   static final RouteManifest<String> manifest = RouteManifest<String>(
     name: 'AppCoordinator',
@@ -149,8 +150,8 @@ class AppCoordinator extends Coordinator<AppRoute> {
         id: 'FeedTabLayout',
         path: '/tabs/feed',
         parentId: 'TabsLayout',
-        kind: RouteManifestLayoutKind.indexed,
-        indexedChildIds: ['FollowingLayout', 'ForYouLayout'],
+        kind: RouteManifestLayoutKind.branched,
+        branchChildIds: ['FollowingLayout', 'ForYouLayout'],
       ),
       RouteManifestLayout(
         id: 'FollowingLayout',
@@ -292,7 +293,7 @@ class AppCoordinator extends Coordinator<AppRoute> {
     label: 'Tabs',
     [FeedTabLayout(), TabProfileRoute(), TabSettingsRoute()],
   )..bindLayout(TabsLayout.new);
-  late final feedTabPath = IndexedStackPath<AppRoute>.createWith(
+  late final feedTabPath = BranchedStackPath<AppRoute>.createWith(
     coordinator: this,
     label: 'FeedTab',
     [FollowingLayout(), ForYouLayout()],

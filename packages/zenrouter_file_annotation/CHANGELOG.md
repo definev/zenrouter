@@ -1,5 +1,7 @@
 ## Unreleased
 
+- Add `LayoutType.branched` and `ZenLayout.branches` for stateful shells whose
+  direct child layouts retain independent navigation stacks.
 - Generate absolute route URIs with `Uri(pathSegments: ...)` so dynamic and
   catch-all parameters round-trip reserved characters without changing URL
   structure.

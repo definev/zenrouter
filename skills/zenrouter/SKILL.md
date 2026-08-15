@@ -40,6 +40,7 @@ feature organisation.
 | `RouteModule<T>` | `zenrouter_core` | Handles one feature's URI patterns and navigation paths |
 | `NavigationPath<T>` | `zenrouter` | Mutable stack of routes; one per layout group |
 | `IndexedStackPath<T>` | `zenrouter` | Fixed set of routes for tab-bar style navigation |
+| `BranchedStackPath<T>` | `zenrouter` | Fixed layout branches with an independent child stack per branch |
 | `RouteLayout<T>` | `zenrouter` | Mixin — layout route that wraps nested routes (shell, tab bar, drawer, etc.) |
 | `RouteRedirectRule<T>` | `zenrouter_core` | Mixin — delegates redirect logic to a list of `RedirectRule`s |
 | `RedirectRule<T>` | `zenrouter_core` | Single composable redirect; returns `continueRedirect`, `redirectTo`, or `stop` |

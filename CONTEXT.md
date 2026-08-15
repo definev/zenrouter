@@ -19,7 +19,7 @@ string wire IDs only when the graph crosses the JSON seam.
 An immutable contribution from one Route Module to the application Route
 Manifest. A fragment validates its local shape and ID uniqueness, while the
 owning modular coordinator validates cross-module parents, indexed children,
-cycles, and URI conflicts after composing the complete graph.
+branch roots, cycles, and URI conflicts after composing the complete graph.
 
 ## Route Binding
 
@@ -38,6 +38,13 @@ IDs. It owns manifest matching followed by sync or async Route Target creation.
 The atomic publication of a completed navigation transaction, including its
 monotonic revision, previous/final URI, and browser-history intent.
 
+## Branched Path
+
+A fixed ordered set of Route Layout roots where exactly one branch is active
+and every branch resolves an independent child Stack Path. Branch selection and
+child navigation history are separate state: switching branches retains the
+navigation depth of every branch.
+
 ## Invariants
 
 - Static route topology lives in a Route Manifest, never in Flutter widgets.
@@ -49,3 +56,4 @@ monotonic revision, previous/final URI, and browser-history intent.
 - Reverse routing and forward matching use the same route pattern.
 - Flutter and server behavior attach through Route Bindings at the manifest
   seam.
+- Branched Path entries are direct child layouts, never leaf Route Targets.

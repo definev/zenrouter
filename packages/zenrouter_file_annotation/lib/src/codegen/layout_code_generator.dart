@@ -33,10 +33,11 @@ class LayoutCodeGenerator {
     final routeBase = config.routeBase;
     final coordinatorName = config.coordinatorName;
 
-    final pathType =
-        layout.layoutType == LayoutType.indexed
-            ? 'IndexedStackPath<$routeBase>'
-            : 'NavigationPath<$routeBase>';
+    final pathType = switch (layout.layoutType) {
+      LayoutType.stack => 'NavigationPath<$routeBase>',
+      LayoutType.indexed => 'IndexedStackPath<$routeBase>',
+      LayoutType.branched => 'BranchedStackPath<$routeBase>',
+    };
 
     // Generate class declaration
     buffer.writeln('/// Generated base class for ${layout.className}.');

@@ -11,11 +11,14 @@ class LayoutElement {
   /// The URI path for this layout.
   final List<String> pathSegments;
 
-  /// The type of layout (stack or indexed).
+  /// The type of layout (stack, indexed, or branched).
   final LayoutType layoutType;
 
   /// For indexed layouts, the route types in order.
   final List<String> indexedRouteTypes;
+
+  /// For branched layouts, the branch layout types in display order.
+  final List<String> branchLayoutTypes;
 
   /// The parent layout type (if nested).
   final String? parentLayoutType;
@@ -23,8 +26,8 @@ class LayoutElement {
   /// Creates a new layout element.
   ///
   /// The [className], [relativePath], [pathSegments], and [layoutType]
-  /// are required. For indexed layouts, provide [indexedRouteTypes] to
-  /// specify the route types in tab order. Set [parentLayoutType] if
+  /// are required. For indexed layouts, provide [indexedRouteTypes]. For
+  /// branched layouts, provide [branchLayoutTypes]. Set [parentLayoutType] if
   /// this layout is nested within another layout.
   const LayoutElement({
     required this.className,
@@ -32,6 +35,7 @@ class LayoutElement {
     required this.pathSegments,
     required this.layoutType,
     this.indexedRouteTypes = const [],
+    this.branchLayoutTypes = const [],
     this.parentLayoutType,
   });
 
@@ -65,6 +69,7 @@ class LayoutElement {
       pathSegments: pathSegments,
       layoutType: layoutType,
       indexedRouteTypes: indexedRouteTypes,
+      branchLayoutTypes: branchLayoutTypes,
       parentLayoutType: parentLayoutType ?? this.parentLayoutType,
     );
   }

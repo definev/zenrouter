@@ -1,6 +1,10 @@
 ## 3.0.0
 
 - **BREAKING**: Update dependency to `zenrouter: ^3.0.0`
+- **Feat**: Add an interactive declarative navigation graph with active route highlighting.
+- **Feat**: Add an observed runtime flow recorder with directed edges, visit counts, action labels, and a Graph mode switcher.
+- **Feat**: Make the debug panel resizable with fullscreen/restore controls and responsive viewport clamping.
+- **Feat**: Make the collapsed devtool launcher freely draggable, position-preserving, and safe-area aware.
 
 ## 2.0.0
 

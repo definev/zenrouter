@@ -107,19 +107,23 @@ class _ActionButtonState extends State<ActionButton> {
             border: Border.all(color: DebugTheme.border),
           ),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                widget.label,
-                style: TextStyle(
-                  color: widget.color,
-                  fontSize: DebugTheme.fontSize,
-                  fontWeight: FontWeight.w500,
-                  decoration: TextDecoration.none,
+              Flexible(
+                child: Text(
+                  widget.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: widget.color,
+                    fontSize: DebugTheme.fontSize,
+                    fontWeight: FontWeight.w500,
+                    decoration: TextDecoration.none,
+                  ),
                 ),
               ),
               if (widget.icon != null) ...[
-                const SizedBox(width: DebugTheme.spacing),
+                const SizedBox(width: DebugTheme.spacingXs),
                 Icon(widget.icon, color: widget.color, size: 11),
               ],
             ],

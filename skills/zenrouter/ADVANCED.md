@@ -364,6 +364,27 @@ class TabBarLayout extends AppRoute with RouteLayout<AppRoute> {
 
 ---
 
+## BranchedStackPath (Stateful Shell Navigation)
+
+Use `BranchedStackPath` when every fixed destination is a layout root with its
+own child `NavigationPath`. Branch switching retains each branch's depth:
+
+```dart
+late final branches = BranchedStackPath<AppRoute>.createWith(
+  [HomeBranchLayout(), SettingsBranchLayout()],
+  coordinator: this,
+  label: 'app-branches',
+)..bindLayout(AppShellLayout.new);
+
+await branches.goToBranch(1);
+```
+
+Each branch entry must implement `RouteLayoutParent`. Register every branch's
+child path in `Coordinator.paths`; restoration then persists the active branch
+index and all child stacks.
+
+---
+
 ## Named Parameter Routes
 
 Files wrapped in `[]` represent dynamic URI segments. The name inside the brackets matches the parameter name used in `parseRouteFromUri` and `toUri()`:

@@ -683,6 +683,36 @@ class TabsLayout extends _$TabsLayout {
 }
 ```
 
+### Branched Layout (BranchedStackPath)
+
+For stateful shells where each branch is a child layout with its own stack:
+
+```dart
+@ZenLayout(
+  type: LayoutType.branched,
+  branches: [HomeLayout, SearchLayout, SettingsLayout],
+)
+class AppShellLayout extends _$AppShellLayout {
+  @override
+  Widget build(AppCoordinator coordinator, BuildContext context) {
+    final path = resolvePath(coordinator);
+
+    return Scaffold(
+      body: buildPath(coordinator),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: path.activeBranchIndex,
+        onDestinationSelected: path.goToBranch,
+        destinations: const [/* ... */],
+      ),
+    );
+  }
+}
+```
+
+Every entry in `branches` must be a direct child `@ZenLayout`. The generator
+creates a `BranchedStackPath` for the shell and a separate path for each branch,
+so switching branches preserves each branch's navigation depth.
+
 ## Generated Code Structure
 
 After running `build_runner`, your routes directory will look like:

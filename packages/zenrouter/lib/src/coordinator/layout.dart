@@ -2,7 +2,8 @@ part of 'base.dart';
 
 /// Ensures [coordinatorCore] is a Flutter [Coordinator] for default path builders.
 ///
-/// [NavigationPath] and [IndexedStackPath] defaults use [NavigationStack],
+/// [NavigationPath], [IndexedStackPath], and [BranchedStackPath] defaults use
+/// [NavigationStack] or [IndexedStackPathBuilder],
 /// restoration IDs, and transitions that require [Coordinator]. Throws an
 /// [AssertionError] in debug when [coordinatorCore] is another [CoordinatorCore]
 /// implementation — register a custom builder via
@@ -18,7 +19,8 @@ Coordinator requireFlutterCoordinator(
     'The default layout builder for "${pathKey.key}" requires a zenrouter '
     'Coordinator (extend Coordinator<YourRoute>), but received '
     '${coordinatorCore.runtimeType}. '
-    'NavigationPath and IndexedStackPath use NavigationStack and need '
+    'NavigationPath, IndexedStackPath, and BranchedStackPath use Flutter '
+    'navigation widgets and need '
     'Coordinator.routerDelegate, CoordinatorRestoration, and transition '
     'strategy. Either extend Coordinator or call defineLayoutBuilder('
     '${pathKey.key}, ...) with a builder that supports your coordinator type. '
@@ -27,9 +29,10 @@ Coordinator requireFlutterCoordinator(
   return coordinatorCore as Coordinator;
 }
 
-/// Built-in layout builders for [NavigationPath] and [IndexedStackPath].
+/// Built-in layout builders for [NavigationPath], [IndexedStackPath], and
+/// [BranchedStackPath].
 ///
-/// Both entries call [requireFlutterCoordinator] — they are not valid for a
+/// All entries call [requireFlutterCoordinator] — they are not valid for a
 /// bare [CoordinatorCore] that is not a [Coordinator].
 final Map<PathKey, RouteLayoutBuilder>
 kDefaultLayoutBuilderTable = Map.unmodifiable(<PathKey, RouteLayoutBuilder>{
@@ -95,6 +98,23 @@ kDefaultLayoutBuilderTable = Map.unmodifiable(<PathKey, RouteLayoutBuilder>{
       },
     );
   },
+  BranchedStackPath.key: (coordinatorCore, path, layout, [restorationId]) {
+    final coordinator = requireFlutterCoordinator(
+      coordinatorCore,
+      pathKey: BranchedStackPath.key,
+    );
+    return ListenableBuilder(
+      listenable: path as Listenable,
+      builder: (context, child) {
+        final branchedPath = path as BranchedStackPath<RouteUnique>;
+        return IndexedStackPathBuilder(
+          path: branchedPath,
+          coordinator: coordinator,
+          restorationId: restorationId,
+        );
+      },
+    );
+  },
 });
 
 /// Mixin that provides Flutter layout builders for [Coordinator].
@@ -118,6 +138,8 @@ mixin CoordinatorLayout<T extends RouteUnique> on CoordinatorLayoutCore<T>
   /// Layout builders determine how a [StackPath] renders its pages. Common builders:
   /// - [NavigationPath.key]: Renders pages using [NavigationStack]
   /// - [IndexedStackPath.key]: Renders pages using [IndexedStackPathBuilder]
+  /// - [BranchedStackPath.key]: Retains every branch with
+  ///   [IndexedStackPathBuilder]
   ///
   /// The first argument is [CoordinatorCore]. Built-in defaults from
   /// [kDefaultLayoutBuilderTable] require a Flutter [Coordinator]; passing
