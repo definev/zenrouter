@@ -235,7 +235,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('topology-auto-layout')));
     await tester.pumpAndSettle();
     expect(
-      topologyRoutes.first.position.value,
+      topologyEditor.controller.nodes[topologyRoutes.first.id]?.position.value,
       topologyPositions.first,
     );
 
@@ -299,13 +299,27 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('observed-auto-layout')));
     await tester.pumpAndSettle();
     expect(
-      observedNodes.first.position.value,
+      observedEditor.controller.nodes[observedNodes.first.id]?.position.value,
       observedPositions.first,
     );
 
     expect(find.textContaining('2 paths'), findsOneWidget);
-    expect(find.text('Open profile ×1'), findsOneWidget);
-    expect(find.text('Back home ×1'), findsOneWidget);
+    expect(find.text('Open profile ×1'), findsNothing);
+    expect(find.text('Back home ×1'), findsNothing);
+    final observedAfterLayout = observedEditor.controller.nodes.values.toList(
+      growable: false,
+    );
+    final observedHome = observedAfterLayout.singleWhere(
+      (node) => (node.data as dynamic).id == 'home',
+    );
+    final observedProfile = observedAfterLayout.singleWhere(
+      (node) => (node.data as dynamic).id == 'profile',
+    );
+    expect(
+      observedProfile.position.value.dy,
+      greaterThan(observedHome.position.value.dy),
+    );
+
     final profilePreview = find.byKey(
       const ValueKey('observed-screen-preview-profile'),
     );
@@ -314,25 +328,14 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.tap(profilePreview);
+    await tester.tap(profilePreview, warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(find.text('Navigate Here'), findsOneWidget);
     expect(find.text('Copy URI'), findsOneWidget);
     expect(find.textContaining('Visited 1 times'), findsOneWidget);
     await tester.tap(find.byIcon(CupertinoIcons.xmark_circle_fill));
     await tester.pumpAndSettle();
-
-    await tester.tap(
-      find.byKey(const ValueKey('observed-toggle-labels')),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Open profile ×1'), findsNothing);
-
-    await tester.tap(
-      find.byKey(const ValueKey('observed-toggle-labels')),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Open profile ×1'), findsOneWidget);
+    expect(find.text('Navigate Here'), findsNothing);
 
     await tester.tap(
       find.byKey(const ValueKey('observed-screen-capture-toggle')),

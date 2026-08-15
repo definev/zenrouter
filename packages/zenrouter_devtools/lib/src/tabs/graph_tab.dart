@@ -582,10 +582,7 @@ class _GraphLayoutGroupCard extends StatelessWidget {
           children: [
             Container(
               height: 28,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 2,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
                 color: layoutColor.withValues(alpha: 0.13),
                 border: Border(
@@ -596,11 +593,7 @@ class _GraphLayoutGroupCard extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Icon(
-                    CupertinoIcons.layers_alt,
-                    color: borderColor,
-                    size: 11,
-                  ),
+                  Icon(CupertinoIcons.layers_alt, color: borderColor, size: 11),
                   const SizedBox(width: DebugTheme.spacingXs),
                   Expanded(
                     child: Text(
@@ -789,8 +782,7 @@ class _TopologyNodeFlowCanvasState extends State<_TopologyNodeFlowCanvas> {
   void autoLayout() {
     final selectedNodeIds = <Object>{
       for (final node in _controller.nodes.values)
-        if (_controller.isNodeSelected(node.id))
-          if (node.data is _TopologyNodeData) (node.data as _TopologyNodeData).id,
+        if (_controller.isNodeSelected(node.id)) node.data.id,
     };
     _model = _TopologyNodeFlowModel.calculate(widget.graph);
     _controller.loadGraph(
@@ -935,10 +927,10 @@ final class _TopologyNodeFlowModel {
       final routesRowWidth = childRouteIds.isEmpty
           ? 0.0
           : childRouteIds.fold<double>(
-                0.0,
-                (sum, childId) => sum + subtreeMetrics[childId]!.width,
-              ) +
-              _horizontalGap * (childRouteIds.length - 1);
+                  0.0,
+                  (sum, childId) => sum + subtreeMetrics[childId]!.width,
+                ) +
+                _horizontalGap * (childRouteIds.length - 1);
       final routesRowHeight = childRouteIds.isEmpty
           ? 0.0
           : childRouteIds.fold<double>(
@@ -952,16 +944,15 @@ final class _TopologyNodeFlowModel {
           ? 0.0
           : childLayoutIds.fold<double>(
               0.0,
-              (maxW, childId) =>
-                  math.max(maxW, subtreeMetrics[childId]!.width),
+              (maxW, childId) => math.max(maxW, subtreeMetrics[childId]!.width),
             );
       final layoutsHeight = childLayoutIds.isEmpty
           ? 0.0
           : childLayoutIds.fold<double>(
-                0.0,
-                (sum, childId) => sum + subtreeMetrics[childId]!.height,
-              ) +
-              _verticalGap * (childLayoutIds.length - 1);
+                  0.0,
+                  (sum, childId) => sum + subtreeMetrics[childId]!.height,
+                ) +
+                _verticalGap * (childLayoutIds.length - 1);
 
       final innerContentWidth = math.max(routesRowWidth, layoutsWidth);
       final innerContentHeight =
@@ -985,7 +976,8 @@ final class _TopologyNodeFlowModel {
         );
       } else {
         finalWidth = math.max(_nodeWidth, innerContentWidth);
-        finalHeight = _nodeHeight +
+        finalHeight =
+            _nodeHeight +
             (innerContentHeight > 0 ? innerContentHeight + _verticalGap : 0.0);
       }
 
@@ -1008,10 +1000,10 @@ final class _TopologyNodeFlowModel {
       final routesRowWidth = childRouteIds.isEmpty
           ? 0.0
           : childRouteIds.fold<double>(
-                0.0,
-                (sum, childId) => sum + subtreeMetrics[childId]!.width,
-              ) +
-              _horizontalGap * (childRouteIds.length - 1);
+                  0.0,
+                  (sum, childId) => sum + subtreeMetrics[childId]!.width,
+                ) +
+                _horizontalGap * (childRouteIds.length - 1);
       final routesRowHeight = childRouteIds.isEmpty
           ? 0.0
           : childRouteIds.fold<double>(
@@ -1023,10 +1015,10 @@ final class _TopologyNodeFlowModel {
       final layoutsHeight = childLayoutIds.isEmpty
           ? 0.0
           : childLayoutIds.fold<double>(
-                0.0,
-                (sum, childId) => sum + subtreeMetrics[childId]!.height,
-              ) +
-              _verticalGap * (childLayoutIds.length - 1);
+                  0.0,
+                  (sum, childId) => sum + subtreeMetrics[childId]!.height,
+                ) +
+                _verticalGap * (childLayoutIds.length - 1);
 
       if (node.isLayout) {
         positions[id] = Offset(left, top);
@@ -1068,10 +1060,7 @@ final class _TopologyNodeFlowModel {
         }
       } else {
         final ownWidth = _nodeWidth;
-        positions[id] = Offset(
-          left + (metrics.width - ownWidth) / 2,
-          top,
-        );
+        positions[id] = Offset(left + (metrics.width - ownWidth) / 2, top);
 
         if (node.childIds.isNotEmpty) {
           var currentY = top + _nodeHeight + _verticalGap;
@@ -1116,10 +1105,10 @@ final class _TopologyNodeFlowModel {
     final standaloneRowWidth = rootRouteIds.isEmpty
         ? 0.0
         : rootRouteIds.fold<double>(
-              0.0,
-              (sum, id) => sum + subtreeMetrics[id]!.width,
-            ) +
-            _horizontalGap * (rootRouteIds.length - 1);
+                0.0,
+                (sum, id) => sum + subtreeMetrics[id]!.width,
+              ) +
+              _horizontalGap * (rootRouteIds.length - 1);
     final standaloneRowHeight = rootRouteIds.isEmpty
         ? 0.0
         : rootRouteIds.fold<double>(
