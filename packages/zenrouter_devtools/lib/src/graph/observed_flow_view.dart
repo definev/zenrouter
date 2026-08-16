@@ -103,7 +103,7 @@ class _ObservedNavigationFlowViewState
         ? _ObservedFlowColors.active
         : defaultColor;
     canvas.drawRRect(
-      RRect.fromRectAndRadius(bounds, const Radius.circular(1.5)),
+      RRect.fromRectAndRadius(bounds, Radius.circular(DebugTheme.radiusSm)),
       Paint()..color = color,
     );
     return true;
@@ -464,248 +464,232 @@ class _ObservedFlowNodeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = isCurrent
+    final screenshotBorderColor = isCurrent
         ? _ObservedFlowColors.active
         : isSelected
         ? _ObservedFlowColors.selected
+        : DebugTheme.border;
+
+    final infoBorderColor = isCurrent
+        ? _ObservedFlowColors.active.withValues(alpha: 0.7)
+        : isSelected
+        ? _ObservedFlowColors.selected.withValues(alpha: 0.7)
         : DebugTheme.border;
 
     return Semantics(
       button: true,
       selected: isSelected,
       label: '${graphNode.label}, visited ${flowNode.visitCount} times',
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(DebugTheme.radiusMd - 1.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onZoom,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    _ObservedScreenPreview(
-                      key: ValueKey('observed-screen-preview-${graphNode.id}'),
-                      preview: flowNode.screenPreview,
-                      captureEnabled: captureEnabled,
-                    ),
-                    if (isCurrent)
-                      Positioned(
-                        top: 6,
-                        right: 6,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: DebugTheme.backgroundDark,
+                borderRadius: BorderRadius.circular(DebugTheme.radiusMd),
+                border: Border.all(
+                  color: screenshotBorderColor,
+                  width: isCurrent || isSelected ? 1.5 : 1.0,
+                ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: _ObservedFlowColors.selected.withValues(
+                            alpha: 0.25,
                           ),
-                          decoration: BoxDecoration(
-                            color: _ObservedFlowColors.activeBackground,
-                            borderRadius: BorderRadius.circular(
-                              DebugTheme.radiusFull,
-                            ),
-                            border: Border.all(
-                              color: _ObservedFlowColors.active.withValues(
-                                alpha: 0.85,
-                              ),
-                              width: 0.8,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 4,
-                                height: 4,
-                                decoration: const BoxDecoration(
-                                  color: _ObservedFlowColors.active,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 3),
-                              const Text(
-                                'LIVE',
-                                style: TextStyle(
-                                  color: _ObservedFlowColors.active,
-                                  fontSize: 7.5,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.4,
-                                  decoration: TextDecoration.none,
-                                ),
-                              ),
-                            ],
-                          ),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
+                      ]
+                    : null,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(DebugTheme.radiusMd - 1.0),
+                child: GestureDetector(
+                  key: ValueKey('observed-screen-zoom-${graphNode.id}'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onZoom,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      _ObservedScreenPreview(
+                        key: ValueKey('observed-screen-preview-${graphNode.id}'),
+                        preview: flowNode.screenPreview,
+                        captureEnabled: captureEnabled,
                       ),
-                    Positioned(
-                      top: 6,
-                      left: 6,
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: onZoom,
-                        child: MouseRegion(
-                          cursor: SystemMouseCursors.click,
+                      if (isCurrent)
+                        Positioned(
+                          top: 6,
+                          right: 6,
                           child: Container(
-                            padding: const EdgeInsets.all(4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
-                              color: const Color(0xCC000000),
+                              color: _ObservedFlowColors.activeBackground,
                               borderRadius: BorderRadius.circular(
-                                DebugTheme.radiusSm,
+                                DebugTheme.radiusFull,
                               ),
                               border: Border.all(
-                                color: DebugTheme.borderDark,
-                                width: 0.6,
+                                color: _ObservedFlowColors.active.withValues(
+                                  alpha: 0.85,
+                                ),
+                                width: 0.8,
                               ),
                             ),
-                            child: const Icon(
-                              CupertinoIcons.viewfinder,
-                              size: 11,
-                              color: _ObservedFlowColors.selected,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 4,
+                                  height: 4,
+                                  decoration: const BoxDecoration(
+                                    color: _ObservedFlowColors.active,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 3),
+                                const Text(
+                                  'LIVE',
+                                  style: TextStyle(
+                                    color: _ObservedFlowColors.active,
+                                    fontSize: 7.5,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.4,
+                                    decoration: TextDecoration.none,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+            decoration: BoxDecoration(
+              color: DebugTheme.backgroundDark,
+              borderRadius: BorderRadius.circular(DebugTheme.radiusMd),
+              border: Border.all(
+                color: infoBorderColor,
+                width: isCurrent || isSelected ? 1.5 : 1.0,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              spacing: 2,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        graphNode.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: DebugTheme.textPrimary,
+                          fontSize: DebugTheme.fontSizeSm,
+                          fontWeight: FontWeight.w700,
+                          decoration: TextDecoration.none,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4.5,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _ObservedFlowColors.edge.withValues(
+                          alpha: 0.14,
+                        ),
+                        borderRadius: BorderRadius.circular(
+                          DebugTheme.radiusSm,
+                        ),
+                        border: Border.all(
+                          color: _ObservedFlowColors.edge.withValues(
+                            alpha: 0.3,
+                          ),
+                          width: 0.6,
+                        ),
+                      ),
+                      child: Text(
+                        '×${flowNode.visitCount}',
+                        style: const TextStyle(
+                          color: _ObservedFlowColors.edge,
+                          fontSize: 7.5,
+                          fontWeight: FontWeight.w700,
+                          decoration: TextDecoration.none,
                         ),
                       ),
                     ),
                   ],
                 ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-              decoration: const BoxDecoration(
-                color: DebugTheme.backgroundDark,
-                border: Border(top: BorderSide(color: DebugTheme.borderDark)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        CupertinoIcons.rectangle_stack_fill,
-                        color: borderColor,
-                        size: 11,
-                      ),
-                      const SizedBox(width: DebugTheme.spacingXs),
-                      Expanded(
-                        child: Text(
-                          graphNode.label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: DebugTheme.textPrimary,
-                            fontSize: DebugTheme.fontSizeSm,
-                            fontWeight: FontWeight.w700,
-                            decoration: TextDecoration.none,
-                          ),
+                const SizedBox(height: 3),
+                Row(
+                  spacing: 4,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        flowNode.lastUri.toString(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: DebugTheme.textSecondary,
+                          fontSize: 8.5,
+                          fontFamily: 'monospace',
+                          decoration: TextDecoration.none,
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4.5,
-                          vertical: 1,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _ObservedFlowColors.edge.withValues(
-                            alpha: 0.14,
-                          ),
-                          borderRadius: BorderRadius.circular(
-                            DebugTheme.radiusSm,
-                          ),
-                          border: Border.all(
-                            color: _ObservedFlowColors.edge.withValues(
-                              alpha: 0.3,
-                            ),
-                            width: 0.6,
-                          ),
-                        ),
-                        child: Text(
-                          '×${flowNode.visitCount}',
-                          style: const TextStyle(
-                            color: _ObservedFlowColors.edge,
-                            fontSize: 7.5,
-                            fontWeight: FontWeight.w700,
-                            decoration: TextDecoration.none,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          flowNode.lastUri.toString(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: DebugTheme.textSecondary,
-                            fontSize: 8.5,
-                            fontFamily: 'monospace',
-                            decoration: TextDecoration.none,
-                          ),
-                        ),
-                      ),
+                    ),
+                    if (onNavigate != null) ...[
                       GestureDetector(
                         behavior: HitTestBehavior.opaque,
-                        onTap: onZoom,
+                        onTap: onNavigate,
                         child: MouseRegion(
                           cursor: SystemMouseCursors.click,
                           child: Container(
                             padding: const EdgeInsets.all(2),
                             child: const Icon(
-                              CupertinoIcons.viewfinder,
+                              CupertinoIcons.compass,
                               size: 11,
-                              color: _ObservedFlowColors.selected,
+                              color: DebugTheme.textSecondary,
                             ),
                           ),
                         ),
                       ),
-                      if (onNavigate != null) ...[
-                        const SizedBox(width: 4),
-                        GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: onNavigate,
-                          child: MouseRegion(
-                            cursor: SystemMouseCursors.click,
-                            child: Container(
-                              padding: const EdgeInsets.all(2),
-                              child: const Icon(
-                                CupertinoIcons.compass,
-                                size: 11,
-                                color: DebugTheme.textSecondary,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                      if (onCopy != null) ...[
-                        const SizedBox(width: 4),
-                        GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: onCopy,
-                          child: MouseRegion(
-                            cursor: SystemMouseCursors.click,
-                            child: Container(
-                              padding: const EdgeInsets.all(2),
-                              child: const Icon(
-                                CupertinoIcons.doc_on_doc,
-                                size: 11,
-                                color: DebugTheme.textSecondary,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
                     ],
-                  ),
-                ],
-              ),
+                    if (onCopy != null) ...[
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: onCopy,
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            child: const Icon(
+                              CupertinoIcons.doc_on_doc,
+                              size: 11,
+                              color: DebugTheme.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -725,27 +709,13 @@ class _ObservedScreenPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenPreview = preview;
     if (screenPreview != null) {
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.memory(
-            screenPreview.bytes,
-            fit: BoxFit.contain,
-            alignment: Alignment.center,
-            gaplessPlayback: true,
-            filterQuality: FilterQuality.low,
-            errorBuilder: (_, _, _) => _buildPlaceholder(),
-          ),
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0x04000000), Color(0x66000000)],
-              ),
-            ),
-          ),
-        ],
+      return Image.memory(
+        screenPreview.bytes,
+        fit: BoxFit.cover,
+        alignment: Alignment.topCenter,
+        gaplessPlayback: true,
+        filterQuality: FilterQuality.medium,
+        errorBuilder: (_, _, _) => _buildPlaceholder(),
       );
     }
     return _buildPlaceholder();
@@ -798,275 +768,427 @@ class _ObservedScreenPreviewZoomModal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final preview = flowNode.screenPreview;
-    final capturedTime = preview != null
-        ? '${preview.capturedAt.toLocal().hour.toString().padLeft(2, '0')}:${preview.capturedAt.toLocal().minute.toString().padLeft(2, '0')}:${preview.capturedAt.toLocal().second.toString().padLeft(2, '0')}'
-        : null;
+    final capturedAt = preview?.capturedAt.toLocal();
+    final capturedTime = capturedAt == null
+        ? null
+        : '${capturedAt.hour.toString().padLeft(2, '0')}:'
+              '${capturedAt.minute.toString().padLeft(2, '0')}:'
+              '${capturedAt.second.toString().padLeft(2, '0')}';
+    final aspectRatio = preview?.aspectRatio ?? (9.0 / 16.0);
+    const headerHeight = 44.0;
+    const footerHeight = 88.0;
 
-    final mediaSize = MediaQuery.sizeOf(context);
-    final previewAspect = preview?.aspectRatio ?? (9.0 / 16.0);
-    final modalWidth = previewAspect >= 1.0
-        ? math.min(mediaSize.width * 0.85, 480.0)
-        : math.min(mediaSize.width * 0.85, 340.0);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final viewport = Size(constraints.maxWidth, constraints.maxHeight);
+        final imageSize = _fitObservedPreviewSize(
+          viewport: viewport,
+          aspectRatio: aspectRatio,
+          chromeHeight: headerHeight + footerHeight,
+        );
+        final panelWidth = math.min(
+          math.max(imageSize.width, 280.0),
+          math.max(160.0, viewport.width - 24),
+        );
 
-    return Stack(
-      children: [
-        // Backdrop scrim
-        Positioned.fill(
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onClose,
-            child: Container(color: const Color(0xB3000000)),
+        return TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: 1),
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          builder: (context, t, _) {
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onClose,
+                    child: ColoredBox(color: Color.fromRGBO(0, 0, 0, 0.78 * t)),
+                  ),
+                ),
+                Center(
+                  child: Opacity(
+                    opacity: t,
+                    child: Transform.scale(
+                      scale: 0.94 + 0.06 * t,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: Container(
+                          key: const ValueKey('observed-screen-preview-zoom'),
+                          width: panelWidth,
+                          decoration: BoxDecoration(
+                            color: DebugTheme.backgroundDark,
+                            borderRadius: BorderRadius.circular(
+                              DebugTheme.radiusLg,
+                            ),
+                            border: Border.all(
+                              color: DebugTheme.border,
+                              width: 1,
+                            ),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x99000000),
+                                blurRadius: 24,
+                                offset: Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(
+                              DebugTheme.radiusLg - 1,
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                SizedBox(
+                                  height: headerHeight,
+                                  child: _ObservedZoomHeader(
+                                    label: graphNode.label,
+                                    uri: flowNode.lastUri.toString(),
+                                    onClose: onClose,
+                                  ),
+                                ),
+                                ColoredBox(
+                                  color: const Color(0xFF050505),
+                                  child: Center(
+                                    child: ClipRect(
+                                      child: SizedBox(
+                                        width: imageSize.width,
+                                        height: imageSize.height,
+                                        child: preview == null
+                                            ? _ObservedZoomPlaceholder(
+                                                captureEnabled: captureEnabled,
+                                              )
+                                            : InteractiveViewer(
+                                                minScale: 1,
+                                                maxScale: 4,
+                                                clipBehavior: Clip.none,
+                                                child: Image.memory(
+                                                  preview.bytes,
+                                                  width: imageSize.width,
+                                                  height: imageSize.height,
+                                                  fit: BoxFit.contain,
+                                                  alignment:
+                                                      Alignment.topCenter,
+                                                  gaplessPlayback: true,
+                                                  filterQuality:
+                                                      FilterQuality.high,
+                                                ),
+                                              ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                _ObservedZoomFooter(
+                                  visitCount: flowNode.visitCount,
+                                  capturedTime: capturedTime,
+                                  onNavigate: onNavigate,
+                                  onCopy: onCopy,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _ObservedZoomHeader extends StatelessWidget {
+  const _ObservedZoomHeader({
+    required this.label,
+    required this.uri,
+    required this.onClose,
+  });
+
+  final String label;
+  final String uri;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 8, 0),
+      child: Row(
+        children: [
+          const Icon(
+            CupertinoIcons.rectangle_stack_fill,
+            color: _ObservedFlowColors.selected,
+            size: 13,
           ),
-        ),
-        // Modal Container
-        Center(
-          child: Container(
-            width: modalWidth,
-            constraints: BoxConstraints(maxHeight: mediaSize.height * 0.85),
-            margin: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: DebugTheme.backgroundDark,
-              borderRadius: BorderRadius.circular(DebugTheme.radiusLg),
-              border: Border.all(color: DebugTheme.border, width: 1.2),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0xCC000000),
-                  blurRadius: 32,
-                  offset: Offset(0, 12),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: DebugTheme.textPrimary,
+                    fontSize: DebugTheme.fontSizeMd,
+                    fontWeight: FontWeight.w700,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+                Text(
+                  uri,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: DebugTheme.textSecondary,
+                    fontSize: 8.5,
+                    fontFamily: 'monospace',
+                    decoration: TextDecoration.none,
+                  ),
                 ),
               ],
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(DebugTheme.radiusLg - 1.2),
-              child: Material(
-                color: Colors.transparent,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      decoration: const BoxDecoration(
-                        color: DebugTheme.background,
-                        border: Border(
-                          bottom: BorderSide(color: DebugTheme.borderDark),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            CupertinoIcons.rectangle_stack_fill,
-                            color: _ObservedFlowColors.selected,
-                            size: 14,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  graphNode.label,
-                                  style: const TextStyle(
-                                    color: DebugTheme.textPrimary,
-                                    fontSize: DebugTheme.fontSizeMd,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                Text(
-                                  flowNode.lastUri.toString(),
-                                  style: const TextStyle(
-                                    color: DebugTheme.textSecondary,
-                                    fontSize: 9,
-                                    fontFamily: 'monospace',
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: onClose,
-                            child: const MouseRegion(
-                              cursor: SystemMouseCursors.click,
-                              child: Icon(
-                                CupertinoIcons.xmark_circle_fill,
-                                color: DebugTheme.textMuted,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Flexible(
-                      child: Container(
-                        color: DebugTheme.background,
-                        alignment: Alignment.center,
-                        padding: const EdgeInsets.all(12),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(
-                            DebugTheme.radiusMd,
-                          ),
-                          child: preview != null
-                              ? Image.memory(
-                                  preview.bytes,
-                                  fit: BoxFit.contain,
-                                  gaplessPlayback: true,
-                                )
-                              : Container(
-                                  height: 180,
-                                  color: DebugTheme.backgroundDark,
-                                  alignment: Alignment.center,
-                                  child: const Text(
-                                    'No Preview Available',
-                                    style: TextStyle(
-                                      color: DebugTheme.textDisabled,
-                                      fontSize: DebugTheme.fontSizeSm,
-                                    ),
-                                  ),
-                                ),
-                        ),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: const BoxDecoration(
-                        color: DebugTheme.backgroundLight,
-                        border: Border(
-                          top: BorderSide(color: DebugTheme.borderDark),
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  'Visited ${flowNode.visitCount} times',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: DebugTheme.textSecondary,
-                                    fontSize: 9,
-                                  ),
-                                ),
-                              ),
-                              if (capturedTime != null) ...[
-                                const SizedBox(width: 8),
-                                Flexible(
-                                  child: Text(
-                                    'Captured at $capturedTime',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    textAlign: TextAlign.end,
-                                    style: const TextStyle(
-                                      color: DebugTheme.textMuted,
-                                      fontSize: 9,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              if (onNavigate != null)
-                                Expanded(
-                                  child: CupertinoButton(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 6,
-                                    ),
-                                    color: _ObservedFlowColors.active,
-                                    borderRadius: BorderRadius.circular(
-                                      DebugTheme.radiusSm,
-                                    ),
-                                    onPressed: onNavigate,
-                                    child: const FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            CupertinoIcons.compass,
-                                            size: 13,
-                                            color: Color(0xFF0C2E25),
-                                          ),
-                                          SizedBox(width: 4),
-                                          Text(
-                                            'Navigate Here',
-                                            style: TextStyle(
-                                              color: Color(0xFF0C2E25),
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              if (onCopy != null) ...[
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: CupertinoButton(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 6,
-                                    ),
-                                    color: DebugTheme.backgroundDark,
-                                    borderRadius: BorderRadius.circular(
-                                      DebugTheme.radiusSm,
-                                    ),
-                                    onPressed: onCopy,
-                                    child: const FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            CupertinoIcons.doc_on_doc,
-                                            size: 12,
-                                            color: DebugTheme.textPrimary,
-                                          ),
-                                          SizedBox(width: 4),
-                                          Text(
-                                            'Copy URI',
-                                            style: TextStyle(
-                                              color: DebugTheme.textPrimary,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+          ),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onClose,
+            child: const MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: Padding(
+                padding: EdgeInsets.all(4),
+                child: Icon(
+                  CupertinoIcons.xmark_circle_fill,
+                  color: DebugTheme.textMuted,
+                  size: 18,
                 ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
+}
+
+class _ObservedZoomPlaceholder extends StatelessWidget {
+  const _ObservedZoomPlaceholder({required this.captureEnabled});
+
+  final bool captureEnabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: DebugTheme.backgroundDark,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              captureEnabled ? CupertinoIcons.camera : CupertinoIcons.eye_slash,
+              color: DebugTheme.textMuted,
+              size: 20,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              captureEnabled ? 'Waiting for preview' : 'Screen capture off',
+              style: const TextStyle(
+                color: DebugTheme.textMuted,
+                fontSize: DebugTheme.fontSizeSm,
+                decoration: TextDecoration.none,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ObservedZoomFooter extends StatelessWidget {
+  const _ObservedZoomFooter({
+    required this.visitCount,
+    required this.capturedTime,
+    this.onNavigate,
+    this.onCopy,
+  });
+
+  final int visitCount;
+  final String? capturedTime;
+  final VoidCallback? onNavigate;
+  final VoidCallback? onCopy;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+      decoration: const BoxDecoration(
+        color: DebugTheme.backgroundLight,
+        border: Border(top: BorderSide(color: DebugTheme.borderDark)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Flexible(
+                child: Text(
+                  'Visited $visitCount times',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: DebugTheme.textSecondary,
+                    fontSize: 9,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+              ),
+              if (capturedTime != null) ...[
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    capturedTime!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                    style: const TextStyle(
+                      color: DebugTheme.textMuted,
+                      fontSize: 9,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          if (onNavigate != null || onCopy != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                if (onNavigate != null)
+                  Expanded(
+                    child: _ObservedZoomActionButton(
+                      color: _ObservedFlowColors.active,
+                      icon: CupertinoIcons.compass,
+                      iconColor: const Color(0xFF0C2E25),
+                      label: 'Navigate Here',
+                      labelColor: const Color(0xFF0C2E25),
+                      onPressed: onNavigate!,
+                    ),
+                  ),
+                if (onNavigate != null && onCopy != null)
+                  const SizedBox(width: 8),
+                if (onCopy != null)
+                  Expanded(
+                    child: _ObservedZoomActionButton(
+                      color: DebugTheme.backgroundDark,
+                      icon: CupertinoIcons.doc_on_doc,
+                      iconColor: DebugTheme.textPrimary,
+                      label: 'Copy URI',
+                      labelColor: DebugTheme.textPrimary,
+                      onPressed: onCopy!,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ObservedZoomActionButton extends StatelessWidget {
+  const _ObservedZoomActionButton({
+    required this.color,
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.labelColor,
+    required this.onPressed,
+  });
+
+  final Color color;
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final Color labelColor;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoButton(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+      minimumSize: Size.zero,
+      color: color,
+      borderRadius: BorderRadius.circular(DebugTheme.radiusSm),
+      onPressed: onPressed,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 12, color: iconColor),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: labelColor,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+Size _fitObservedPreviewSize({
+  required Size viewport,
+  required double aspectRatio,
+  required double chromeHeight,
+}) {
+  const horizontalInset = 32.0;
+  const verticalInset = 32.0;
+  final maxWidth = math.max(64.0, viewport.width - horizontalInset);
+  final maxHeight = math.max(64.0, viewport.height - verticalInset - chromeHeight);
+
+  final double targetWidth;
+  if (aspectRatio >= 1.0) {
+    // Landscape: cap width up to 720 or maxWidth, max height to maxHeight
+    final width = math.min(maxWidth, 720.0);
+    final height = width / aspectRatio;
+    if (height > maxHeight) {
+      targetWidth = maxHeight * aspectRatio;
+    } else {
+      targetWidth = width;
+    }
+  } else {
+    // Portrait: scale up comfortably to fill available height up to 640px or maxWidth up to 380px
+    final targetHeight = math.min(maxHeight, 640.0);
+    final width = targetHeight * aspectRatio;
+    targetWidth = math.min(maxWidth, math.min(width, 380.0));
+  }
+
+  var width = targetWidth;
+  var height = width / aspectRatio;
+  if (height > maxHeight) {
+    height = maxHeight;
+    width = height * aspectRatio;
+  }
+  if (width > maxWidth) {
+    width = maxWidth;
+    height = width / aspectRatio;
+  }
+  return Size(width.clamp(48.0, maxWidth), height.clamp(48.0, maxHeight));
 }
 
 final _observedNodeFlowTheme = createNavigationNodeFlowTheme(
@@ -1109,21 +1231,22 @@ final class _ObservedNodeFlowModel {
 
     final double nodeWidth;
     final double previewHeight;
-    const footerHeight = 56.0;
+    const cardSpacing = 8.0;
+    const infoCardHeight = 56.0;
 
     if (isLandscape) {
-      nodeWidth = 200.0;
-      previewHeight = (nodeWidth / aspectRatio).clamp(110.0, 160.0);
+      nodeWidth = 240.0;
+      previewHeight = (nodeWidth / aspectRatio).clamp(135.0, 190.0);
     } else {
       // Mobile Portrait: standard phone mockup ratio
-      nodeWidth = 142.0;
-      previewHeight = (nodeWidth / aspectRatio).clamp(200.0, 280.0);
+      nodeWidth = 180.0;
+      previewHeight = (nodeWidth / aspectRatio).clamp(240.0, 320.0);
     }
 
-    final nodeHeight = previewHeight + footerHeight;
+    final nodeHeight = previewHeight + cardSpacing + infoCardHeight;
     final nodeSize = Size(nodeWidth, nodeHeight);
-    final flowGap = isLandscape ? 64.0 : 72.0;
-    final siblingGap = isLandscape ? 48.0 : 36.0;
+    final flowGap = isLandscape ? 68.0 : 76.0;
+    final siblingGap = isLandscape ? 52.0 : 44.0;
     const padding = 28.0;
 
     // 2. Build Storyboard Discovery Tree (Hierarchical User Journey)
@@ -1234,7 +1357,6 @@ final class _ObservedNodeFlowModel {
       if (!positions.containsKey(flowNode.id)) continue;
       final id = 'observed-node-${nodeIndex++}';
       flowIds[flowNode.id] = id;
-      final isCurrent = graph.activeRouteId == flowNode.id;
       nodes.add(
         Node<_ObservedNodeData>(
           id: id,
@@ -1244,14 +1366,15 @@ final class _ObservedNodeFlowModel {
           data: _ObservedNodeData(flowNode.id),
           ports: createObservedNodeFlowPorts(nodeSize),
           theme: _observedNodeFlowTheme.nodeTheme.copyWith(
-            backgroundColor: isCurrent
-                ? _ObservedFlowColors.activeBackground
-                : DebugTheme.backgroundLight,
-            borderColor: isCurrent
-                ? _ObservedFlowColors.active
-                : DebugTheme.border,
-            borderWidth: isCurrent ? 1.5 : 1,
-            borderRadius: BorderRadius.circular(DebugTheme.radiusMd),
+            backgroundColor: Colors.transparent,
+            selectedBackgroundColor: Colors.transparent,
+            highlightBackgroundColor: Colors.transparent,
+            borderColor: Colors.transparent,
+            selectedBorderColor: Colors.transparent,
+            highlightBorderColor: Colors.transparent,
+            borderWidth: 0,
+            selectedBorderWidth: 0,
+            borderRadius: BorderRadius.zero,
           ),
         ),
       );

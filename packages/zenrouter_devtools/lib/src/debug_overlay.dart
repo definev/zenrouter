@@ -26,7 +26,6 @@ class DebugOverlay<T extends RouteUnique> extends StatefulWidget {
 class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
   static const _desktopPanelSize = Size(420, 500);
   static const _mobilePanelHeight = 400.0;
-  static const _minimumPanelSize = Size(340, 320);
   static const _launcherMargin = DebugTheme.spacingLg;
 
   final TextEditingController _uriController = TextEditingController();
@@ -34,11 +33,7 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
   final GlobalKey _launcherKey = GlobalKey();
 
   _DebugTab _selectedTab = _DebugTab.problems;
-  Size? _customPanelSize;
   bool _panelMaximized = false;
-  bool _resizingPanel = false;
-  Offset? _resizeStartPosition;
-  Size? _resizeStartSize;
   Offset? _launcherPosition;
   Offset? _launcherDragStartPosition;
   Offset? _launcherDragStartPointer;
@@ -116,14 +111,13 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
           math.max(40.0, _launcherBounds.width),
         );
         final launcherSize = _launcherSize;
-        final resolvedPosition =
-            _launcherPosition == null
-                ? null
-                : _clampLauncherPosition(
-                  _launcherPosition!,
-                  launcherSize,
-                  _launcherBounds,
-                );
+        final resolvedPosition = _launcherPosition == null
+            ? null
+            : _clampLauncherPosition(
+                _launcherPosition!,
+                launcherSize,
+                _launcherBounds,
+              );
 
         return SizedBox.expand(
           key: _collapsedViewportKey,
@@ -246,8 +240,8 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
 
   void _startLauncherDrag(DragStartDetails details) {
     final launcherBox = _launcherKey.currentContext?.findRenderObject();
-    final viewportBox =
-        _collapsedViewportKey.currentContext?.findRenderObject();
+    final viewportBox = _collapsedViewportKey.currentContext
+        ?.findRenderObject();
     if (launcherBox is! RenderBox || viewportBox is! RenderBox) return;
     _launcherDragStartPointer = details.globalPosition;
     _launcherDragStartPosition = viewportBox.globalToLocal(
@@ -302,93 +296,56 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
           isMobile ? availableSize.width : _desktopPanelSize.width,
           isMobile ? _mobilePanelHeight : _desktopPanelSize.height,
         );
-        final panelSize =
-            _panelMaximized
-                ? availableSize
-                : _clampPanelSize(
-                  _customPanelSize ?? defaultSize,
-                  availableSize,
-                );
 
-        return Align(
-          alignment: Alignment.bottomRight,
-          child: Padding(
-            padding: panelMargin,
-            child: AnimatedContainer(
-              key: const ValueKey('zenrouter-debug-panel'),
-              duration:
-                  _resizingPanel
-                      ? Duration.zero
-                      : const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
-              width: panelSize.width,
-              height: panelSize.height,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: Container(
-                      clipBehavior: Clip.antiAlias,
-                      decoration: BoxDecoration(
-                        color: DebugTheme.background,
-                        borderRadius: BorderRadius.circular(
-                          isMobile || _panelMaximized ? 0 : DebugTheme.radiusLg,
-                        ),
-                        border: Border.all(color: DebugTheme.border),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF000000).withAlpha(50),
-                            blurRadius: 24,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          _buildHeader(),
-                          const _Divider(),
-                          _buildTabBar(),
-                          const _Divider(),
-                          Expanded(
-                            child: switch (_selectedTab) {
-                              _DebugTab.problems => ProblemsTab<T>(
-                                coordinator: widget.coordinator,
-                              ),
-                              _DebugTab.inspect => PathListView<T>(
-                                coordinator: widget.coordinator,
-                              ),
-                              _DebugTab.active => ActiveLayoutsListView<T>(
-                                coordinator: widget.coordinator,
-                              ),
-                              _DebugTab.graph => NavigationGraphTab<T>(
-                                coordinator: widget.coordinator,
-                              ),
-                              _DebugTab.routes => DebugRoutesListView<T>(
-                                coordinator: widget.coordinator,
-                              ),
-                            },
-                          ),
-                          const _Divider(),
-                          _buildInputArea(),
-                        ],
-                      ),
-                    ),
-                  ),
-                  if (!_panelMaximized)
-                    Positioned(
-                      left: 0,
-                      top: 0,
-                      child: _PanelResizeHandle(
-                        onPanStart:
-                            (details) => _startPanelResize(details, panelSize),
-                        onPanUpdate:
-                            (details) =>
-                                _updatePanelResize(details, availableSize),
-                        onPanEnd: (_) => _endPanelResize(),
-                        onPanCancel: _endPanelResize,
-                      ),
-                    ),
-                ],
+        return _ResizableDebugPanel(
+          availableSize: availableSize,
+          defaultSize: defaultSize,
+          margin: panelMargin,
+          maximized: _panelMaximized,
+          child: Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: DebugTheme.background,
+              borderRadius: BorderRadius.circular(
+                isMobile || _panelMaximized ? 0 : DebugTheme.radiusLg,
               ),
+              border: Border.all(color: DebugTheme.border),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF000000).withAlpha(50),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                _buildHeader(),
+                const _Divider(),
+                _buildTabBar(),
+                const _Divider(),
+                Expanded(
+                  child: switch (_selectedTab) {
+                    _DebugTab.problems => ProblemsTab<T>(
+                      coordinator: widget.coordinator,
+                    ),
+                    _DebugTab.inspect => PathListView<T>(
+                      coordinator: widget.coordinator,
+                    ),
+                    _DebugTab.active => ActiveLayoutsListView<T>(
+                      coordinator: widget.coordinator,
+                    ),
+                    _DebugTab.graph => NavigationGraphTab<T>(
+                      coordinator: widget.coordinator,
+                    ),
+                    _DebugTab.routes => DebugRoutesListView<T>(
+                      coordinator: widget.coordinator,
+                    ),
+                  },
+                ),
+                const _Divider(),
+                _buildInputArea(),
+              ],
             ),
           ),
         );
@@ -424,21 +381,15 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
           ),
           _HeaderIconButton(
             key: const ValueKey('zenrouter-debug-panel-maximize'),
-            semanticsLabel:
-                _panelMaximized
-                    ? 'Restore debug panel'
-                    : 'Maximize debug panel',
-            icon:
-                _panelMaximized
-                    ? CupertinoIcons.fullscreen_exit
-                    : CupertinoIcons.fullscreen,
-            onTap:
-                () => setState(() {
-                  _panelMaximized = !_panelMaximized;
-                  _resizingPanel = false;
-                  _resizeStartPosition = null;
-                  _resizeStartSize = null;
-                }),
+            semanticsLabel: _panelMaximized
+                ? 'Restore debug panel'
+                : 'Maximize debug panel',
+            icon: _panelMaximized
+                ? CupertinoIcons.fullscreen_exit
+                : CupertinoIcons.fullscreen,
+            onTap: () => setState(() {
+              _panelMaximized = !_panelMaximized;
+            }),
           ),
           _HeaderIconButton(
             semanticsLabel: 'Close debug panel',
@@ -449,43 +400,6 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
         ],
       ),
     );
-  }
-
-  Size _clampPanelSize(Size requested, Size available) {
-    final minimumWidth = math.min(_minimumPanelSize.width, available.width);
-    final minimumHeight = math.min(_minimumPanelSize.height, available.height);
-    return Size(
-      requested.width.clamp(minimumWidth, available.width).toDouble(),
-      requested.height.clamp(minimumHeight, available.height).toDouble(),
-    );
-  }
-
-  void _startPanelResize(DragStartDetails details, Size panelSize) {
-    _resizeStartPosition = details.globalPosition;
-    _resizeStartSize = panelSize;
-    setState(() => _resizingPanel = true);
-  }
-
-  void _updatePanelResize(DragUpdateDetails details, Size availableSize) {
-    final startPosition = _resizeStartPosition;
-    final startSize = _resizeStartSize;
-    if (startPosition == null || startSize == null) return;
-    final delta = details.globalPosition - startPosition;
-    setState(() {
-      _customPanelSize = _clampPanelSize(
-        Size(startSize.width - delta.dx, startSize.height - delta.dy),
-        availableSize,
-      );
-    });
-  }
-
-  void _endPanelResize() {
-    if (!_resizingPanel) return;
-    setState(() {
-      _resizingPanel = false;
-      _resizeStartPosition = null;
-      _resizeStartSize = null;
-    });
   }
 
   // ===========================================================================
@@ -503,15 +417,13 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
             Expanded(
               child: TabButton(
                 label: _availableTabs[index].label,
-                count:
-                    _availableTabs[index] == _DebugTab.problems
-                        ? widget.coordinator.problems
-                        : 0,
+                count: _availableTabs[index] == _DebugTab.problems
+                    ? widget.coordinator.problems
+                    : 0,
                 isSelected: _selectedTab == _availableTabs[index],
-                onTap:
-                    () => setState(() {
-                      _selectedTab = _availableTabs[index];
-                    }),
+                onTap: () => setState(() {
+                  _selectedTab = _availableTabs[index];
+                }),
               ),
             ),
           ],
@@ -655,6 +567,131 @@ enum _DebugTab {
   const _DebugTab(this.label);
 
   final String label;
+}
+
+class _ResizableDebugPanel extends StatefulWidget {
+  const _ResizableDebugPanel({
+    required this.availableSize,
+    required this.defaultSize,
+    required this.margin,
+    required this.maximized,
+    required this.child,
+  });
+
+  static const _minimumPanelSize = Size(340, 320);
+
+  final Size availableSize;
+  final Size defaultSize;
+  final EdgeInsets margin;
+  final bool maximized;
+  final Widget child;
+
+  @override
+  State<_ResizableDebugPanel> createState() => _ResizableDebugPanelState();
+}
+
+class _ResizableDebugPanelState extends State<_ResizableDebugPanel> {
+  Size? _customPanelSize;
+  bool _resizingPanel = false;
+  Offset? _resizeStartPosition;
+  Size? _resizeStartSize;
+
+  @override
+  void didUpdateWidget(_ResizableDebugPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.maximized) {
+      _resizingPanel = false;
+      _resizeStartPosition = null;
+      _resizeStartSize = null;
+    }
+  }
+
+  Size get _panelSize {
+    if (widget.maximized) return widget.availableSize;
+    return _clampPanelSize(
+      _customPanelSize ?? widget.defaultSize,
+      widget.availableSize,
+    );
+  }
+
+  Size _clampPanelSize(Size requested, Size available) {
+    final minimumWidth = math.min(
+      _ResizableDebugPanel._minimumPanelSize.width,
+      available.width,
+    );
+    final minimumHeight = math.min(
+      _ResizableDebugPanel._minimumPanelSize.height,
+      available.height,
+    );
+    return Size(
+      requested.width.clamp(minimumWidth, available.width).toDouble(),
+      requested.height.clamp(minimumHeight, available.height).toDouble(),
+    );
+  }
+
+  void _startPanelResize(DragStartDetails details) {
+    _resizeStartPosition = details.globalPosition;
+    _resizeStartSize = _panelSize;
+    setState(() => _resizingPanel = true);
+  }
+
+  void _updatePanelResize(DragUpdateDetails details) {
+    final startPosition = _resizeStartPosition;
+    final startSize = _resizeStartSize;
+    if (startPosition == null || startSize == null) return;
+    final delta = details.globalPosition - startPosition;
+    setState(() {
+      _customPanelSize = _clampPanelSize(
+        Size(startSize.width - delta.dx, startSize.height - delta.dy),
+        widget.availableSize,
+      );
+    });
+  }
+
+  void _endPanelResize() {
+    if (!_resizingPanel) return;
+    setState(() {
+      _resizingPanel = false;
+      _resizeStartPosition = null;
+      _resizeStartSize = null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final panelSize = _panelSize;
+    return Align(
+      alignment: Alignment.bottomRight,
+      child: Padding(
+        padding: widget.margin,
+        child: AnimatedContainer(
+          key: const ValueKey('zenrouter-debug-panel'),
+          duration: _resizingPanel
+              ? Duration.zero
+              : const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          width: panelSize.width,
+          height: panelSize.height,
+          child: Stack(
+            children: [
+              Positioned.fill(child: widget.child),
+              if (!widget.maximized)
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  child: _PanelResizeHandle(
+                    onPanStart: _startPanelResize,
+                    onPanUpdate: _updatePanelResize,
+                    onPanEnd: (_) => _endPanelResize(),
+                    onPanCancel: _endPanelResize,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // =============================================================================

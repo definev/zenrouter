@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:vyuh_node_flow/vyuh_node_flow.dart' hide DebugTheme;
 
@@ -24,25 +26,77 @@ class NavigationNodeFlowAutoFit extends StatefulWidget {
 }
 
 class _NavigationNodeFlowAutoFitState extends State<NavigationNodeFlowAutoFit> {
-  Size? _lastSize;
+  static const _settleDelay = Duration(milliseconds: 120);
+  static const _fitDelta = 32.0;
+
+  Size? _layoutSize;
+  Size? _frozenSize;
+  Size? _pendingSize;
+  Timer? _commitTimer;
   bool _fitScheduled = false;
+
+  @override
+  void dispose() {
+    _commitTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = constraints.biggest;
-        final previousSize = _lastSize;
-        _lastSize = size;
-        if (previousSize != null &&
-            size.isFinite &&
-            ((size.width - previousSize.width).abs() >= 32 ||
-                (size.height - previousSize.height).abs() >= 32)) {
-          _scheduleFit();
+        if (!size.isFinite || size.isEmpty) {
+          return widget.child;
         }
-        return widget.child;
+        _observeSize(size);
+        final childSize = _frozenSize ?? size;
+        return FittedBox(
+          fit: BoxFit.fill,
+          clipBehavior: Clip.hardEdge,
+          child: SizedBox(
+            width: childSize.width,
+            height: childSize.height,
+            child: widget.child,
+          ),
+        );
       },
     );
+  }
+
+  void _observeSize(Size size) {
+    final layoutSize = _layoutSize;
+    if (layoutSize == null) {
+      _layoutSize = size;
+      return;
+    }
+    if (size == layoutSize) {
+      return;
+    }
+    _frozenSize ??= layoutSize;
+    if (_pendingSize == size) {
+      return;
+    }
+    _pendingSize = size;
+    _commitTimer?.cancel();
+    _commitTimer = Timer(_settleDelay, _commitSize);
+  }
+
+  void _commitSize() {
+    if (!mounted) return;
+    final previousSize = _layoutSize;
+    final nextSize = _pendingSize ?? previousSize;
+    setState(() {
+      _layoutSize = nextSize;
+      _frozenSize = null;
+      _pendingSize = null;
+    });
+    if (previousSize != null &&
+        nextSize != null &&
+        ((nextSize.width - previousSize.width).abs() >= _fitDelta ||
+            (nextSize.height - previousSize.height).abs() >= _fitDelta)) {
+      _scheduleFit();
+    }
   }
 
   void _scheduleFit() {
@@ -75,9 +129,9 @@ NodeFlowConfig createNavigationNodeFlowConfig({
         viewportFillOpacity: 0.08,
         viewportBorderOpacity: 0.7,
         borderColor: DebugTheme.border,
-        borderRadius: DebugTheme.radius,
+        borderRadius: DebugTheme.radiusMd,
         padding: const EdgeInsets.all(5),
-        nodeBorderRadius: 1.5,
+        nodeBorderRadius: DebugTheme.radiusSm,
       ),
       thumbnailBuilder: minimapThumbnailBuilder,
     ),
