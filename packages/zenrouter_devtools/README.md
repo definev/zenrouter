@@ -60,6 +60,10 @@ class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug<AppRout
   @override
   bool get debugCaptureRouteScreenshots => false;
 
+  // Customize the default layout mode: stack (floating overlay), row (side-by-side), or column (bottom panel)
+  @override
+  DevToolsLayoutMode get defaultDebugLayoutMode => DevToolsLayoutMode.row;
+
   // Add quick-access debug routes
   @override
   List<AppRoute> get debugRoutes => [
@@ -77,11 +81,18 @@ class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug<AppRout
 }
 ```
 
-### 3. Accessing the Overlay
+### 3. Layout Modes & Accessing the Overlay
 
 Once integrated, a floating action button (FAB) with a bug icon will appear in your app (by default). Click it to open the debug overlay, or drag the complete URI pill and button to keep it clear of your app's controls. The launcher keeps its position while the panel is opened and closed, and is automatically clamped back into view when the viewport shrinks.
 
-The expanded panel defaults to `420 × 500` on desktop. Drag the resize handle in its top-left corner for a custom size, or use the fullscreen control in the header. Custom dimensions are preserved when toggling fullscreen and automatically clamped when the viewport becomes smaller.
+ZenRouter DevTools supports 3 layout modes:
+- **Stack Mode (`DevToolsLayoutMode.stack`)**: Floating overlay positioned over your app. Features 2D corner resizing and freely draggable launcher.
+- **Row Mode (`DevToolsLayoutMode.row`)**: Side-by-side horizontal split pane. The app occupies the left side while DevTools docks on the right with a draggable edge divider to adjust panel width.
+- **Column Mode (`DevToolsLayoutMode.column`)**: Top-and-bottom vertical split pane. The app occupies the top area while DevTools docks at the bottom with a draggable edge divider to adjust panel height.
+
+You can switch layout modes on the fly using the header tool menu (`⋮`) or programmatically via `coordinator.setDebugLayoutMode(mode)`.
+
+The expanded panel preserves your custom resized dimensions and supports fullscreen maximize/restore in all layout modes.
 
 - **Inspect Tab**: Shows the current navigation tree. You can see active paths, pop routes, and switch between stateful shell branches.
 - **Graph Tab / Topology**: Shows coordinators, layouts, and routes from `routeManifest`. Pan or zoom the canvas, select nodes for details, and follow the green path to the route matching the current URI.

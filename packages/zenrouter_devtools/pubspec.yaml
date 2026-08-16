@@ -20,6 +20,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter:
     sdk: flutter
+  hit: ^1.2.4
   vyuh_node_flow: ^0.31.0
   zenrouter: ^3.0.0
 

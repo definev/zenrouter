@@ -4,10 +4,51 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
+import 'package:hit/hit.dart';
 import 'package:zenrouter/zenrouter.dart';
 
 import 'debug_overlay.dart';
 import 'graph/navigation_flow.dart';
+
+/// Mixin to add debug capabilities to a [Coordinator].
+///
+/// This adds a floating debug button that opens an overlay showing:
+/// - Current navigation stacks for all paths
+/// - Declarative route and layout graph with the active URI flow highlighted
+/// - Observed route-to-route transitions recorded from navigation commits
+/// - Ability to push routes by URI
+/// - Ability to push pre-defined debug routes
+///
+/// ## Usage
+///
+/// ```dart
+/// class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug<AppRoute> {
+///   @override
+///   bool get debugEnabled => kDebugMode;
+///
+///   @override
+///   List<AppRoute> get debugRoutes => [
+///     AppRoute.home(),
+///     AppRoute.settings(),
+///     AppRoute.profile(userId: 'test'),
+///   ];
+///
+///   @override
+///   String debugLabel(StackPath path) {
+///     // Return human-readable labels for paths
+///     return path.toString();
+///   }
+/// The layout mode used to display the ZenRouter DevTools panel.
+enum DevToolsLayoutMode {
+  /// Floating overlay positioned over the application.
+  stack,
+
+  /// Side-by-side horizontal split (application on the left, DevTools on the right).
+  row,
+
+  /// Top-and-bottom vertical split (application on top, DevTools at the bottom).
+  column,
+}
 
 /// Mixin to add debug capabilities to a [Coordinator].
 ///
@@ -50,6 +91,13 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   /// the debug overlay (e.g., only in debug mode).
   bool get debugEnabled => kDebugMode;
 
+  /// The default layout mode for the DevTools panel.
+  ///
+  /// Defaults to [DevToolsLayoutMode.stack] (floating overlay). Override this
+  /// to configure a different default layout mode, such as [DevToolsLayoutMode.row]
+  /// or [DevToolsLayoutMode.column].
+  DevToolsLayoutMode get defaultDebugLayoutMode => DevToolsLayoutMode.stack;
+
   /// Override this to provide a list of routes that can be quickly pushed
   /// from the debug overlay.
   ///
@@ -88,6 +136,7 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   // ===========================================================================
 
   bool _debugOverlayOpen = false;
+  DevToolsLayoutMode? _debugLayoutMode;
   NavigationFlowRecorder<Object>? _debugNavigationFlow;
   bool _debugNavigationFlowAttached = false;
   String? _debugFlowActionLabel;
@@ -100,6 +149,10 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
 
   /// Whether the debug overlay is currently open.
   bool get debugOverlayOpen => _debugOverlayOpen;
+
+  /// The active layout mode for the DevTools panel.
+  DevToolsLayoutMode get debugLayoutMode =>
+      _debugLayoutMode ?? defaultDebugLayoutMode;
 
   /// Whether automatic Observed-flow screen previews are currently enabled.
   bool get debugScreenCaptureEnabled =>
@@ -153,6 +206,17 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   /// [layoutBuilder] to show or hide the overlay.
   void toggleDebugOverlay() {
     _debugOverlayOpen = !_debugOverlayOpen;
+    notifyListeners();
+  }
+
+  /// Sets the active layout mode for the DevTools panel.
+  ///
+  /// Switches between [DevToolsLayoutMode.stack] (overlay),
+  /// [DevToolsLayoutMode.row] (side-by-side horizontal split),
+  /// and [DevToolsLayoutMode.column] (top-and-bottom vertical split).
+  void setDebugLayoutMode(DevToolsLayoutMode mode) {
+    if (_debugLayoutMode == mode) return;
+    _debugLayoutMode = mode;
     notifyListeners();
   }
 
@@ -371,56 +435,99 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   // ===========================================================================
 
   @override
-  /// Wraps the application layout with the debug overlay.
+  /// Wraps the application layout with the debug overlay or split panel.
   ///
   /// If [debugEnabled] is `false`, it simply returns the result of
-  /// `super.layoutBuilder(context)`. Otherwise, it wraps the layout with
-  /// a [ToastProvider] and an [Overlay] containing the [DebugOverlay].
+  /// `super.layoutBuilder(context)`. Otherwise, depending on [debugLayoutMode]
+  /// and whether the devtools panel is open, it presents the devtools as a
+  /// floating overlay ([DevToolsLayoutMode.stack]), a side-by-side split
+  /// ([DevToolsLayoutMode.row]), or a vertical split ([DevToolsLayoutMode.column]).
   Widget layoutBuilder(BuildContext context) {
     if (!debugEnabled) return super.layoutBuilder(context);
     debugNavigationFlow;
 
-    return Stack(
-      children: [
-        RepaintBoundary(
-          key: _debugAppBoundaryKey,
-          child: Builder(builder: (context) => super.layoutBuilder(context)),
-        ),
-        Overlay(
-          initialEntries: [
-            OverlayEntry(
-              builder:
-                  (context) => MediaQuery.fromView(
-                    view: View.of(context),
-                    child: DefaultTextStyle(
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                        fontFamily: 'Inter',
-                        height: 1.4,
-                        decoration: TextDecoration.none,
-                      ),
-                      child: Builder(
-                        builder: (context) {
-                          final viewInsets = MediaQuery.viewInsetsOf(context);
-                          final viewPadding = MediaQuery.viewPaddingOf(context);
-                          return Padding(
-                            padding: EdgeInsets.only(
-                              bottom: switch (viewInsets.bottom) {
-                                > 0 => viewInsets.bottom,
-                                _ => viewPadding.bottom,
-                              },
-                            ),
-                            child: DebugOverlay(coordinator: this),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
+    final appLayer = RepaintBoundary(
+      key: _debugAppBoundaryKey,
+      child: Builder(builder: (context) => super.layoutBuilder(context)),
+    );
+
+    if (!_debugOverlayOpen) {
+      return Stack(
+        children: [
+          appLayer,
+          _buildDebugOverlayScope(
+            context,
+            child: DebugOverlay(coordinator: this),
+          ),
+        ],
+      );
+    }
+
+    switch (debugLayoutMode) {
+      case DevToolsLayoutMode.stack:
+        return Stack(
+          children: [
+            appLayer,
+            _buildDebugOverlayScope(
+              context,
+              child: DebugOverlay(coordinator: this),
             ),
           ],
+        );
+      case DevToolsLayoutMode.row:
+      case DevToolsLayoutMode.column:
+        return _buildDebugOverlayScope(
+          context,
+          child: Flex(
+            direction: debugLayoutMode == DevToolsLayoutMode.row
+                ? Axis.horizontal
+                : Axis.vertical,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: appLayer),
+              DebugOverlay(coordinator: this),
+            ],
+          ),
+        );
+    }
+  }
+
+  Widget _buildDebugOverlayScope(
+    BuildContext context, {
+    required Widget child,
+  }) {
+    return MediaQuery.fromView(
+      view: View.of(context),
+      child: DefaultTextStyle(
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w400,
+          fontFamily: 'Inter',
+          height: 1.4,
+          decoration: TextDecoration.none,
         ),
-      ],
+        child: Builder(
+          builder: (context) {
+            final viewInsets = MediaQuery.viewInsetsOf(context);
+            final viewPadding = MediaQuery.viewPaddingOf(context);
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: switch (viewInsets.bottom) {
+                  > 0 => viewInsets.bottom,
+                  _ => viewPadding.bottom,
+                },
+              ),
+              child: HitScope(
+                child: Overlay(
+                  initialEntries: [
+                    OverlayEntry(builder: (context) => child),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 }
