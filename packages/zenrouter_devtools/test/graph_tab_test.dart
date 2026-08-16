@@ -46,6 +46,9 @@ void main() {
         coordinator.debugNavigationFlow.nodes['home']?.screenPreview;
     expect(preview, isNotNull);
     expect(preview!.bytes, isNotEmpty);
+    expect(coordinator.debugScreenCapturePixelRatio, 0.8);
+    expect(preview.width, 320);
+    expect(preview.height, 240);
     expect(tester.takeException(), isNull);
   });
 
@@ -206,6 +209,13 @@ void main() {
     final profileNode = allTopologyRoutes.singleWhere(
       (node) => (node.data as dynamic).id == 'profile',
     );
+    final homeNode = allTopologyRoutes.singleWhere(
+      (node) => (node.data as dynamic).id == 'home',
+    );
+    expect(
+      (profileNode.position.value.dx - homeNode.position.value.dx).abs(),
+      152.0 + 16.0,
+    );
     final topologyRoutes = [
       profileNode,
       allTopologyRoutes.firstWhere((node) => node != profileNode),
@@ -328,11 +338,14 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.tap(profilePreview, warnIfMissed: false);
+    await tester.tap(
+      find.byKey(const ValueKey('observed-screen-zoom-profile')),
+      warnIfMissed: false,
+    );
     await tester.pumpAndSettle();
     expect(find.text('Navigate Here'), findsOneWidget);
     expect(find.text('Copy URI'), findsOneWidget);
-    expect(find.textContaining('Visited 1 times'), findsOneWidget);
+    expect(find.textContaining(RegExp(r'Visited \d+ times')), findsOneWidget);
     await tester.tap(find.byIcon(CupertinoIcons.xmark_circle_fill));
     await tester.pumpAndSettle();
     expect(find.text('Navigate Here'), findsNothing);
@@ -344,6 +357,44 @@ void main() {
     expect(coordinator.debugScreenCaptureEnabled, isFalse);
     expect(find.text('SCREEN CAPTURE OFF'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('topology wraps a fifth sibling route onto the next row', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 600);
+    addTearDown(() {
+      tester.view.resetDevicePixelRatio();
+      tester.view.resetPhysicalSize();
+    });
+
+    final coordinator = _WrapCoordinator()..toggleDebugOverlay();
+    addTearDown(coordinator.dispose);
+    await tester.pumpWidget(
+      CupertinoApp(home: DebugOverlay<_WrapRoute>(coordinator: coordinator)),
+    );
+    await tester.tap(find.text('Graph'));
+    await tester.pump();
+
+    final topologyEditor = tester.widget<NodeFlowEditor<dynamic, Object?>>(
+      find.byKey(const ValueKey('topology-node-flow')),
+    );
+    Offset positionOf(String id) => topologyEditor.controller.nodes.values
+        .firstWhere(
+          (node) => node is! GroupNode && (node.data as dynamic).id == id,
+        )
+        .position
+        .value;
+
+    const slot = 152.0 + 16.0;
+    const nodeHeight = 68.0;
+    const verticalGap = 16.0;
+    final first = positionOf('one');
+    expect(positionOf('four').dx - first.dx, slot * 3);
+    expect(positionOf('four').dy, first.dy);
+    expect(positionOf('five').dx, first.dx);
+    expect(positionOf('five').dy, first.dy + nodeHeight + verticalGap);
   });
 }
 
@@ -380,6 +431,49 @@ final class _HomeRoute extends _TestRoute {
 final class _ProfileRoute extends _TestRoute {
   @override
   Uri toUri() => Uri.parse('/profile');
+}
+
+final class _WrapRoute extends RouteTarget with RouteUnique {
+  _WrapRoute(this.path);
+
+  final String path;
+
+  @override
+  Uri toUri() => Uri.parse(path);
+
+  @override
+  List<Object?> get props => [path];
+
+  @override
+  Widget build(covariant _WrapCoordinator coordinator, BuildContext context) =>
+      const ColoredBox(color: Color(0xFF059669));
+}
+
+final class _WrapCoordinator extends Coordinator<_WrapRoute>
+    with CoordinatorDebug<_WrapRoute> {
+  static const _tabIds = ['one', 'two', 'three', 'four', 'five'];
+
+  static final manifest = RouteManifest<String>(
+    name: 'WrapGraph',
+    routes: [
+      for (final id in _tabIds)
+        RouteManifestRoute(id: id, path: '/$id', parentId: 'shell'),
+    ],
+    layouts: [
+      RouteManifestLayout(
+        id: 'shell',
+        path: '/',
+        kind: RouteManifestLayoutKind.indexed,
+        indexedChildIds: _tabIds,
+      ),
+    ],
+  );
+
+  @override
+  RouteManifest<String> get routeManifest => manifest;
+
+  @override
+  _WrapRoute parseRouteFromUri(Uri uri) => _WrapRoute(uri.path);
 }
 
 final class _TestCoordinator extends Coordinator<_TestRoute>

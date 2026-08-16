@@ -77,6 +77,12 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   Duration get debugScreenCaptureSettleTimeout =>
       const Duration(milliseconds: 500);
 
+  /// Pixel ratio used when capturing screen previews for the Observed tab.
+  ///
+  /// Defaults to `0.8` to provide crisp, high-resolution previews while keeping
+  /// memory overhead modest.
+  double get debugScreenCapturePixelRatio => 0.8;
+
   // ===========================================================================
   // STATE
   // ===========================================================================
@@ -314,7 +320,9 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
 
     ui.Image? image;
     try {
-      image = await renderObject.toImage(pixelRatio: 0.25);
+      image = await renderObject.toImage(
+        pixelRatio: debugScreenCapturePixelRatio,
+      );
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null ||
           _debugDisposed ||

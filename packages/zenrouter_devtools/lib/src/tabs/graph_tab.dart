@@ -385,13 +385,6 @@ class _GraphNodeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = isCurrent
-        ? _GraphColors.active
-        : isSelected
-        ? _GraphColors.selected
-        : isActive
-        ? _GraphColors.activeMuted
-        : DebugTheme.border;
     return Semantics(
       button: true,
       selected: isSelected,
@@ -404,14 +397,6 @@ class _GraphNodeCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(
-                  node.isRoute
-                      ? CupertinoIcons.arrow_right_circle_fill
-                      : CupertinoIcons.layers_alt_fill,
-                  color: borderColor,
-                  size: 13,
-                ),
-                const SizedBox(width: DebugTheme.spacingXs),
                 Expanded(
                   child: Text(
                     node.label,
@@ -468,23 +453,15 @@ class _GraphNodeCard extends StatelessWidget {
                   ),
               ],
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              decoration: BoxDecoration(
-                color: DebugTheme.backgroundDark,
-                borderRadius: BorderRadius.circular(DebugTheme.radiusSm),
-                border: Border.all(color: DebugTheme.borderDark),
-              ),
-              child: Text(
-                node.path,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: DebugTheme.textSecondary,
-                  fontSize: 8.5,
-                  fontFamily: 'monospace',
-                  decoration: TextDecoration.none,
-                ),
+            Text(
+              node.path,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: DebugTheme.textSecondary,
+                fontSize: 8.5,
+                fontFamily: 'monospace',
+                decoration: TextDecoration.underline,
               ),
             ),
             Row(
@@ -581,10 +558,13 @@ class _GraphLayoutGroupCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              height: 28,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              height: 32,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: layoutColor.withValues(alpha: 0.13),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(DebugTheme.radiusMd),
+                ),
                 border: Border(
                   bottom: BorderSide(
                     color: layoutColor.withValues(alpha: 0.24),
@@ -592,25 +572,21 @@ class _GraphLayoutGroupCard extends StatelessWidget {
                 ),
               ),
               child: Row(
+                spacing: 8,
                 children: [
-                  Icon(CupertinoIcons.layers_alt, color: borderColor, size: 11),
-                  const SizedBox(width: DebugTheme.spacingXs),
-                  Expanded(
-                    child: Text(
-                      node.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: DebugTheme.textPrimary,
-                        fontSize: DebugTheme.fontSizeSm,
-                        fontWeight: FontWeight.w600,
-                        decoration: TextDecoration.none,
-                      ),
+                  Text(
+                    node.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: DebugTheme.textPrimary,
+                      fontSize: DebugTheme.fontSizeSm,
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.none,
                     ),
                   ),
                   _NodeBadge(label: _kindLabel(node.kind)),
                   if (node.branchIndex case final branchIndex?) ...[
-                    const SizedBox(width: 3),
                     _NodeBadge(label: '#${branchIndex + 1}', branch: true),
                   ],
                 ],
@@ -813,7 +789,7 @@ class _TopologyNodeFlowCanvasState extends State<_TopologyNodeFlowCanvas> {
         ? _GraphColors.activeMuted
         : defaultColor;
     canvas.drawRRect(
-      RRect.fromRectAndRadius(bounds, const Radius.circular(1.5)),
+      RRect.fromRectAndRadius(bounds, Radius.circular(DebugTheme.radiusSm)),
       Paint()..color = color,
     );
     return true;
@@ -870,6 +846,32 @@ final class _SubtreeMetrics {
   final double height;
 }
 
+final class _WrappedRow {
+  const _WrappedRow({
+    required this.ids,
+    required this.width,
+    required this.height,
+  });
+
+  final List<Object> ids;
+  final double width;
+  final double height;
+}
+
+final class _WrappedGrid {
+  const _WrappedGrid({
+    required this.rows,
+    required this.width,
+    required this.height,
+  });
+
+  static const empty = _WrappedGrid(rows: [], width: 0, height: 0);
+
+  final List<_WrappedRow> rows;
+  final double width;
+  final double height;
+}
+
 final class _TopologyNodeFlowModel {
   const _TopologyNodeFlowModel({
     required this.nodes,
@@ -881,9 +883,64 @@ final class _TopologyNodeFlowModel {
   static const _nodeWidth = 152.0;
   static const _nodeHeight = 68.0;
   static const _horizontalGap = 16.0;
-  static const _verticalGap = 18.0;
+  static const _verticalGap = 16.0;
+  static const _maxCardsPerRow = 4;
   static const _padding = 16.0;
-  static const _groupPadding = EdgeInsets.fromLTRB(10, 34, 10, 10);
+  static const _groupPadding = EdgeInsets.fromLTRB(18, 48, 18, 18);
+
+  static _WrappedGrid _wrapGrid(
+    List<Object> ids,
+    Map<Object, _SubtreeMetrics> metrics,
+  ) {
+    if (ids.isEmpty) return _WrappedGrid.empty;
+
+    final rows = <_WrappedRow>[];
+    var gridWidth = 0.0;
+    var gridHeight = 0.0;
+    for (var start = 0; start < ids.length; start += _maxCardsPerRow) {
+      final end = math.min(start + _maxCardsPerRow, ids.length);
+      var rowWidth = 0.0;
+      var rowHeight = 0.0;
+      for (var i = start; i < end; i++) {
+        final size = metrics[ids[i]]!;
+        if (i > start) rowWidth += _horizontalGap;
+        rowWidth += size.width;
+        rowHeight = math.max(rowHeight, size.height);
+      }
+      rows.add(
+        _WrappedRow(
+          ids: ids.sublist(start, end),
+          width: rowWidth,
+          height: rowHeight,
+        ),
+      );
+      gridWidth = math.max(gridWidth, rowWidth);
+      if (rows.length > 1) gridHeight += _verticalGap;
+      gridHeight += rowHeight;
+    }
+    return _WrappedGrid(rows: rows, width: gridWidth, height: gridHeight);
+  }
+
+  static void _placeGrid(
+    _WrappedGrid grid,
+    Map<Object, _SubtreeMetrics> metrics, {
+    required double left,
+    required double top,
+    required void Function(Object id, double left, double top) placeChild,
+  }) {
+    var y = top;
+    for (var r = 0; r < grid.rows.length; r++) {
+      final row = grid.rows[r];
+      var x = left;
+      for (final id in row.ids) {
+        final size = metrics[id]!;
+        placeChild(id, x, y + (row.height - size.height) / 2);
+        x += size.width + _horizontalGap;
+      }
+      y += row.height;
+      if (r < grid.rows.length - 1) y += _verticalGap;
+    }
+  }
 
   factory _TopologyNodeFlowModel.calculate(
     NavigationGraph<Object> graph, {
@@ -923,23 +980,10 @@ final class _TopologyNodeFlowModel {
           .where((childId) => graph.nodes[childId]!.isLayout)
           .toList(growable: false);
 
-      // 1. Các Route con (node đơn lẻ) -> luôn bố cục NGANG
-      final routesRowWidth = childRouteIds.isEmpty
-          ? 0.0
-          : childRouteIds.fold<double>(
-                  0.0,
-                  (sum, childId) => sum + subtreeMetrics[childId]!.width,
-                ) +
-                _horizontalGap * (childRouteIds.length - 1);
-      final routesRowHeight = childRouteIds.isEmpty
-          ? 0.0
-          : childRouteIds.fold<double>(
-              0.0,
-              (maxH, childId) =>
-                  math.max(maxH, subtreeMetrics[childId]!.height),
-            );
+      // 1. Route children wrap horizontally, 4 cards per row.
+      final routesGrid = _wrapGrid(childRouteIds, subtreeMetrics);
 
-      // 2. Các Layout con (layout trong layout) -> luôn bố cục DỌC
+      // 2. Nested layouts stack vertically.
       final layoutsWidth = childLayoutIds.isEmpty
           ? 0.0
           : childLayoutIds.fold<double>(
@@ -954,13 +998,11 @@ final class _TopologyNodeFlowModel {
                 ) +
                 _verticalGap * (childLayoutIds.length - 1);
 
-      final innerContentWidth = math.max(routesRowWidth, layoutsWidth);
+      final innerContentWidth = math.max(routesGrid.width, layoutsWidth);
       final innerContentHeight =
-          (childRouteIds.isNotEmpty ? routesRowHeight : 0.0) +
-          (childLayoutIds.isNotEmpty ? layoutsHeight : 0.0) +
-          (childRouteIds.isNotEmpty && childLayoutIds.isNotEmpty
-              ? _verticalGap
-              : 0.0);
+          routesGrid.height +
+          layoutsHeight +
+          (routesGrid.height > 0 && layoutsHeight > 0 ? _verticalGap : 0.0);
 
       double finalWidth;
       double finalHeight;
@@ -997,21 +1039,7 @@ final class _TopologyNodeFlowModel {
           .where((childId) => graph.nodes[childId]!.isLayout)
           .toList(growable: false);
 
-      final routesRowWidth = childRouteIds.isEmpty
-          ? 0.0
-          : childRouteIds.fold<double>(
-                  0.0,
-                  (sum, childId) => sum + subtreeMetrics[childId]!.width,
-                ) +
-                _horizontalGap * (childRouteIds.length - 1);
-      final routesRowHeight = childRouteIds.isEmpty
-          ? 0.0
-          : childRouteIds.fold<double>(
-              0.0,
-              (maxH, childId) =>
-                  math.max(maxH, subtreeMetrics[childId]!.height),
-            );
-
+      final routesGrid = _wrapGrid(childRouteIds, subtreeMetrics);
       final layoutsHeight = childLayoutIds.isEmpty
           ? 0.0
           : childLayoutIds.fold<double>(
@@ -1028,30 +1056,25 @@ final class _TopologyNodeFlowModel {
         final innerTop = top + _groupPadding.top;
         final availableWidth = metrics.width - _groupPadding.horizontal;
         final availableHeight = metrics.height - _groupPadding.vertical;
-
         final totalInnerContentHeight =
-            (childRouteIds.isNotEmpty ? routesRowHeight : 0.0) +
-            (childLayoutIds.isNotEmpty ? layoutsHeight : 0.0) +
-            (childRouteIds.isNotEmpty && childLayoutIds.isNotEmpty
-                ? _verticalGap
-                : 0.0);
+            routesGrid.height +
+            layoutsHeight +
+            (routesGrid.height > 0 && layoutsHeight > 0 ? _verticalGap : 0.0);
 
         var currentY =
             innerTop + (availableHeight - totalInnerContentHeight) / 2;
 
-        // 1. Đặt các Route con (node đơn lẻ) theo chiều NGANG
-        if (childRouteIds.isNotEmpty) {
-          var currentX = innerLeft + (availableWidth - routesRowWidth) / 2;
-          for (final routeId in childRouteIds) {
-            final childM = subtreeMetrics[routeId]!;
-            final childY = currentY + (routesRowHeight - childM.height) / 2;
-            place(routeId, currentX, childY);
-            currentX += childM.width + _horizontalGap;
-          }
-          currentY += routesRowHeight + _verticalGap;
+        if (routesGrid.rows.isNotEmpty) {
+          _placeGrid(
+            routesGrid,
+            subtreeMetrics,
+            left: innerLeft + (availableWidth - routesGrid.width) / 2,
+            top: currentY,
+            placeChild: place,
+          );
+          currentY += routesGrid.height + _verticalGap;
         }
 
-        // 2. Đặt các Layout con (layout trong layout) theo chiều DỌC
         for (final layoutId in childLayoutIds) {
           final childM = subtreeMetrics[layoutId]!;
           final layoutX = innerLeft + (availableWidth - childM.width) / 2;
@@ -1059,33 +1082,24 @@ final class _TopologyNodeFlowModel {
           currentY += childM.height + _verticalGap;
         }
       } else {
-        final ownWidth = _nodeWidth;
-        positions[id] = Offset(left + (metrics.width - ownWidth) / 2, top);
+        positions[id] = Offset(left + (metrics.width - _nodeWidth) / 2, top);
+        if (node.childIds.isEmpty) return;
 
-        if (node.childIds.isNotEmpty) {
-          var currentY = top + _nodeHeight + _verticalGap;
-          if (childRouteIds.isNotEmpty) {
-            var currentX = left + (metrics.width - routesRowWidth) / 2;
-            for (final routeId in childRouteIds) {
-              final childM = subtreeMetrics[routeId]!;
-              place(
-                routeId,
-                currentX,
-                currentY + (routesRowHeight - childM.height) / 2,
-              );
-              currentX += childM.width + _horizontalGap;
-            }
-            currentY += routesRowHeight + _verticalGap;
-          }
-          for (final layoutId in childLayoutIds) {
-            final childM = subtreeMetrics[layoutId]!;
-            place(
-              layoutId,
-              left + (metrics.width - childM.width) / 2,
-              currentY,
-            );
-            currentY += childM.height + _verticalGap;
-          }
+        var currentY = top + _nodeHeight + _verticalGap;
+        if (routesGrid.rows.isNotEmpty) {
+          _placeGrid(
+            routesGrid,
+            subtreeMetrics,
+            left: left + (metrics.width - routesGrid.width) / 2,
+            top: currentY,
+            placeChild: place,
+          );
+          currentY += routesGrid.height + _verticalGap;
+        }
+        for (final layoutId in childLayoutIds) {
+          final childM = subtreeMetrics[layoutId]!;
+          place(layoutId, left + (metrics.width - childM.width) / 2, currentY);
+          currentY += childM.height + _verticalGap;
         }
       }
     }
@@ -1101,23 +1115,9 @@ final class _TopologyNodeFlowModel {
         .where((id) => graph.nodes[id]!.isRoute)
         .toList(growable: false);
 
-    // Tính tổng kích thước cho hàng các node đơn lẻ (layout ngang)
-    final standaloneRowWidth = rootRouteIds.isEmpty
-        ? 0.0
-        : rootRouteIds.fold<double>(
-                0.0,
-                (sum, id) => sum + subtreeMetrics[id]!.width,
-              ) +
-              _horizontalGap * (rootRouteIds.length - 1);
-    final standaloneRowHeight = rootRouteIds.isEmpty
-        ? 0.0
-        : rootRouteIds.fold<double>(
-            0.0,
-            (maxH, id) => math.max(maxH, subtreeMetrics[id]!.height),
-          );
+    final standaloneGrid = _wrapGrid(rootRouteIds, subtreeMetrics);
 
-    // Chiều rộng tối đa bao gồm cả hàng node đơn lẻ và các layout group
-    var maxTotalWidth = standaloneRowWidth;
+    var maxTotalWidth = standaloneGrid.width;
     for (final layoutId in rootLayoutIds) {
       final w = subtreeMetrics[layoutId]!.width;
       if (w > maxTotalWidth) maxTotalWidth = w;
@@ -1125,16 +1125,15 @@ final class _TopologyNodeFlowModel {
 
     var currentTop = _padding;
 
-    // 1. Các node đơn lẻ -> layout ngang thành một hàng side-by-side
-    if (rootRouteIds.isNotEmpty) {
-      var currentX = _padding + (maxTotalWidth - standaloneRowWidth) / 2;
-      for (final routeId in rootRouteIds) {
-        final m = subtreeMetrics[routeId]!;
-        final currentY = currentTop + (standaloneRowHeight - m.height) / 2;
-        place(routeId, currentX, currentY);
-        currentX += m.width + _horizontalGap;
-      }
-      currentTop += standaloneRowHeight + _verticalGap;
+    if (standaloneGrid.rows.isNotEmpty) {
+      _placeGrid(
+        standaloneGrid,
+        subtreeMetrics,
+        left: _padding + (maxTotalWidth - standaloneGrid.width) / 2,
+        top: currentTop,
+        placeChild: place,
+      );
+      currentTop += standaloneGrid.height + _verticalGap;
     }
 
     // 2. Các Layout -> layout dọc từ trên xuống dưới
