@@ -435,17 +435,32 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
       child: Row(
         children: [
           const SizedBox(width: DebugTheme.spacingMd),
-          const ConnectionIndicator(),
-          const SizedBox(width: DebugTheme.spacing),
+          Container(
+            width: 7,
+            height: 7,
+            decoration: const BoxDecoration(
+              color: Color(0xFF10B981),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0x6610B981),
+                  blurRadius: 4,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
           const Expanded(
             child: Text(
-              'ZenRouter Devtools',
+              'ZenRouter DevTools',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: DebugTheme.textPrimary,
-                fontSize: DebugTheme.fontSizeLg,
+                fontSize: 12.5,
                 fontWeight: FontWeight.w600,
+                letterSpacing: 0.2,
                 decoration: TextDecoration.none,
               ),
             ),
@@ -913,31 +928,53 @@ class _DebugFabState extends State<_DebugFab> {
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: Container(
+    return HitLayer(
+      alignment: Alignment.center,
+      hitChild: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: const SizedBox(
+          width: 52,
+          height: 52,
+        ),
+      ),
+      paintChild: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
         width: 40,
         height: 40,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: _isHovered ? const Color(0xFF222222) : const Color(0xFF000000),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: _isHovered
+                ? const [Color(0xFF2E2E2E), Color(0xFF181818)]
+                : const [Color(0xFF1A1A1A), Color(0xFF0D0D0D)],
+          ),
           shape: BoxShape.circle,
-          border: Border.all(color: const Color(0x3DFFFFFF)),
+          border: Border.all(
+            color: _isHovered
+                ? const Color(0x80FFFFFF)
+                : const Color(0x33FFFFFF),
+          ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF000000).withAlpha(100),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: _isHovered
+                  ? const Color(0x663B82F6)
+                  : const Color(0x99000000),
+              blurRadius: _isHovered ? 14 : 10,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
         child: CountBadge(
           count: widget.problems,
-          child: const Icon(
+          child: Icon(
             CupertinoIcons.ant,
-            color: Color(0xFFFFFFFF),
-            size: 20,
+            color: _isHovered ? const Color(0xFFFFFFFF) : const Color(0xFFE2E8F0),
+            size: 19,
           ),
         ),
       ),
@@ -967,7 +1004,7 @@ class _VerticalDivider extends StatelessWidget {
   }
 }
 
-class _HeaderIconButton extends StatelessWidget {
+class _HeaderIconButton extends StatefulWidget {
   const _HeaderIconButton({
     super.key,
     required this.semanticsLabel,
@@ -982,22 +1019,102 @@ class _HeaderIconButton extends StatelessWidget {
   final EdgeInsets margin;
 
   @override
+  State<_HeaderIconButton> createState() => _HeaderIconButtonState();
+}
+
+class _HeaderIconButtonState extends State<_HeaderIconButton> {
+  bool _isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: semanticsLabel,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Container(
-          width: 30,
-          height: 30,
-          margin: margin,
+    return Padding(
+      padding: widget.margin,
+      child: Semantics(
+        button: true,
+        label: widget.semanticsLabel,
+        child: HitLayer(
           alignment: Alignment.center,
-          child: Icon(icon, color: DebugTheme.textPrimary, size: 14),
+          hitChild: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            onEnter: (_) => setState(() => _isHovered = true),
+            onExit: (_) => setState(() => _isHovered = false),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: widget.onTap,
+              child: const SizedBox(
+                width: 36,
+                height: 36,
+              ),
+            ),
+          ),
+          paintChild: AnimatedContainer(
+            duration: const Duration(milliseconds: 140),
+            curve: Curves.easeOutCubic,
+            width: 28,
+            height: 28,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: _isHovered
+                  ? const Color(0xFF242424)
+                  : const Color(0x00000000),
+              borderRadius: BorderRadius.circular(DebugTheme.radiusSm),
+              border: Border.all(
+                color: _isHovered ? const Color(0xFF383838) : const Color(0x00000000),
+              ),
+            ),
+            child: Icon(
+              widget.icon,
+              color: _isHovered ? DebugTheme.textPrimary : DebugTheme.textMuted,
+              size: 13,
+            ),
+          ),
         ),
       ),
     );
+  }
+}
+
+class _DiagonalGripPainter extends CustomPainter {
+  const _DiagonalGripPainter({
+    required this.color,
+    required this.glowColor,
+    this.isHovered = false,
+  });
+
+  final Color color;
+  final Color glowColor;
+  final bool isHovered;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (isHovered) {
+      final glowPaint = Paint()
+        ..color = glowColor
+        ..strokeWidth = 3.5
+        ..strokeCap = StrokeCap.round
+        ..style = PaintingStyle.stroke
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+
+      canvas.drawLine(const Offset(3.5, 9.0), const Offset(9.0, 3.5), glowPaint);
+      canvas.drawLine(const Offset(5.5, 14.0), const Offset(14.0, 5.5), glowPaint);
+    }
+
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.75
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    // Two crisp, parallel diagonal grip slashes (//) across the top-left corner
+    canvas.drawLine(const Offset(3.5, 9.0), const Offset(9.0, 3.5), paint);
+    canvas.drawLine(const Offset(5.5, 14.0), const Offset(14.0, 5.5), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _DiagonalGripPainter oldDelegate) {
+    return oldDelegate.color != color ||
+        oldDelegate.glowColor != glowColor ||
+        oldDelegate.isHovered != isHovered;
   }
 }
 
@@ -1024,6 +1141,7 @@ class _PanelResizeHandleState extends State<_PanelResizeHandle> {
 
   @override
   Widget build(BuildContext context) {
+    final isActive = _isHovered || _isDragging;
     return Semantics(
       label: 'Resize debug panel',
       child: HitLayer(
@@ -1051,17 +1169,24 @@ class _PanelResizeHandleState extends State<_PanelResizeHandle> {
             child: const SizedBox(width: 32, height: 32),
           ),
         ),
-        paintChild: AnimatedOpacity(
-          duration: const Duration(milliseconds: 150),
-          opacity: _isHovered || _isDragging ? 1.0 : 0.0,
-          child: Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: const Color(0xFF3B82F6).withAlpha(180),
-              borderRadius: const BorderRadius.only(
-                bottomRight: Radius.circular(4),
-              ),
+        paintChild: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOutCubic,
+          width: 18,
+          height: 18,
+          decoration: BoxDecoration(
+            color: isActive ? const Color(0x1A3B82F6) : const Color(0x00000000),
+            borderRadius: const BorderRadius.only(
+              bottomRight: Radius.circular(6),
+            ),
+          ),
+          child: CustomPaint(
+            painter: _DiagonalGripPainter(
+              color: isActive
+                  ? const Color(0xFF60A5FA)
+                  : DebugTheme.textMuted.withAlpha(140),
+              glowColor: const Color(0x803B82F6),
+              isHovered: isActive,
             ),
           ),
         ),
@@ -1143,7 +1268,16 @@ class _FlexPanelResizeHandleState extends State<_FlexPanelResizeHandle> {
           child: Container(
             width: _isHorizontal ? 2 : double.infinity,
             height: _isHorizontal ? double.infinity : 2,
-            color: const Color(0xFF3B82F6),
+            decoration: const BoxDecoration(
+              color: Color(0xFF3B82F6),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0x663B82F6),
+                  blurRadius: 4,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1167,6 +1301,7 @@ class _ToolMenuButton extends StatefulWidget {
 class _ToolMenuButtonState extends State<_ToolMenuButton> {
   final GlobalKey _buttonKey = GlobalKey();
   OverlayEntry? _overlayEntry;
+  bool _isHovered = false;
 
   @override
   void dispose() {
@@ -1210,7 +1345,7 @@ class _ToolMenuButtonState extends State<_ToolMenuButton> {
               ),
             ),
             Positioned(
-              top: buttonPosition.dy + buttonSize.height + 4,
+              top: buttonPosition.dy + buttonSize.height + 6,
               right: math.max(
                 8.0,
                 mediaSize.width - buttonPosition.dx - buttonSize.width,
@@ -1241,27 +1376,44 @@ class _ToolMenuButtonState extends State<_ToolMenuButton> {
     return Semantics(
       button: true,
       label: 'DevTools options and layout modes',
-      child: GestureDetector(
-        key: _buttonKey,
-        behavior: HitTestBehavior.opaque,
-        onTap: _toggleMenu,
-        child: Container(
+      child: HitLayer(
+        alignment: Alignment.center,
+        hitChild: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _isHovered = true),
+          onExit: (_) => setState(() => _isHovered = false),
+          child: GestureDetector(
+            key: _buttonKey,
+            behavior: HitTestBehavior.opaque,
+            onTap: _toggleMenu,
+            child: const SizedBox(width: 36, height: 36),
+          ),
+        ),
+        paintChild: AnimatedContainer(
           key: const ValueKey('zenrouter-debug-tool-menu-button'),
-          width: 30,
-          height: 30,
-          margin: const EdgeInsets.only(right: DebugTheme.spacingXs),
-          decoration: isOpen
-              ? BoxDecoration(
-                  color: const Color(0xFF262626),
-                  borderRadius: BorderRadius.circular(DebugTheme.radiusSm),
-                  border: Border.all(color: DebugTheme.border),
-                )
-              : null,
+          duration: const Duration(milliseconds: 140),
+          curve: Curves.easeOutCubic,
+          width: 28,
+          height: 28,
+          margin: const EdgeInsets.only(right: 2),
+          decoration: BoxDecoration(
+            color: isOpen || _isHovered
+                ? const Color(0xFF242424)
+                : const Color(0x00000000),
+            borderRadius: BorderRadius.circular(DebugTheme.radiusSm),
+            border: Border.all(
+              color: isOpen || _isHovered
+                  ? const Color(0xFF383838)
+                  : const Color(0x00000000),
+            ),
+          ),
           alignment: Alignment.center,
           child: Icon(
             CupertinoIcons.ellipsis_vertical,
-            color: isOpen ? DebugTheme.textPrimary : DebugTheme.textDisabled,
-            size: 15,
+            color: isOpen || _isHovered
+                ? DebugTheme.textPrimary
+                : DebugTheme.textMuted,
+            size: 13,
           ),
         ),
       ),
@@ -1291,17 +1443,18 @@ class _ToolMenuPopup extends StatelessWidget {
         decoration: TextDecoration.none,
       ),
       child: Container(
-        width: 220,
-        padding: const EdgeInsets.symmetric(vertical: DebugTheme.spacingSm),
+        width: 210,
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
         decoration: BoxDecoration(
-          color: DebugTheme.backgroundDark,
-          borderRadius: BorderRadius.circular(DebugTheme.radiusMd),
-          border: Border.all(color: DebugTheme.borderLight),
-          boxShadow: [
+          color: const Color(0xFF141414),
+          borderRadius: BorderRadius.circular(DebugTheme.radiusLg),
+          border: Border.all(color: const Color(0xFF2E2E2E)),
+          boxShadow: const [
             BoxShadow(
-              color: const Color(0xFF000000).withAlpha(160),
-              blurRadius: 20,
-              offset: const Offset(0, 6),
+              color: Color(0xCC000000),
+              blurRadius: 24,
+              spreadRadius: 2,
+              offset: Offset(0, 8),
             ),
           ],
         ),
@@ -1310,21 +1463,17 @@ class _ToolMenuPopup extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: DebugTheme.spacingMd,
-                vertical: DebugTheme.spacingXs,
-              ),
+              padding: EdgeInsets.fromLTRB(10, 4, 10, 6),
               child: Text(
                 'LAYOUT MODE',
                 style: TextStyle(
-                  color: DebugTheme.textMuted,
-                  fontSize: DebugTheme.fontSizeXs + 2,
+                  color: Color(0xFF737373),
+                  fontSize: 9.5,
                   fontWeight: FontWeight.w700,
-                  letterSpacing: 0.6,
+                  letterSpacing: 0.8,
                 ),
               ),
             ),
-            const SizedBox(height: 2),
             _ToolMenuItem(
               key: const ValueKey('zenrouter-debug-layout-stack'),
               icon: CupertinoIcons.layers,
@@ -1377,27 +1526,39 @@ class _ToolMenuItemState extends State<_ToolMenuItem> {
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
+      cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOutCubic,
           height: 32,
-          padding: const EdgeInsets.symmetric(horizontal: DebugTheme.spacingMd),
-          color: _isHovered
-              ? DebugTheme.backgroundLight
-              : const Color(0x00000000),
+          margin: const EdgeInsets.symmetric(vertical: 1),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: widget.isSelected
+                ? const Color(0xFF1E293B)
+                : (_isHovered ? const Color(0xFF222222) : const Color(0x00000000)),
+            borderRadius: BorderRadius.circular(DebugTheme.radius),
+            border: widget.isSelected
+                ? Border.all(color: const Color(0xFF334155))
+                : null,
+          ),
           child: Row(
             children: [
               Icon(
                 widget.icon,
-                size: 14,
+                size: 13,
                 color: widget.isSelected
-                    ? DebugTheme.textPrimary
-                    : DebugTheme.textSecondary,
+                    ? const Color(0xFF60A5FA)
+                    : (_isHovered
+                        ? DebugTheme.textPrimary
+                        : DebugTheme.textSecondary),
               ),
-              const SizedBox(width: DebugTheme.spacing),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   widget.label,
@@ -1405,9 +1566,11 @@ class _ToolMenuItemState extends State<_ToolMenuItem> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: widget.isSelected
-                        ? DebugTheme.textPrimary
-                        : DebugTheme.textSecondary,
-                    fontSize: DebugTheme.fontSizeMd,
+                        ? const Color(0xFFF1F5F9)
+                        : (_isHovered
+                            ? DebugTheme.textPrimary
+                            : DebugTheme.textSecondary),
+                    fontSize: 12,
                     fontWeight: widget.isSelected
                         ? FontWeight.w600
                         : FontWeight.w400,
@@ -1418,7 +1581,7 @@ class _ToolMenuItemState extends State<_ToolMenuItem> {
                 const Icon(
                   CupertinoIcons.checkmark,
                   size: 12,
-                  color: DebugTheme.textPrimary,
+                  color: Color(0xFF60A5FA),
                 ),
             ],
           ),
