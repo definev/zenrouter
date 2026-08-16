@@ -40,6 +40,7 @@ class _ObservedNavigationFlowViewState
   late _ObservedNodeFlowModel _model;
   Object? _selectedNodeId;
   Object? _zoomedNodeId;
+  bool _isReadOnly = false;
 
   @override
   void initState() {
@@ -90,6 +91,15 @@ class _ObservedNavigationFlowViewState
   }
 
   void _resetView() => _controller.fitToView();
+
+  void _setReadOnly(bool value) {
+    setState(() {
+      _isReadOnly = value;
+      _controller.setBehavior(
+        value ? NodeFlowBehavior.inspect : NodeFlowBehavior.preview,
+      );
+    });
+  }
 
   bool _paintMinimapNode(
     Canvas canvas,
@@ -191,6 +201,8 @@ class _ObservedNavigationFlowViewState
               isSelected: _selectedNodeId != null,
               captureEnabled: widget.captureEnabled,
               onCaptureChanged: widget.onCaptureChanged,
+              isReadOnly: _isReadOnly,
+              onReadOnlyChanged: _setReadOnly,
               onAutoLayout: _autoLayout,
               onReset: _resetView,
               onClear: _clearFlow,
@@ -204,7 +216,9 @@ class _ObservedNavigationFlowViewState
                         key: const ValueKey('observed-node-flow'),
                         controller: _controller,
                         theme: _observedNodeFlowTheme,
-                        behavior: NodeFlowBehavior.preview,
+                        behavior: _isReadOnly
+                            ? NodeFlowBehavior.inspect
+                            : NodeFlowBehavior.preview,
                         events: NodeFlowEvents<_ObservedNodeData, Object?>(
                           onInit: _controller.fitToView,
                           node: NodeEvents<_ObservedNodeData>(
@@ -275,6 +289,8 @@ class _FlowHeader extends StatelessWidget {
     required this.isSelected,
     required this.captureEnabled,
     required this.onCaptureChanged,
+    required this.isReadOnly,
+    required this.onReadOnlyChanged,
     required this.onAutoLayout,
     required this.onReset,
     required this.onClear,
@@ -285,6 +301,8 @@ class _FlowHeader extends StatelessWidget {
   final bool isSelected;
   final bool captureEnabled;
   final ValueChanged<bool> onCaptureChanged;
+  final bool isReadOnly;
+  final ValueChanged<bool> onReadOnlyChanged;
   final VoidCallback onAutoLayout;
   final VoidCallback onReset;
   final VoidCallback onClear;
@@ -357,6 +375,19 @@ class _FlowHeader extends StatelessWidget {
                 ? _ObservedFlowColors.active
                 : DebugTheme.textSecondary,
             onTap: () => onCaptureChanged(!captureEnabled),
+          ),
+          _HeaderAction(
+            key: const ValueKey('observed-mode-toggle'),
+            semanticsLabel: isReadOnly
+                ? 'Switch to move mode (unlock nodes)'
+                : 'Switch to readonly mode (lock nodes)',
+            icon: isReadOnly
+                ? CupertinoIcons.lock_fill
+                : CupertinoIcons.lock_open,
+            color: isReadOnly
+                ? _ObservedFlowColors.selected
+                : DebugTheme.textSecondary,
+            onTap: () => onReadOnlyChanged(!isReadOnly),
           ),
           _HeaderAction(
             key: const ValueKey('observed-auto-layout'),

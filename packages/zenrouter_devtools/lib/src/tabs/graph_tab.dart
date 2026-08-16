@@ -26,6 +26,7 @@ class _NavigationGraphTabState<T extends RouteUnique>
   final _topologyCanvasKey = GlobalKey<_TopologyNodeFlowCanvasState>();
   Object? _selectedNodeId;
   _NavigationGraphMode _mode = _NavigationGraphMode.topology;
+  bool _isTopologyReadOnly = false;
 
   void _resetView() => _topologyCanvasKey.currentState?.fitToView();
 
@@ -99,6 +100,9 @@ class _NavigationGraphTabState<T extends RouteUnique>
         _GraphHeader(
           graph: graph,
           selectedNode: selectedNode,
+          isReadOnly: _isTopologyReadOnly,
+          onReadOnlyChanged: (val) =>
+              setState(() => _isTopologyReadOnly = val),
           onAutoLayout: _autoLayout,
           onReset: _resetView,
           onNavigate: (path) => _navigateToPath(path),
@@ -109,6 +113,7 @@ class _NavigationGraphTabState<T extends RouteUnique>
             key: _topologyCanvasKey,
             graph: graph,
             selectedNodeId: _selectedNodeId,
+            isReadOnly: _isTopologyReadOnly,
             onNodeSelected: (id) => setState(() {
               _selectedNodeId = id;
             }),
@@ -233,6 +238,8 @@ class _GraphHeader extends StatelessWidget {
   const _GraphHeader({
     required this.graph,
     required this.selectedNode,
+    required this.isReadOnly,
+    required this.onReadOnlyChanged,
     required this.onAutoLayout,
     required this.onReset,
     required this.onNavigate,
@@ -241,6 +248,8 @@ class _GraphHeader extends StatelessWidget {
 
   final NavigationGraph<Object> graph;
   final NavigationGraphNode<Object>? selectedNode;
+  final bool isReadOnly;
+  final ValueChanged<bool> onReadOnlyChanged;
   final VoidCallback onAutoLayout;
   final VoidCallback onReset;
   final ValueChanged<String> onNavigate;
@@ -314,6 +323,19 @@ class _GraphHeader extends StatelessWidget {
               onTap: () => onCopy(inspectedNode.path),
             ),
           ],
+          _HeaderIconButton(
+            key: const ValueKey('topology-mode-toggle'),
+            tooltip: isReadOnly
+                ? 'Switch to move mode (unlock nodes)'
+                : 'Switch to readonly mode (lock nodes)',
+            icon: isReadOnly
+                ? CupertinoIcons.lock_fill
+                : CupertinoIcons.lock_open,
+            color: isReadOnly
+                ? _GraphColors.selected
+                : DebugTheme.textSecondary,
+            onTap: () => onReadOnlyChanged(!isReadOnly),
+          ),
           _HeaderIconButton(
             key: const ValueKey('topology-auto-layout'),
             tooltip: 'Auto layout graph',
@@ -670,6 +692,7 @@ class _TopologyNodeFlowCanvas extends StatefulWidget {
     super.key,
     required this.graph,
     required this.selectedNodeId,
+    required this.isReadOnly,
     required this.onNodeSelected,
     required this.onNavigate,
     required this.onCopy,
@@ -677,6 +700,7 @@ class _TopologyNodeFlowCanvas extends StatefulWidget {
 
   final NavigationGraph<Object> graph;
   final Object? selectedNodeId;
+  final bool isReadOnly;
   final ValueChanged<Object> onNodeSelected;
   final ValueChanged<String> onNavigate;
   final ValueChanged<String> onCopy;
@@ -707,6 +731,13 @@ class _TopologyNodeFlowCanvasState extends State<_TopologyNodeFlowCanvas> {
   @override
   void didUpdateWidget(_TopologyNodeFlowCanvas oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.isReadOnly != widget.isReadOnly) {
+      _controller.setBehavior(
+        widget.isReadOnly
+            ? NodeFlowBehavior.inspect
+            : NodeFlowBehavior.preview,
+      );
+    }
     final selectedNodeIds = <Object>{
       for (final node in _controller.nodes.values)
         if (_controller.isNodeSelected(node.id)) node.data.id,
@@ -809,7 +840,9 @@ class _TopologyNodeFlowCanvasState extends State<_TopologyNodeFlowCanvas> {
         key: const ValueKey('topology-node-flow'),
         controller: _controller,
         theme: _topologyNodeFlowTheme,
-        behavior: NodeFlowBehavior.preview,
+        behavior: widget.isReadOnly
+            ? NodeFlowBehavior.inspect
+            : NodeFlowBehavior.preview,
         events: NodeFlowEvents<_TopologyNodeData, Object?>(
           onInit: _controller.fitToView,
           node: NodeEvents<_TopologyNodeData>(
