@@ -1,6 +1,7 @@
 ## 3.0.0
 
 - **BREAKING**: Update dependency to `zenrouter: ^3.0.0`
+- **Feat**: Support **Stack** (floating overlay), **Row** (side-by-side horizontal split), and **Column** (bottom panel vertical split) layout modes for DevTools with an anchored header tool menu (`⋮`), coordinator configuration (`defaultDebugLayoutMode`, `debugLayoutMode`, `setDebugLayoutMode`), and unified `Flex` split panels using `package:hit` for enlarged touch/drag targets on minimal resize handles.
 - **Feat**: Add an interactive declarative navigation graph with active route highlighting.
 - **Feat**: Add an observed runtime flow recorder with directed edges, visit counts, action labels, and a Graph mode switcher.
 - **Feat**: Make the debug panel resizable with fullscreen/restore controls and responsive viewport clamping.
