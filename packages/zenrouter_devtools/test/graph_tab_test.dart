@@ -249,6 +249,32 @@ void main() {
       topologyPositions.first,
     );
 
+    expect(
+      find.byKey(const ValueKey('topology-mode-toggle')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('topology-mode-toggle')));
+    await tester.pump();
+    expect(
+      tester
+          .widget<NodeFlowEditor<dynamic, Object?>>(
+            find.byKey(const ValueKey('topology-node-flow')),
+          )
+          .behavior,
+      NodeFlowBehavior.inspect,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('topology-mode-toggle')));
+    await tester.pump();
+    expect(
+      tester
+          .widget<NodeFlowEditor<dynamic, Object?>>(
+            find.byKey(const ValueKey('topology-node-flow')),
+          )
+          .behavior,
+      NodeFlowBehavior.preview,
+    );
+
     await coordinator.debugFlowAction(
       'Open profile',
       () => coordinator.pushSilently(_ProfileRoute()),
@@ -356,6 +382,41 @@ void main() {
     await tester.pump();
     expect(coordinator.debugScreenCaptureEnabled, isFalse);
     expect(find.text('SCREEN CAPTURE OFF'), findsOneWidget);
+
+    expect(
+      find.byKey(const ValueKey('observed-mode-toggle')),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<NodeFlowEditor<dynamic, Object?>>(
+            find.byKey(const ValueKey('observed-node-flow')),
+          )
+          .behavior,
+      NodeFlowBehavior.preview,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('observed-mode-toggle')));
+    await tester.pump();
+    expect(
+      tester
+          .widget<NodeFlowEditor<dynamic, Object?>>(
+            find.byKey(const ValueKey('observed-node-flow')),
+          )
+          .behavior,
+      NodeFlowBehavior.inspect,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('observed-mode-toggle')));
+    await tester.pump();
+    expect(
+      tester
+          .widget<NodeFlowEditor<dynamic, Object?>>(
+            find.byKey(const ValueKey('observed-node-flow')),
+          )
+          .behavior,
+      NodeFlowBehavior.preview,
+    );
     expect(tester.takeException(), isNull);
   });
 
