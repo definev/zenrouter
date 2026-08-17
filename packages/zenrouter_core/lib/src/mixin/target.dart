@@ -67,9 +67,6 @@ abstract class RouteTarget extends Equatable {
   /// When `false`, pop was initiated externally (back button, system).
   bool isPopByPath = false;
 
-  @override
-  List<Object?> get internalProps => [runtimeType, _path, _onResult];
-
   /// Properties used for equality comparison.
   ///
   /// Override to include route parameters. Two routes are equal

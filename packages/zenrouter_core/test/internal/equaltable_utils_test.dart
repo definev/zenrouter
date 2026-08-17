@@ -51,18 +51,6 @@ class CollectionPropEquatable extends eq.Equatable {
   List<Object?> get props => [items, metadata];
 }
 
-class InternalPropEquatable extends eq.Equatable {
-  const InternalPropEquatable(this.id, {this.internalTag = ''});
-  final String id;
-  final String internalTag;
-
-  @override
-  List<Object?> get props => [id];
-
-  @override
-  List<Object?> get internalProps => [internalTag];
-}
-
 void main() {
   group('mapPropsToHashCode', () {
     test('returns consistent hash for null', () {
@@ -818,15 +806,6 @@ void main() {
     });
 
     group('hashCode', () {
-      test('excludes internalProps from value hashing', () {
-        final a = InternalPropEquatable('id1', internalTag: 'tagA');
-        final b = InternalPropEquatable('id1', internalTag: 'tagB');
-
-        // Same props → equal via ==
-        expect(a == b, isTrue);
-        expect(a.hashCode, equals(b.hashCode));
-      });
-
       test('is consistent across calls', () {
         final a = SimpleEquatable('Alice', 30);
         final h1 = a.hashCode;
@@ -875,28 +854,6 @@ void main() {
         expect(a.toString(), contains('CollectionPropEquatable['));
         expect(a.toString(), contains('[1, 2]'));
         expect(a.toString(), contains('{k: v}'));
-      });
-    });
-
-    group('internalProps', () {
-      test('defaults to empty list', () {
-        final a = SimpleEquatable('Alice', 30);
-        expect(a.internalProps, isEmpty);
-      });
-
-      test('does not affect equality comparison', () {
-        final a = InternalPropEquatable('id1', internalTag: 'tagA');
-        final b = InternalPropEquatable('id1', internalTag: 'tagB');
-
-        // compareWith only compares props, not internalProps
-        expect(a == b, isTrue);
-      });
-
-      test('does not affect hashCode', () {
-        final a = InternalPropEquatable('id1', internalTag: 'tagA');
-        final b = InternalPropEquatable('id1', internalTag: 'tagB');
-
-        expect(a.hashCode, equals(b.hashCode));
       });
     });
   });

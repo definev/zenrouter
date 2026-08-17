@@ -272,7 +272,7 @@ Thay đổi tách ba khái niệm trước đây bị trộn:
 | Lifecycle entry identity | `identical(a, b)` | Ownership, result, disposal |
 | Flutter page identity | `ObjectKey(route)` | Navigator page entry |
 
-`internalProps` như path binding và result completer không còn tham gia `hashCode`. Điều này sửa invariant bắt buộc của Dart:
+Path binding và result completer không tham gia `hashCode`. Điều này sửa invariant bắt buộc của Dart:
 
 ```text
 a == b  ⇒  a.hashCode == b.hashCode

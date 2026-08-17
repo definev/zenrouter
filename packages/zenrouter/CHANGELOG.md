@@ -19,6 +19,9 @@
   `completeOnResult` again after `pop` / `tryPop`; the completer is already
   done. `onDidPop` is idempotent if Flutter's page callback also fires.
 
+- **`Equatable.internalProps` is removed.** Equality and hashing use
+  `runtimeType` + `props` only. Delete leftover overrides.
+
 ### 🚀 New Features
 
 - **`pushReplacement` on indexed/branched parents** now activates the

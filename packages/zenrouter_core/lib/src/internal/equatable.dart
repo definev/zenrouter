@@ -151,13 +151,6 @@ String mapPropsToString(Type runtimeType, List<Object?> props) {
 /// - Provides [compareWith] for controlled equality checks
 /// - Avoids external dependencies
 ///
-/// ## props vs internalProps
-///
-/// | Property       | Purpose                                    | When to override? |
-/// |----------------|-------------------------------------------|-------------------|
-/// | [props]        | User-defined equality (route parameters)   | **Yes** - always  |
-/// | [internalProps]| Legacy framework state; not identity      | **Never**         |
-///
 /// **Example:**
 /// ```dart
 /// class ProductRoute extends RouteTarget with RouteUnique {
@@ -169,8 +162,6 @@ String mapPropsToString(Type runtimeType, List<Object?> props) {
 ///   // Include all parameters that make this route unique
 ///   @override
 ///   List<Object?> get props => [productId, variant];
-///
-///   // Do NOT override internalProps - framework manages it
 /// }
 /// ```
 ///
@@ -180,25 +171,10 @@ String mapPropsToString(Type runtimeType, List<Object?> props) {
 /// 1. Same [runtimeType] (e.g., both are `ProductRoute`)
 /// 2. Same [props] values (e.g., same `productId`)
 ///
-/// [internalProps] are deliberately excluded from both equality and hashing.
 /// Framework lifecycle state is mutable and therefore cannot safely participate
-/// in a value object's hash code.
+/// in a value object's hash code. Put only constructor parameters in [props].
 abstract class Equatable {
   const Equatable();
-
-  // coverage:ignore-start
-  /// Framework-managed properties for internal identity.
-  ///
-  /// **Do not override.** This is used by ZenRouter to track:
-  /// - Runtime type
-  /// - Path binding (`_path`)
-  /// - Result completer (`_onResult`)
-  ///
-  /// These values are not compared and are not used for hashing. The getter is
-  /// retained for compatibility with existing subclasses; new code should keep
-  /// lifecycle identity separate from value identity.
-  List<Object?> get internalProps => [];
-  // coverage:ignore-end
 
   /// User-defined properties for equality comparison.
   ///

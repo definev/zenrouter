@@ -23,6 +23,8 @@
 - **Route value hashing now follows Dart's equality contract.** Mutable path
   and result lifecycle state no longer contributes to `hashCode`;
   `RouteTarget.deepEquals` now means same lifecycle entry (reference identity).
+- **`Equatable.internalProps` is removed.** Equality and hashing use
+  `runtimeType` + `props` only. Delete any leftover subclass overrides.
 - **`CoordinatorModular.defineModules` now returns `Iterable`** and snapshots
   its deterministic iteration order. Duplicate module runtime types throw.
 - **`RouteResolution.data` is deprecated** in favor of the versioned

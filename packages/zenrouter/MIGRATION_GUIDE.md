@@ -117,10 +117,11 @@ expect(await pushFuture, 'done');
 
 - `==` / `hashCode` use `runtimeType` + `props` only. Path binding and the result completer are not hashed.
 - `RouteTarget.deepEquals` is **reference identity** (same lifecycle entry), not a deep value compare.
+- `Equatable.internalProps` is **removed**. It was unused by equality and hashing.
 
 #### Migration
 
-Do not put mutable lifecycle state in `props`. Do not override `internalProps`. If you compared `deepEquals` for “same screen, same params”, use `==` instead.
+Do not put mutable lifecycle state in `props`. Delete any `internalProps` overrides — they no longer compile. If you compared `deepEquals` for “same screen, same params”, use `==` instead.
 
 ### Deprecated `RouteResolution.data`
 
@@ -487,13 +488,6 @@ FutureOr<AppRoute?> parseRouteFromUri(Uri uri) { ... }
 
 ## Internal Properties (`internalProps`)
 
-A new property `internalProps` has been introduced to the `Equatable` base class (and consequently `RouteTarget`) to handling deep comparison and hashing of internal state.
+> Removed in 3.0.0. See [Equality and `deepEquals`](#equality-and-deepequals).
 
-### Changes
-
-- **`internalProps`**: A list of properties used for calculating `hashCode` and ensuring object identity, separate from the public `props`.
-- `RouteTarget` now includes `runtimeType`, `_path`, and the internal result completer in `internalProps`.
-
-### Impact
-
-This ensures that `RouteTarget` instances are correctly distinguished even if they have identical configuration `props`, especially when they belong to different paths or have different lifecycle states. This improves the reliability of deep comparisons and sets containing routes.
+`internalProps` was added in 0.4.0 as a second property list on `Equatable` / `RouteTarget`. It never participated in `==` or `hashCode` in 3.0 and has been deleted. Put route parameters in `props` only.
