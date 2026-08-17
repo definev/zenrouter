@@ -4,6 +4,10 @@
 - **Feat**: Support **Stack** (floating overlay), **Row** (side-by-side horizontal split), and **Column** (bottom panel vertical split) layout modes for DevTools with an anchored header tool menu (`⋮`), coordinator configuration (`defaultDebugLayoutMode`, `debugLayoutMode`, `setDebugLayoutMode`), and unified `Flex` split panels using `package:hit` for enlarged touch/drag targets on minimal resize handles.
 - **Feat**: Add an interactive declarative navigation graph with active route highlighting.
 - **Feat**: Add an observed runtime flow recorder with directed edges, visit counts, action labels, and a Graph mode switcher.
+- **Feat**: Extract the Observed matched transition log as a URI-first `NavigationFlowSession` JSON document. The document contains URIs, history intent, labels, and timestamps — never PNG previews.
+- **Feat**: Replay extracted sessions on the Observed canvas with Play/Pause, step, speed, and playhead highlight. Replay does not re-navigate the live app; Compass and Navigate Here remain live jumps.
+- **Feat**: Export Observed session JSON to the clipboard and import it by rematching URIs against the current `RouteManifest`. Unmatched URIs are skipped. Live Play pauses recording; Import does not.
+- **Feat**: Add an Observed replay timeline with a scrubber and collapsible event list.
 - **Feat**: Make the debug panel resizable with fullscreen/restore controls and responsive viewport clamping.
 - **Feat**: Make the collapsed devtool launcher freely draggable, position-preserving, and safe-area aware.
 - **Feat**: Add automatic, memory-bounded app screen previews to Observed flow nodes with a capture toggle.
