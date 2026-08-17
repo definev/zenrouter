@@ -133,6 +133,21 @@ class _ObservedNavigationFlowViewState
     super.dispose();
   }
 
+  static double _observedCanvasBottomInset({
+    required bool showTimeline,
+    required double timelineHeight,
+    required bool showMessage,
+  }) {
+    if (!showTimeline && !showMessage) return 0;
+    var inset = 8.0;
+    if (showMessage) inset += 40;
+    if (showTimeline) {
+      if (showMessage) inset += 6;
+      inset += timelineHeight;
+    }
+    return inset + 16;
+  }
+
   void _resetView() => _controller.fitToView();
 
   void _setReadOnly(bool value) {
@@ -672,11 +687,18 @@ class _ObservedNavigationFlowViewState
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final showTimeline = !_isLive && (_player?.length ?? 0) > 0;
+                  final showMessage =
+                      _replayBanner != null || _driveConfirmPending;
                   final timelineHeight = !showTimeline
                       ? 0.0
                       : _listExpanded
                       ? math.max(140.0, constraints.maxHeight * 0.36)
                       : 32.0;
+                  final canvasBottomInset = _observedCanvasBottomInset(
+                    showTimeline: showTimeline,
+                    timelineHeight: timelineHeight,
+                    showMessage: showMessage,
+                  );
                   return Stack(
                     children: [
                       Positioned.fill(
@@ -684,76 +706,93 @@ class _ObservedNavigationFlowViewState
                             ? const _EmptyObservedFlow()
                             : NavigationNodeFlowAutoFit(
                                 onFit: _controller.fitToView,
-                                child:
-                                    NodeFlowEditor<_ObservedNodeData, Object?>(
-                                      key: const ValueKey('observed-node-flow'),
-                                      controller: _controller,
-                                      theme: _observedNodeFlowTheme,
-                                      behavior: _isReadOnly
-                                          ? NodeFlowBehavior.inspect
-                                          : NodeFlowBehavior.preview,
-                                      events:
-                                          NodeFlowEvents<
-                                            _ObservedNodeData,
-                                            Object?
-                                          >(
-                                            onInit: _controller.fitToView,
-                                            node: NodeEvents<_ObservedNodeData>(
-                                              onTap: (node) => setState(() {
-                                                _selectedNodeId = node.data.id;
-                                              }),
-                                              onDoubleTap: (node) =>
-                                                  _openZoomModal(node.data.id),
+                                child: Padding(
+                                  padding: EdgeInsets.only(
+                                    bottom: canvasBottomInset,
+                                  ),
+                                  child:
+                                      NodeFlowEditor<
+                                        _ObservedNodeData,
+                                        Object?
+                                      >(
+                                        key: const ValueKey(
+                                          'observed-node-flow',
+                                        ),
+                                        controller: _controller,
+                                        theme: _observedNodeFlowTheme,
+                                        behavior: _isReadOnly
+                                            ? NodeFlowBehavior.inspect
+                                            : NodeFlowBehavior.preview,
+                                        events:
+                                            NodeFlowEvents<
+                                              _ObservedNodeData,
+                                              Object?
+                                            >(
+                                              onInit: _controller.fitToView,
+                                              node:
+                                                  NodeEvents<_ObservedNodeData>(
+                                                    onTap: (node) =>
+                                                        setState(() {
+                                                          _selectedNodeId =
+                                                              node.data.id;
+                                                        }),
+                                                    onDoubleTap: (node) =>
+                                                        _openZoomModal(
+                                                          node.data.id,
+                                                        ),
+                                                  ),
                                             ),
-                                          ),
-                                      nodeBuilder: (context, node) {
-                                        final id = node.data.id;
-                                        final graphNode =
-                                            widget.graph.nodes[id];
-                                        final flowNode = canvasFlow.nodes[id];
-                                        if (graphNode == null ||
-                                            flowNode == null) {
-                                          return const SizedBox.shrink();
-                                        }
-                                        return _ObservedFlowNodeCard(
-                                          key: ValueKey(
-                                            'observed-flow-node-$id',
-                                          ),
-                                          graphNode: graphNode,
-                                          flowNode: flowNode,
-                                          preview: _previewFor(id),
-                                          variants: _variantsFor(
-                                            flowNode,
-                                            playheadUri:
-                                                _player?.current?.currentUri,
-                                          ),
-                                          isCurrent: _isLive && currentId == id,
-                                          isReplay:
-                                              !_isLive && playheadToId == id,
-                                          isReplayFrom:
-                                              !_isLive &&
-                                              playheadFromId == id &&
-                                              playheadToId != id,
-                                          isSelected: _selectedNodeId == id,
-                                          captureEnabled: widget.captureEnabled,
-                                          onZoom: () => _openZoomModal(id),
-                                          onInfoTap: _isLive
-                                              ? null
-                                              : () {
-                                                  setState(() {
-                                                    _selectedNodeId = id;
-                                                  });
-                                                  _seekToLatestArrival(id);
-                                                },
-                                          onNavigate: widget.onNavigate,
-                                          onCopy: widget.onCopy != null
-                                              ? () => widget.onCopy!(
-                                                  flowNode.lastUri.toString(),
-                                                )
-                                              : null,
-                                        );
-                                      },
-                                    ),
+                                        nodeBuilder: (context, node) {
+                                          final id = node.data.id;
+                                          final graphNode =
+                                              widget.graph.nodes[id];
+                                          final flowNode = canvasFlow.nodes[id];
+                                          if (graphNode == null ||
+                                              flowNode == null) {
+                                            return const SizedBox.shrink();
+                                          }
+                                          return _ObservedFlowNodeCard(
+                                            key: ValueKey(
+                                              'observed-flow-node-$id',
+                                            ),
+                                            graphNode: graphNode,
+                                            flowNode: flowNode,
+                                            preview: _previewFor(id),
+                                            variants: _variantsFor(
+                                              flowNode,
+                                              playheadUri:
+                                                  _player?.current?.currentUri,
+                                            ),
+                                            isCurrent:
+                                                _isLive && currentId == id,
+                                            isReplay:
+                                                !_isLive && playheadToId == id,
+                                            isReplayFrom:
+                                                !_isLive &&
+                                                playheadFromId == id &&
+                                                playheadToId != id,
+                                            isSelected: _selectedNodeId == id,
+                                            captureEnabled:
+                                                widget.captureEnabled,
+                                            onZoom: () => _openZoomModal(id),
+                                            onInfoTap: _isLive
+                                                ? null
+                                                : () {
+                                                    setState(() {
+                                                      _selectedNodeId = id;
+                                                    });
+                                                    _seekToLatestArrival(id);
+                                                  },
+                                            onNavigate: widget.onNavigate,
+                                            onCopy: widget.onCopy != null
+                                                ? () => widget.onCopy!(
+                                                    flowNode.lastUri.toString(),
+                                                  )
+                                                : null,
+                                          );
+                                        },
+                                      ),
+                                ),
                               ),
                       ),
                       if (showTimeline ||
