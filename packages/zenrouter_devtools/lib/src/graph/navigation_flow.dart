@@ -241,8 +241,6 @@ final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
 
   /// URI-first document of the current matched log. No preview bytes.
   NavigationFlowSession exportSession() {
-    final encodeId = manifest.idCodec?.encode;
-
     return NavigationFlowSession(
       initialUri: _initialUri,
       ignoredTransitionCount: _ignoredTransitionCount,
@@ -256,13 +254,21 @@ final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
             historyIntent: transition.historyIntent.name,
             actionLabel: transition.actionLabel,
             occurredAt: transition.occurredAt.toUtc().toIso8601String(),
-            fromId:
-                encodeId?.call(transition.fromId) ??
-                transition.fromId.toString(),
-            toId: encodeId?.call(transition.toId) ?? transition.toId.toString(),
+            fromId: _encodeRouteId(transition.fromId),
+            toId: _encodeRouteId(transition.toId),
           ),
       ],
     );
+  }
+
+  String _encodeRouteId(I id) {
+    final codec = manifest.idCodec;
+    if (codec == null) return id.toString();
+    try {
+      return codec.encode(id);
+    } catch (_) {
+      return id.toString();
+    }
   }
 
   bool _record(NavigationCommit commit, {String? actionLabel}) {

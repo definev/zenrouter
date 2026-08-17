@@ -96,7 +96,7 @@ The expanded panel preserves your custom resized dimensions and supports fullscr
 
 - **Inspect Tab**: Shows the current navigation tree. You can see active paths, pop routes, and switch between stateful shell branches.
 - **Graph Tab / Topology**: Shows coordinators, layouts, and routes from `routeManifest`. Pan or zoom the canvas, select nodes for details, and follow the green path to the route matching the current URI.
-- **Graph Tab / Observed**: Builds a directed journey graph from real navigation commits. Edges show the latest action and traversal count; nodes show visits, the last concrete URI, and a preview of the real app screen. Recording and preview capture start automatically when the devtool attaches. Use the camera button to pause capture or the trash button to clear the graph.
+- **Graph Tab / Observed**: Builds a directed journey graph from real navigation commits. Edges show the latest action and traversal count; nodes show visits, the last concrete URI, and a preview of the real app screen. Recording and preview capture start automatically when the devtool attaches. Use the camera button to pause capture or the trash button to clear the graph. Play/Pause/step replay the extracted session on the canvas. It does **not** re-navigate the live app. Export copies URI-first JSON (no screenshots). Import rematches URIs against the current manifest.
 - **Routes Tab**: Lists your `debugRoutes` for quick navigation.
 - **Input Area**: Type a URI (e.g., `/user/123`) and click "Push" or "Replace" to navigate.
 
