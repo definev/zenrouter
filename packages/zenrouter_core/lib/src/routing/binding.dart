@@ -139,11 +139,11 @@ final class RouteBindingRegistry<I extends Object, T extends RouteUri> {
 /// bindings, lookups, and matches.
 extension RouteManifestBinding<I extends Object> on RouteManifest<I> {
   RouteBindingRegistry<I, T> bind<T extends RouteUri>({
-    required Iterable<RouteBinding<I, T>> Function() bindings,
+    required Iterable<RouteBinding<I, T>> bindings,
     RouteNotFoundBinding<T>? notFound,
   }) => RouteBindingRegistry<I, T>(
     manifest: this,
-    bindings: bindings(),
+    bindings: bindings,
     notFound: notFound,
   );
 }

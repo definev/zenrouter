@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:zenrouter/zenrouter.dart';
 import 'mixin_test_utils.dart';
 
 void main() {
@@ -148,5 +151,160 @@ void main() {
         isFalse,
       );
     });
+
+    testWidgets('blocked pop does not complete the route or call onDidPop', (
+      tester,
+    ) async {
+      final coordinator = MixinTestCoordinator();
+      final route = _LifecycleGuardRoute(allowPop: false);
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      unawaited(coordinator.push(route));
+      await tester.pumpAndSettle();
+
+      final popped = await coordinator.tryPop();
+
+      expect(popped, isFalse);
+      expect(coordinator.root.stack.last, route);
+      expect(route.events, ['popGuard']);
+      expect(route.onResult.isCompleted, isFalse);
+      expect(find.byKey(const ValueKey('lifecycle-guard')), findsOneWidget);
+    });
+
+    testWidgets('allowed pop runs popGuard before onDidPop', (tester) async {
+      final coordinator = MixinTestCoordinator();
+      final route = _LifecycleGuardRoute(allowPop: true);
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      unawaited(coordinator.push(route));
+      await tester.pumpAndSettle();
+
+      final popped = await coordinator.tryPop();
+      await tester.pumpAndSettle();
+
+      expect(popped, isTrue);
+      // PopScope may invoke onDidPop again after the page is removed; the
+      // base implementation is idempotent, so only the first teardown counts.
+      expect(route.events.take(3), ['popGuard', 'onDidPop', 'onDiscard']);
+      expect(route.events.first, 'popGuard');
+      expect(route.onResult.isCompleted, isTrue);
+      expect(find.byKey(const ValueKey('simple-home')), findsOneWidget);
+    });
+
+    testWidgets(
+      'allowed pop does not throw after onDiscard disposes canPopListenable',
+      (tester) async {
+        final coordinator = MixinTestCoordinator();
+        final route = _DisposingCanPopListenableRoute();
+
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerDelegate: coordinator.routerDelegate,
+            routeInformationParser: coordinator.routeInformationParser,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        unawaited(coordinator.push(route));
+        await tester.pumpAndSettle();
+
+        await coordinator.tryPop();
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(route.onResult.isCompleted, isTrue);
+        expect(find.byKey(const ValueKey('simple-home')), findsOneWidget);
+      },
+    );
   });
+}
+
+class _LifecycleGuardRoute extends TestAppRoute with RouteGuard {
+  _LifecycleGuardRoute({required this.allowPop});
+
+  final bool allowPop;
+  final events = <String>[];
+
+  @override
+  Future<bool> popGuard() async {
+    events.add('popGuard');
+    return allowPop;
+  }
+
+  @override
+  void onDidPop(Object? result, covariant CoordinatorCore? coordinator) {
+    events.add('onDidPop');
+    super.onDidPop(result, coordinator);
+  }
+
+  @override
+  void onDiscard() {
+    events.add('onDiscard');
+    super.onDiscard();
+  }
+
+  @override
+  Uri toUri() => Uri.parse('/lifecycle-guard');
+
+  @override
+  Widget build(
+    covariant MixinTestCoordinator coordinator,
+    BuildContext context,
+  ) {
+    return const Scaffold(
+      key: ValueKey('lifecycle-guard'),
+      body: Text('Lifecycle Guard'),
+    );
+  }
+
+  @override
+  List<Object?> get props => [allowPop];
+}
+
+class _DisposingCanPopListenableRoute extends TestAppRoute with RouteGuard {
+  final dirty = ValueNotifier(true);
+
+  @override
+  bool get canPop => !dirty.value;
+
+  @override
+  ListenableMixin? get canPopListenable => dirty.toListenableMixin();
+
+  @override
+  Future<bool> popGuard() async => true;
+
+  @override
+  void onDiscard() {
+    dirty.dispose();
+    super.onDiscard();
+  }
+
+  @override
+  Uri toUri() => Uri.parse('/disposing-can-pop');
+
+  @override
+  Widget build(
+    covariant MixinTestCoordinator coordinator,
+    BuildContext context,
+  ) {
+    return const Scaffold(
+      key: ValueKey('disposing-can-pop'),
+      body: Text('Disposing CanPop'),
+    );
+  }
 }

@@ -87,7 +87,7 @@ class ManualManifestCoordinator extends Coordinator<ManualManifestRoute>
   /// Runtime presentation bindings replace a handwritten parser switch.
   @override
   late final routeBindings = manifest.bind<ManualManifestRoute>(
-    bindings: () => <RouteBinding<Object, ManualManifestRoute>>[
+    bindings: <RouteBinding<Object, ManualManifestRoute>>[
       RouteBinding<AppShellRouteId, ManualManifestRoute>(
         id: AppShellRouteId.home,
         create: (_) => ManualHomeRoute(),
