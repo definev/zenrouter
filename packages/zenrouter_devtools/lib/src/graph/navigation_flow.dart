@@ -120,7 +120,8 @@ final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
     int initialRevision = -1,
     DateTime Function()? clock,
   }) : _clock = clock ?? DateTime.now,
-       _lastRecordedRevision = initialRevision {
+       _lastRecordedRevision = initialRevision,
+       _initialUri = initialUri {
     if (maxTransitions <= 0) {
       throw ArgumentError.value(
         maxTransitions,
@@ -206,6 +207,7 @@ final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
   int _lastRecordedRevision;
   int _ignoredTransitionCount = 0;
   I? _entryNodeId;
+  Uri _initialUri;
 
   Map<I, NavigationFlowNode<I>> get nodes => UnmodifiableMapView(_nodes);
 
@@ -233,17 +235,10 @@ final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
 
   /// URI-first document of the current matched log. No preview bytes.
   NavigationFlowSession exportSession() {
-    final entryId = _entryNodeId;
-    final entryUri = entryId == null ? null : _nodes[entryId]?.lastUri;
-    final initialUri =
-        entryUri ??
-        (_transitions.isNotEmpty
-            ? _transitions.first.previousUri
-            : Uri.parse('/'));
     final encodeId = manifest.idCodec?.encode;
 
     return NavigationFlowSession(
-      initialUri: initialUri,
+      initialUri: _initialUri,
       ignoredTransitionCount: _ignoredTransitionCount,
       exportedAt: _clock(),
       transitions: [
@@ -386,6 +381,7 @@ final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
     _screenPreviewOrder.clear();
     _ignoredTransitionCount = 0;
     _entryNodeId = null;
+    _initialUri = initialUri;
     _observeInitialUri(initialUri);
     notifyListeners();
   }
