@@ -163,8 +163,7 @@ void main() {
     MaterialApp.router(
       // ADD THIS LINE FOR RESTORATION WORKING
       restorationScopeId: 'main_restorable',
-      routerDelegate: coordinator.routerDelegate,
-      routeInformationParser: coordinator.routeInformationParser,
+      routerConfig: coordinator,
     ),
   );
 }

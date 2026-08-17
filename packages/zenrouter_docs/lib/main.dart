@@ -47,7 +47,7 @@ void main() {
 /// The root of our documentation application.
 ///
 /// Here we see the Coordinator pattern in its simplest integration:
-/// `MaterialApp.router` accepts our coordinator's delegate and parser,
+/// `MaterialApp.router` accepts our coordinator as `routerConfig`,
 /// and from that point forward, all navigation flows through our
 /// centralized system.
 class ZenRouterDocsApp extends StatelessWidget {
@@ -61,8 +61,7 @@ class ZenRouterDocsApp extends StatelessWidget {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.system,
-      routerDelegate: docsCoordinator.routerDelegate,
-      routeInformationParser: docsCoordinator.routeInformationParser,
+      routerConfig: docsCoordinator,
     );
   }
 }

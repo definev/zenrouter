@@ -203,8 +203,7 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      routerDelegate: appCoordinator.routerDelegate,
-      routeInformationParser: appCoordinator.routeInformationParser,
+      routerConfig: appCoordinator,
     );
   }
 }
@@ -611,8 +610,8 @@ Capability mixins (from `zenrouter_core`; `Coordinator` includes all of them):
 |----------|-------------|
 | `root` | Main navigation path (always present) |
 | `paths` | All navigation paths managed by coordinator |
-| `routerDelegate` | Router delegate for MaterialApp.router |
-| `routeInformationParser` | Route information parser |
+| `routerDelegate` | Router delegate (via `RouterConfig`) |
+| `routeInformationParser` | Route information parser (via `RouterConfig`) |
 
 **Example:**
 ```dart
@@ -628,8 +627,7 @@ class AppCoordinator extends Coordinator<AppRoute> {
 }
 
 MaterialApp.router(
-  routerDelegate: coordinator.routerDelegate,
-  routeInformationParser: coordinator.routeInformationParser,
+  routerConfig: coordinator,
 )
 ```
 

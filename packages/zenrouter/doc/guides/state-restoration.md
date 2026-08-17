@@ -17,8 +17,7 @@ Add a `restorationScopeId` to your `MaterialApp.router`. This ID tells Flutter t
 ```dart
 MaterialApp.router(
   restorationScopeId: 'app_state', // Required to enable restoration
-  routerDelegate: coordinator.routerDelegate,
-  routeInformationParser: coordinator.routeInformationParser,
+  routerConfig: coordinator,
 )
 ```
 

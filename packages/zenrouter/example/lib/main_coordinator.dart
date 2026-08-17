@@ -22,8 +22,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp.router(
       title: 'ZenRouter Nested Routes Example',
       restorationScopeId: 'main_coordinator',
-      routerDelegate: coordinator.routerDelegate,
-      routeInformationParser: coordinator.routeInformationParser,
+      routerConfig: coordinator,
     );
   }
 }

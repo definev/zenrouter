@@ -202,7 +202,7 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      routeConfig: appCoordinator,
+      routerConfig: appCoordinator,
     );
   }
 }
@@ -611,8 +611,8 @@ Capability mixins (từ `zenrouter_core`; `Coordinator` gồm tất cả):
 |----------|-------------|
 | `root` | Đường dẫn điều hướng chính (luôn hiện diện) |
 | `paths` | Tất cả các đường dẫn điều hướng được quản lý bởi coordinator |
-| `routerDelegate` | Router delegate cho MaterialApp.router |
-| `routeInformationParser` | Route information parser |
+| `routerDelegate` | Router delegate (qua `RouterConfig`) |
+| `routeInformationParser` | Route information parser (qua `RouterConfig`) |
 
 **Ví dụ:**
 ```dart
@@ -628,8 +628,7 @@ class AppCoordinator extends Coordinator<AppRoute> {
 }
 
 MaterialApp.router(
-  routerDelegate: coordinator.routerDelegate,
-  routeInformationParser: coordinator.routeInformationParser,
+  routerConfig: coordinator,
 )
 ```
 
