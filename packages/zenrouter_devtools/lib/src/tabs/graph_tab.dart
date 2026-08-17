@@ -74,6 +74,10 @@ class _NavigationGraphTabState<T extends RouteUnique>
                   _NavigationGraphMode.observed => ObservedNavigationFlowView(
                     graph: graph,
                     flow: flow,
+                    manifest: widget.coordinator.routeManifest,
+                    acquireRecordingPause: widget
+                        .coordinator
+                        .acquireDebugNavigationFlowRecordingPause,
                     captureEnabled:
                         widget.coordinator.debugScreenCaptureEnabled,
                     onCaptureChanged:

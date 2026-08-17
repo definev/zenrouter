@@ -451,6 +451,311 @@ void main() {
     expect(positionOf('five').dx, first.dx);
     expect(positionOf('five').dy, first.dy + nodeHeight + verticalGap);
   });
+
+  testWidgets('play key exists after matched transitions are recorded', (
+    tester,
+  ) async {
+    await _pumpObservedWithTransitions(tester);
+    expect(find.byKey(const ValueKey('observed-replay-play')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('step changes 1-based REPLAY i / n', (tester) async {
+    await _pumpObservedWithTransitions(tester);
+    await tester.tap(find.byKey(const ValueKey('observed-replay-next')));
+    await tester.pump();
+    expect(find.textContaining('REPLAY 1 / 2'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('observed-replay-next')));
+    await tester.pump();
+    expect(find.textContaining('REPLAY 2 / 2'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('exit restores LIVE and records the next pushSilently', (
+    tester,
+  ) async {
+    final coordinator = await _pumpObservedWithTransitions(tester);
+    await tester.tap(find.byKey(const ValueKey('observed-replay-play')));
+    await tester.pump();
+    expect(find.textContaining('REPLAY 1 / 2'), findsOneWidget);
+    expect(coordinator.debugNavigationFlowRecording, isFalse);
+
+    await tester.tap(find.byKey(const ValueKey('observed-replay-exit')));
+    await tester.pump();
+    expect(find.textContaining('REPLAY'), findsNothing);
+    expect(find.text('LIVE'), findsWidgets);
+    expect(coordinator.debugNavigationFlowRecording, isTrue);
+
+    final before = coordinator.debugNavigationFlow.transitions.length;
+    await coordinator.pushSilently(_ProfileRoute());
+    await tester.pump();
+    expect(coordinator.debugNavigationFlow.transitions, hasLength(before + 1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('leave Observed during live-export replay does not throw', (
+    tester,
+  ) async {
+    final coordinator = await _pumpObservedWithTransitions(tester);
+    await tester.tap(find.byKey(const ValueKey('observed-replay-play')));
+    await tester.pump();
+    expect(coordinator.debugNavigationFlowRecording, isFalse);
+
+    await tester.tap(find.text('Topology'));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(coordinator.debugNavigationFlowRecording, isTrue);
+
+    final before = coordinator.debugNavigationFlow.transitions.length;
+    await coordinator.pushSilently(_ProfileRoute());
+    await tester.pump();
+    expect(coordinator.debugNavigationFlow.transitions, hasLength(before + 1));
+  });
+
+  testWidgets('leave Graph during live-export replay does not throw', (
+    tester,
+  ) async {
+    final coordinator = await _pumpObservedWithTransitions(tester);
+    await tester.tap(find.byKey(const ValueKey('observed-replay-play')));
+    await tester.pump();
+
+    await tester.tap(find.text('Inspect'));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(coordinator.debugNavigationFlowRecording, isTrue);
+
+    final before = coordinator.debugNavigationFlow.transitions.length;
+    await coordinator.pushSilently(_ProfileRoute());
+    await tester.pump();
+    expect(coordinator.debugNavigationFlow.transitions, hasLength(before + 1));
+  });
+
+  testWidgets('close overlay during live-export replay does not throw', (
+    tester,
+  ) async {
+    final coordinator = await _pumpObservedWithTransitions(tester);
+    await tester.tap(find.byKey(const ValueKey('observed-replay-play')));
+    await tester.pump();
+
+    coordinator.toggleDebugOverlay();
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(coordinator.debugNavigationFlowRecording, isTrue);
+
+    final before = coordinator.debugNavigationFlow.transitions.length;
+    await coordinator.pushSilently(_ProfileRoute());
+    await tester.pump();
+    expect(coordinator.debugNavigationFlow.transitions, hasLength(before + 1));
+  });
+
+  testWidgets('import of recorded JSON enters replay without a lease', (
+    tester,
+  ) async {
+    final coordinator = await _pumpObservedWithTransitions(tester);
+    final encoded = coordinator.debugNavigationFlow.exportSession().encode();
+    final recorded = coordinator.debugNavigationFlow.transitions.length;
+
+    await tester.tap(find.byKey(const ValueKey('observed-replay-import')));
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const ValueKey('observed-replay-import-field')),
+      encoded,
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('observed-replay-import-confirm')),
+    );
+    await tester.pump();
+
+    expect(find.textContaining('REPLAY 1 / 2'), findsOneWidget);
+    expect(find.text('Replaying imported session.'), findsOneWidget);
+    expect(coordinator.debugNavigationFlowRecording, isTrue);
+
+    await coordinator.pushSilently(_ProfileRoute());
+    await tester.pump();
+    expect(
+      coordinator.debugNavigationFlow.transitions,
+      hasLength(recorded + 1),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('import of unmatched URIs shows banner and disables transport', (
+    tester,
+  ) async {
+    await _pumpObservedWithTransitions(tester);
+    const unmatchedJson = '''
+{
+  "schemaVersion": 1,
+  "kind": "zenrouter.devtools.observedSession",
+  "initialUri": "/unknown",
+  "ignoredTransitionCount": 0,
+  "transitions": [
+    {
+      "revision": 1,
+      "previousUri": "/unknown",
+      "currentUri": "/also-unknown",
+      "historyIntent": "push",
+      "occurredAt": "2026-08-17T12:00:01.000Z"
+    }
+  ]
+}''';
+
+    await tester.tap(find.byKey(const ValueKey('observed-replay-import')));
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const ValueKey('observed-replay-import-field')),
+      unmatchedJson,
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('observed-replay-import-confirm')),
+    );
+    await tester.pump();
+
+    expect(
+      find.text('Imported session did not match this manifest.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('REPLAY 0 / 0'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('observed-replay-play')));
+    await tester.pump();
+    expect(find.textContaining('REPLAY 0 / 0'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('live navigate during replay does not loadGraph', (tester) async {
+    final coordinator = await _pumpObservedWithTransitions(tester);
+    await tester.tap(find.byKey(const ValueKey('observed-replay-next')));
+    await tester.pump();
+
+    final editor = tester.widget<NodeFlowEditor<dynamic, Object?>>(
+      find.byKey(const ValueKey('observed-node-flow')),
+    );
+    final ids = editor.controller.nodes.keys.toList(growable: false);
+    final positions = [
+      for (final node in editor.controller.nodes.values) node.position.value,
+    ];
+
+    await coordinator.navigate(_ProfileRoute());
+    await tester.pump();
+
+    expect(editor.controller.nodes.keys.toList(), ids);
+    expect([
+      for (final node in editor.controller.nodes.values) node.position.value,
+    ], positions);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('sparkles is disabled during replay', (tester) async {
+    await _pumpObservedWithTransitions(tester);
+    await tester.tap(find.byKey(const ValueKey('observed-replay-next')));
+    await tester.pump();
+
+    final editor = tester.widget<NodeFlowEditor<dynamic, Object?>>(
+      find.byKey(const ValueKey('observed-node-flow')),
+    );
+    final firstId = editor.controller.nodes.keys.first;
+    final original = editor.controller.nodes[firstId]!.position.value;
+    editor.controller
+      ..startNodeDrag(firstId)
+      ..moveNodeDrag(const Offset(40, 24))
+      ..endNodeDrag();
+    await tester.pump();
+    final moved = editor.controller.nodes[firstId]!.position.value;
+    expect(moved, isNot(original));
+
+    await tester.tap(find.byKey(const ValueKey('observed-auto-layout')));
+    await tester.pump();
+    expect(editor.controller.nodes[firstId]!.position.value, moved);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'camera during live-export replay does not attach or evict previews',
+    (tester) async {
+      final coordinator = await _pumpObservedWithTransitions(tester);
+      const png =
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4'
+          '2mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+      final previewRevision = coordinator.lastNavigationCommit!.revision;
+      coordinator.debugNavigationFlow.attachScreenPreview(
+        'home',
+        base64Decode(png),
+        revision: previewRevision,
+      );
+      final playheadPreview = coordinator.debugNavigationFlow
+          .previewForRevision(previewRevision);
+      expect(playheadPreview, isNotNull);
+
+      await tester.tap(find.byKey(const ValueKey('observed-replay-play')));
+      await tester.pump();
+
+      await tester.tap(
+        find.byKey(const ValueKey('observed-screen-capture-toggle')),
+      );
+      await tester.pump();
+      await tester.tap(
+        find.byKey(const ValueKey('observed-screen-capture-toggle')),
+      );
+      await tester.pump();
+
+      await coordinator.pushSilently(_ProfileRoute());
+      await tester.pump();
+      for (var attempt = 0; attempt < 5; attempt += 1) {
+        await tester.pump();
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)),
+        );
+      }
+
+      expect(
+        coordinator.debugNavigationFlow.previewForRevision(previewRevision),
+        same(playheadPreview),
+      );
+      expect(
+        coordinator.debugNavigationFlow.previewForRevision(
+          coordinator.lastNavigationCommit!.revision,
+        ),
+        isNull,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('trash after play does not throw', (tester) async {
+    await _pumpObservedWithTransitions(tester);
+    await tester.tap(find.byKey(const ValueKey('observed-replay-play')));
+    await tester.pump();
+    await tester.tap(find.byIcon(CupertinoIcons.trash));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(find.textContaining('REPLAY'), findsNothing);
+  });
+}
+
+Future<_TestCoordinator> _pumpObservedWithTransitions(
+  WidgetTester tester,
+) async {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = const Size(800, 600);
+  addTearDown(() {
+    tester.view.resetDevicePixelRatio();
+    tester.view.resetPhysicalSize();
+  });
+
+  final coordinator = _TestCoordinator()..toggleDebugOverlay();
+  addTearDown(coordinator.dispose);
+  await tester.pumpWidget(
+    CupertinoApp(home: DebugOverlay<_TestRoute>(coordinator: coordinator)),
+  );
+  await tester.tap(find.text('Graph'));
+  await tester.pump();
+  await coordinator.pushSilently(_ProfileRoute());
+  await tester.pump();
+  await coordinator.pushSilently(_HomeRoute());
+  await tester.pump();
+  await tester.tap(find.text('Observed'));
+  await tester.pump();
+  return coordinator;
 }
 
 Rect _nodeRect(Node<dynamic> node) => node.position.value & node.size.value;

@@ -2,18 +2,27 @@ import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:vyuh_node_flow/vyuh_node_flow.dart' hide DebugTheme;
+import 'package:zenrouter/zenrouter.dart';
 
 import '../widgets/debug_theme.dart';
 import 'navigation_flow.dart';
+import 'navigation_flow_player.dart';
+import 'navigation_flow_session.dart';
 import 'navigation_graph.dart';
 import 'node_flow_canvas.dart';
+import 'observed_replay_controls.dart';
+
+enum _ObservedReplayMode { live, replayPaused, replayPlaying }
 
 class ObservedNavigationFlowView extends StatefulWidget {
   const ObservedNavigationFlowView({
     super.key,
     required this.graph,
     required this.flow,
+    required this.manifest,
+    required this.acquireRecordingPause,
     required this.captureEnabled,
     required this.onCaptureChanged,
     required this.onClear,
@@ -23,6 +32,8 @@ class ObservedNavigationFlowView extends StatefulWidget {
 
   final NavigationGraph<Object> graph;
   final NavigationFlowRecorder<Object> flow;
+  final RouteManifest<Object> manifest;
+  final VoidCallback Function() acquireRecordingPause;
   final bool captureEnabled;
   final ValueChanged<bool> onCaptureChanged;
   final VoidCallback onClear;
@@ -36,11 +47,28 @@ class ObservedNavigationFlowView extends StatefulWidget {
 
 class _ObservedNavigationFlowViewState
     extends State<ObservedNavigationFlowView> {
+  static const _speeds = [0.5, 1.0, 2.0, 4.0];
+
   late final NodeFlowController<_ObservedNodeData, Object?> _controller;
   late _ObservedNodeFlowModel _model;
   Object? _selectedNodeId;
   Object? _zoomedNodeId;
   bool _isReadOnly = false;
+  _ObservedReplayMode _mode = _ObservedReplayMode.live;
+  NavigationFlowPlayer<Object>? _player;
+  NavigationFlowRecorder<Object>? _hydrated;
+  _ObservedNodeFlowModel? _frozenModel;
+  Map<Object, NavigationFlowScreenPreview> _replayLatestPreviews = const {};
+  bool _replayFromLiveExport = false;
+  bool _importedUnmatched = false;
+  double _speed = 1;
+  VoidCallback _releaseRecordingPause = _noopRelease;
+
+  static void _noopRelease() {}
+
+  bool get _isLive => _mode == _ObservedReplayMode.live;
+
+  NavigationFlowRecorder<Object> get _canvasFlow => _hydrated ?? widget.flow;
 
   @override
   void initState() {
@@ -53,11 +81,14 @@ class _ObservedNavigationFlowViewState
       nodes: _model.nodes,
       connections: _model.connections,
     );
+    _applyConnectionStyles();
   }
 
   @override
   void didUpdateWidget(ObservedNavigationFlowView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // Live URI / recorder growth must not rebake the hydrated storyboard.
+    if (!_isLive) return;
     final selectedNodeIds = <Object>{
       for (final node in _controller.nodes.values)
         if (_controller.isNodeSelected(node.id)) node.data.id,
@@ -82,10 +113,13 @@ class _ObservedNavigationFlowViewState
       );
       _restoreSelection(selectedNodeIds);
     }
+    _applyConnectionStyles();
   }
 
   @override
   void dispose() {
+    _disposeReplaySession();
+    _releaseRecordingPause();
     _controller.dispose();
     super.dispose();
   }
@@ -109,8 +143,9 @@ class _ObservedNavigationFlowViewState
   ) {
     final data = node.data;
     if (data is! _ObservedNodeData) return false;
-    final color = widget.graph.activeRouteId == data.id
-        ? _ObservedFlowColors.active
+    final highlightId = _isLive ? widget.graph.activeRouteId : _player?.toId;
+    final color = highlightId == data.id
+        ? (_isLive ? _ObservedFlowColors.active : _ObservedFlowColors.selected)
         : defaultColor;
     canvas.drawRRect(
       RRect.fromRectAndRadius(bounds, Radius.circular(DebugTheme.radiusSm)),
@@ -139,6 +174,9 @@ class _ObservedNavigationFlowViewState
   }
 
   void _clearFlow() {
+    if (!_isLive) {
+      _exitReplay();
+    }
     setState(() {
       _selectedNodeId = null;
       _zoomedNodeId = null;
@@ -159,6 +197,7 @@ class _ObservedNavigationFlowViewState
   }
 
   void _autoLayout() {
+    if (!_isLive) return;
     final selectedNodeIds = <Object>{
       for (final node in _controller.nodes.values)
         if (_controller.isNodeSelected(node.id)) node.data.id,
@@ -173,11 +212,294 @@ class _ObservedNavigationFlowViewState
     );
     _restoreSelection(selectedNodeIds);
     _controller.fitToView();
+    _applyConnectionStyles();
+  }
+
+  void _enterReplay({
+    required NavigationFlowSession session,
+    required int initialIndex,
+    required bool play,
+    required bool pauseLiveRecording,
+  }) {
+    _disposeReplaySession();
+    _releaseRecordingPause();
+    _releaseRecordingPause = _noopRelease;
+
+    _hydrated = NavigationFlowRecorder.fromSession(widget.manifest, session);
+    _replayLatestPreviews = pauseLiveRecording
+        ? _copyLiveLatestPreviews()
+        : const {};
+    _player = NavigationFlowPlayer(
+      transitions: _hydrated!.transitions,
+      previewsByRevision: pauseLiveRecording
+          ? _copyLivePreviewRefs()
+          : const {},
+      latestPreviewById: _replayLatestPreviews,
+    );
+    _player!.addListener(_onPlayerChanged);
+    _player!.setSpeed(_speed);
+    final previousPositions = <Object, Offset>{
+      for (final node in _controller.nodes.values)
+        node.data.id: node.position.value,
+    };
+    _frozenModel = _ObservedNodeFlowModel.calculate(
+      widget.graph,
+      _hydrated!,
+      previousPositions: previousPositions,
+    );
+    _model = _frozenModel!;
+    _replayFromLiveExport = pauseLiveRecording;
+    _importedUnmatched =
+        !pauseLiveRecording &&
+        session.transitions.isNotEmpty &&
+        _hydrated!.transitions.isEmpty;
+    _mode = play
+        ? _ObservedReplayMode.replayPlaying
+        : _ObservedReplayMode.replayPaused;
+    _controller.loadGraph(
+      NodeGraph<_ObservedNodeData, Object?>(
+        nodes: _model.nodes,
+        connections: _model.connections,
+        viewport: _controller.viewport,
+      ),
+    );
+    if (pauseLiveRecording) {
+      _releaseRecordingPause = widget.acquireRecordingPause();
+    }
+    if (_player!.length > 0) {
+      _player!.seek(initialIndex);
+      if (play) _player!.play();
+    }
+    _applyConnectionStyles();
+    _centerOnPlayhead();
+    setState(() {});
+  }
+
+  void _exitReplay() {
+    _disposeReplaySession();
+    _releaseRecordingPause();
+    _releaseRecordingPause = _noopRelease;
+    _mode = _ObservedReplayMode.live;
+    _replayFromLiveExport = false;
+    _importedUnmatched = false;
+    if (!mounted) return;
+    final previousPositions = <Object, Offset>{
+      for (final node in _controller.nodes.values)
+        node.data.id: node.position.value,
+    };
+    _model = _ObservedNodeFlowModel.calculate(
+      widget.graph,
+      widget.flow,
+      previousPositions: previousPositions,
+    );
+    _controller.loadGraph(
+      NodeGraph<_ObservedNodeData, Object?>(
+        nodes: _model.nodes,
+        connections: _model.connections,
+        viewport: _controller.viewport,
+      ),
+    );
+    _applyConnectionStyles();
+    setState(() {});
+  }
+
+  void _disposeReplaySession() {
+    _player?.removeListener(_onPlayerChanged);
+    _player?.dispose();
+    _player = null;
+    _hydrated?.dispose();
+    _hydrated = null;
+    _frozenModel = null;
+    _replayLatestPreviews = const {};
+  }
+
+  void _onPlayerChanged() {
+    if (!mounted || _player == null) return;
+    _mode = _player!.isPlaying
+        ? _ObservedReplayMode.replayPlaying
+        : _ObservedReplayMode.replayPaused;
+    _applyConnectionStyles();
+    _centerOnPlayhead();
+    setState(() {});
+  }
+
+  void _centerOnPlayhead() {
+    final toId = _player?.toId;
+    if (toId == null) return;
+    final flowId = _model.flowIds[toId];
+    if (flowId == null) return;
+    _controller.selectNode(flowId);
+    _controller.centerOnNode(flowId);
+  }
+
+  void _applyConnectionStyles() {
+    final routeByFlowId = <String, Object>{
+      for (final entry in _model.flowIds.entries) entry.value: entry.key,
+    };
+    final playFrom = _isLive ? null : _player?.fromId;
+    final playTo = _isLive ? null : _player?.toId;
+    final liveActive = _isLive ? widget.graph.activeRouteId : null;
+    for (final conn in _controller.connections) {
+      final source = routeByFlowId[conn.sourceNodeId];
+      final target = routeByFlowId[conn.targetNodeId];
+      final isDownward = conn.sourcePortId == nodeFlowOutputPortId;
+      final isReplayEdge =
+          playFrom != null &&
+          playTo != null &&
+          ((source == playFrom && target == playTo) ||
+              (source == playTo && target == playFrom));
+      final isLiveEdge = liveActive != null && target == liveActive;
+      if (isReplayEdge) {
+        conn.color = _ObservedFlowColors.selected;
+        conn.strokeWidth = 2.4;
+      } else if (isLiveEdge) {
+        final color = _ObservedFlowColors.active;
+        conn.color = isDownward ? color : color.withValues(alpha: 0.7);
+        conn.strokeWidth = 2.2;
+      } else {
+        final color = _ObservedFlowColors.edge;
+        conn.color = isDownward ? color : color.withValues(alpha: 0.7);
+        conn.strokeWidth = isDownward ? 1.8 : 1.4;
+      }
+    }
+  }
+
+  Map<int, NavigationFlowScreenPreview> _copyLivePreviewRefs() {
+    final live = widget.flow;
+    return {
+      for (final transition in live.transitions)
+        transition.revision: ?live.previewForRevision(transition.revision),
+    };
+  }
+
+  Map<Object, NavigationFlowScreenPreview> _copyLiveLatestPreviews() {
+    return {
+      for (final node in widget.flow.nodes.values) node.id: ?node.screenPreview,
+    };
+  }
+
+  void _playOrToggle() {
+    if (_isLive) {
+      _enterReplayFromLive(initialIndex: 0, play: true);
+      return;
+    }
+    final player = _player;
+    if (player == null) return;
+    if (player.isPlaying) {
+      player.pause();
+    } else {
+      player.play();
+    }
+  }
+
+  void _stepBack() {
+    if (_isLive) {
+      final last = widget.flow.transitions.length - 1;
+      if (last < 0) return;
+      _enterReplayFromLive(initialIndex: last, play: false);
+      return;
+    }
+    _player?.stepBack();
+  }
+
+  void _stepForward() {
+    if (_isLive) {
+      _enterReplayFromLive(initialIndex: 0, play: false);
+      return;
+    }
+    _player?.stepForward();
+  }
+
+  void _jumpStart() {
+    if (_isLive) {
+      _enterReplayFromLive(initialIndex: 0, play: false);
+      return;
+    }
+    _player?.seek(0);
+  }
+
+  void _jumpEnd() {
+    if (_isLive) {
+      final last = widget.flow.transitions.length - 1;
+      if (last < 0) return;
+      _enterReplayFromLive(initialIndex: last, play: false);
+      return;
+    }
+    final player = _player;
+    if (player == null || player.length == 0) return;
+    player.seek(player.length - 1);
+  }
+
+  void _enterReplayFromLive({required int initialIndex, required bool play}) {
+    if (widget.flow.transitions.isEmpty) return;
+    _enterReplay(
+      session: widget.flow.exportSession(),
+      initialIndex: initialIndex,
+      play: play,
+      pauseLiveRecording: true,
+    );
+  }
+
+  void _cycleSpeed() {
+    final index = _speeds.indexOf(_speed);
+    _speed = _speeds[(index + 1) % _speeds.length];
+    _player?.setSpeed(_speed);
+    setState(() {});
+  }
+
+  void _exportSession() {
+    Clipboard.setData(
+      ClipboardData(text: widget.flow.exportSession().encode()),
+    );
+  }
+
+  Future<void> _importSession() async {
+    final source = await showObservedSessionImportDialog(context);
+    if (!mounted || source == null) return;
+    try {
+      final session = NavigationFlowSession.decode(source);
+      _enterReplay(
+        session: session,
+        initialIndex: 0,
+        play: false,
+        pauseLiveRecording: false,
+      );
+    } on FormatException {
+      // Invalid document stays on the current canvas.
+    }
+  }
+
+  NavigationFlowScreenPreview? _previewFor(Object id) {
+    if (!_isLive) {
+      if (_player?.toId == id) return _player?.currentPreview;
+      return _replayLatestPreviews[id];
+    }
+    return _canvasFlow.nodes[id]?.screenPreview;
+  }
+
+  String? get _replayBanner {
+    if (_isLive) return null;
+    if (_importedUnmatched) return observedReplayUnmatchedBanner;
+    if (_replayFromLiveExport) return observedReplayLiveExportBanner;
+    return observedReplayImportBanner;
+  }
+
+  String get _transitionLabel {
+    if (_isLive) {
+      return '${widget.flow.transitions.length} transitions';
+    }
+    final player = _player;
+    if (player == null || player.length == 0) return 'REPLAY 0 / 0';
+    final index = player.index < 0 ? 0 : player.index + 1;
+    return 'REPLAY $index / ${player.length}';
   }
 
   @override
   Widget build(BuildContext context) {
+    final canvasFlow = _canvasFlow;
     final currentId = widget.graph.activeRouteId;
+    final playheadToId = _player?.toId;
+    final playheadFromId = _player?.fromId;
     final inspectedId = _selectedNodeId ?? currentId;
     final inspectedNode = inspectedId == null
         ? null
@@ -187,28 +509,45 @@ class _ObservedNavigationFlowViewState
     final zoomedGraphNode = zoomedId == null
         ? null
         : widget.graph.nodes[zoomedId];
-    final zoomedFlowNode = zoomedId == null
-        ? null
-        : widget.flow.nodes[zoomedId];
+    final zoomedFlowNode = zoomedId == null ? null : canvasFlow.nodes[zoomedId];
+    final showTransport = !_isLive || widget.flow.transitions.isNotEmpty;
 
     return Stack(
       children: [
         Column(
           children: [
             _FlowHeader(
-              flow: widget.flow,
+              flow: canvasFlow,
+              transitionLabel: _transitionLabel,
               inspectedNode: inspectedNode,
               isSelected: _selectedNodeId != null,
               captureEnabled: widget.captureEnabled,
               onCaptureChanged: widget.onCaptureChanged,
               isReadOnly: _isReadOnly,
               onReadOnlyChanged: _setReadOnly,
-              onAutoLayout: _autoLayout,
+              onAutoLayout: _isLive ? _autoLayout : null,
               onReset: _resetView,
               onClear: _clearFlow,
             ),
+            if (showTransport)
+              ObservedReplayTransport(
+                isLive: _isLive,
+                isPlaying: _mode == _ObservedReplayMode.replayPlaying,
+                enabled: canvasFlow.transitions.isNotEmpty,
+                speed: _speed,
+                banner: _replayBanner,
+                onJumpStart: _jumpStart,
+                onStepBack: _stepBack,
+                onPlayPause: _playOrToggle,
+                onStepForward: _stepForward,
+                onJumpEnd: _jumpEnd,
+                onExit: _exitReplay,
+                onCycleSpeed: _cycleSpeed,
+                onExport: _exportSession,
+                onImport: _importSession,
+              ),
             Expanded(
-              child: widget.flow.edges.isEmpty
+              child: canvasFlow.edges.isEmpty
                   ? const _EmptyObservedFlow()
                   : NavigationNodeFlowAutoFit(
                       onFit: _controller.fitToView,
@@ -231,12 +570,18 @@ class _ObservedNavigationFlowViewState
                         nodeBuilder: (context, node) {
                           final id = node.data.id;
                           final graphNode = widget.graph.nodes[id]!;
-                          final flowNode = widget.flow.nodes[id]!;
+                          final flowNode = canvasFlow.nodes[id]!;
                           return _ObservedFlowNodeCard(
                             key: ValueKey('observed-flow-node-$id'),
                             graphNode: graphNode,
                             flowNode: flowNode,
-                            isCurrent: currentId == id,
+                            preview: _previewFor(id),
+                            isCurrent: _isLive && currentId == id,
+                            isReplay: !_isLive && playheadToId == id,
+                            isReplayFrom:
+                                !_isLive &&
+                                playheadFromId == id &&
+                                playheadToId != id,
                             isSelected: _selectedNodeId == id,
                             captureEnabled: widget.captureEnabled,
                             onZoom: () => _openZoomModal(id),
@@ -262,6 +607,7 @@ class _ObservedNavigationFlowViewState
             child: _ObservedScreenPreviewZoomModal(
               graphNode: zoomedGraphNode,
               flowNode: zoomedFlowNode,
+              preview: _previewFor(zoomedId!),
               captureEnabled: widget.captureEnabled,
               onClose: _closeZoomModal,
               onNavigate: widget.onNavigate != null
@@ -285,6 +631,7 @@ class _ObservedNavigationFlowViewState
 class _FlowHeader extends StatelessWidget {
   const _FlowHeader({
     required this.flow,
+    required this.transitionLabel,
     required this.inspectedNode,
     required this.isSelected,
     required this.captureEnabled,
@@ -297,13 +644,14 @@ class _FlowHeader extends StatelessWidget {
   });
 
   final NavigationFlowRecorder<Object> flow;
+  final String transitionLabel;
   final NavigationGraphNode<Object>? inspectedNode;
   final bool isSelected;
   final bool captureEnabled;
   final ValueChanged<bool> onCaptureChanged;
   final bool isReadOnly;
   final ValueChanged<bool> onReadOnlyChanged;
-  final VoidCallback onAutoLayout;
+  final VoidCallback? onAutoLayout;
   final VoidCallback onReset;
   final VoidCallback onClear;
 
@@ -332,7 +680,7 @@ class _FlowHeader extends StatelessWidget {
               children: [
                 Text(
                   '${flow.nodes.length} screens  •  ${flow.edges.length} '
-                  'paths  •  ${flow.transitions.length} transitions'
+                  'paths  •  $transitionLabel'
                   '${previewCount == 0 ? '' : '  •  $previewCount previews'}'
                   '${flow.ignoredTransitionCount == 0 ? '' : '  •  ${flow.ignoredTransitionCount} unmatched'}',
                   maxLines: 1,
@@ -393,7 +741,9 @@ class _FlowHeader extends StatelessWidget {
             key: const ValueKey('observed-auto-layout'),
             semanticsLabel: 'Auto layout observed flow',
             icon: CupertinoIcons.sparkles,
-            color: _ObservedFlowColors.selected,
+            color: onAutoLayout == null
+                ? DebugTheme.textDisabled
+                : _ObservedFlowColors.selected,
             onTap: onAutoLayout,
           ),
           _HeaderAction(
@@ -424,7 +774,7 @@ class _HeaderAction extends StatelessWidget {
 
   final String semanticsLabel;
   final IconData icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final Color color;
 
   @override
@@ -476,7 +826,10 @@ class _ObservedFlowNodeCard extends StatelessWidget {
     super.key,
     required this.graphNode,
     required this.flowNode,
+    this.preview,
     required this.isCurrent,
+    this.isReplay = false,
+    this.isReplayFrom = false,
     required this.isSelected,
     required this.captureEnabled,
     required this.onZoom,
@@ -486,7 +839,10 @@ class _ObservedFlowNodeCard extends StatelessWidget {
 
   final NavigationGraphNode<Object> graphNode;
   final NavigationFlowNode<Object> flowNode;
+  final NavigationFlowScreenPreview? preview;
   final bool isCurrent;
+  final bool isReplay;
+  final bool isReplayFrom;
   final bool isSelected;
   final bool captureEnabled;
   final VoidCallback onZoom;
@@ -495,16 +851,15 @@ class _ObservedFlowNodeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenshotBorderColor = isCurrent
-        ? _ObservedFlowColors.active
-        : isSelected
+    final isHighlighted = isReplay || isCurrent || isSelected || isReplayFrom;
+    final accent = isReplay || isReplayFrom
         ? _ObservedFlowColors.selected
-        : DebugTheme.border;
-
-    final infoBorderColor = isCurrent
-        ? _ObservedFlowColors.active.withValues(alpha: 0.7)
-        : isSelected
-        ? _ObservedFlowColors.selected.withValues(alpha: 0.7)
+        : isCurrent
+        ? _ObservedFlowColors.active
+        : _ObservedFlowColors.selected;
+    final screenshotBorderColor = isHighlighted ? accent : DebugTheme.border;
+    final infoBorderColor = isHighlighted
+        ? accent.withValues(alpha: isReplayFrom ? 0.45 : 0.7)
         : DebugTheme.border;
 
     return Semantics(
@@ -521,7 +876,7 @@ class _ObservedFlowNodeCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(DebugTheme.radiusMd),
                 border: Border.all(
                   color: screenshotBorderColor,
-                  width: isCurrent || isSelected ? 1.5 : 1.0,
+                  width: isHighlighted ? 1.5 : 1.0,
                 ),
                 boxShadow: isSelected
                     ? [
@@ -548,54 +903,21 @@ class _ObservedFlowNodeCard extends StatelessWidget {
                         key: ValueKey(
                           'observed-screen-preview-${graphNode.id}',
                         ),
-                        preview: flowNode.screenPreview,
+                        preview: preview ?? flowNode.screenPreview,
                         captureEnabled: captureEnabled,
                       ),
-                      if (isCurrent)
+                      if (isReplay || isCurrent)
                         Positioned(
                           top: 6,
                           right: 6,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _ObservedFlowColors.activeBackground,
-                              borderRadius: BorderRadius.circular(
-                                DebugTheme.radiusFull,
-                              ),
-                              border: Border.all(
-                                color: _ObservedFlowColors.active.withValues(
-                                  alpha: 0.85,
-                                ),
-                                width: 0.8,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 4,
-                                  height: 4,
-                                  decoration: const BoxDecoration(
-                                    color: _ObservedFlowColors.active,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 3),
-                                const Text(
-                                  'LIVE',
-                                  style: TextStyle(
-                                    color: _ObservedFlowColors.active,
-                                    fontSize: 7.5,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.4,
-                                    decoration: TextDecoration.none,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          child: _ObservedNodeBadge(
+                            label: isReplay ? 'REPLAY' : 'LIVE',
+                            color: isReplay
+                                ? _ObservedFlowColors.selected
+                                : _ObservedFlowColors.active,
+                            background: isReplay
+                                ? const Color(0xFF0B1B33)
+                                : _ObservedFlowColors.activeBackground,
                           ),
                         ),
                     ],
@@ -612,7 +934,7 @@ class _ObservedFlowNodeCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(DebugTheme.radiusMd),
               border: Border.all(
                 color: infoBorderColor,
-                width: isCurrent || isSelected ? 1.5 : 1.0,
+                width: isHighlighted ? 1.5 : 1.0,
               ),
             ),
             child: Column(
@@ -726,6 +1048,51 @@ class _ObservedFlowNodeCard extends StatelessWidget {
   }
 }
 
+class _ObservedNodeBadge extends StatelessWidget {
+  const _ObservedNodeBadge({
+    required this.label,
+    required this.color,
+    required this.background,
+  });
+
+  final String label;
+  final Color color;
+  final Color background;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(DebugTheme.radiusFull),
+        border: Border.all(color: color.withValues(alpha: 0.85), width: 0.8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 4,
+            height: 4,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 7.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.4,
+              decoration: TextDecoration.none,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ObservedScreenPreview extends StatelessWidget {
   const _ObservedScreenPreview({
     super.key,
@@ -783,6 +1150,7 @@ class _ObservedScreenPreviewZoomModal extends StatelessWidget {
   const _ObservedScreenPreviewZoomModal({
     required this.graphNode,
     required this.flowNode,
+    this.preview,
     required this.captureEnabled,
     required this.onClose,
     this.onNavigate,
@@ -791,6 +1159,7 @@ class _ObservedScreenPreviewZoomModal extends StatelessWidget {
 
   final NavigationGraphNode<Object> graphNode;
   final NavigationFlowNode<Object> flowNode;
+  final NavigationFlowScreenPreview? preview;
   final bool captureEnabled;
   final VoidCallback onClose;
   final VoidCallback? onNavigate;
@@ -798,7 +1167,7 @@ class _ObservedScreenPreviewZoomModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final preview = flowNode.screenPreview;
+    final preview = this.preview ?? flowNode.screenPreview;
     final capturedAt = preview?.capturedAt.toLocal();
     final capturedTime = capturedAt == null
         ? null
@@ -1388,6 +1757,7 @@ final class _ObservedNodeFlowModel {
     var nodeIndex = 0;
     final nodes = <Node<_ObservedNodeData>>[];
     for (final flowNode in orderedFlowNodes) {
+      if (!graph.nodes.containsKey(flowNode.id)) continue;
       if (!positions.containsKey(flowNode.id)) continue;
       final id = 'observed-node-${nodeIndex++}';
       flowIds[flowNode.id] = id;
@@ -1437,10 +1807,7 @@ final class _ObservedNodeFlowModel {
       if (!visiblePairKeys.add(pairKey)) continue;
 
       final isDownward = toPos.dy > fromPos.dy;
-      final isEdgeActive = graph.activeRouteId == edge.toId;
-      final edgeColor = isEdgeActive
-          ? _ObservedFlowColors.active
-          : _ObservedFlowColors.edge;
+      final edgeColor = _ObservedFlowColors.edge;
 
       // Cạnh tiến: Xuất cổng Bottom -> Nhập cổng Top
       // Cạnh ngang/lùi: Xuất cổng Right -> Nhập cổng Left
@@ -1460,7 +1827,7 @@ final class _ObservedNodeFlowModel {
           targetPortId: targetPortId,
           color: isDownward ? edgeColor : edgeColor.withValues(alpha: 0.7),
           selectedColor: _ObservedFlowColors.selected,
-          strokeWidth: isEdgeActive ? 2.2 : (isDownward ? 1.8 : 1.4),
+          strokeWidth: isDownward ? 1.8 : 1.4,
           selectedStrokeWidth: 2.4,
           startPoint: ConnectionEndPoint.none,
           endPoint: ConnectionEndPoint.triangle,
@@ -1474,7 +1841,6 @@ final class _ObservedNodeFlowModel {
       connections: List.unmodifiable(connections),
       flowIds: Map.unmodifiable(flowIds),
       signature: Object.hashAll([
-        graph.activeRouteId,
         nodeSize,
         for (final node in orderedFlowNodes) ...[
           node.id,
