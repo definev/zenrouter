@@ -8,20 +8,32 @@ void main() {
       final coordinator = AppCoordinator();
       addTearDown(coordinator.dispose);
 
-      final location = AppCoordinator.profileIdLocation(profileId: 'core team');
+      final location = coordinator.location.profileId(profileId: 'core team');
       expect(location, Uri.parse('/profile/core%20team'));
+      expect(
+        location,
+        AppCoordinator.location.profileId(profileId: 'core team'),
+      );
 
       final route = await coordinator.parseRouteFromUri(location);
-      expect(route.toUri(), location);
+      expect(route, isNotNull);
+      expect(route!.toUri(), location);
       expect(
         AppCoordinator.manifest.match(location)?.route.id,
         'ProfileIdRoute',
       );
+      expect(coordinator.routeBindings['ProfileIdRoute'], isNotNull);
+      expect(coordinator.routeManifest, same(AppCoordinator.manifest));
     },
   );
 
+  test('static routes reverse-route as location getters', () {
+    expect(AppCoordinator.location.index, Uri.parse('/'));
+    expect(AppCoordinator.location.about, Uri.parse('/about'));
+  });
+
   test('generated reverse routing supports middle rest parameters', () {
-    final location = AppCoordinator.feedDynamicIdLocation(
+    final location = AppCoordinator.location.feedDynamicId(
       slugs: ['guides', 'web'],
       id: 'start',
     );

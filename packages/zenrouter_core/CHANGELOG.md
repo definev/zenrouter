@@ -13,7 +13,7 @@
   |-------|--------------|
   | `CoordinatorLayoutCore` | Layout-parent registration / hierarchy activation |
   | `CoordinatorNavigatable` | `navigate` |
-  | `CoordinatorMutatable` | `push`, `pop`, `replace`, `pushReplacement`, `pushOrMoveToTop`, `tryPop` |
+  | `CoordinatorMutatable` | `push`, `pushSilently`, `pop`, `replace`, `pushReplacement`, `pushOrMoveToTop`, `tryPop` |
   | `CoordinatorRecoverable` | `recover`, `recoverUri`, `defineDeeplinkHandler` |
 
   Flutter `Coordinator` still mixes all of them — existing apps that extend
@@ -60,7 +60,13 @@
   `RouteManifest.bind<T>` builds a registry while inferring its ID type from
   the manifest.
 - **Shared contracts** `Navigatable<T>` and `Mutatable<T>` implemented by both
-  stack paths and coordinator mixins.
+  stack paths and coordinator mixins. `Mutatable` includes `pushSilently` in
+  addition to `push`, `pushOrMoveToTop`, and `pushReplacement`. `pop` stays
+  off the shared contract because path and coordinator return types differ.
+- **Internal `StackCommit` seam** so coordinators apply an already-resolved
+  route without a second `RouteRedirect` pass. `pushReplacement` now falls
+  back to `activateRoute` when the parent path is not mutatable (indexed or
+  branched stacks).
 - **`defineDeeplinkHandler`**: override built-in `DeeplinkStrategy` behaviour
   (`navigate` / `push` / `replace`). `custom` still uses
   `RouteDeepLink.deeplinkHandler`.

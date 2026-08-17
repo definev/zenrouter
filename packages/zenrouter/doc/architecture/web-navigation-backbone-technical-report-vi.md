@@ -379,8 +379,9 @@ Dart object pattern trên `RouteManifestMatch.id`. `RouteIdCodec<I>` chỉ chuy�
 ID typed sang stable string khi encode/decode JSON; serialization concern không
 còn rò vào matching hoặc reverse-routing interface.
 
-File generator sinh `Coordinator.manifest`, dùng manifest match trước khi binding
-route ID sang `RouteTarget` cụ thể, và sinh static `{route}Location()` helpers.
+File generator sinh `Coordinator.manifest`, mix `CoordinatorRouteBinding`,
+emit `RouteBinding` / `RouteBinding.deferred`, và sinh
+`coordinator.location.{route}` helpers.
 Widget, `BuildContext`, transition và constructor closure không đi vào manifest.
 Hand-written coordinator vẫn tương thích qua `RouteManifest.empty` và có thể
 override `routeManifest` khi muốn khai báo topology tĩnh.

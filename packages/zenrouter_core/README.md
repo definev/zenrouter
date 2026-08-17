@@ -269,10 +269,12 @@ path.pathKey;         // PathKey identifier for builder lookup
 ```
 
 **StackMutatable** mixin adds:
-- `push(route)` - Add to top
+- `push(route)` - Add to top and wait for the pop result
+- `pushSilently(route)` - Add to top and complete at commit
+- `pushReplacement(route)` - Replace the current entry
+- `pushOrMoveToTop(route)` - Move an existing equal route to the top, or push
 - `pop(result)` - Remove top (respects guards)
-- `replace(route)` - Replace current
-- `navigate(route)` - Browser-style navigation
+- `navigate(route)` - Pop back to an existing route, or push
 
 ---
 

@@ -13,6 +13,7 @@ import 'package:zenrouter_core/src/mixin/layout.dart';
 import 'package:zenrouter_core/src/mixin/redirect.dart';
 import 'package:zenrouter_core/src/mixin/uri.dart';
 import 'package:zenrouter_core/src/path/base.dart';
+import 'package:zenrouter_core/src/path/commit.dart';
 import 'package:zenrouter_core/src/path/navigatable.dart';
 import 'package:zenrouter_core/src/routing/resolution.dart';
 import 'package:zenrouter_core/src/routing/cancellation.dart';

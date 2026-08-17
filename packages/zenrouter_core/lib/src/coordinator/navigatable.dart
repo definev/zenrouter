@@ -32,14 +32,17 @@ mixin CoordinatorNavigatable<T extends RouteUri> on CoordinatorLayoutCore<T>
       'effect on the navigation stack or browser history.',
     );
 
-    if (parentPath case StackNavigatable parentPath) {
-      final intent = switch (parentPath) {
-        StackMutatable() when parentPath.stack.contains(target) =>
-          NavigationHistoryIntent.replace,
-        _ => NavigationHistoryIntent.push,
-      };
-      recordHistoryIntent(intent);
-      await parentPath.navigate(target);
+    switch (parentPath) {
+      case final StackCommit<T> commit:
+        recordHistoryIntent(
+          parentPath.stack.contains(target)
+              ? NavigationHistoryIntent.replace
+              : NavigationHistoryIntent.push,
+        );
+        await commit.commitResolvedNavigate(target);
+      case final StackNavigatable navigable:
+        recordHistoryIntent(NavigationHistoryIntent.push);
+        await navigable.navigate(target);
     }
   });
 }
