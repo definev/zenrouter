@@ -22,8 +22,7 @@ class ModularApp extends StatelessWidget {
     return MaterialApp.router(
       title: 'ZenRouter Modular Coordinator Example',
       restorationScopeId: 'modular_coordinator',
-      routerDelegate: coordinator.routerDelegate,
-      routeInformationParser: coordinator.routeInformationParser,
+      routerConfig: coordinator,
     );
   }
 }

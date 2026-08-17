@@ -15,8 +15,10 @@ class ForYouSheetRoute extends _$ForYouSheetRoute {
 
   @override
   FutureOr<void> deeplinkHandler(AppCoordinator coordinator, Uri uri) async {
-    await coordinator.replaceFollowing();
+    coordinator.replaceFollowing();
+    await Future.delayed(Duration(milliseconds: 100));
     coordinator.pushForYou();
+    await Future.delayed(Duration(milliseconds: 100));
     coordinator.push(this);
   }
 

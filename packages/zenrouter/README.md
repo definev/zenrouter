@@ -264,7 +264,7 @@ Coordinator<T extends RouteUnique>
 1. Define route classes extending `RouteTarget with RouteUnique`
 2. Create a `Coordinator<T>` subclass implementing `parseRouteFromUri`
 3. Declare `NavigationPath` and `IndexedStackPath` instances for nested stacks
-4. Wire up with `MaterialApp.router` using `routerDelegate` and `routeInformationParser`
+4. Wire up with `MaterialApp.router(routerConfig: coordinator)`
 5. Navigate with `coordinator.push()`, `coordinator.pop()`, `coordinator.replace()`
 
 ### Example

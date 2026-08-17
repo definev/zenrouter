@@ -96,7 +96,7 @@ class ProfileRoute extends AppRoute {
 
 ## Integration with MaterialApp
 
-The Coordinator provides a `routerDelegate` and `routeInformationParser` that plug directly into Flutter's Router system via `MaterialApp.router`.
+The Coordinator implements `RouterConfig`, so it plugs directly into Flutter's Router system via `MaterialApp.router`.
 
 ```dart
 final coordinator = AppCoordinator();
@@ -107,8 +107,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      routerDelegate: coordinator.routerDelegate,
-      routeInformationParser: coordinator.routeInformationParser,
+      routerConfig: coordinator,
     );
   }
 }

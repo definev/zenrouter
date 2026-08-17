@@ -230,8 +230,7 @@ class AppCoordinator extends Coordinator<AppRoute> {
 final coordinator = AppCoordinator();
 
 MaterialApp.router(
-  routerDelegate: coordinator.routerDelegate,
-  routeInformationParser: coordinator.routeInformationParser,
+  routerConfig: coordinator,
 );
 ```
 
@@ -582,7 +581,7 @@ Now links like `myapp://products/123` automatically work!
 - [ ] Convert page classes to `RouteTarget` classes
 - [ ] Create `Coordinator` with `parseRouteFromUri`
 - [ ] Implement `toUri()` on each route
-- [ ] Update `MaterialApp.router` to use `coordinator.routerDelegate` and `routeInformationParser`
+- [ ] Update `MaterialApp.router` to use `routerConfig: coordinator`
 - [ ] Test deep linking and state restoration
 
 ---
