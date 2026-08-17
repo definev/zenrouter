@@ -155,6 +155,108 @@ void main() {
       recorder.clear(initialUri: Uri.parse('/settings'));
       expect(recorder.nodes['settings']!.screenPreview, isNull);
     });
+
+    test('aliases node-latest previews by revision without copying bytes', () {
+      final recorder = NavigationFlowRecorder<String>(
+        manifest: _manifest,
+        initialUri: Uri.parse('/'),
+        maxScreenPreviews: 2,
+      );
+      addTearDown(recorder.dispose);
+      recorder.record(
+        _commit(1, '/', '/profile', NavigationHistoryIntent.push),
+      );
+      recorder.record(
+        _commit(2, '/profile', '/settings', NavigationHistoryIntent.push),
+      );
+
+      expect(
+        recorder.attachScreenPreview(
+          'home',
+          Uint8List.fromList([1, 2, 3]),
+          revision: 0,
+        ),
+        isTrue,
+      );
+      expect(
+        recorder.previewForRevision(0),
+        same(recorder.nodes['home']!.screenPreview),
+      );
+
+      recorder.attachScreenPreview(
+        'profile',
+        Uint8List.fromList([4]),
+        revision: 1,
+      );
+      recorder.attachScreenPreview(
+        'settings',
+        Uint8List.fromList([5]),
+        revision: 2,
+      );
+
+      expect(recorder.nodes['home']!.screenPreview, isNull);
+      expect(recorder.previewForRevision(0), isNull);
+      expect(
+        recorder.previewForRevision(1),
+        same(recorder.nodes['profile']!.screenPreview),
+      );
+      expect(
+        recorder.previewForRevision(2),
+        same(recorder.nodes['settings']!.screenPreview),
+      );
+
+      recorder.attachScreenPreview(
+        'profile',
+        Uint8List.fromList([6]),
+        revision: 3,
+      );
+      expect(recorder.previewForRevision(1), isNull);
+      expect(
+        recorder.previewForRevision(3),
+        same(recorder.nodes['profile']!.screenPreview),
+      );
+      expect(recorder.nodes['profile']!.screenPreview!.bytes, [6]);
+    });
+
+    test('recapture does not evict other routes from the preview LRU', () {
+      final recorder = NavigationFlowRecorder<String>(
+        manifest: _manifest,
+        initialUri: Uri.parse('/'),
+        maxScreenPreviews: 2,
+      );
+      addTearDown(recorder.dispose);
+      recorder.record(
+        _commit(1, '/', '/profile', NavigationHistoryIntent.push),
+      );
+
+      recorder.attachScreenPreview(
+        'home',
+        Uint8List.fromList([1]),
+        revision: 0,
+      );
+      recorder.attachScreenPreview(
+        'profile',
+        Uint8List.fromList([2]),
+        revision: 1,
+      );
+      final profilePreview = recorder.nodes['profile']!.screenPreview;
+
+      for (var revision = 2; revision < 26; revision += 1) {
+        recorder.attachScreenPreview(
+          'home',
+          Uint8List.fromList([revision]),
+          revision: revision,
+        );
+      }
+
+      expect(recorder.previewForRevision(1), same(profilePreview));
+      expect(recorder.nodes['profile']!.screenPreview, same(profilePreview));
+      expect(recorder.previewForRevision(0), isNull);
+      expect(
+        recorder.previewForRevision(25),
+        same(recorder.nodes['home']!.screenPreview),
+      );
+    });
   });
 }
 

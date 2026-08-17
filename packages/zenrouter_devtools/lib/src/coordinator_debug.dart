@@ -145,6 +145,7 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   );
   bool? _debugScreenCaptureEnabled;
   int? _scheduledScreenCaptureRevision;
+  int _debugNavigationFlowRecordingPauseCount = 0;
   bool _debugDisposed = false;
 
   /// Whether the debug overlay is currently open.
@@ -157,6 +158,10 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   /// Whether automatic Observed-flow screen previews are currently enabled.
   bool get debugScreenCaptureEnabled =>
       _debugScreenCaptureEnabled ?? debugCaptureRouteScreenshots;
+
+  /// True when no replay session holds a recording/capture pause lease.
+  bool get debugNavigationFlowRecording =>
+      _debugNavigationFlowRecordingPauseCount == 0;
 
   /// Runtime route transitions observed after the debug UI is attached.
   ///
@@ -251,6 +256,28 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
     );
   }
 
+  /// Pauses Observed record and screen capture until the returned callback runs.
+  ///
+  /// Acquire notifies listeners. Release decrements only — it must not
+  /// [notifyListeners], because the view invokes it from [State.dispose]
+  /// during a locked rebuild.
+  ///
+  /// Safe to call the callback more than once. The last outstanding lease
+  /// returning restores recording.
+  VoidCallback acquireDebugNavigationFlowRecordingPause() {
+    _debugNavigationFlowRecordingPauseCount += 1;
+    _scheduledScreenCaptureRevision = null;
+    notifyListeners();
+    var released = false;
+    return () {
+      if (released || _debugDisposed) return;
+      released = true;
+      if (_debugNavigationFlowRecordingPauseCount > 0) {
+        _debugNavigationFlowRecordingPauseCount -= 1;
+      }
+    };
+  }
+
   /// Enables or disables automatic screen previews for the Observed graph.
   ///
   /// Existing in-memory previews are retained until the flow is cleared.
@@ -269,6 +296,7 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   }
 
   void _recordDebugNavigationCommit() {
+    if (!debugNavigationFlowRecording) return;
     final commit = lastNavigationCommit;
     if (commit == null) return;
     final recorder = _debugNavigationFlow;
@@ -290,7 +318,8 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
     required int revision,
     required Uri uri,
   }) {
-    if (_debugDisposed || !debugScreenCaptureEnabled) return;
+    if (_debugDisposed || !debugNavigationFlowRecording) return;
+    if (!debugScreenCaptureEnabled) return;
     final routeId = routeManifest.match(uri)?.id;
     if (routeId == null) return;
     final preview = recorder.nodes[routeId]?.screenPreview;
@@ -318,6 +347,7 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   }) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_debugDisposed ||
+          !debugNavigationFlowRecording ||
           !debugScreenCaptureEnabled ||
           _scheduledScreenCaptureRevision != revision ||
           currentUri != uri) {
@@ -357,6 +387,7 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
     required DateTime startTime,
   }) async {
     if (_debugDisposed ||
+        !debugNavigationFlowRecording ||
         !debugScreenCaptureEnabled ||
         _scheduledScreenCaptureRevision != revision ||
         currentUri != uri) {
@@ -388,6 +419,7 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null ||
           _debugDisposed ||
+          !debugNavigationFlowRecording ||
           !debugScreenCaptureEnabled ||
           _scheduledScreenCaptureRevision != revision ||
           currentUri != uri) {
