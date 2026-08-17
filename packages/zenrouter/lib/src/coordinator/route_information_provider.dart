@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
 import 'package:zenrouter/zenrouter.dart';
 
@@ -31,13 +32,33 @@ class CoordinatorRouteInformationProvider
   @visibleForTesting
   static RouteInformationReportingType resolveReportingType(
     NavigationHistoryIntent intent,
-    RouteInformationReportingType fallback,
-  ) => switch (intent) {
+    RouteInformationReportingType fallback, {
+    Uri? reportedUri,
+    Uri? engineUri,
+  }) => switch (intent) {
     NavigationHistoryIntent.automatic => fallback,
     NavigationHistoryIntent.push => RouteInformationReportingType.navigate,
     NavigationHistoryIntent.replace => RouteInformationReportingType.neglect,
-    NavigationHistoryIntent.traverse => RouteInformationReportingType.none,
+    // Flutter's `none` still reports to the engine. If the URIs differ it
+    // *pushes* a history entry (`replace: false`). A blocked traversal must
+    // restore the current entry instead of looping the back button.
+    NavigationHistoryIntent.traverse =>
+      reportedUri != null &&
+              engineUri != null &&
+              !sameHistoryUri(reportedUri, engineUri)
+          ? RouteInformationReportingType.neglect
+          : RouteInformationReportingType.none,
   };
+
+  /// URI comparison matching Flutter's history-equality rules.
+  @visibleForTesting
+  static bool sameHistoryUri(Uri a, Uri b) =>
+      a.path == b.path &&
+      a.fragment == b.fragment &&
+      const DeepCollectionEquality.unordered().equals(
+        a.queryParametersAll,
+        b.queryParametersAll,
+      );
 
   @override
   void routerReportsNewRouteInformation(
@@ -46,7 +67,12 @@ class CoordinatorRouteInformationProvider
   }) {
     super.routerReportsNewRouteInformation(
       routeInformation,
-      type: resolveReportingType(coordinator.consumeHistoryIntent(), type),
+      type: resolveReportingType(
+        coordinator.consumeHistoryIntent(),
+        type,
+        reportedUri: routeInformation.uri,
+        engineUri: value.uri,
+      ),
     );
   }
 

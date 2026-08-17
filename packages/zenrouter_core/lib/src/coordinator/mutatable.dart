@@ -138,8 +138,6 @@ mixin CoordinatorMutatable<T extends RouteUri> on CoordinatorLayoutCore<T>
         } else {
           final popped = await activePath.pop(result);
           if (popped == null || !popped) return;
-          // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
-          await currentRoute.onResult.future;
         }
       }
 

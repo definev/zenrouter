@@ -209,5 +209,23 @@ void main() {
     test('has a built-in Flutter layout builder', () {
       expect(kDefaultLayoutBuilderTable[BranchedStackPath.key], isNotNull);
     });
+
+    test('replace publishes one commit across every NavigationPath', () async {
+      final coordinator = _BranchCoordinator();
+      await coordinator.pushSilently(_HomeRoute('one'));
+      await coordinator.pushSilently(_SettingsRoute('one'));
+
+      var notifications = 0;
+      coordinator.addListener(() => notifications++);
+
+      await coordinator.replace(_HomeRoute('fresh'));
+      await pumpEventQueue();
+
+      expect(notifications, 1);
+      expect(coordinator.homePath.stack, [_HomeRoute('fresh')]);
+      expect(coordinator.settingsPath.stack, isEmpty);
+
+      coordinator.dispose();
+    });
   });
 }

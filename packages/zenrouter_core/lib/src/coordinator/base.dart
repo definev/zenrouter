@@ -150,6 +150,16 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
   Future<void> _transactionQueue = Future<void>.value();
   bool _transactionQueueIdle = true;
 
+  /// Whether a navigation transaction is currently running for this coordinator.
+  ///
+  /// Used by path implementations that must notify synchronously inside a
+  /// transaction (so deferred microtasks do not publish extra commits) and
+  /// asynchronously outside one (so reset is safe during a Flutter build).
+  bool get isInNavigationTransaction {
+    if (isRouteModule) return rootCoordinator.isInNavigationTransaction;
+    return _transactionDepth > 0 || Zone.current[_transactionZoneKey] == true;
+  }
+
   /// The most recently published atomic navigation commit.
   NavigationCommit? get lastNavigationCommit => isRouteModule
       ? rootCoordinator.lastNavigationCommit

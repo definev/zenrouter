@@ -171,17 +171,11 @@ class _NavigationStackState<T extends RouteTarget>
 
           switch (didPop) {
             case true when result != null:
-              route.completeOnResult(result, widget.coordinator);
+              route.completeOnResult(result, widget.coordinator, true);
               route.onDidPop(result, widget.coordinator);
             case true:
               result = route.resultValue;
-              route.completeOnResult(
-                result,
-                widget.coordinator,
-
-                /// Fail silently if it's a force pop from the platform.
-                route.isPopByPath == false,
-              );
+              route.completeOnResult(result, widget.coordinator, true);
               route.onDidPop(result, widget.coordinator);
             case false when route is RouteGuard:
               widget.path.pop();
@@ -227,7 +221,11 @@ class _NavigationStackState<T extends RouteTarget>
     final currentRoutes = widget.path.stack;
 
     // Calculate diff between previous and current routes
-    final diffOps = myersDiff(_previousRoutes, currentRoutes);
+    final diffOps = myersDiff(
+      _previousRoutes,
+      currentRoutes,
+      equals: identical,
+    );
 
     // Build new pages list using diff operations
     final newPages = <Page>[];

@@ -128,8 +128,6 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
 
       final popped = await pop(result);
       if (popped == null || !popped) return null;
-      // ignore: invalid_use_of_visible_for_testing_member
-      await activeRoute.onResult.future;
       return commitResolvedRoute(target);
     }
 
@@ -194,6 +192,12 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
     final element = _stack.removeLast();
     element.isPopByPath = true;
     element.bindResultValue(result);
+    // Complete and tear down here so push()/pushReplacement do not depend on
+    // a later Flutter page callback. Awaiting onResult inside a transaction
+    // hung headless and blocked the queue; skipping it left results pending
+    // when pop+push landed in the same frame.
+    element.completeOnResult(result, coordinator, true);
+    element.onDidPop(result, coordinator);
     notifyListeners();
     return true;
   }

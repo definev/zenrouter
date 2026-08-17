@@ -61,5 +61,32 @@ void main() {
       expect(result!.id, 'target');
       expect(route.discarded, isTrue);
     });
+
+    test('throws StateError on a cyclic redirect chain', () async {
+      final a = _CyclicRedirectRoute('a');
+      final b = _CyclicRedirectRoute('b');
+      a.next = b;
+      b.next = a;
+
+      await expectLater(
+        () => RouteRedirect.resolve<BaseRoute>(a, null),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            contains('RouteRedirect loop detected'),
+          ),
+        ),
+      );
+    });
   });
+}
+
+class _CyclicRedirectRoute extends BaseRoute with RouteRedirect<BaseRoute> {
+  _CyclicRedirectRoute(super.id);
+
+  late BaseRoute next;
+
+  @override
+  BaseRoute redirect() => next;
 }
