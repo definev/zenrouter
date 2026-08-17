@@ -17,6 +17,8 @@ When to use each navigation method on `Coordinator` / `CoordinatorCore`.
 | `pushOrMoveToTop(route)` | Pushes new or moves existing to top | Tab-like nav where duplicates should be avoided |
 | `tryPop([result])` | Pops if possible; returns success | Conditional back (check if pop was blocked by guard) |
 | `recover(route)` | Depends on `RouteDeepLink` strategy | Deep link / URL bar navigation |
+| `pushUri` / `navigateUri` / `replaceUri` / `recoverUri` / … | Same as the route form | You have a `Uri` from `manifest.location` |
+| `uri.pushWith(c)` / `uri.recoverWith(c)` / … | Same as the `*Uri` form | Receiver-flipped URI helpers |
 
 ---
 
@@ -170,6 +172,30 @@ coordinator.recover(route);
 
 ---
 
+### URI / location helpers
+
+```dart
+final uri = AppCoordinator.location.product('42');
+// or: ShopModule.manifest.location(ShopRouteId.product, pathParameters: {'id': '42'});
+
+await coordinator.pushUri(uri);
+await coordinator.navigateUri(uri);
+await coordinator.replaceUri(uri);
+await coordinator.recoverUri(uri);
+await coordinator.pushSilentlyUri(uri);
+await coordinator.pushReplacementUri(uri);
+await coordinator.pushOrMoveToTopUri(uri);
+
+await uri.recoverWith(coordinator);
+await uri.pushWith(coordinator);
+```
+
+Each helper parses through `parseRouteFromUri` (manifest match + binding, including deferred library loads) then delegates to the route method above. Throws `StateError` if parsing returns `null`.
+
+**Use for:** Reverse-routed navigation when you do not want to construct a `RouteTarget` by hand. Prefer `recoverWith` / `recoverUri` for URL-bar and deep-link style jumps so `RouteDeepLink` applies.
+
+---
+
 ## Decision Flowchart
 
 ```
@@ -195,8 +221,9 @@ What kind of navigation?
 ├─ Full state reset (sign-out, switch account)
 │  └─ replace()
 │
-└─ Handling a deep link / URL change
-   └─ recover() (automatic — configure via RouteDeepLink)
+└─ Handling a deep link / URL / location helper
+   ├─ Have a Uri from manifest.location → recoverUri() / uri.recoverWith()
+   └─ Have a RouteTarget → recover() (automatic for the URL bar — configure via RouteDeepLink)
 ```
 
 ---
