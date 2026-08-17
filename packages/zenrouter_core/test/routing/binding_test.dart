@@ -30,7 +30,7 @@ void main() {
 
       final RouteBindingRegistry<_ShellId, _TestRoute> registry = manifest
           .bind<_TestRoute>(
-            bindings: () => [
+            bindings: [
               RouteBinding(
                 id: _ShellId.home,
                 create: (match) => _TestRoute('home', match.uri),
@@ -48,7 +48,7 @@ void main() {
         routes: [RouteManifestRoute(id: _ShellId.home, path: '/')],
       );
       final registry = manifest.bind<_TestRoute>(
-        bindings: () => [
+        bindings: [
           RouteBinding(
             id: _ShellId.home,
             create: (match) => _TestRoute('home', match.uri),
