@@ -98,10 +98,9 @@ class ActiveLayoutItem extends StatelessWidget {
                 isDeepest
                     ? CupertinoIcons.layers_alt_fill
                     : CupertinoIcons.layers_alt,
-                color:
-                    isDeepest
-                        ? const Color(0xFF2196F3)
-                        : DebugTheme.textSecondary,
+                color: isDeepest
+                    ? const Color(0xFF2196F3)
+                    : DebugTheme.textSecondary,
                 size: 16,
               ),
               const SizedBox(width: DebugTheme.spacing),
@@ -114,10 +113,9 @@ class ActiveLayoutItem extends StatelessWidget {
                         Text(
                           layout.runtimeType.toString(),
                           style: TextStyle(
-                            color:
-                                isDeepest
-                                    ? DebugTheme.textPrimary
-                                    : DebugTheme.textSecondary,
+                            color: isDeepest
+                                ? DebugTheme.textPrimary
+                                : DebugTheme.textSecondary,
                             fontSize: DebugTheme.fontSizeMd,
                             fontWeight: FontWeight.w600,
                             decoration: TextDecoration.none,

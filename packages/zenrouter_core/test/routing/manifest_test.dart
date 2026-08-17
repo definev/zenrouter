@@ -141,13 +141,7 @@ void main() {
         () => RouteManifest(
           name: 'app',
           routes: [RouteManifestRoute(id: 'shell', path: '/')],
-          layouts: [
-            RouteManifestLayout(
-              id: 'shell',
-              path: '/',
-              kind: RouteManifestLayoutKind.stack,
-            ),
-          ],
+          layouts: [RouteManifestLayout.stack(id: 'shell', path: '/')],
         ),
         throwsA(isA<RouteManifestValidationException>()),
       );
@@ -212,17 +206,15 @@ void main() {
         () => RouteManifest(
           name: 'app',
           layouts: [
-            RouteManifestLayout(
+            RouteManifestLayout.stack(
               id: 'left',
               path: '/left',
               parentId: 'right',
-              kind: RouteManifestLayoutKind.stack,
             ),
-            RouteManifestLayout(
+            RouteManifestLayout.stack(
               id: 'right',
               path: '/right',
               parentId: 'left',
-              kind: RouteManifestLayoutKind.stack,
             ),
           ],
         ),
@@ -242,17 +234,12 @@ void main() {
             ),
           ],
           layouts: [
-            RouteManifestLayout(
+            RouteManifestLayout.indexed(
               id: 'tabs',
               path: '/',
-              kind: RouteManifestLayoutKind.indexed,
-              indexedChildIds: ['home'],
+              childIds: ['home'],
             ),
-            RouteManifestLayout(
-              id: 'other-shell',
-              path: '/other',
-              kind: RouteManifestLayoutKind.stack,
-            ),
+            RouteManifestLayout.stack(id: 'other-shell', path: '/other'),
           ],
         ),
         throwsA(
@@ -268,11 +255,10 @@ void main() {
     test('validates indexed children and freezes all collections', () {
       final indexedChildren = <String>['home'];
       final route = RouteManifestRoute(id: 'home', path: '/', parentId: 'tabs');
-      final layout = RouteManifestLayout(
+      final layout = RouteManifestLayout.indexed(
         id: 'tabs',
         path: '/',
-        kind: RouteManifestLayoutKind.indexed,
-        indexedChildIds: indexedChildren,
+        childIds: indexedChildren,
       );
       final manifest = RouteManifest(
         name: 'app',
@@ -281,30 +267,27 @@ void main() {
       );
       indexedChildren.add('changed');
 
-      expect(layout.indexedChildIds, ['home']);
+      expect(layout.kind.childIds, ['home']);
       expect(() => manifest.routes.add(route), throwsUnsupportedError);
       expect(() => manifest.nodes['other'] = route, throwsUnsupportedError);
     });
 
     test('validates branched layout roots and freezes branch order', () {
       final branchChildren = <String>['home-branch', 'settings-branch'];
-      final shell = RouteManifestLayout(
+      final shell = RouteManifestLayout.branched(
         id: 'shell',
         path: '/shell',
-        kind: RouteManifestLayoutKind.branched,
-        branchChildIds: branchChildren,
+        childIds: branchChildren,
       );
-      final homeBranch = RouteManifestLayout(
+      final homeBranch = RouteManifestLayout.stack(
         id: 'home-branch',
         path: '/shell/home',
         parentId: 'shell',
-        kind: RouteManifestLayoutKind.stack,
       );
-      final settingsBranch = RouteManifestLayout(
+      final settingsBranch = RouteManifestLayout.stack(
         id: 'settings-branch',
         path: '/shell/settings',
         parentId: 'shell',
-        kind: RouteManifestLayoutKind.stack,
       );
 
       final manifest = RouteManifest(
@@ -325,8 +308,8 @@ void main() {
       );
       branchChildren.add('changed');
 
-      expect(shell.branchChildIds, ['home-branch', 'settings-branch']);
-      expect(() => shell.branchChildIds.add('changed'), throwsUnsupportedError);
+      expect(shell.kind.childIds, ['home-branch', 'settings-branch']);
+      expect(() => shell.kind.childIds.add('changed'), throwsUnsupportedError);
       expect(
         RouteManifest<String>.decode(manifest.encode()).toJson(),
         manifest.toJson(),
@@ -335,11 +318,7 @@ void main() {
 
     test('rejects invalid branched layout topology', () {
       expect(
-        () => RouteManifestLayout<String>(
-          id: 'empty-shell',
-          path: '/shell',
-          kind: RouteManifestLayoutKind.branched,
-        ),
+        () => RouteManifestLayoutKind<String>.branched(const []),
         throwsArgumentError,
       );
 
@@ -350,11 +329,10 @@ void main() {
             RouteManifestRoute(id: 'home', path: '/home', parentId: 'shell'),
           ],
           layouts: [
-            RouteManifestLayout(
+            RouteManifestLayout.branched(
               id: 'shell',
               path: '/',
-              kind: RouteManifestLayoutKind.branched,
-              branchChildIds: ['home'],
+              childIds: ['home'],
             ),
           ],
         ),
@@ -365,23 +343,20 @@ void main() {
         () => RouteManifest(
           name: 'undeclared-direct-child',
           layouts: [
-            RouteManifestLayout(
+            RouteManifestLayout.branched(
               id: 'shell',
               path: '/',
-              kind: RouteManifestLayoutKind.branched,
-              branchChildIds: ['home-branch'],
+              childIds: ['home-branch'],
             ),
-            RouteManifestLayout(
+            RouteManifestLayout.stack(
               id: 'home-branch',
               path: '/home',
               parentId: 'shell',
-              kind: RouteManifestLayoutKind.stack,
             ),
-            RouteManifestLayout(
+            RouteManifestLayout.stack(
               id: 'hidden-branch',
               path: '/hidden',
               parentId: 'shell',
-              kind: RouteManifestLayoutKind.stack,
             ),
           ],
         ),
@@ -401,11 +376,7 @@ void main() {
         ),
       ],
       layouts: [
-        RouteManifestLayout(
-          id: 'account-layout',
-          path: '/profiles',
-          kind: RouteManifestLayoutKind.stack,
-        ),
+        RouteManifestLayout.stack(id: 'account-layout', path: '/profiles'),
       ],
     );
 
@@ -444,11 +415,7 @@ void main() {
           ),
         ],
         layouts: [
-          RouteManifestLayout(
-            id: 'feature-shell',
-            path: '/feature',
-            kind: RouteManifestLayoutKind.stack,
-          ),
+          RouteManifestLayout.stack(id: 'feature-shell', path: '/feature'),
         ],
       );
 
@@ -472,11 +439,7 @@ void main() {
         name: 'shell',
         idCodec: RouteIdCodec.enumValues(_ShellRouteId.values),
         layouts: [
-          RouteManifestLayout(
-            id: _ShellRouteId.shell,
-            path: '/account',
-            kind: RouteManifestLayoutKind.stack,
-          ),
+          RouteManifestLayout.stack(id: _ShellRouteId.shell, path: '/account'),
         ],
       );
       final account = RouteManifestFragment<Object>(

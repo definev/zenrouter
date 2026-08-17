@@ -238,13 +238,7 @@ void main() {
           RouteManifestRoute(id: 'home', path: '/'),
           RouteManifestRoute(id: 'profile', path: '/profile'),
         ],
-        layouts: [
-          RouteManifestLayout(
-            id: 'shell',
-            path: '/',
-            kind: RouteManifestLayoutKind.stack,
-          ),
-        ],
+        layouts: [RouteManifestLayout.stack(id: 'shell', path: '/')],
       );
     });
 

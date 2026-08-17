@@ -590,10 +590,9 @@ class ShellModule extends RouteModule<AppRoute> {
         name: 'shell',
         idCodec: RouteIdCodec.enumValues(AppRouteId.values),
         layouts: [
-          RouteManifestLayout(
+          RouteManifestLayout.stack(
             id: AppRouteId.shell,
             path: '/account',
-            kind: RouteManifestLayoutKind.stack,
           ),
         ],
       );

@@ -41,18 +41,16 @@ class _SmallIconButtonState extends State<SmallIconButton> {
           decoration: BoxDecoration(
             border: Border.all(color: DebugTheme.border),
             borderRadius: BorderRadius.circular(DebugTheme.radiusSm),
-            color:
-                _isHovered && widget.onTap != null
-                    ? DebugTheme.backgroundLight
-                    : DebugTheme.backgroundDark,
+            color: _isHovered && widget.onTap != null
+                ? DebugTheme.backgroundLight
+                : DebugTheme.backgroundDark,
           ),
           child: Icon(
             widget.icon,
             size: 11,
-            color:
-                widget.onTap != null
-                    ? (widget.color ?? DebugTheme.textPrimary)
-                    : DebugTheme.textPlaceholder,
+            color: widget.onTap != null
+                ? (widget.color ?? DebugTheme.textPrimary)
+                : DebugTheme.textPlaceholder,
           ),
         ),
       ),
@@ -99,10 +97,9 @@ class _ActionButtonState extends State<ActionButton> {
           height: 28,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color:
-                _isHovered
-                    ? DebugTheme.backgroundLight
-                    : widget.backgroundColor,
+            color: _isHovered
+                ? DebugTheme.backgroundLight
+                : widget.backgroundColor,
             borderRadius: BorderRadius.circular(DebugTheme.radius),
             border: Border.all(color: DebugTheme.border),
           ),
@@ -170,16 +167,14 @@ class _TabButtonState extends State<TabButton> {
         child: Container(
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color:
-                widget.isSelected || _isHovered
-                    ? DebugTheme.backgroundLight
-                    : const Color(0x00000000),
-            border:
-                widget.isSelected
-                    ? const Border(
-                      bottom: BorderSide(color: Color(0xFFFFFFFF), width: 2),
-                    )
-                    : null,
+            color: widget.isSelected || _isHovered
+                ? DebugTheme.backgroundLight
+                : const Color(0x00000000),
+            border: widget.isSelected
+                ? const Border(
+                    bottom: BorderSide(color: Color(0xFFFFFFFF), width: 2),
+                  )
+                : null,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -187,13 +182,13 @@ class _TabButtonState extends State<TabButton> {
               Text(
                 widget.label,
                 style: TextStyle(
-                  color:
-                      widget.isSelected
-                          ? DebugTheme.textPrimary
-                          : DebugTheme.textDisabled,
+                  color: widget.isSelected
+                      ? DebugTheme.textPrimary
+                      : DebugTheme.textDisabled,
                   fontSize: DebugTheme.fontSizeMd,
-                  fontWeight:
-                      widget.isSelected ? FontWeight.w600 : FontWeight.w500,
+                  fontWeight: widget.isSelected
+                      ? FontWeight.w600
+                      : FontWeight.w500,
                   decoration: TextDecoration.none,
                 ),
               ),

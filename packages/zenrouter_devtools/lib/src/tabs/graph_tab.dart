@@ -101,8 +101,7 @@ class _NavigationGraphTabState<T extends RouteUnique>
           graph: graph,
           selectedNode: selectedNode,
           isReadOnly: _isTopologyReadOnly,
-          onReadOnlyChanged: (val) =>
-              setState(() => _isTopologyReadOnly = val),
+          onReadOnlyChanged: (val) => setState(() => _isTopologyReadOnly = val),
           onAutoLayout: _autoLayout,
           onReset: _resetView,
           onNavigate: (path) => _navigateToPath(path),
@@ -733,9 +732,7 @@ class _TopologyNodeFlowCanvasState extends State<_TopologyNodeFlowCanvas> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.isReadOnly != widget.isReadOnly) {
       _controller.setBehavior(
-        widget.isReadOnly
-            ? NodeFlowBehavior.inspect
-            : NodeFlowBehavior.preview,
+        widget.isReadOnly ? NodeFlowBehavior.inspect : NodeFlowBehavior.preview,
       );
     }
     final selectedNodeIds = <Object>{

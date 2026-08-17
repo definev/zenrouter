@@ -458,23 +458,28 @@ void main() {
       await replacement;
     });
 
-    test('pushReplacement with a deeper stack commits without a Flutter pop',
-        () async {
-      final coordinator = FullCapabilityCoordinator();
-      await coordinator.pushSilently(ComposeRoute('base'));
-      await coordinator.pushSilently(ComposeRoute('old'));
+    test(
+      'pushReplacement with a deeper stack commits without a Flutter pop',
+      () async {
+        final coordinator = FullCapabilityCoordinator();
+        await coordinator.pushSilently(ComposeRoute('base'));
+        await coordinator.pushSilently(ComposeRoute('old'));
 
-      unawaited(
-        coordinator.pushReplacement(ComposeRoute('replacement'), result: 'done'),
-      );
-      await pumpEventQueue();
+        unawaited(
+          coordinator.pushReplacement(
+            ComposeRoute('replacement'),
+            result: 'done',
+          ),
+        );
+        await pumpEventQueue();
 
-      expect(coordinator.root.stack.map((route) => route.id), [
-        'base',
-        'replacement',
-      ]);
-      coordinator.root.reset();
-    });
+        expect(coordinator.root.stack.map((route) => route.id), [
+          'base',
+          'replacement',
+        ]);
+        coordinator.root.reset();
+      },
+    );
 
     test('pushOrMoveToTopUri moves an existing route to the top', () async {
       final coordinator = FullCapabilityCoordinator();

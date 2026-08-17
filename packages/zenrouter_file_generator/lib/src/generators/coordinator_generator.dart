@@ -521,18 +521,25 @@ class CoordinatorGenerator implements Builder {
       ],
       layouts: [
         for (final layout in tree.layouts)
-          RouteManifestLayout(
-            id: layout.className,
-            path: _routePattern(layout.pathSegments),
-            parentId: layout.parentLayoutType,
-            kind: switch (layout.layoutType) {
-              LayoutType.stack => RouteManifestLayoutKind.stack,
-              LayoutType.indexed => RouteManifestLayoutKind.indexed,
-              LayoutType.branched => RouteManifestLayoutKind.branched,
-            },
-            indexedChildIds: layout.indexedRouteTypes,
-            branchChildIds: layout.branchLayoutTypes,
-          ),
+          switch (layout.layoutType) {
+            LayoutType.stack => RouteManifestLayout.stack(
+              id: layout.className,
+              path: _routePattern(layout.pathSegments),
+              parentId: layout.parentLayoutType,
+            ),
+            LayoutType.indexed => RouteManifestLayout.indexed(
+              id: layout.className,
+              path: _routePattern(layout.pathSegments),
+              parentId: layout.parentLayoutType,
+              childIds: layout.indexedRouteTypes,
+            ),
+            LayoutType.branched => RouteManifestLayout.branched(
+              id: layout.className,
+              path: _routePattern(layout.pathSegments),
+              parentId: layout.parentLayoutType,
+              childIds: layout.branchLayoutTypes,
+            ),
+          },
       ],
     );
   }
@@ -1018,32 +1025,7 @@ class CoordinatorGenerator implements Builder {
     buffer.writeln('    ],');
     buffer.writeln('    layouts: [');
     for (final layout in tree.layouts) {
-      buffer.writeln('      RouteManifestLayout(');
-      buffer.writeln('        id: ${_dartString(layout.className)},');
-      buffer.writeln(
-        '        path: ${_dartString(_routePattern(layout.pathSegments))},',
-      );
-      if (layout.parentLayoutType != null) {
-        buffer.writeln(
-          '        parentId: ${_dartString(layout.parentLayoutType!)},',
-        );
-      }
-      buffer.writeln(
-        '        kind: RouteManifestLayoutKind.${layout.layoutType.name},',
-      );
-      if (layout.indexedRouteTypes.isNotEmpty) {
-        buffer.writeln(
-          '        indexedChildIds: '
-          '${_dartStringList(layout.indexedRouteTypes)},',
-        );
-      }
-      if (layout.branchLayoutTypes.isNotEmpty) {
-        buffer.writeln(
-          '        branchChildIds: '
-          '${_dartStringList(layout.branchLayoutTypes)},',
-        );
-      }
-      buffer.writeln('      ),');
+      buffer.writeln('      ${_writeLayoutConstructor(layout)}');
     }
     buffer.writeln('    ],');
     buffer.writeln('  );');
@@ -1136,6 +1118,24 @@ class CoordinatorGenerator implements Builder {
       return _wrapDeferredImportLoad(relativePath, routeInstance);
     }
     return routeInstance;
+  }
+
+  String _writeLayoutConstructor(LayoutInfo layout) {
+    final parent = layout.parentLayoutType == null
+        ? ''
+        : 'parentId: ${_dartString(layout.parentLayoutType!)}, ';
+    final header =
+        'RouteManifestLayout.${layout.layoutType.name}('
+        'id: ${_dartString(layout.className)}, '
+        'path: ${_dartString(_routePattern(layout.pathSegments))}, '
+        '$parent';
+    return switch (layout.layoutType) {
+      LayoutType.stack => '$header),',
+      LayoutType.indexed =>
+        '${header}childIds: ${_dartStringList(layout.indexedRouteTypes)}),',
+      LayoutType.branched =>
+        '${header}childIds: ${_dartStringList(layout.branchLayoutTypes)}),',
+    };
   }
 
   String _dartStringList(Iterable<String> values) =>

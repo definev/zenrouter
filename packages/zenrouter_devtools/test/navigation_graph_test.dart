@@ -67,23 +67,20 @@ void main() {
           ),
         ],
         layouts: [
-          RouteManifestLayout(
+          RouteManifestLayout.branched(
             id: _BranchedId.shell,
             path: '/',
-            kind: RouteManifestLayoutKind.branched,
-            branchChildIds: [_BranchedId.right, _BranchedId.left],
+            childIds: [_BranchedId.right, _BranchedId.left],
           ),
-          RouteManifestLayout(
+          RouteManifestLayout.stack(
             id: _BranchedId.left,
             path: '/left',
             parentId: _BranchedId.shell,
-            kind: RouteManifestLayoutKind.stack,
           ),
-          RouteManifestLayout(
+          RouteManifestLayout.stack(
             id: _BranchedId.right,
             path: '/right',
             parentId: _BranchedId.shell,
-            kind: RouteManifestLayoutKind.stack,
           ),
         ],
       );
@@ -136,17 +133,15 @@ final _manifest = RouteManifest<_NodeId>(
     RouteManifestRoute(id: _NodeId.about, path: '/about'),
   ],
   layouts: [
-    RouteManifestLayout(
+    RouteManifestLayout.indexed(
       id: _NodeId.shell,
       path: '/',
-      kind: RouteManifestLayoutKind.indexed,
-      indexedChildIds: [_NodeId.feed, _NodeId.settings],
+      childIds: [_NodeId.feed, _NodeId.settings],
     ),
-    RouteManifestLayout(
+    RouteManifestLayout.stack(
       id: _NodeId.feed,
       path: '/feed',
       parentId: _NodeId.shell,
-      kind: RouteManifestLayoutKind.stack,
     ),
   ],
 );

@@ -70,7 +70,9 @@ final knowledgeBaseManifestFragment =
     );
 
 class ManualManifestCoordinator extends Coordinator<ManualManifestRoute>
-    with CoordinatorRouteBinding<ManualManifestRoute, Object>, CoordinatorDebug {
+    with
+        CoordinatorRouteBinding<ManualManifestRoute, Object>,
+        CoordinatorDebug {
   /// Composition validates duplicate IDs, ambiguous paths, and graph
   /// relationships across all feature boundaries in one place.
   static final manifest = RouteManifest<Object>.fromFragments(

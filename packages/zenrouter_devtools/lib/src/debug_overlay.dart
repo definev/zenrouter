@@ -934,10 +934,7 @@ class _DebugFabState extends State<_DebugFab> {
         cursor: SystemMouseCursors.click,
         onEnter: (_) => setState(() => _isHovered = true),
         onExit: (_) => setState(() => _isHovered = false),
-        child: const SizedBox(
-          width: 52,
-          height: 52,
-        ),
+        child: const SizedBox(width: 52, height: 52),
       ),
       paintChild: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
@@ -973,7 +970,9 @@ class _DebugFabState extends State<_DebugFab> {
           count: widget.problems,
           child: Icon(
             CupertinoIcons.ant,
-            color: _isHovered ? const Color(0xFFFFFFFF) : const Color(0xFFE2E8F0),
+            color: _isHovered
+                ? const Color(0xFFFFFFFF)
+                : const Color(0xFFE2E8F0),
             size: 19,
           ),
         ),
@@ -1041,10 +1040,7 @@ class _HeaderIconButtonState extends State<_HeaderIconButton> {
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: widget.onTap,
-              child: const SizedBox(
-                width: 36,
-                height: 36,
-              ),
+              child: const SizedBox(width: 36, height: 36),
             ),
           ),
           paintChild: AnimatedContainer(
@@ -1059,7 +1055,9 @@ class _HeaderIconButtonState extends State<_HeaderIconButton> {
                   : const Color(0x00000000),
               borderRadius: BorderRadius.circular(DebugTheme.radiusSm),
               border: Border.all(
-                color: _isHovered ? const Color(0xFF383838) : const Color(0x00000000),
+                color: _isHovered
+                    ? const Color(0xFF383838)
+                    : const Color(0x00000000),
               ),
             ),
             child: Icon(
@@ -1095,8 +1093,16 @@ class _DiagonalGripPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
 
-      canvas.drawLine(const Offset(3.5, 9.0), const Offset(9.0, 3.5), glowPaint);
-      canvas.drawLine(const Offset(5.5, 14.0), const Offset(14.0, 5.5), glowPaint);
+      canvas.drawLine(
+        const Offset(3.5, 9.0),
+        const Offset(9.0, 3.5),
+        glowPaint,
+      );
+      canvas.drawLine(
+        const Offset(5.5, 14.0),
+        const Offset(14.0, 5.5),
+        glowPaint,
+      );
     }
 
     final paint = Paint()
@@ -1541,7 +1547,9 @@ class _ToolMenuItemState extends State<_ToolMenuItem> {
           decoration: BoxDecoration(
             color: widget.isSelected
                 ? const Color(0xFF1E293B)
-                : (_isHovered ? const Color(0xFF222222) : const Color(0x00000000)),
+                : (_isHovered
+                      ? const Color(0xFF222222)
+                      : const Color(0x00000000)),
             borderRadius: BorderRadius.circular(DebugTheme.radius),
             border: widget.isSelected
                 ? Border.all(color: const Color(0xFF334155))
@@ -1555,8 +1563,8 @@ class _ToolMenuItemState extends State<_ToolMenuItem> {
                 color: widget.isSelected
                     ? const Color(0xFF60A5FA)
                     : (_isHovered
-                        ? DebugTheme.textPrimary
-                        : DebugTheme.textSecondary),
+                          ? DebugTheme.textPrimary
+                          : DebugTheme.textSecondary),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -1568,8 +1576,8 @@ class _ToolMenuItemState extends State<_ToolMenuItem> {
                     color: widget.isSelected
                         ? const Color(0xFFF1F5F9)
                         : (_isHovered
-                            ? DebugTheme.textPrimary
-                            : DebugTheme.textSecondary),
+                              ? DebugTheme.textPrimary
+                              : DebugTheme.textSecondary),
                     fontSize: 12,
                     fontWeight: widget.isSelected
                         ? FontWeight.w600

@@ -92,7 +92,6 @@ mixin CoordinatorRecoverable<T extends RouteUri>
       await _handleDeeplinkStrategy(DeeplinkStrategy.replace, target);
     }
   }
-
 }
 
 /// Location-based convenience operations for a fully capable coordinator.

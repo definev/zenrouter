@@ -545,7 +545,9 @@ class _ObservedFlowNodeCard extends StatelessWidget {
                     fit: StackFit.expand,
                     children: [
                       _ObservedScreenPreview(
-                        key: ValueKey('observed-screen-preview-${graphNode.id}'),
+                        key: ValueKey(
+                          'observed-screen-preview-${graphNode.id}',
+                        ),
                         preview: flowNode.screenPreview,
                         captureEnabled: captureEnabled,
                       ),
@@ -639,9 +641,7 @@ class _ObservedFlowNodeCard extends StatelessWidget {
                         vertical: 1,
                       ),
                       decoration: BoxDecoration(
-                        color: _ObservedFlowColors.edge.withValues(
-                          alpha: 0.14,
-                        ),
+                        color: _ObservedFlowColors.edge.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(
                           DebugTheme.radiusSm,
                         ),
@@ -1190,7 +1190,10 @@ Size _fitObservedPreviewSize({
   const horizontalInset = 32.0;
   const verticalInset = 32.0;
   final maxWidth = math.max(64.0, viewport.width - horizontalInset);
-  final maxHeight = math.max(64.0, viewport.height - verticalInset - chromeHeight);
+  final maxHeight = math.max(
+    64.0,
+    viewport.height - verticalInset - chromeHeight,
+  );
 
   final double targetWidth;
   if (aspectRatio >= 1.0) {

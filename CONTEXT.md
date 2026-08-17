@@ -9,10 +9,13 @@ application's static route topology.
 ## Route Manifest
 
 The immutable, adapter-neutral graph of route and layout IDs, URI patterns,
-parent relationships, matching metadata, and preload hints. It owns graph
-validation, deterministic URI matching, serialization, and reverse routing.
-Route IDs are strongly typed in memory. A Route ID Codec maps them to stable
-string wire IDs only when the graph crosses the JSON seam.
+parent relationships, and layout kinds. A layout kind is a sealed
+child-structure contract (unbounded stack, fixed indexed children, or fixed
+branch layout roots). Fixed children belong to the kind, not to the layout
+node. The manifest owns graph validation, deterministic URI matching,
+serialization, and reverse routing. Route IDs are strongly typed in memory. A
+Route ID Codec maps them to stable string wire IDs only when the graph crosses
+the JSON seam.
 
 ## Route Manifest Fragment
 
