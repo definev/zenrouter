@@ -3,6 +3,8 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:zenrouter/zenrouter.dart';
 
+import 'navigation_flow_session.dart';
+
 /// One route observed while the application is running.
 final class NavigationFlowNode<I extends Object> {
   const NavigationFlowNode({
@@ -143,6 +145,55 @@ final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
     _observeInitialUri(initialUri);
   }
 
+  /// Rebuild nodes/edges/transitions by rematching [session] URIs
+  /// against [manifest]. Does not attach previews.
+  factory NavigationFlowRecorder.fromSession(
+    RouteManifest<I> manifest,
+    NavigationFlowSession session, {
+    int maxTransitions = 500,
+    int maxScreenPreviews = 24,
+  }) {
+    var hydrateIndex = 0;
+    var hydrating = true;
+    final recorder = NavigationFlowRecorder<I>(
+      manifest: manifest,
+      initialUri: session.initialUri,
+      maxTransitions: maxTransitions,
+      maxScreenPreviews: maxScreenPreviews,
+      initialRevision: -1,
+      clock: () {
+        if (!hydrating || hydrateIndex >= session.transitions.length) {
+          return DateTime.now();
+        }
+        return DateTime.parse(session.transitions[hydrateIndex].occurredAt);
+      },
+    );
+
+    var newlyUnmatched = 0;
+    for (; hydrateIndex < session.transitions.length; hydrateIndex++) {
+      final row = session.transitions[hydrateIndex];
+      final ignoredBefore = recorder._ignoredTransitionCount;
+      recorder._record(
+        NavigationCommit(
+          revision: row.revision,
+          previousUri: Uri.parse(row.previousUri),
+          currentUri: Uri.parse(row.currentUri),
+          historyIntent: NavigationHistoryIntent.values.byName(
+            row.historyIntent,
+          ),
+        ),
+        actionLabel: row.actionLabel,
+      );
+      if (recorder._ignoredTransitionCount > ignoredBefore) {
+        newlyUnmatched += 1;
+      }
+    }
+    hydrating = false;
+    recorder._ignoredTransitionCount =
+        session.ignoredTransitionCount + newlyUnmatched;
+    return recorder;
+  }
+
   final RouteManifest<I> manifest;
   final int maxTransitions;
   final int maxScreenPreviews;
@@ -175,6 +226,45 @@ final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
 
   /// Captures [commit] once, returning whether recorder state changed.
   bool record(NavigationCommit commit, {String? actionLabel}) {
+    final changed = _record(commit, actionLabel: actionLabel);
+    if (changed) notifyListeners();
+    return changed;
+  }
+
+  /// URI-first document of the current matched log. No preview bytes.
+  NavigationFlowSession exportSession() {
+    final entryId = _entryNodeId;
+    final entryUri = entryId == null ? null : _nodes[entryId]?.lastUri;
+    final initialUri =
+        entryUri ??
+        (_transitions.isNotEmpty
+            ? _transitions.first.previousUri
+            : Uri.parse('/'));
+    final encodeId = manifest.idCodec?.encode;
+
+    return NavigationFlowSession(
+      initialUri: initialUri,
+      ignoredTransitionCount: _ignoredTransitionCount,
+      exportedAt: _clock(),
+      transitions: [
+        for (final transition in _transitions)
+          NavigationFlowSessionTransition(
+            revision: transition.revision,
+            previousUri: transition.previousUri.toString(),
+            currentUri: transition.currentUri.toString(),
+            historyIntent: transition.historyIntent.name,
+            actionLabel: transition.actionLabel,
+            occurredAt: transition.occurredAt.toUtc().toIso8601String(),
+            fromId:
+                encodeId?.call(transition.fromId) ??
+                transition.fromId.toString(),
+            toId: encodeId?.call(transition.toId) ?? transition.toId.toString(),
+          ),
+      ],
+    );
+  }
+
+  bool _record(NavigationCommit commit, {String? actionLabel}) {
     if (commit.revision <= _lastRecordedRevision) return false;
     _lastRecordedRevision = commit.revision;
 
@@ -193,7 +283,6 @@ final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
           incrementVisit: true,
         );
       }
-      notifyListeners();
       return true;
     }
 
@@ -245,7 +334,6 @@ final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
       historyIntents: Set.unmodifiable(intents),
       actionLabels: Set.unmodifiable(labels),
     );
-    notifyListeners();
     return true;
   }
 
