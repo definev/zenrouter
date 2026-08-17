@@ -57,6 +57,9 @@
   `CoordinatorRouteBinding` and `RouteModuleBinding` provide manifest-backed
   URI parsing without handwritten parser switches while supporting sync,
   async, not-found, and heterogeneous typed-ID bindings.
+  `deferredBindingFactory` / `deferredRouteNotFoundBinding` wrap any
+  factory so a deferred library can load before a match or not-found route
+  is created. `RouteBinding.deferred` uses the same wrapper.
   `RouteManifest.bind<T>` builds a registry while inferring its ID type from
   the manifest.
 - **Shared contracts** `Navigatable<T>` and `Mutatable<T>` implemented by both
