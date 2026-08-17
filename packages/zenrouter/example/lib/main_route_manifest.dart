@@ -167,13 +167,13 @@ class ManualHomeRoute extends ManualManifestRoute {
             title: const Text('Dynamic profile route'),
             subtitle: Text(profileLocation.toString()),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => unawaited(coordinator.recoverUri(profileLocation)),
+            onTap: () => unawaited(profileLocation.recoverWith(coordinator)),
           ),
           ListTile(
             title: const Text('Catch-all documentation route'),
             subtitle: Text(docsLocation.toString()),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => unawaited(coordinator.recoverUri(docsLocation)),
+            onTap: () => unawaited(docsLocation.recoverWith(coordinator)),
           ),
           const Divider(),
           Text(

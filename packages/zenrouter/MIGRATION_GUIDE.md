@@ -29,7 +29,7 @@ Navigation operations moved off `CoordinatorCore` into capability mixins:
 | `CoordinatorMutatable` | `push`, `pushSilently`, `pop`, `replace`, `pushReplacement`, `pushOrMoveToTop`, `tryPop` |
 | `CoordinatorRecoverable` | `recover`, `recoverUri`, `defineDeeplinkHandler` |
 
-URI helpers (`navigateUri`, `pushUri`, …) are an extension on `CoordinatorRecoverable`.
+URI helpers (`navigateUri`, `pushUri`, …) are an extension on `CoordinatorRecoverable`. The same operations are also available on `Uri` (`uri.pushWith(coordinator)`, `uri.navigateWith(coordinator)`, `uri.replaceWith(coordinator)`, …).
 
 #### Migration
 

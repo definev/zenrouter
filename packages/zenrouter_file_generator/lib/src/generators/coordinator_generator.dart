@@ -928,26 +928,46 @@ class CoordinatorGenerator implements Builder {
     );
     buffer.writeln('}');
 
-    /// Extension for pushing [routeBase] routes.
-    buffer.writeln('/// Extension on [$routeBaseName] for navigation methods.');
+    buffer.writeln(
+      '/// Destination navigation for [$routeBaseName] instances.',
+    );
     buffer.writeln(
       'extension ${coordinatorName}NavContext on $routeBaseName {',
     );
-    // Navigate
     buffer.writeln(
-      '  Future<void> navigate(BuildContext context) => context.$contextGetterName.navigate(this);',
+      '  Future<void> navigate(BuildContext context) => '
+      'context.$contextGetterName.navigate(this);',
     );
-    // Push
     buffer.writeln(
-      '  Future<T?> push<T extends Object>(BuildContext context) => context.$contextGetterName.push<T>(this);',
+      '  Future<T?> push<T extends Object>(BuildContext context) => '
+      'context.$contextGetterName.push<T>(this);',
     );
-    // Replace
     buffer.writeln(
-      '  Future<void> replace(BuildContext context) => context.$contextGetterName.replace(this);',
+      '  Future<void> pushSilently(BuildContext context) => '
+      'context.$contextGetterName.pushSilently(this);',
     );
-    // Recover
     buffer.writeln(
-      '  Future<void> recover(BuildContext context) => context.$contextGetterName.recover(this);',
+      '  Future<void> replace(BuildContext context) => '
+      'context.$contextGetterName.replace(this);',
+    );
+    buffer.writeln(
+      '  Future<R?> pushReplacement<R extends Object, RO extends Object>(',
+    );
+    buffer.writeln('    BuildContext context, {');
+    buffer.writeln('    RO? result,');
+    buffer.writeln(
+      '  }) => context.$contextGetterName.pushReplacement<R, RO>(',
+    );
+    buffer.writeln('    this,');
+    buffer.writeln('    result: result,');
+    buffer.writeln('  );');
+    buffer.writeln(
+      '  Future<void> pushOrMoveToTop(BuildContext context) => '
+      'context.$contextGetterName.pushOrMoveToTop(this);',
+    );
+    buffer.writeln(
+      '  Future<void> recover(BuildContext context) => '
+      'context.$contextGetterName.recover(this);',
     );
     buffer.writeln('}');
 

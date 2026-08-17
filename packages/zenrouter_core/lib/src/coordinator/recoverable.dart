@@ -153,3 +153,46 @@ extension CoordinatorUriActions<T extends RouteUri>
     await pushOrMoveToTop(await _requireRouteFromUri(uri));
   }
 }
+
+/// Destination navigation for a [Uri] against a fully capable coordinator.
+///
+/// Receiver-flipped form of [CoordinatorUriActions]:
+/// `uri.pushWith(coordinator)` is `coordinator.pushUri(uri)`.
+extension UriCoordinatorActions on Uri {
+  /// Parses this URI and navigates to the resulting route.
+  Future<void> navigateWith<T extends RouteUri>(
+    CoordinatorRecoverable<T> coordinator,
+  ) => coordinator.navigateUri(this);
+
+  /// Parses this URI, pushes the resulting route, and waits for its result.
+  Future<R?> pushWith<R extends Object, T extends RouteUri>(
+    CoordinatorRecoverable<T> coordinator,
+  ) => coordinator.pushUri<R>(this);
+
+  /// Parses this URI and pushes the resulting route without waiting for pop.
+  Future<void> pushSilentlyWith<T extends RouteUri>(
+    CoordinatorRecoverable<T> coordinator,
+  ) => coordinator.pushSilentlyUri(this);
+
+  /// Parses this URI and replaces the current navigation state with it.
+  Future<void> replaceWith<T extends RouteUri>(
+    CoordinatorRecoverable<T> coordinator,
+  ) => coordinator.replaceUri(this);
+
+  /// Parses this URI and recovers it using its deep-link strategy.
+  Future<void> recoverWith<T extends RouteUri>(
+    CoordinatorRecoverable<T> coordinator,
+  ) => coordinator.recoverUri(this);
+
+  /// Parses this URI and replaces the current route with the resulting route.
+  Future<R?>
+  pushReplacementWith<R extends Object, RO extends Object, T extends RouteUri>(
+    CoordinatorRecoverable<T> coordinator, {
+    RO? result,
+  }) => coordinator.pushReplacementUri<R, RO>(this, result: result);
+
+  /// Parses this URI and pushes the route, or moves it to the top if present.
+  Future<void> pushOrMoveToTopWith<T extends RouteUri>(
+    CoordinatorRecoverable<T> coordinator,
+  ) => coordinator.pushOrMoveToTopUri(this);
+}
