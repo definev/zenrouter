@@ -13,6 +13,7 @@ final class NavigationFlowNode<I extends Object> {
     required this.lastSeenRevision,
     required this.lastUri,
     required this.visitCount,
+    this.seenUris = const [],
     this.screenPreview,
   });
 
@@ -21,6 +22,13 @@ final class NavigationFlowNode<I extends Object> {
   final int lastSeenRevision;
   final Uri lastUri;
   final int visitCount;
+
+  /// Distinct URIs observed for this route, oldest first.
+  ///
+  /// Parameterized routes collapse to one node; this list is the bound
+  /// variants (`/users/1`, `/users/2`) that would otherwise be hidden
+  /// behind [lastUri].
+  final List<Uri> seenUris;
 
   /// Latest in-memory screenshot captured for this route.
   final NavigationFlowScreenPreview? screenPreview;
@@ -111,6 +119,7 @@ final class NavigationFlowEdge<I extends Object> {
 /// omitted from the directed graph.
 final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
   static const _maxActionLabelsPerEdge = 16;
+  static const _maxSeenUrisPerNode = 16;
 
   NavigationFlowRecorder({
     required this.manifest,
@@ -430,6 +439,7 @@ final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
       lastSeenRevision: revision,
       lastUri: uri,
       visitCount: (previous?.visitCount ?? 0) + (shouldIncrement ? 1 : 0),
+      seenUris: _rememberUri(previous?.seenUris ?? const [], uri),
       screenPreview: previous?.screenPreview,
     );
     _entryNodeId ??= id;
@@ -445,10 +455,22 @@ final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
     lastSeenRevision: node.lastSeenRevision,
     lastUri: node.lastUri,
     visitCount: node.visitCount,
+    seenUris: node.seenUris,
     screenPreview: clearScreenPreview
         ? null
         : screenPreview ?? node.screenPreview,
   );
+
+  static List<Uri> _rememberUri(List<Uri> previous, Uri uri) {
+    final key = uri.toString();
+    if (previous.any((seen) => seen.toString() == key)) {
+      return previous;
+    }
+    if (previous.length >= _maxSeenUrisPerNode) {
+      return List<Uri>.unmodifiable(previous);
+    }
+    return List<Uri>.unmodifiable([...previous, uri]);
+  }
 }
 
 final class _NavigationFlowEdgeKey<I extends Object> {

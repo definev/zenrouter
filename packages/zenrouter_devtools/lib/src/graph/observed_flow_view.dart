@@ -578,6 +578,26 @@ class _ObservedNavigationFlowViewState
     }
   }
 
+  List<_ObservedUriVariant> _variantsFor(
+    NavigationFlowNode<Object> flowNode, {
+    Uri? playheadUri,
+  }) {
+    final uris = flowNode.seenUris.isEmpty
+        ? [flowNode.lastUri]
+        : flowNode.seenUris;
+    if (uris.length <= 1) return const [];
+    return [
+      for (final uri in uris)
+        _ObservedUriVariant(
+          uri: uri,
+          label: _variantChipLabel(widget.manifest.match(uri), uri),
+          isLatest: uri.toString() == flowNode.lastUri.toString(),
+          isPlayhead:
+              playheadUri != null && uri.toString() == playheadUri.toString(),
+        ),
+    ];
+  }
+
   NavigationFlowScreenPreview? _previewFor(Object id) {
     if (!_isLive) {
       if (_player?.toId == id) return _player?.currentPreview;
@@ -648,49 +668,21 @@ class _ObservedNavigationFlowViewState
               onReset: _resetView,
               onClear: _clearFlow,
             ),
-            if (showTransport)
-              ObservedReplayTransport(
-                isLive: _isLive,
-                isPlaying: _mode == _ObservedReplayMode.replayPlaying,
-                enabled: canvasFlow.transitions.isNotEmpty,
-                timelineOpen: _listExpanded,
-                speed: _speed,
-                banner: _replayBanner,
-                onJumpStart: _jumpStart,
-                onStepBack: _stepBack,
-                onPlayPause: _playOrToggle,
-                onStepForward: _stepForward,
-                onJumpEnd: _jumpEnd,
-                onExit: _exitReplay,
-                onCycleSpeed: _cycleSpeed,
-                onToggleTimeline: _toggleTimeline,
-                onExport: _exportSession,
-                onImport: _importSession,
-                onToggleDrive: widget.onDrive == null ? null : _toggleDrive,
-                onConfirmDrive: _confirmDrive,
-                onCancelDrive: () {
-                  _driveConfirmPending = false;
-                  setState(() {});
-                },
-                driveArmed: _driveArmed,
-                driveConfirmPending: _driveConfirmPending,
-              ),
             Expanded(
-              child: canvasFlow.edges.isEmpty
-                  ? const _EmptyObservedFlow()
-                  : LayoutBuilder(
-                      builder: (context, constraints) {
-                        final showTimeline =
-                            !_isLive && (_player?.length ?? 0) > 0;
-                        final timelineHeight = !showTimeline
-                            ? 0.0
-                            : _listExpanded
-                            ? math.max(140.0, constraints.maxHeight * 0.36)
-                            : 44.0;
-                        return Stack(
-                          children: [
-                            Positioned.fill(
-                              child: NavigationNodeFlowAutoFit(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final showTimeline = !_isLive && (_player?.length ?? 0) > 0;
+                  final timelineHeight = !showTimeline
+                      ? 0.0
+                      : _listExpanded
+                      ? math.max(140.0, constraints.maxHeight * 0.36)
+                      : 32.0;
+                  return Stack(
+                    children: [
+                      Positioned.fill(
+                        child: canvasFlow.edges.isEmpty
+                            ? const _EmptyObservedFlow()
+                            : NavigationNodeFlowAutoFit(
                                 onFit: _controller.fitToView,
                                 child:
                                     NodeFlowEditor<_ObservedNodeData, Object?>(
@@ -730,6 +722,11 @@ class _ObservedNavigationFlowViewState
                                           graphNode: graphNode,
                                           flowNode: flowNode,
                                           preview: _previewFor(id),
+                                          variants: _variantsFor(
+                                            flowNode,
+                                            playheadUri:
+                                                _player?.current?.currentUri,
+                                          ),
                                           isCurrent: _isLive && currentId == id,
                                           isReplay:
                                               !_isLive && playheadToId == id,
@@ -748,11 +745,7 @@ class _ObservedNavigationFlowViewState
                                                   });
                                                   _seekToLatestArrival(id);
                                                 },
-                                          onNavigate: widget.onNavigate != null
-                                              ? () => widget.onNavigate!(
-                                                  flowNode.lastUri.toString(),
-                                                )
-                                              : null,
+                                          onNavigate: widget.onNavigate,
                                           onCopy: widget.onCopy != null
                                               ? () => widget.onCopy!(
                                                   flowNode.lastUri.toString(),
@@ -762,26 +755,73 @@ class _ObservedNavigationFlowViewState
                                       },
                                     ),
                               ),
-                            ),
-                            if (showTimeline)
-                              Positioned(
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                height: timelineHeight,
-                                child: ObservedReplayTimeline(
-                                  transitions: _hydrated!.transitions,
-                                  index: _player!.index,
-                                  listExpanded: _listExpanded,
-                                  onSeek: _seekTimeline,
-                                  onToggleList: _toggleTimeline,
+                      ),
+                      if (showTimeline ||
+                          _replayBanner != null ||
+                          _driveConfirmPending)
+                        Positioned(
+                          left: 10,
+                          right: 10,
+                          bottom: 8,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (_driveConfirmPending || _replayBanner != null)
+                                ObservedReplayDockMessage(
+                                  banner: _replayBanner,
+                                  confirmPending: _driveConfirmPending,
+                                  onConfirm: _confirmDrive,
+                                  onCancel: () {
+                                    _driveConfirmPending = false;
+                                    setState(() {});
+                                  },
                                 ),
-                              ),
-                          ],
-                        );
-                      },
-                    ),
+                              if (showTimeline) ...[
+                                if (_driveConfirmPending ||
+                                    _replayBanner != null)
+                                  const SizedBox(height: 6),
+                                SizedBox(
+                                  height: timelineHeight,
+                                  child: ObservedReplayTimeline(
+                                    transitions: _hydrated!.transitions,
+                                    index: _player!.index,
+                                    listExpanded: _listExpanded,
+                                    onSeek: _seekTimeline,
+                                    onToggleList: _toggleTimeline,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
             ),
+            if (showTransport)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                child: ObservedReplayTransport(
+                  isLive: _isLive,
+                  isPlaying: _mode == _ObservedReplayMode.replayPlaying,
+                  enabled: canvasFlow.transitions.isNotEmpty,
+                  timelineOpen: _listExpanded,
+                  speed: _speed,
+                  onJumpStart: _jumpStart,
+                  onStepBack: _stepBack,
+                  onPlayPause: _playOrToggle,
+                  onStepForward: _stepForward,
+                  onJumpEnd: _jumpEnd,
+                  onExit: _exitReplay,
+                  onCycleSpeed: _cycleSpeed,
+                  onToggleTimeline: _toggleTimeline,
+                  onExport: _exportSession,
+                  onImport: _importSession,
+                  onToggleDrive: widget.onDrive == null ? null : _toggleDrive,
+                  driveArmed: _driveArmed,
+                ),
+              ),
           ],
         ),
         if (zoomedGraphNode != null && zoomedFlowNode != null)
@@ -798,6 +838,10 @@ class _ObservedNavigationFlowViewState
                       widget.onNavigate!(zoomedFlowNode.lastUri.toString());
                     }
                   : null,
+              variants: _variantsFor(
+                zoomedFlowNode,
+                playheadUri: _player?.current?.currentUri,
+              ),
               onCopy: widget.onCopy != null
                   ? () {
                       widget.onCopy!(zoomedFlowNode.lastUri.toString());
@@ -1009,6 +1053,7 @@ class _ObservedFlowNodeCard extends StatelessWidget {
     required this.graphNode,
     required this.flowNode,
     this.preview,
+    this.variants = const [],
     required this.isCurrent,
     this.isReplay = false,
     this.isReplayFrom = false,
@@ -1023,6 +1068,7 @@ class _ObservedFlowNodeCard extends StatelessWidget {
   final NavigationGraphNode<Object> graphNode;
   final NavigationFlowNode<Object> flowNode;
   final NavigationFlowScreenPreview? preview;
+  final List<_ObservedUriVariant> variants;
   final bool isCurrent;
   final bool isReplay;
   final bool isReplayFrom;
@@ -1030,7 +1076,7 @@ class _ObservedFlowNodeCard extends StatelessWidget {
   final bool captureEnabled;
   final VoidCallback onZoom;
   final VoidCallback? onInfoTap;
-  final VoidCallback? onNavigate;
+  final ValueChanged<String>? onNavigate;
   final VoidCallback? onCopy;
 
   @override
@@ -1090,6 +1136,16 @@ class _ObservedFlowNodeCard extends StatelessWidget {
                         preview: preview ?? flowNode.screenPreview,
                         captureEnabled: captureEnabled,
                       ),
+                      if (variants.length > 1)
+                        Positioned(
+                          top: 6,
+                          left: 6,
+                          child: _ObservedNodeBadge(
+                            label: '${variants.length} variants',
+                            color: _ObservedFlowColors.edge,
+                            background: const Color(0xFF1A1428),
+                          ),
+                        ),
                       if (isReplay || isCurrent)
                         Positioned(
                           top: 6,
@@ -1177,58 +1233,77 @@ class _ObservedFlowNodeCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 3),
-                  Row(
-                    spacing: 4,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          flowNode.lastUri.toString(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: DebugTheme.textSecondary,
-                            fontSize: 8.5,
-                            fontFamily: 'monospace',
-                            decoration: TextDecoration.none,
-                          ),
-                        ),
+                  if (variants.length > 1) ...[
+                    Text(
+                      graphNode.path,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: DebugTheme.textMuted,
+                        fontSize: 8,
+                        fontFamily: 'monospace',
+                        decoration: TextDecoration.none,
                       ),
-                      if (onNavigate != null) ...[
-                        GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: onNavigate,
-                          child: MouseRegion(
-                            cursor: SystemMouseCursors.click,
-                            child: Container(
-                              padding: const EdgeInsets.all(2),
-                              child: const Icon(
-                                CupertinoIcons.compass,
-                                size: 11,
-                                color: DebugTheme.textSecondary,
-                              ),
+                    ),
+                    const SizedBox(height: 3),
+                    _ObservedVariantChips(
+                      variants: variants,
+                      onNavigate: onNavigate,
+                    ),
+                  ] else
+                    Row(
+                      spacing: 4,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            flowNode.lastUri.toString(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: DebugTheme.textSecondary,
+                              fontSize: 8.5,
+                              fontFamily: 'monospace',
+                              decoration: TextDecoration.none,
                             ),
                           ),
                         ),
-                      ],
-                      if (onCopy != null) ...[
-                        GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: onCopy,
-                          child: MouseRegion(
-                            cursor: SystemMouseCursors.click,
-                            child: Container(
-                              padding: const EdgeInsets.all(2),
-                              child: const Icon(
-                                CupertinoIcons.doc_on_doc,
-                                size: 11,
-                                color: DebugTheme.textSecondary,
+                        if (onNavigate != null) ...[
+                          GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () =>
+                                onNavigate!(flowNode.lastUri.toString()),
+                            child: MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                child: const Icon(
+                                  CupertinoIcons.compass,
+                                  size: 11,
+                                  color: DebugTheme.textSecondary,
+                                ),
                               ),
                             ),
                           ),
-                        ),
+                        ],
+                        if (onCopy != null) ...[
+                          GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: onCopy,
+                            child: MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                child: const Icon(
+                                  CupertinoIcons.doc_on_doc,
+                                  size: 11,
+                                  color: DebugTheme.textSecondary,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
-                  ),
+                    ),
                 ],
               ),
             ),
@@ -1280,6 +1355,137 @@ class _ObservedNodeBadge extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+final class _ObservedUriVariant {
+  const _ObservedUriVariant({
+    required this.uri,
+    required this.label,
+    required this.isLatest,
+    required this.isPlayhead,
+  });
+
+  final Uri uri;
+  final String label;
+  final bool isLatest;
+  final bool isPlayhead;
+}
+
+String _variantChipLabel(RouteManifestMatch<Object>? match, Uri uri) {
+  final parts = <String>[
+    if (match != null) ...[
+      if (match.pathParameters.length == 1)
+        match.pathParameters.values.single
+      else
+        for (final entry in match.pathParameters.entries)
+          '${entry.key}=${entry.value}',
+      for (final entry in match.restParameters.entries)
+        if (entry.value.isNotEmpty) entry.value.join('/'),
+    ],
+  ];
+  if (parts.isEmpty) {
+    parts.add(uri.pathSegments.isEmpty ? '/' : uri.pathSegments.last);
+  }
+  if (uri.hasQuery) {
+    parts.add('?${uri.query}');
+  }
+  return parts.join(' · ');
+}
+
+class _ObservedVariantChips extends StatelessWidget {
+  const _ObservedVariantChips({required this.variants, this.onNavigate});
+
+  static const _maxVisible = 3;
+
+  final List<_ObservedUriVariant> variants;
+  final ValueChanged<String>? onNavigate;
+
+  @override
+  Widget build(BuildContext context) {
+    final overflow = variants.length - _maxVisible;
+    final visible = overflow > 0 ? variants.sublist(0, _maxVisible) : variants;
+    return Wrap(
+      spacing: 3,
+      runSpacing: 3,
+      children: [
+        for (final variant in visible)
+          _ObservedVariantChip(
+            variant: variant,
+            onTap: onNavigate == null
+                ? null
+                : () => onNavigate!(variant.uri.toString()),
+          ),
+        if (overflow > 0)
+          Container(
+            key: const ValueKey('observed-variant-overflow'),
+            padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.5),
+            decoration: BoxDecoration(
+              color: DebugTheme.textMuted.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(DebugTheme.radiusFull),
+              border: Border.all(
+                color: DebugTheme.textMuted.withValues(alpha: 0.3),
+                width: 0.6,
+              ),
+            ),
+            child: Text(
+              '+$overflow',
+              style: const TextStyle(
+                color: DebugTheme.textMuted,
+                fontSize: 7.5,
+                fontWeight: FontWeight.w700,
+                decoration: TextDecoration.none,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ObservedVariantChip extends StatelessWidget {
+  const _ObservedVariantChip({required this.variant, this.onTap});
+
+  final _ObservedUriVariant variant;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = variant.isPlayhead
+        ? _ObservedFlowColors.selected
+        : variant.isLatest
+        ? _ObservedFlowColors.edge
+        : DebugTheme.textMuted;
+    final child = Container(
+      key: ValueKey('observed-variant-${variant.uri}'),
+      padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.5),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: variant.isLatest ? 0.16 : 0.08),
+        borderRadius: BorderRadius.circular(DebugTheme.radiusFull),
+        border: Border.all(
+          color: accent.withValues(alpha: variant.isLatest ? 0.55 : 0.3),
+          width: 0.6,
+        ),
+      ),
+      child: Text(
+        variant.label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: accent,
+          fontSize: 7.5,
+          fontWeight: variant.isLatest ? FontWeight.w700 : FontWeight.w600,
+          fontFamily: 'monospace',
+          decoration: TextDecoration.none,
+        ),
+      ),
+    );
+    if (onTap == null) return child;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: MouseRegion(cursor: SystemMouseCursors.click, child: child),
     );
   }
 }
@@ -1342,6 +1548,7 @@ class _ObservedScreenPreviewZoomModal extends StatelessWidget {
     required this.graphNode,
     required this.flowNode,
     this.preview,
+    this.variants = const [],
     required this.captureEnabled,
     required this.onClose,
     this.onNavigate,
@@ -1351,6 +1558,7 @@ class _ObservedScreenPreviewZoomModal extends StatelessWidget {
   final NavigationGraphNode<Object> graphNode;
   final NavigationFlowNode<Object> flowNode;
   final NavigationFlowScreenPreview? preview;
+  final List<_ObservedUriVariant> variants;
   final bool captureEnabled;
   final VoidCallback onClose;
   final VoidCallback? onNavigate;
@@ -1473,6 +1681,8 @@ class _ObservedScreenPreviewZoomModal extends StatelessWidget {
                                 _ObservedZoomFooter(
                                   visitCount: flowNode.visitCount,
                                   capturedTime: capturedTime,
+                                  path: graphNode.path,
+                                  variants: variants,
                                   onNavigate: onNavigate,
                                   onCopy: onCopy,
                                 ),
@@ -1605,12 +1815,16 @@ class _ObservedZoomFooter extends StatelessWidget {
   const _ObservedZoomFooter({
     required this.visitCount,
     required this.capturedTime,
+    required this.path,
+    this.variants = const [],
     this.onNavigate,
     this.onCopy,
   });
 
   final int visitCount;
   final String? capturedTime;
+  final String path;
+  final List<_ObservedUriVariant> variants;
   final VoidCallback? onNavigate;
   final VoidCallback? onCopy;
 
@@ -1657,6 +1871,25 @@ class _ObservedZoomFooter extends StatelessWidget {
               ],
             ],
           ),
+          if (variants.length > 1) ...[
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                path,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: DebugTheme.textMuted,
+                  fontSize: 8.5,
+                  fontFamily: 'monospace',
+                  decoration: TextDecoration.none,
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            _ObservedVariantChips(variants: variants),
+          ],
           if (onNavigate != null || onCopy != null) ...[
             const SizedBox(height: 8),
             Row(
@@ -1826,7 +2059,10 @@ final class _ObservedNodeFlowModel {
     final double nodeWidth;
     final double previewHeight;
     const cardSpacing = 8.0;
-    const infoCardHeight = 56.0;
+    final needsVariantRow = flow.nodes.values.any(
+      (node) => node.seenUris.length > 1,
+    );
+    final infoCardHeight = needsVariantRow ? 76.0 : 56.0;
 
     if (isLandscape) {
       nodeWidth = 240.0;
@@ -2036,6 +2272,7 @@ final class _ObservedNodeFlowModel {
         for (final node in orderedFlowNodes) ...[
           node.id,
           node.firstSeenRevision,
+          node.seenUris.length,
           node.screenPreview?.width,
           node.screenPreview?.height,
         ],

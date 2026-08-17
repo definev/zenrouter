@@ -70,12 +70,21 @@ class _ObservedReplayTimelineState extends State<ObservedReplayTimeline> {
   @override
   Widget build(BuildContext context) {
     final length = widget.transitions.length;
-    return ColoredBox(
-      color: DebugTheme.backgroundDark,
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: DebugTheme.borderDark)),
-        ),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xF2141416),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF2A2A2E)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x99000000),
+            blurRadius: 18,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(13),
         child: Column(
           children: [
             _TimelineSlider(
@@ -129,7 +138,7 @@ class _TimelineSlider extends StatelessWidget {
     final max = length <= 1 ? 0.0 : (length - 1).toDouble();
     final value = index < 0 ? 0.0 : index.toDouble().clamp(0.0, max);
     return SizedBox(
-      height: 44,
+      height: 32,
       child: Row(
         children: [
           Expanded(
@@ -166,7 +175,7 @@ class _TimelineSlider extends StatelessWidget {
             onTap: onToggleList,
             child: SizedBox(
               width: 28,
-              height: 44,
+              height: 32,
               child: Icon(
                 listExpanded
                     ? CupertinoIcons.chevron_down

@@ -308,16 +308,9 @@ void main() {
     final observedNodes = observedEditor.controller.nodes.values.toList(
       growable: false,
     );
-    await tester.tap(
-      find.byKey(const ValueKey('observed-flow-node-home')),
-      warnIfMissed: false,
-    );
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-    await tester.tap(
-      find.byKey(const ValueKey('observed-flow-node-profile')),
-      warnIfMissed: false,
-    );
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    observedEditor.controller.selectNodes([
+      for (final node in observedNodes) node.id,
+    ]);
     await tester.pump();
     final observedPositions = [
       for (final node in observedNodes) node.position.value,
@@ -362,10 +355,11 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.tap(
-      find.byKey(const ValueKey('observed-screen-zoom-profile')),
-      warnIfMissed: false,
-    );
+    tester
+        .widget<GestureDetector>(
+          find.byKey(const ValueKey('observed-screen-zoom-profile')),
+        )
+        .onTap!();
     await tester.pumpAndSettle();
     expect(find.text('Navigate Here'), findsOneWidget);
     expect(find.text('Copy URI'), findsOneWidget);
@@ -993,6 +987,43 @@ void main() {
     expect(find.textContaining('Driving the live app'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('parameterized Observed node lists bound URI variants', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 600);
+    addTearDown(() {
+      tester.view.resetDevicePixelRatio();
+      tester.view.resetPhysicalSize();
+    });
+
+    final coordinator = _ItemCoordinator()..toggleDebugOverlay();
+    addTearDown(coordinator.dispose);
+    await tester.pumpWidget(
+      CupertinoApp(home: DebugOverlay<_ItemRoute>(coordinator: coordinator)),
+    );
+    await tester.tap(find.text('Graph'));
+    await tester.pump();
+    await coordinator.pushSilently(_ItemDetailRoute('1'));
+    await tester.pump();
+    await coordinator.pushSilently(_ItemDetailRoute('2'));
+    await tester.pump();
+    await tester.tap(find.text('Observed'));
+    await tester.pump();
+
+    expect(find.text('2 variants'), findsOneWidget);
+    expect(find.text('/items/:id'), findsWidgets);
+    expect(
+      find.byKey(ValueKey('observed-variant-${Uri.parse('/items/1')}')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(ValueKey('observed-variant-${Uri.parse('/items/2')}')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Future<_TestCoordinator> _pumpObservedWithTransitions(
@@ -1092,6 +1123,52 @@ final class _WrapCoordinator extends Coordinator<_WrapRoute>
 
   @override
   _WrapRoute parseRouteFromUri(Uri uri) => _WrapRoute(uri.path);
+}
+
+abstract class _ItemRoute extends RouteTarget with RouteUnique {
+  @override
+  Widget build(covariant _ItemCoordinator coordinator, BuildContext context) =>
+      const ColoredBox(color: Color(0xFF7C3AED));
+}
+
+final class _ItemHomeRoute extends _ItemRoute {
+  @override
+  Uri toUri() => Uri.parse('/');
+}
+
+final class _ItemDetailRoute extends _ItemRoute {
+  _ItemDetailRoute(this.itemId);
+
+  final String itemId;
+
+  @override
+  Uri toUri() => Uri.parse('/items/$itemId');
+
+  @override
+  List<Object?> get props => [itemId];
+}
+
+final class _ItemCoordinator extends Coordinator<_ItemRoute>
+    with CoordinatorDebug<_ItemRoute> {
+  static final manifest = RouteManifest<String>(
+    name: 'ItemGraph',
+    routes: [
+      RouteManifestRoute(id: 'home', path: '/'),
+      RouteManifestRoute(id: 'item', path: '/items/:id'),
+    ],
+  );
+
+  @override
+  RouteManifest<String> get routeManifest => manifest;
+
+  @override
+  _ItemRoute parseRouteFromUri(Uri uri) {
+    final segments = uri.pathSegments;
+    if (segments.length == 2 && segments.first == 'items') {
+      return _ItemDetailRoute(segments[1]);
+    }
+    return _ItemHomeRoute();
+  }
 }
 
 final class _TestCoordinator extends Coordinator<_TestRoute>

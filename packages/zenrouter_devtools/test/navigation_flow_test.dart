@@ -54,6 +54,36 @@ void main() {
       expect(homeToProfile.historyIntents, {NavigationHistoryIntent.push});
     });
 
+    test('keeps distinct URIs for a parameterized route', () {
+      final recorder = NavigationFlowRecorder<String>(
+        manifest: _parameterizedManifest,
+        initialUri: Uri.parse('/'),
+      );
+      addTearDown(recorder.dispose);
+
+      recorder.record(
+        _commit(1, '/', '/items/1', NavigationHistoryIntent.push),
+      );
+      recorder.record(
+        _commit(2, '/items/1', '/items/2', NavigationHistoryIntent.push),
+      );
+      recorder.record(
+        _commit(3, '/items/2', '/items/1', NavigationHistoryIntent.replace),
+      );
+
+      final item = recorder.nodes['item']!;
+      expect(item.visitCount, 3);
+      expect(item.lastUri, Uri.parse('/items/1'));
+      expect(item.seenUris, [Uri.parse('/items/1'), Uri.parse('/items/2')]);
+
+      final hydrated = NavigationFlowRecorder.fromSession(
+        _parameterizedManifest,
+        recorder.exportSession(),
+      );
+      addTearDown(hydrated.dispose);
+      expect(hydrated.nodes['item']!.seenUris, item.seenUris);
+    });
+
     test('counts unmatched transitions without inventing graph nodes', () {
       final recorder = NavigationFlowRecorder<String>(
         manifest: _manifest,
@@ -266,6 +296,14 @@ final _manifest = RouteManifest<String>(
     RouteManifestRoute(id: 'home', path: '/'),
     RouteManifestRoute(id: 'profile', path: '/profile'),
     RouteManifestRoute(id: 'settings', path: '/settings'),
+  ],
+);
+
+final _parameterizedManifest = RouteManifest<String>(
+  name: 'flow-params',
+  routes: [
+    RouteManifestRoute(id: 'home', path: '/'),
+    RouteManifestRoute(id: 'item', path: '/items/:id'),
   ],
 );
 

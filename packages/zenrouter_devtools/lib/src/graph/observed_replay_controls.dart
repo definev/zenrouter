@@ -23,7 +23,7 @@ const observedReplayImportFailedBanner = 'Could not import session.';
 const observedReplayDriveBanner =
     'Driving the live app via navigate. Redirects may re-run.';
 
-/// Second Observed header row: playhead transport, speed, export/import.
+/// Floating Observed playback dock: transport, speed, export/import.
 class ObservedReplayTransport extends StatelessWidget {
   const ObservedReplayTransport({
     super.key,
@@ -31,7 +31,6 @@ class ObservedReplayTransport extends StatelessWidget {
     required this.isPlaying,
     required this.enabled,
     required this.speed,
-    this.banner,
     required this.onJumpStart,
     required this.onStepBack,
     required this.onPlayPause,
@@ -43,10 +42,7 @@ class ObservedReplayTransport extends StatelessWidget {
     required this.onExport,
     required this.onImport,
     this.onToggleDrive,
-    this.onConfirmDrive,
-    this.onCancelDrive,
     this.driveArmed = false,
-    this.driveConfirmPending = false,
     this.timelineOpen = false,
   });
 
@@ -55,7 +51,6 @@ class ObservedReplayTransport extends StatelessWidget {
   final bool enabled;
   final bool timelineOpen;
   final double speed;
-  final String? banner;
   final VoidCallback onJumpStart;
   final VoidCallback onStepBack;
   final VoidCallback onPlayPause;
@@ -67,27 +62,30 @@ class ObservedReplayTransport extends StatelessWidget {
   final VoidCallback onExport;
   final VoidCallback onImport;
   final VoidCallback? onToggleDrive;
-  final VoidCallback? onConfirmDrive;
-  final VoidCallback? onCancelDrive;
   final bool driveArmed;
-  final bool driveConfirmPending;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          height: 32,
-          decoration: const BoxDecoration(
-            color: DebugTheme.backgroundDark,
-            border: Border(bottom: BorderSide(color: DebugTheme.borderDark)),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xF2141416),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF2A2A2E)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x99000000),
+            blurRadius: 22,
+            offset: Offset(0, 10),
           ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(13),
+        child: SizedBox(
+          height: 40,
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(
-              horizontal: DebugTheme.spacingXs,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 6),
             child: Row(
               children: [
                 _ReplayTransportButton(
@@ -108,8 +106,9 @@ class ObservedReplayTransport extends StatelessWidget {
                   icon: isPlaying
                       ? CupertinoIcons.pause_fill
                       : CupertinoIcons.play_fill,
+                  emphasized: true,
                   color: enabled
-                      ? const Color(0xFF60A5FA)
+                      ? const Color(0xFF0B1220)
                       : DebugTheme.textDisabled,
                   onTap: enabled ? onPlayPause : null,
                 ),
@@ -125,13 +124,7 @@ class ObservedReplayTransport extends StatelessWidget {
                   icon: CupertinoIcons.forward_end_fill,
                   onTap: enabled ? onJumpEnd : null,
                 ),
-                if (!isLive)
-                  _ReplayTransportButton(
-                    key: const ValueKey('observed-replay-exit'),
-                    semanticsLabel: 'Exit replay',
-                    icon: CupertinoIcons.xmark,
-                    onTap: onExit,
-                  ),
+                const _DockDivider(),
                 _ReplaySpeedButton(speed: speed, onTap: onCycleSpeed),
                 if (onToggleDrive != null)
                   _ReplayTransportButton(
@@ -140,6 +133,7 @@ class ObservedReplayTransport extends StatelessWidget {
                         ? 'Stop driving the live app'
                         : 'Drive the live app to the playhead',
                     icon: CupertinoIcons.car,
+                    active: driveArmed,
                     color: !enabled
                         ? DebugTheme.textDisabled
                         : driveArmed
@@ -153,6 +147,7 @@ class ObservedReplayTransport extends StatelessWidget {
                       ? 'Hide replay event list'
                       : 'Show replay event list',
                   icon: CupertinoIcons.list_bullet,
+                  active: timelineOpen,
                   color: !enabled
                       ? DebugTheme.textDisabled
                       : timelineOpen
@@ -160,6 +155,7 @@ class ObservedReplayTransport extends StatelessWidget {
                       : DebugTheme.textSecondary,
                   onTap: enabled ? onToggleTimeline : null,
                 ),
+                const _DockDivider(),
                 _ReplayTransportButton(
                   key: const ValueKey('observed-replay-export'),
                   semanticsLabel: 'Export observed session JSON',
@@ -172,34 +168,50 @@ class ObservedReplayTransport extends StatelessWidget {
                   icon: CupertinoIcons.square_arrow_down,
                   onTap: onImport,
                 ),
+                if (!isLive) ...[
+                  const _DockDivider(),
+                  _ReplayTransportButton(
+                    key: const ValueKey('observed-replay-exit'),
+                    semanticsLabel: 'Exit replay',
+                    icon: CupertinoIcons.xmark,
+                    onTap: onExit,
+                  ),
+                ],
               ],
             ),
           ),
         ),
-        if (driveConfirmPending)
-          _DriveConfirmBar(onConfirm: onConfirmDrive, onCancel: onCancelDrive)
-        else if (banner != null)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(
-              DebugTheme.spacingMd,
-              4,
-              DebugTheme.spacingMd,
-              6,
-            ),
-            color: const Color(0xFF1A1408),
-            child: Text(
-              banner!,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Color(0xFFFBBF24),
-                fontSize: DebugTheme.fontSizeSm,
-                decoration: TextDecoration.none,
-              ),
-            ),
-          ),
-      ],
+      ),
+    );
+  }
+}
+
+/// Banner or Drive confirm chip that overlays the canvas above the dock.
+class ObservedReplayDockMessage extends StatelessWidget {
+  const ObservedReplayDockMessage({
+    super.key,
+    this.banner,
+    this.confirmPending = false,
+    this.onConfirm,
+    this.onCancel,
+  });
+
+  final String? banner;
+  final bool confirmPending;
+  final VoidCallback? onConfirm;
+  final VoidCallback? onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xF21A1610),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0x663F2F12)),
+      ),
+      child: confirmPending
+          ? _DriveConfirmBar(onConfirm: onConfirm, onCancel: onCancel)
+          : _DockBanner(banner: banner ?? ''),
     );
   }
 }
@@ -250,6 +262,33 @@ Future<String?> showObservedSessionImportDialog(BuildContext context) async {
   }
 }
 
+class _DockBanner extends StatelessWidget {
+  const _DockBanner({required this.banner});
+
+  final String banner;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          banner,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Color(0xFFE8C872),
+            fontSize: DebugTheme.fontSizeSm,
+            height: 1.3,
+            decoration: TextDecoration.none,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _DriveConfirmBar extends StatelessWidget {
   const _DriveConfirmBar({this.onConfirm, this.onCancel});
 
@@ -258,15 +297,8 @@ class _DriveConfirmBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(
-        DebugTheme.spacingMd,
-        6,
-        DebugTheme.spacingXs,
-        6,
-      ),
-      color: const Color(0xFF1A1408),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 8, 6),
       child: Row(
         children: [
           const Expanded(
@@ -275,42 +307,25 @@ class _DriveConfirmBar extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: Color(0xFFFBBF24),
+                color: Color(0xFFE8C872),
                 fontSize: DebugTheme.fontSizeSm,
+                height: 1.3,
                 decoration: TextDecoration.none,
               ),
             ),
           ),
-          GestureDetector(
+          _DockTextAction(
             key: const ValueKey('observed-replay-drive-cancel'),
+            label: 'Cancel',
+            color: DebugTheme.textSecondary,
             onTap: onCancel,
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: DebugTheme.spacingSm),
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                  color: DebugTheme.textSecondary,
-                  fontSize: DebugTheme.fontSizeSm,
-                  decoration: TextDecoration.none,
-                ),
-              ),
-            ),
           ),
-          GestureDetector(
+          _DockTextAction(
             key: const ValueKey('observed-replay-drive-confirm'),
+            label: 'Drive',
+            color: const Color(0xFFFBBF24),
+            emphasized: true,
             onTap: onConfirm,
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: DebugTheme.spacingSm),
-              child: Text(
-                'Drive',
-                style: TextStyle(
-                  color: Color(0xFFFBBF24),
-                  fontSize: DebugTheme.fontSizeSm,
-                  fontWeight: FontWeight.w700,
-                  decoration: TextDecoration.none,
-                ),
-              ),
-            ),
           ),
         ],
       ),
@@ -318,39 +333,50 @@ class _DriveConfirmBar extends StatelessWidget {
   }
 }
 
-class _ReplayTransportButton extends StatelessWidget {
-  const _ReplayTransportButton({
+class _DockTextAction extends StatelessWidget {
+  const _DockTextAction({
     super.key,
-    required this.semanticsLabel,
-    required this.icon,
+    required this.label,
+    required this.color,
     required this.onTap,
-    this.color,
+    this.emphasized = false,
   });
 
-  final String semanticsLabel;
-  final IconData icon;
+  final String label;
+  final Color color;
   final VoidCallback? onTap;
-  final Color? color;
+  final bool emphasized;
 
   @override
   Widget build(BuildContext context) {
-    final enabled = onTap != null;
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      label: semanticsLabel,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: SizedBox(
-          width: 28,
-          height: 32,
-          child: Icon(
-            icon,
-            size: 13.5,
-            color: enabled
-                ? (color ?? DebugTheme.textSecondary)
-                : DebugTheme.textDisabled,
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: emphasized
+                ? const Color(0x26FBBF24)
+                : const Color(0x00000000),
+            borderRadius: BorderRadius.circular(DebugTheme.radiusFull),
+            border: emphasized
+                ? Border.all(color: const Color(0x66FBBF24))
+                : null,
+          ),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: emphasized ? 8 : 6,
+              vertical: 4,
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: DebugTheme.fontSizeSm,
+                fontWeight: emphasized ? FontWeight.w700 : FontWeight.w500,
+                decoration: TextDecoration.none,
+              ),
+            ),
           ),
         ),
       ),
@@ -358,35 +384,142 @@ class _ReplayTransportButton extends StatelessWidget {
   }
 }
 
-class _ReplaySpeedButton extends StatelessWidget {
+class _DockDivider extends StatelessWidget {
+  const _DockDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 4),
+      child: SizedBox(
+        width: 1,
+        height: 14,
+        child: ColoredBox(color: Color(0xFF2A2A2E)),
+      ),
+    );
+  }
+}
+
+class _ReplayTransportButton extends StatefulWidget {
+  const _ReplayTransportButton({
+    super.key,
+    required this.semanticsLabel,
+    required this.icon,
+    required this.onTap,
+    this.color,
+    this.emphasized = false,
+    this.active = false,
+  });
+
+  final String semanticsLabel;
+  final IconData icon;
+  final VoidCallback? onTap;
+  final Color? color;
+  final bool emphasized;
+  final bool active;
+
+  @override
+  State<_ReplayTransportButton> createState() => _ReplayTransportButtonState();
+}
+
+class _ReplayTransportButtonState extends State<_ReplayTransportButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = widget.onTap != null;
+    final emphasized = widget.emphasized && enabled;
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: widget.semanticsLabel,
+      child: MouseRegion(
+        cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 1),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 120),
+              width: emphasized ? 28 : 26,
+              height: emphasized ? 28 : 26,
+              decoration: BoxDecoration(
+                color: emphasized
+                    ? const Color(0xFF60A5FA)
+                    : widget.active
+                    ? const Color(0x1A60A5FA)
+                    : _hovered && enabled
+                    ? const Color(0xFF222226)
+                    : const Color(0x00000000),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                widget.icon,
+                size: emphasized ? 13 : 13.5,
+                color: enabled
+                    ? (widget.color ?? DebugTheme.textSecondary)
+                    : DebugTheme.textDisabled,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReplaySpeedButton extends StatefulWidget {
   const _ReplaySpeedButton({required this.speed, required this.onTap});
 
   final double speed;
   final VoidCallback onTap;
 
   @override
+  State<_ReplaySpeedButton> createState() => _ReplaySpeedButtonState();
+}
+
+class _ReplaySpeedButtonState extends State<_ReplaySpeedButton> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    final label = speed == speed.roundToDouble()
-        ? '${speed.toInt()}×'
-        : '$speed×';
+    final label = widget.speed == widget.speed.roundToDouble()
+        ? '${widget.speed.toInt()}×'
+        : '${widget.speed}×';
     return Semantics(
       button: true,
       label: 'Replay speed $label',
-      child: GestureDetector(
-        key: const ValueKey('observed-replay-speed'),
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: SizedBox(
-          width: 36,
-          height: 32,
-          child: Center(
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: DebugTheme.textSecondary,
-                fontSize: DebugTheme.fontSizeSm,
-                fontWeight: FontWeight.w700,
-                decoration: TextDecoration.none,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: GestureDetector(
+          key: const ValueKey('observed-replay-speed'),
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 120),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+              decoration: BoxDecoration(
+                color: _hovered
+                    ? const Color(0xFF222226)
+                    : const Color(0xFF1A1A1D),
+                borderRadius: BorderRadius.circular(DebugTheme.radiusFull),
+                border: Border.all(color: const Color(0xFF2E2E32)),
+              ),
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: DebugTheme.textSecondary,
+                  fontSize: DebugTheme.fontSizeSm,
+                  fontWeight: FontWeight.w700,
+                  decoration: TextDecoration.none,
+                ),
               ),
             ),
           ),
