@@ -99,6 +99,9 @@
   the transaction `finally` and serializes overlapping work on a side
   Completer, so the caller's future has no extra listeners. The trailing
   microtask drain runs only when no path has already notified synchronously.
+  `navigate` prefers a matching lifecycle entry over the first value-equal
+  stack occupant, so updating an inactive instance does not pop and discard
+  that instance.
 - **Cooperative route cancellation** via `RouteCancellationToken`, propagated
   across redirect requests and kept distinct from typed 500 failures.
 - **Redirect continuation semantics** for 301, 302, 303, 307, and 308,

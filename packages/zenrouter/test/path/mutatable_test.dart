@@ -1109,6 +1109,25 @@ void main() {
       expect(path.stack.first, route1);
     });
 
+    test(
+      'pops to the matching instance when an earlier equal route exists',
+      () async {
+        final path = NavigationPath<MutatableTestRoute>.create();
+        final first = SimpleRoute('1');
+        final second = SimpleRoute('1');
+        final top = SimpleRoute('2');
+
+        path.push(first);
+        path.push(second);
+        path.push(top);
+        await path.navigate(second);
+
+        expect(path.stack.length, 2);
+        expect(identical(path.stack[0], first), isTrue);
+        expect(identical(path.stack[1], second), isTrue);
+      },
+    );
+
     test('pops multiple routes to reach target', () async {
       final path = NavigationPath<MutatableTestRoute>.create();
       final route1 = SimpleRoute('1');

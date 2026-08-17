@@ -235,7 +235,7 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
   @override
   @internal
   Future<void> commitResolvedNavigate(T target) async {
-    final routeIndex = stack.indexOf(target);
+    final routeIndex = _indexOfNavigateTarget(target);
     if (routeIndex != -1) {
       while (stack.length > routeIndex + 1) {
         final allowPop = await pop();
@@ -256,5 +256,18 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
     }
 
     commitResolvedRoute(target);
+  }
+
+  /// Prefers the same lifecycle entry over the first value-equal route.
+  ///
+  /// `navigate(existingInstance)` must pop back to that instance even when an
+  /// earlier stack entry compares equal (empty `props`, shared path params).
+  /// A newly parsed, value-equal instance still matches the first occupant.
+  int _indexOfNavigateTarget(T target) {
+    final identityIndex = _stack.indexWhere(
+      (route) => route.deepEquals(target),
+    );
+    if (identityIndex != -1) return identityIndex;
+    return _stack.indexOf(target);
   }
 }
