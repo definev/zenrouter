@@ -85,6 +85,7 @@ class _NavigationGraphTabState<T extends RouteUnique>
                     onClear: widget.coordinator.clearDebugNavigationFlow,
                     onNavigate: _navigateToPath,
                     onCopy: _copyToClipboard,
+                    onDrive: widget.coordinator.debugDriveToUri,
                   ),
                 },
               ),

@@ -16,7 +16,7 @@ A powerful debugging tool for [ZenRouter](https://pub.dev/packages/zenrouter), p
 - **Visual Stack Inspection**: View the current navigation hierarchy, including active paths, nested routers, and their stack history.
 - **Navigation Graph**: Explore the declarative route topology, layout branches, URI patterns, and the highlighted path to the currently matched route.
 - **Observed Runtime Flow**: Record real route-to-route transitions while using the app, including direction, visit counts, history intent, and optional action labels.
-- **Observed Session Replay**: Extract the matched transition log as URI-first JSON, then play, step, and scrub it on the Observed canvas. Replay does not re-navigate the live app.
+- **Observed Session Replay**: Extract the matched transition log as URI-first JSON, then play, step, and scrub it on the Observed canvas. Optional Drive re-issues `navigate` on the live coordinator after a confirm.
 - **Screen Previews**: See low-resolution screenshots of the real app screen inside Observed flow nodes, with an in-panel privacy toggle and bounded memory use.
 - **Resizable Debug Panel**: Drag the panel's top-left corner to resize it, or maximize and restore it from the header when a large graph needs more space.
 - **Movable Launcher**: Drag the collapsed URI pill and bug button anywhere in the safe viewport; its position survives opening and closing the panel.
@@ -114,7 +114,7 @@ onPressed: () => coordinator.debugFlowAction(
 
 The Observed canvas records every **matched** navigation commit as a chronological log and collapses that log into the directed journey graph. The replayable unit is that matched log, extracted as a versioned, URI-first JSON document (`NavigationFlowSession`). Unmatched commits stay out of the log; they only increment the header unmatched count.
 
-Replay is graph and timeline playback of that document. It does **not** re-navigate the live app, re-run `RouteRedirect` / `RouteGuard`, or restore stacks. Compass on a card and **Navigate Here** in the zoom footer still perform a live jump via `navigate`.
+Replay is graph and timeline playback of that document. **Play** does not move the live app. Arm **Drive** (car icon) after a confirm to call `coordinator.navigate` for each playhead URI. Drive is not a faithful stack restore: `pop` and `replace` both published as `replace`, so Drive only uses `navigate`. Redirects may re-run, and `navigate` to a URI already on the stack may pop and consult `RouteGuard`. Compass and **Navigate Here** remain one-shot live jumps.
 
 ### Session JSON
 
@@ -147,6 +147,7 @@ Replay is graph and timeline playback of that document. It does **not** re-navig
 When the matched log is not empty, a transport row appears under the Observed header:
 
 - **Play / Pause**, step back / forward, and jump to start / end
+- **Drive** (car icon) arms live `navigate` after a confirm; step and Play then move the real coordinator
 - **Speed** cycles 0.5× / 1× / 2× / 4×
 - **Timeline** opens a slider and a collapsible event list for scrubbing
 - **Export** copies the live session JSON (even during replay); **Import** loads a pasted document
@@ -156,7 +157,7 @@ Play highlights the playhead's from / to nodes on the existing canvas, shows the
 
 ### Recording during replay
 
-**Live Play** (Play, step, jump, or timeline from the current session) exports the in-memory log and **pauses recording**. Navigations during that replay are not added to the session. The banner says `Recording paused for replay. Navigations will not be added to this session.` Recording resumes when you Exit replay, leave Observed, leave Graph, or close the overlay.
+**Live Play** (Play, step, jump, or timeline from the current session) exports the in-memory log and **pauses recording**. Navigations during that replay — including Drive — are not added to the session. The banner says `Recording paused for replay. Navigations will not be added to this session.` Recording resumes when you Exit replay, leave Observed, leave Graph, or close the overlay. Drive from an imported session also takes a lease so driven `navigate` calls are not recorded.
 
 **Import** loads a pasted document and does **not** pause live recording. The live recorder keeps recording; Exit discards the imported document and shows the live graph again.
 

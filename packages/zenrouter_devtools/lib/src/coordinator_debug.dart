@@ -278,6 +278,20 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
     };
   }
 
+  /// Re-issues [navigate] for a recorded URI. Does not call [replace] or [pop].
+  ///
+  /// Returns `false` when parse fails. Redirects and pop-to-existing guards
+  /// still run — this is not a faithful stack restore.
+  Future<bool> debugDriveToUri(Uri uri) async {
+    try {
+      final route = await parseRouteFromUri(uri);
+      await navigate(route!);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Enables or disables automatic screen previews for the Observed graph.
   ///
   /// Existing in-memory previews are retained until the flow is cleared.

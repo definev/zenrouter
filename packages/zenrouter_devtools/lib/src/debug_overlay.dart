@@ -74,14 +74,14 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
 
   @override
   Widget build(BuildContext context) {
-    final Widget content = !widget.coordinator.debugOverlayOpen
+    Widget content = !widget.coordinator.debugOverlayOpen
         ? _buildCollapsedView()
         : _buildExpandedView();
 
     if (HitScope.maybeOf(context) == null) {
-      return HitScope(child: content);
+      content = HitScope(child: content);
     }
-    return content;
+    return HeroControllerScope.none(child: content);
   }
 
   // ===========================================================================

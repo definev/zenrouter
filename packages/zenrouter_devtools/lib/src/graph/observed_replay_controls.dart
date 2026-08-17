@@ -19,6 +19,10 @@ const observedReplayStalePreviewCaption = 'Preview from a later visit';
 /// Copy shown when pasted JSON cannot be decoded.
 const observedReplayImportFailedBanner = 'Could not import session.';
 
+/// Copy appended while Drive is armed.
+const observedReplayDriveBanner =
+    'Driving the live app via navigate. Redirects may re-run.';
+
 /// Second Observed header row: playhead transport, speed, export/import.
 class ObservedReplayTransport extends StatelessWidget {
   const ObservedReplayTransport({
@@ -38,6 +42,11 @@ class ObservedReplayTransport extends StatelessWidget {
     required this.onToggleTimeline,
     required this.onExport,
     required this.onImport,
+    this.onToggleDrive,
+    this.onConfirmDrive,
+    this.onCancelDrive,
+    this.driveArmed = false,
+    this.driveConfirmPending = false,
     this.timelineOpen = false,
   });
 
@@ -57,6 +66,11 @@ class ObservedReplayTransport extends StatelessWidget {
   final VoidCallback onToggleTimeline;
   final VoidCallback onExport;
   final VoidCallback onImport;
+  final VoidCallback? onToggleDrive;
+  final VoidCallback? onConfirmDrive;
+  final VoidCallback? onCancelDrive;
+  final bool driveArmed;
+  final bool driveConfirmPending;
 
   @override
   Widget build(BuildContext context) {
@@ -119,6 +133,20 @@ class ObservedReplayTransport extends StatelessWidget {
                     onTap: onExit,
                   ),
                 _ReplaySpeedButton(speed: speed, onTap: onCycleSpeed),
+                if (onToggleDrive != null)
+                  _ReplayTransportButton(
+                    key: const ValueKey('observed-replay-drive'),
+                    semanticsLabel: driveArmed
+                        ? 'Stop driving the live app'
+                        : 'Drive the live app to the playhead',
+                    icon: CupertinoIcons.car,
+                    color: !enabled
+                        ? DebugTheme.textDisabled
+                        : driveArmed
+                        ? const Color(0xFFFBBF24)
+                        : DebugTheme.textSecondary,
+                    onTap: enabled ? onToggleDrive : null,
+                  ),
                 _ReplayTransportButton(
                   key: const ValueKey('observed-replay-timeline'),
                   semanticsLabel: timelineOpen
@@ -148,7 +176,9 @@ class ObservedReplayTransport extends StatelessWidget {
             ),
           ),
         ),
-        if (banner != null)
+        if (driveConfirmPending)
+          _DriveConfirmBar(onConfirm: onConfirmDrive, onCancel: onCancelDrive)
+        else if (banner != null)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(
@@ -180,6 +210,7 @@ Future<String?> showObservedSessionImportDialog(BuildContext context) async {
   try {
     final result = await showCupertinoDialog<String>(
       context: context,
+      useRootNavigator: false,
       builder: (context) {
         return CupertinoAlertDialog(
           title: const Text('Import session'),
@@ -216,6 +247,74 @@ Future<String?> showObservedSessionImportDialog(BuildContext context) async {
     return source;
   } finally {
     controller.dispose();
+  }
+}
+
+class _DriveConfirmBar extends StatelessWidget {
+  const _DriveConfirmBar({this.onConfirm, this.onCancel});
+
+  final VoidCallback? onConfirm;
+  final VoidCallback? onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(
+        DebugTheme.spacingMd,
+        6,
+        DebugTheme.spacingXs,
+        6,
+      ),
+      color: const Color(0xFF1A1408),
+      child: Row(
+        children: [
+          const Expanded(
+            child: Text(
+              'Drive the live app via navigate? Redirects may re-run.',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: Color(0xFFFBBF24),
+                fontSize: DebugTheme.fontSizeSm,
+                decoration: TextDecoration.none,
+              ),
+            ),
+          ),
+          GestureDetector(
+            key: const ValueKey('observed-replay-drive-cancel'),
+            onTap: onCancel,
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: DebugTheme.spacingSm),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: DebugTheme.textSecondary,
+                  fontSize: DebugTheme.fontSizeSm,
+                  decoration: TextDecoration.none,
+                ),
+              ),
+            ),
+          ),
+          GestureDetector(
+            key: const ValueKey('observed-replay-drive-confirm'),
+            onTap: onConfirm,
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: DebugTheme.spacingSm),
+              child: Text(
+                'Drive',
+                style: TextStyle(
+                  color: Color(0xFFFBBF24),
+                  fontSize: DebugTheme.fontSizeSm,
+                  fontWeight: FontWeight.w700,
+                  decoration: TextDecoration.none,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

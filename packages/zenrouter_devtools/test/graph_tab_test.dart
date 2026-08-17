@@ -667,6 +667,51 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('live-export replay keeps live node sizes', (tester) async {
+    final coordinator = await _pumpObservedWithTransitions(tester);
+    const png =
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4'
+        '2mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+    coordinator.debugNavigationFlow.attachScreenPreview(
+      'home',
+      base64Decode(png),
+      revision: coordinator.lastNavigationCommit!.revision,
+      width: 320,
+      height: 180,
+    );
+    await tester.pump();
+
+    final editor = tester.widget<NodeFlowEditor<dynamic, Object?>>(
+      find.byKey(const ValueKey('observed-node-flow')),
+    );
+    final ids = editor.controller.nodes.keys.toList(growable: false);
+    final sizes = [
+      for (final node in editor.controller.nodes.values) node.size.value,
+    ];
+    expect(sizes, isNotEmpty);
+    expect(sizes.first.width, 240);
+
+    await tester.tap(find.byKey(const ValueKey('observed-replay-next')));
+    await tester.pump();
+    expect(editor.controller.nodes.keys.toList(), ids);
+    expect([
+      for (final node in editor.controller.nodes.values) node.size.value,
+    ], sizes);
+
+    await tester.tap(find.byKey(const ValueKey('observed-replay-drive')));
+    await tester.pump();
+    await tester.tap(
+      find.byKey(const ValueKey('observed-replay-drive-confirm')),
+    );
+    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(editor.controller.nodes.keys.toList(), ids);
+    expect([
+      for (final node in editor.controller.nodes.values) node.size.value,
+    ], sizes);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('live navigate during replay does not loadGraph', (tester) async {
     final coordinator = await _pumpObservedWithTransitions(tester);
     await tester.tap(find.byKey(const ValueKey('observed-replay-next')));
@@ -916,6 +961,37 @@ void main() {
     await tester.pump();
     expect(tester.takeException(), isNull);
     expect(find.textContaining('REPLAY'), findsNothing);
+  });
+
+  testWidgets('play without Drive does not change the live URI', (
+    tester,
+  ) async {
+    final coordinator = await _pumpObservedWithTransitions(tester);
+    expect(coordinator.currentUri.path, '/');
+    await tester.tap(find.byKey(const ValueKey('observed-replay-next')));
+    await tester.pump();
+    expect(find.textContaining('REPLAY 1 / 2'), findsOneWidget);
+    expect(coordinator.currentUri.path, '/');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Drive confirm navigates the live coordinator to the playhead', (
+    tester,
+  ) async {
+    final coordinator = await _pumpObservedWithTransitions(tester);
+    expect(coordinator.currentUri.path, '/');
+    await tester.tap(find.byKey(const ValueKey('observed-replay-next')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('observed-replay-drive')));
+    await tester.pump();
+    await tester.tap(
+      find.byKey(const ValueKey('observed-replay-drive-confirm')),
+    );
+    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(coordinator.currentUri.path, '/profile');
+    expect(find.textContaining('Driving the live app'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
 

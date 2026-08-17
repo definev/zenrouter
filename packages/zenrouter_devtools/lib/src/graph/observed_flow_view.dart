@@ -29,6 +29,7 @@ class ObservedNavigationFlowView extends StatefulWidget {
     required this.onClear,
     this.onNavigate,
     this.onCopy,
+    this.onDrive,
   });
 
   final NavigationGraph<Object> graph;
@@ -40,6 +41,7 @@ class ObservedNavigationFlowView extends StatefulWidget {
   final VoidCallback onClear;
   final ValueChanged<String>? onNavigate;
   final ValueChanged<String>? onCopy;
+  final Future<bool> Function(Uri uri)? onDrive;
 
   @override
   State<ObservedNavigationFlowView> createState() =>
@@ -66,6 +68,10 @@ class _ObservedNavigationFlowViewState
   double _speed = 1;
   bool _listExpanded = false;
   VoidCallback _releaseRecordingPause = _noopRelease;
+  bool _driveArmed = false;
+  bool _driveConfirmPending = false;
+  bool _driveOwnsLease = false;
+  int? _lastDrivenRevision;
 
   static void _noopRelease() {}
 
@@ -227,6 +233,10 @@ class _ObservedNavigationFlowViewState
     _disposeReplaySession();
     _releaseRecordingPause();
     _releaseRecordingPause = _noopRelease;
+    _driveArmed = false;
+    _driveConfirmPending = false;
+    _driveOwnsLease = false;
+    _lastDrivenRevision = null;
 
     _hydrated = NavigationFlowRecorder.fromSession(widget.manifest, session);
     _replayLatestPreviews = pauseLiveRecording
@@ -241,16 +251,6 @@ class _ObservedNavigationFlowViewState
     );
     _player!.addListener(_onPlayerChanged);
     _player!.setSpeed(_speed);
-    final previousPositions = <Object, Offset>{
-      for (final node in _controller.nodes.values)
-        node.data.id: node.position.value,
-    };
-    _frozenModel = _ObservedNodeFlowModel.calculate(
-      widget.graph,
-      _hydrated!,
-      previousPositions: previousPositions,
-    );
-    _model = _frozenModel!;
     _replayFromLiveExport = pauseLiveRecording;
     _importFailed = false;
     _importedUnmatched =
@@ -260,13 +260,29 @@ class _ObservedNavigationFlowViewState
     _mode = play
         ? _ObservedReplayMode.replayPlaying
         : _ObservedReplayMode.replayPaused;
-    _controller.loadGraph(
-      NodeGraph<_ObservedNodeData, Object?>(
-        nodes: _model.nodes,
-        connections: _model.connections,
-        viewport: _controller.viewport,
-      ),
-    );
+    // Live-export keeps the on-screen cards. Hydrated sessions have no
+    // preview aspect ratios, so recalculating would resize every node.
+    if (pauseLiveRecording) {
+      _frozenModel = _model;
+    } else {
+      final previousPositions = <Object, Offset>{
+        for (final node in _controller.nodes.values)
+          node.data.id: node.position.value,
+      };
+      _frozenModel = _ObservedNodeFlowModel.calculate(
+        widget.graph,
+        _hydrated!,
+        previousPositions: previousPositions,
+      );
+      _model = _frozenModel!;
+      _controller.loadGraph(
+        NodeGraph<_ObservedNodeData, Object?>(
+          nodes: _model.nodes,
+          connections: _model.connections,
+          viewport: _controller.viewport,
+        ),
+      );
+    }
     if (pauseLiveRecording) {
       _releaseRecordingPause = widget.acquireRecordingPause();
     }
@@ -280,6 +296,8 @@ class _ObservedNavigationFlowViewState
   }
 
   void _exitReplay() {
+    final restoreLiveGraph = !_replayFromLiveExport;
+    _disarmDrive(releaseLease: false);
     _disposeReplaySession();
     _releaseRecordingPause();
     _releaseRecordingPause = _noopRelease;
@@ -289,22 +307,24 @@ class _ObservedNavigationFlowViewState
     _importFailed = false;
     _listExpanded = false;
     if (!mounted) return;
-    final previousPositions = <Object, Offset>{
-      for (final node in _controller.nodes.values)
-        node.data.id: node.position.value,
-    };
-    _model = _ObservedNodeFlowModel.calculate(
-      widget.graph,
-      widget.flow,
-      previousPositions: previousPositions,
-    );
-    _controller.loadGraph(
-      NodeGraph<_ObservedNodeData, Object?>(
-        nodes: _model.nodes,
-        connections: _model.connections,
-        viewport: _controller.viewport,
-      ),
-    );
+    if (restoreLiveGraph) {
+      final previousPositions = <Object, Offset>{
+        for (final node in _controller.nodes.values)
+          node.data.id: node.position.value,
+      };
+      _model = _ObservedNodeFlowModel.calculate(
+        widget.graph,
+        widget.flow,
+        previousPositions: previousPositions,
+      );
+      _controller.loadGraph(
+        NodeGraph<_ObservedNodeData, Object?>(
+          nodes: _model.nodes,
+          connections: _model.connections,
+          viewport: _controller.viewport,
+        ),
+      );
+    }
     _applyConnectionStyles();
     setState(() {});
   }
@@ -326,7 +346,59 @@ class _ObservedNavigationFlowViewState
         : _ObservedReplayMode.replayPaused;
     _applyConnectionStyles();
     _centerOnPlayhead();
+    _syncDriveToPlayhead();
     setState(() {});
+  }
+
+  void _toggleDrive() {
+    if (widget.onDrive == null) return;
+    if (_driveArmed) {
+      _disarmDrive();
+      setState(() {});
+      return;
+    }
+    if (_driveConfirmPending) {
+      _driveConfirmPending = false;
+      setState(() {});
+      return;
+    }
+    if (_isLive) {
+      if (widget.flow.transitions.isEmpty) return;
+      _enterReplayFromLive(initialIndex: 0, play: false);
+    }
+    _driveConfirmPending = true;
+    setState(() {});
+  }
+
+  void _confirmDrive() {
+    _driveConfirmPending = false;
+    _driveArmed = true;
+    if (_releaseRecordingPause == _noopRelease) {
+      _releaseRecordingPause = widget.acquireRecordingPause();
+      _driveOwnsLease = true;
+    }
+    _syncDriveToPlayhead(force: true);
+    setState(() {});
+  }
+
+  void _disarmDrive({bool releaseLease = true}) {
+    _driveArmed = false;
+    _driveConfirmPending = false;
+    _lastDrivenRevision = null;
+    if (releaseLease && _driveOwnsLease) {
+      _releaseRecordingPause();
+      _releaseRecordingPause = _noopRelease;
+    }
+    _driveOwnsLease = false;
+  }
+
+  void _syncDriveToPlayhead({bool force = false}) {
+    final onDrive = widget.onDrive;
+    final current = _player?.current;
+    if (!_driveArmed || onDrive == null || current == null) return;
+    if (!force && current.revision == _lastDrivenRevision) return;
+    _lastDrivenRevision = current.revision;
+    onDrive(current.currentUri);
   }
 
   void _centerOnPlayhead() {
@@ -517,13 +589,16 @@ class _ObservedNavigationFlowViewState
   String? get _replayBanner {
     if (_importFailed) return observedReplayImportFailedBanner;
     if (_isLive) return null;
-    final base = _importedUnmatched
+    var base = _importedUnmatched
         ? observedReplayUnmatchedBanner
         : _replayFromLiveExport
         ? observedReplayLiveExportBanner
         : observedReplayImportBanner;
     if (_player?.currentPreviewIsStale == true) {
-      return '$base $observedReplayStalePreviewCaption';
+      base = '$base $observedReplayStalePreviewCaption';
+    }
+    if (_driveArmed) {
+      return '$base $observedReplayDriveBanner';
     }
     return base;
   }
@@ -591,6 +666,14 @@ class _ObservedNavigationFlowViewState
                 onToggleTimeline: _toggleTimeline,
                 onExport: _exportSession,
                 onImport: _importSession,
+                onToggleDrive: widget.onDrive == null ? null : _toggleDrive,
+                onConfirmDrive: _confirmDrive,
+                onCancelDrive: () {
+                  _driveConfirmPending = false;
+                  setState(() {});
+                },
+                driveArmed: _driveArmed,
+                driveConfirmPending: _driveConfirmPending,
               ),
             Expanded(
               child: canvasFlow.edges.isEmpty
@@ -634,8 +717,12 @@ class _ObservedNavigationFlowViewState
                                       nodeBuilder: (context, node) {
                                         final id = node.data.id;
                                         final graphNode =
-                                            widget.graph.nodes[id]!;
-                                        final flowNode = canvasFlow.nodes[id]!;
+                                            widget.graph.nodes[id];
+                                        final flowNode = canvasFlow.nodes[id];
+                                        if (graphNode == null ||
+                                            flowNode == null) {
+                                          return const SizedBox.shrink();
+                                        }
                                         return _ObservedFlowNodeCard(
                                           key: ValueKey(
                                             'observed-flow-node-$id',

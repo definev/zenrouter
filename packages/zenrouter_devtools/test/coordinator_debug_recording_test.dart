@@ -121,6 +121,26 @@ void main() {
       },
     );
   });
+
+  testWidgets('debugDriveToUri navigates via parseRouteFromUri', (
+    tester,
+  ) async {
+    final coordinator = _TestCoordinator();
+    addTearDown(coordinator.dispose);
+    await tester.pumpWidget(
+      CupertinoApp(
+        home: CoordinatorView<_TestRoute>(
+          coordinator: coordinator,
+          initialUri: Uri.parse('/'),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(coordinator.currentUri.path, '/');
+    expect(await coordinator.debugDriveToUri(Uri.parse('/profile')), isTrue);
+    await tester.pump();
+    expect(coordinator.currentUri.path, '/profile');
+  });
 }
 
 Future<void> _waitForPreview(
