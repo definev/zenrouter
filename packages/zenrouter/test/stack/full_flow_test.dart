@@ -1239,9 +1239,7 @@ void main() {
       );
     });
 
-    testWidgets('recoverUri navigates to parsed route', (
-      tester,
-    ) async {
+    testWidgets('recoverUri navigates to parsed route', (tester) async {
       final coordinator = TestCoordinator();
 
       await tester.pumpWidget(

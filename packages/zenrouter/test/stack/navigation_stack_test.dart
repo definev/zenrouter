@@ -120,41 +120,36 @@ void main() {
       expect(BuildTracker.getBuildCount('home'), 1);
     });
 
-    testWidgets(
-      'pushOrMoveToTop of an equal new instance rebuilds the page',
-      (tester) async {
-        final path = NavigationPath<TestRoute>.create();
-        final first = TestRoute('home');
-        final second = TestRoute('home');
+    testWidgets('pushOrMoveToTop of an equal new instance rebuilds the page', (
+      tester,
+    ) async {
+      final path = NavigationPath<TestRoute>.create();
+      final first = TestRoute('home');
+      final second = TestRoute('home');
 
-        await tester.pumpWidget(
-          MaterialApp(
-            home: NavigationStack<TestRoute>(
-              path: path,
-              resolver: (route) => StackTransition.none(
-                Text('instance', key: ObjectKey(route)),
-              ),
-            ),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: NavigationStack<TestRoute>(
+            path: path,
+            resolver: (route) =>
+                StackTransition.none(Text('instance', key: ObjectKey(route))),
           ),
-        );
+        ),
+      );
 
-        final other = TestRoute('other');
+      final other = TestRoute('other');
 
-        await path.pushSilently(first);
-        await path.pushSilently(other);
-        await tester.pumpAndSettle();
+      await path.pushSilently(first);
+      await path.pushSilently(other);
+      await tester.pumpAndSettle();
 
-        await path.pushOrMoveToTop(second);
-        await tester.pumpAndSettle();
+      await path.pushOrMoveToTop(second);
+      await tester.pumpAndSettle();
 
-        expect(find.byKey(ObjectKey(second)), findsOneWidget);
-        expect(
-          find.byKey(ObjectKey(first), skipOffstage: false),
-          findsNothing,
-        );
-        expect(first.onResult.isCompleted, isTrue);
-      },
-    );
+      expect(find.byKey(ObjectKey(second)), findsOneWidget);
+      expect(find.byKey(ObjectKey(first), skipOffstage: false), findsNothing);
+      expect(first.onResult.isCompleted, isTrue);
+    });
 
     testWidgets('creates new page on push', (tester) async {
       final path = NavigationPath<TestRoute>.create();

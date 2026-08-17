@@ -138,21 +138,12 @@ class DocsCoordinator extends Coordinator<DocsRoute> {
       RouteManifestRoute(id: 'IndexRoute', path: '/'),
     ],
     layouts: [
-      RouteManifestLayout(
-        id: 'RootLayout',
-        path: '/',
-        kind: RouteManifestLayoutKind.stack,
-      ),
-      RouteManifestLayout(
-        id: 'DocsLayout',
-        path: '/docs',
-        kind: RouteManifestLayoutKind.stack,
-      ),
-      RouteManifestLayout(
+      RouteManifestLayout.stack(id: 'RootLayout', path: '/'),
+      RouteManifestLayout.stack(id: 'DocsLayout', path: '/docs'),
+      RouteManifestLayout.stack(
         id: 'ExamplesLayout',
         path: '/docs/examples',
         parentId: 'DocsLayout',
-        kind: RouteManifestLayoutKind.stack,
       ),
     ],
   );

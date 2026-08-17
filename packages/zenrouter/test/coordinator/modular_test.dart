@@ -268,10 +268,9 @@ class ShellFragmentModule extends RouteModule<AppRoute> {
         name: 'shell-fragment',
         idCodec: RouteIdCodec.enumValues(SharedFragmentId.values),
         layouts: [
-          RouteManifestLayout(
+          RouteManifestLayout.stack(
             id: SharedFragmentId.shell,
             path: '/account',
-            kind: RouteManifestLayoutKind.stack,
           ),
         ],
       );

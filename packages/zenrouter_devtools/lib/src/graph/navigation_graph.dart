@@ -89,11 +89,12 @@ final class NavigationGraph<I extends Object> {
       );
     }
 
-    final roots = manifest.nodes.values
-        .where((node) => node.parentId == null)
-        .map((node) => node.id)
-        .toList(growable: false)
-      ..sort((left, right) => compareChildren(left, right, null));
+    final roots =
+        manifest.nodes.values
+            .where((node) => node.parentId == null)
+            .map((node) => node.id)
+            .toList(growable: false)
+          ..sort((left, right) => compareChildren(left, right, null));
 
     final depths = <I, int>{};
     void visit(I id, int depth) {
@@ -109,8 +110,9 @@ final class NavigationGraph<I extends Object> {
 
     final activeRouteId = manifest.match(currentUri)?.id;
     final activeNodeIds = <I>{};
-    RouteManifestNode<I>? activeNode =
-        activeRouteId == null ? null : manifest.nodes[activeRouteId];
+    RouteManifestNode<I>? activeNode = activeRouteId == null
+        ? null
+        : manifest.nodes[activeRouteId];
     while (activeNode != null && activeNodeIds.add(activeNode.id)) {
       final parentId = activeNode.parentId;
       activeNode = parentId == null ? null : manifest.nodes[parentId];
@@ -118,12 +120,12 @@ final class NavigationGraph<I extends Object> {
 
     final graphNodes = <I, NavigationGraphNode<I>>{};
     for (final node in manifest.nodes.values) {
-      final parent =
-          node.parentId == null ? null : manifest.nodes[node.parentId];
-      final declaredBranches =
-          parent is RouteManifestLayout<I>
-              ? _declaredBranches(parent)
-              : const [];
+      final parent = node.parentId == null
+          ? null
+          : manifest.nodes[node.parentId];
+      final declaredBranches = parent is RouteManifestLayout<I>
+          ? _declaredBranches(parent)
+          : const [];
       final branchIndex = declaredBranches.indexOf(node.id);
       graphNodes[node.id] = NavigationGraphNode<I>(
         id: node.id,
@@ -132,11 +134,11 @@ final class NavigationGraph<I extends Object> {
         parentId: node.parentId,
         kind: switch (node) {
           RouteManifestRoute<I>() => NavigationGraphNodeKind.route,
-          RouteManifestLayout<I>(kind: RouteManifestLayoutKind.stack) =>
+          RouteManifestLayout<I>(kind: RouteManifestStackKind()) =>
             NavigationGraphNodeKind.stackLayout,
-          RouteManifestLayout<I>(kind: RouteManifestLayoutKind.indexed) =>
+          RouteManifestLayout<I>(kind: RouteManifestIndexedKind()) =>
             NavigationGraphNodeKind.indexedLayout,
-          RouteManifestLayout<I>(kind: RouteManifestLayoutKind.branched) =>
+          RouteManifestLayout<I>(kind: RouteManifestBranchedKind()) =>
             NavigationGraphNodeKind.branchedLayout,
         },
         childIds: List<I>.unmodifiable(childIds[node.id] ?? const []),
@@ -186,11 +188,7 @@ final class NavigationGraph<I extends Object> {
 }
 
 List<I> _declaredBranches<I extends Object>(RouteManifestLayout<I> layout) =>
-    switch (layout.kind) {
-      RouteManifestLayoutKind.stack => <I>[],
-      RouteManifestLayoutKind.indexed => layout.indexedChildIds,
-      RouteManifestLayoutKind.branched => layout.branchChildIds,
-    };
+    layout.kind.childIds;
 
 int _kindRank<I extends Object>(RouteManifestNode<I> node) => switch (node) {
   RouteManifestLayout<I>() => 0,

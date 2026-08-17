@@ -42,10 +42,9 @@ final class NavigationFlowScreenPreview {
   final int? height;
 
   /// Aspect ratio (width / height) if dimensions are known.
-  double? get aspectRatio =>
-      (width != null && height != null && height! > 0)
-          ? width! / height!
-          : null;
+  double? get aspectRatio => (width != null && height != null && height! > 0)
+      ? width! / height!
+      : null;
 }
 
 /// One committed transition in chronological order.
@@ -339,8 +338,9 @@ final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
     lastSeenRevision: node.lastSeenRevision,
     lastUri: node.lastUri,
     visitCount: node.visitCount,
-    screenPreview:
-        clearScreenPreview ? null : screenPreview ?? node.screenPreview,
+    screenPreview: clearScreenPreview
+        ? null
+        : screenPreview ?? node.screenPreview,
   );
 }
 

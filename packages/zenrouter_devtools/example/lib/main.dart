@@ -11,9 +11,7 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      routerConfig: appCoordinator,
-    );
+    return MaterialApp.router(routerConfig: appCoordinator);
   }
 }
 
@@ -263,17 +261,15 @@ class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug {
       RouteManifestRoute(id: 'NotFound', path: '/not-found'),
     ],
     layouts: [
-      RouteManifestLayout(
+      RouteManifestLayout.indexed(
         id: 'CustomLayout',
         path: '/',
-        kind: RouteManifestLayoutKind.indexed,
-        indexedChildIds: ['FirstLayout', 'SecondTab', 'ThirdTab'],
+        childIds: ['FirstLayout', 'SecondTab', 'ThirdTab'],
       ),
-      RouteManifestLayout(
+      RouteManifestLayout.stack(
         id: 'FirstLayout',
         path: '/first',
         parentId: 'CustomLayout',
-        kind: RouteManifestLayoutKind.stack,
       ),
     ],
   );

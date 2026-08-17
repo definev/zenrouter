@@ -131,39 +131,27 @@ class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug {
       ),
     ],
     layouts: [
-      RouteManifestLayout(
-        id: 'AuthLayout',
-        path: '/',
-        kind: RouteManifestLayoutKind.stack,
-      ),
-      RouteManifestLayout(
+      RouteManifestLayout.stack(id: 'AuthLayout', path: '/'),
+      RouteManifestLayout.indexed(
         id: 'TabsLayout',
         path: '/tabs',
-        kind: RouteManifestLayoutKind.indexed,
-        indexedChildIds: [
-          'FeedTabLayout',
-          'TabProfileRoute',
-          'TabSettingsRoute',
-        ],
+        childIds: ['FeedTabLayout', 'TabProfileRoute', 'TabSettingsRoute'],
       ),
-      RouteManifestLayout(
+      RouteManifestLayout.branched(
         id: 'FeedTabLayout',
         path: '/tabs/feed',
         parentId: 'TabsLayout',
-        kind: RouteManifestLayoutKind.branched,
-        branchChildIds: ['FollowingLayout', 'ForYouLayout'],
+        childIds: ['FollowingLayout', 'ForYouLayout'],
       ),
-      RouteManifestLayout(
+      RouteManifestLayout.stack(
         id: 'FollowingLayout',
         path: '/tabs/feed/following',
         parentId: 'FeedTabLayout',
-        kind: RouteManifestLayoutKind.stack,
       ),
-      RouteManifestLayout(
+      RouteManifestLayout.stack(
         id: 'ForYouLayout',
         path: '/tabs/feed/for-you',
         parentId: 'FeedTabLayout',
-        kind: RouteManifestLayoutKind.stack,
       ),
     ],
   );

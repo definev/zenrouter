@@ -15,6 +15,10 @@
   Custom page builders normally require no change unless they explicitly typed
   the callback parameter.
 
+- **`pop()` completes `onResult` and runs `onDidPop` immediately.** Do not call
+  `completeOnResult` again after `pop` / `tryPop`; the completer is already
+  done. `onDidPop` is idempotent if Flutter's page callback also fires.
+
 ### 🚀 New Features
 
 - **Stateful branch navigation** via `BranchedStackPath`: fixed branch layout
@@ -38,9 +42,11 @@
   `CoordinatorRecoverable`.
 - **`recoverUri`**: parses a URI and recovers it on `CoordinatorRecoverable`
   (`parseRouteFromUri` → `recover`).
-- **Correct browser history intent**: push/replace/traversal is mapped to
-  Flutter's navigate/neglect/automatic reporting by
-  `CoordinatorRouteInformationProvider`.
+- **Correct browser history intent**: push → navigate, replace → neglect.
+  Traversal reports `none` when the app URI already matches the engine, and
+  `neglect` when a guard (or other failed apply) must restore the current
+  entry. Unconditional `none` would push a new history entry on Flutter
+  stable/master.
 - **Superseding Router resolution**: newer route information cooperatively
   cancels unresolved older work. Commits remain serialized and atomic once
   started; cancelled Router futures complete normally.
@@ -49,16 +55,20 @@
 - **Typed route resolution**: Flutter Router consumes core match, redirect,
   not-found, and error outcomes; redirects replace the current history entry.
 - **Stable page-entry identity**: equal semantic routes can coexist in a stack
-  without duplicate Navigator page keys.
-- **Reset cleanup**: `NavigationPath.reset` discards route-owned resources and
-  publishes its notification asynchronously, including in headless use where
-  no Flutter binding exists.
+  without duplicate Navigator page keys. Imperative `NavigationStack` diffs
+  pages by identity; `DeclarativeNavigationStack` still diffs by `==`.
+- **Reset cleanup**: `NavigationPath.reset` discards route-owned resources.
+  Inside a navigation transaction it notifies synchronously so multi-path
+  `replace` publishes one commit; outside a transaction it still publishes in
+  a microtask (safe during Flutter builds and in headless use).
 - **Atomic declarative diffs**: inserting/replacing routes no longer exposes an
   intermediate empty stack or rebuilds retained pages.
 
 ### 📖 Documentation
 
 - Architecture docs updated for the capability-mixin split.
+- [Migration guide](MIGRATION_GUIDE.md#300-manifests-capability-mixins-and-lifecycle)
+  covers 3.0 capability mixins, `PageCallback`, `pop()` results, and equality.
 
 ## 2.3.0
 

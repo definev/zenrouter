@@ -11,14 +11,14 @@ class ProblemsTab<T extends RouteUnique> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 1. Get all paths known to coordinator (excluding root)
-    final userPaths =
-        coordinator.paths.where((p) => p != coordinator.root).toSet();
+    final userPaths = coordinator.paths
+        .where((p) => p != coordinator.root)
+        .toSet();
 
     // 2. Instantiate all registered layouts
-    final layouts =
-        coordinator.layoutParentConstructorTable.entries
-            .map((entry) => entry.value(entry.key) as RouteLayout)
-            .toList();
+    final layouts = coordinator.layoutParentConstructorTable.entries
+        .map((entry) => entry.value(entry.key) as RouteLayout)
+        .toList();
 
     // 3. Map paths to the layouts that claim them
     final pathLayoutMap = <StackPath, List<RouteLayout>>{};
@@ -123,10 +123,9 @@ class _LayoutProblem extends StatelessWidget {
         children: [
           Icon(
             CupertinoIcons.exclamationmark_triangle_fill,
-            color:
-                type == _LayoutProblemType.duplicatedPath
-                    ? const Color(0xFFEF5350) // Red for duplicate (critical)
-                    : const Color(0xFFE85600), // Orange for others
+            color: type == _LayoutProblemType.duplicatedPath
+                ? const Color(0xFFEF5350) // Red for duplicate (critical)
+                : const Color(0xFFE85600), // Orange for others
             size: 16,
           ),
           const SizedBox(width: DebugTheme.spacing),

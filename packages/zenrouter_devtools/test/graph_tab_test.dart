@@ -249,10 +249,7 @@ void main() {
       topologyPositions.first,
     );
 
-    expect(
-      find.byKey(const ValueKey('topology-mode-toggle')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('topology-mode-toggle')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('topology-mode-toggle')));
     await tester.pump();
     expect(
@@ -383,10 +380,7 @@ void main() {
     expect(coordinator.debugScreenCaptureEnabled, isFalse);
     expect(find.text('SCREEN CAPTURE OFF'), findsOneWidget);
 
-    expect(
-      find.byKey(const ValueKey('observed-mode-toggle')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('observed-mode-toggle')), findsOneWidget);
     expect(
       tester
           .widget<NodeFlowEditor<dynamic, Object?>>(
@@ -521,12 +515,7 @@ final class _WrapCoordinator extends Coordinator<_WrapRoute>
         RouteManifestRoute(id: id, path: '/$id', parentId: 'shell'),
     ],
     layouts: [
-      RouteManifestLayout(
-        id: 'shell',
-        path: '/',
-        kind: RouteManifestLayoutKind.indexed,
-        indexedChildIds: _tabIds,
-      ),
+      RouteManifestLayout.indexed(id: 'shell', path: '/', childIds: _tabIds),
     ],
   );
 
@@ -547,17 +536,12 @@ final class _TestCoordinator extends Coordinator<_TestRoute>
       RouteManifestRoute(id: 'login', path: '/login', parentId: 'auth'),
     ],
     layouts: [
-      RouteManifestLayout(
+      RouteManifestLayout.indexed(
         id: 'shell',
         path: '/',
-        kind: RouteManifestLayoutKind.indexed,
-        indexedChildIds: ['home', 'profile'],
+        childIds: ['home', 'profile'],
       ),
-      RouteManifestLayout(
-        id: 'auth',
-        path: '/auth',
-        kind: RouteManifestLayoutKind.stack,
-      ),
+      RouteManifestLayout.stack(id: 'auth', path: '/auth'),
     ],
   );
 

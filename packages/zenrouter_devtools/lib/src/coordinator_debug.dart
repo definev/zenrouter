@@ -163,12 +163,11 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   /// The recorder is created lazily and seeded with the current route. It
   /// deduplicates coordinator notifications by navigation commit revision.
   NavigationFlowRecorder<Object> get debugNavigationFlow {
-    final recorder =
-        _debugNavigationFlow ??= NavigationFlowRecorder<Object>(
-          manifest: routeManifest,
-          initialUri: currentUri,
-          initialRevision: lastNavigationCommit?.revision ?? -1,
-        );
+    final recorder = _debugNavigationFlow ??= NavigationFlowRecorder<Object>(
+      manifest: routeManifest,
+      initialUri: currentUri,
+      initialRevision: lastNavigationCommit?.revision ?? -1,
+    );
     if (!_debugNavigationFlowAttached) {
       addListener(_recordDebugNavigationCommit);
       _debugNavigationFlowAttached = true;
@@ -186,15 +185,14 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   /// Currently, this counts the number of [debugRoutes] that fail to convert
   /// to a URI (i.e., [toUri] throws an exception). This helps identify
   /// routes that might be missing proper URI generation logic.
-  int get problems =>
-      debugRoutes.where((r) {
-        try {
-          r.toUri();
-          return false;
-        } catch (_) {
-          return true;
-        }
-      }).length;
+  int get problems => debugRoutes.where((r) {
+    try {
+      r.toUri();
+      return false;
+    } catch (_) {
+      return true;
+    }
+  }).length;
 
   // ===========================================================================
   // METHODS
@@ -365,8 +363,8 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
       return;
     }
 
-    final renderObject =
-        _debugAppBoundaryKey.currentContext?.findRenderObject();
+    final renderObject = _debugAppBoundaryKey.currentContext
+        ?.findRenderObject();
     if (renderObject is! RenderRepaintBoundary) {
       _scheduledScreenCaptureRevision = null;
       return;
@@ -519,9 +517,7 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
               ),
               child: HitScope(
                 child: Overlay(
-                  initialEntries: [
-                    OverlayEntry(builder: (context) => child),
-                  ],
+                  initialEntries: [OverlayEntry(builder: (context) => child)],
                 ),
               ),
             );

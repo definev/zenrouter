@@ -28,12 +28,20 @@
 - **`RouteResolution.data` is deprecated** in favor of the versioned
   `RouteResolution.hydration` payload. Legacy JSON-compatible data is wrapped
   automatically for migration.
+- **`StackMutatable.pop` completes `onResult` and calls `onDidPop`.** Callers
+  of `push` no longer depend on a later Flutter page callback. A second
+  `completeOnResult` after `pop` throws. `onDidPop` is idempotent.
 
 ### New Features
 
-- **Branched manifest layouts**: `RouteManifestLayoutKind.branched` declares
-  an ordered set of direct child layout roots and validates that every direct
-  child belongs to the branch topology.
+- **Sealed layout kinds**: `RouteManifestLayoutKind` is a sealed class.
+  Fixed children live on `indexed(childIds)` and `branched(childIds)`.
+  Construct layouts with `RouteManifestLayout.stack/indexed/branched` so the
+  ID type is inferred from the node id. JSON still uses `kind` plus
+  `indexedChildIds` / `branchChildIds`.
+- **Branched manifest layouts**: `RouteManifestLayoutKind.branched(...)`
+  declares an ordered set of direct child layout roots and validates that
+  every direct child belongs to the branch topology.
 - **Declarative route graph** via the immutable, versioned `RouteManifest`,
   with deterministic URI matching, layout relationship validation, ambiguous
   pattern detection, composition, JSON serialization, and reverse routing.
@@ -74,7 +82,9 @@
   hydration data.
 - **Atomic coordinator transactions**: nested mutations publish one
   `NavigationCommit`; concurrent top-level mutations serialize without being
-  mistaken for nested work.
+  mistaken for nested work. `isInNavigationTransaction` lets paths notify
+  synchronously inside a transaction so multi-path `reset` does not leak extra
+  commits.
 - **Cooperative route cancellation** via `RouteCancellationToken`, propagated
   across redirect requests and kept distinct from typed 500 failures.
 - **Redirect continuation semantics** for 301, 302, 303, 307, and 308,
