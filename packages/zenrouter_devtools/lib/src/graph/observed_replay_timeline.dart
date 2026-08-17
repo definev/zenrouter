@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import '../widgets/debug_theme.dart';
 import 'navigation_flow.dart';
 
+/// Fixed row height so [ScrollController] can jump to an unbuilt index.
+const _observedReplayEventRowExtent = 44.0;
+
 /// Collapsible Observed replay scrubber: slider plus optional event list.
 class ObservedReplayTimeline extends StatefulWidget {
   const ObservedReplayTimeline({
@@ -26,13 +29,13 @@ class ObservedReplayTimeline extends StatefulWidget {
 }
 
 class _ObservedReplayTimelineState extends State<ObservedReplayTimeline> {
-  final _rowKeys = <int, GlobalKey>{};
+  final _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _ensureCurrentVisible();
+      _scrollToCurrent();
     });
   }
 
@@ -42,22 +45,26 @@ class _ObservedReplayTimelineState extends State<ObservedReplayTimeline> {
     if (widget.index != oldWidget.index ||
         widget.listExpanded != oldWidget.listExpanded) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _ensureCurrentVisible();
+        _scrollToCurrent();
       });
     }
   }
 
-  void _ensureCurrentVisible() {
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToCurrent() {
     if (!mounted || !widget.listExpanded) return;
     final index = widget.index;
-    if (index < 0) return;
-    final rowContext = _rowKeys[index]?.currentContext;
-    if (rowContext == null) return;
-    Scrollable.ensureVisible(
-      rowContext,
-      alignment: 0.35,
-      duration: Duration.zero,
-    );
+    if (index < 0 || !_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    final target =
+        index * _observedReplayEventRowExtent -
+        position.viewportDimension * 0.35;
+    _scrollController.jumpTo(target.clamp(0.0, position.maxScrollExtent));
   }
 
   @override
@@ -81,12 +88,13 @@ class _ObservedReplayTimelineState extends State<ObservedReplayTimeline> {
             if (widget.listExpanded)
               Expanded(
                 child: ListView.builder(
+                  controller: _scrollController,
                   padding: EdgeInsets.zero,
+                  itemExtent: _observedReplayEventRowExtent,
                   itemCount: length,
                   itemBuilder: (context, i) {
                     return _TimelineEventRow(
                       key: ValueKey('observed-replay-event-$i'),
-                      rowKey: _rowKeys.putIfAbsent(i, GlobalKey.new),
                       transition: widget.transitions[i],
                       selected: widget.index == i,
                       onTap: () => widget.onSeek(i),
@@ -177,13 +185,11 @@ class _TimelineSlider extends StatelessWidget {
 class _TimelineEventRow extends StatelessWidget {
   const _TimelineEventRow({
     super.key,
-    required this.rowKey,
     required this.transition,
     required this.selected,
     required this.onTap,
   });
 
-  final GlobalKey rowKey;
   final NavigationFlowTransition<Object> transition;
   final bool selected;
   final VoidCallback onTap;
@@ -199,7 +205,6 @@ class _TimelineEventRow extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: ColoredBox(
-        key: rowKey,
         color: selected
             ? const Color(0xFF60A5FA).withValues(alpha: 0.16)
             : Colors.transparent,

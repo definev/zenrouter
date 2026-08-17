@@ -767,11 +767,14 @@ void main() {
   );
 
   testWidgets('opening timeline from live enters replay', (tester) async {
-    await _pumpObservedWithTransitions(tester);
+    final coordinator = await _pumpObservedWithTransitions(tester);
     expect(find.textContaining('REPLAY'), findsNothing);
     await tester.tap(find.byKey(const ValueKey('observed-replay-timeline')));
     await tester.pump();
     expect(find.textContaining('REPLAY 2 / 2'), findsOneWidget);
+    expect(coordinator.debugNavigationFlowRecording, isFalse);
+    expect(find.byIcon(CupertinoIcons.play_fill), findsOneWidget);
+    expect(find.byIcon(CupertinoIcons.pause_fill), findsNothing);
     expect(
       find.byKey(const ValueKey('observed-replay-slider')),
       findsOneWidget,
@@ -783,6 +786,71 @@ void main() {
     expect(
       find.byKey(const ValueKey('observed-replay-event-1')),
       findsOneWidget,
+    );
+
+    final screenshotZoom = tester.widget<GestureDetector>(
+      find.byKey(const ValueKey('observed-screen-zoom-profile')),
+    );
+    expect(screenshotZoom.onTap, isNotNull);
+    screenshotZoom.onTap!();
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('observed-screen-preview-zoom')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('REPLAY 2 / 2'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('opening timeline keeps a custom canvas viewport zoom', (
+    tester,
+  ) async {
+    await _pumpObservedWithTransitions(tester);
+    final editor = tester.widget<NodeFlowEditor<dynamic, Object?>>(
+      find.byKey(const ValueKey('observed-node-flow')),
+    );
+    editor.controller.setViewport(
+      const GraphViewport(x: 48, y: -36, zoom: 1.6),
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('observed-replay-timeline')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(editor.controller.viewport.zoom, closeTo(1.6, 0.001));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('timeline scrolls an off-screen last event into view', (
+    tester,
+  ) async {
+    final coordinator = await _pumpObservedWithTransitions(tester);
+    for (var i = 0; i < 18; i++) {
+      await coordinator.pushSilently(i.isEven ? _ProfileRoute() : _HomeRoute());
+      await tester.pump();
+    }
+    await tester.tap(find.byKey(const ValueKey('observed-replay-timeline')));
+    await tester.pump();
+    await tester.pump();
+    expect(find.textContaining('REPLAY 20 / 20'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('observed-replay-event-19')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('observed-replay-event-0')), findsNothing);
+
+    tester
+        .widget<Slider>(find.byKey(const ValueKey('observed-replay-slider')))
+        .onChanged!(0);
+    await tester.pump();
+    await tester.pump();
+    expect(find.textContaining('REPLAY 1 / 20'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('observed-replay-event-0')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('observed-replay-event-19')),
+      findsNothing,
     );
     expect(tester.takeException(), isNull);
   });

@@ -450,7 +450,7 @@ class _ObservedNavigationFlowViewState
     if (_isLive) {
       final last = widget.flow.transitions.length - 1;
       if (last < 0) return;
-      // 400px mobile overlay: keep the list collapsed; slider stays.
+      // Same mobile breakpoint as DebugOverlay (viewport width < 600).
       _listExpanded = MediaQuery.sizeOf(context).width >= 600;
       _enterReplayFromLive(initialIndex: last, play: false);
       return;
@@ -604,9 +604,9 @@ class _ObservedNavigationFlowViewState
                             : _listExpanded
                             ? math.max(140.0, constraints.maxHeight * 0.36)
                             : 44.0;
-                        return Column(
+                        return Stack(
                           children: [
-                            Expanded(
+                            Positioned.fill(
                               child: NavigationNodeFlowAutoFit(
                                 onFit: _controller.fitToView,
                                 child:
@@ -677,7 +677,10 @@ class _ObservedNavigationFlowViewState
                               ),
                             ),
                             if (showTimeline)
-                              SizedBox(
+                              Positioned(
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
                                 height: timelineHeight,
                                 child: ObservedReplayTimeline(
                                   transitions: _hydrated!.transitions,
