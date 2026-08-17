@@ -16,6 +16,7 @@ A powerful debugging tool for [ZenRouter](https://pub.dev/packages/zenrouter), p
 - **Visual Stack Inspection**: View the current navigation hierarchy, including active paths, nested routers, and their stack history.
 - **Navigation Graph**: Explore the declarative route topology, layout branches, URI patterns, and the highlighted path to the currently matched route.
 - **Observed Runtime Flow**: Record real route-to-route transitions while using the app, including direction, visit counts, history intent, and optional action labels.
+- **Observed Session Replay**: Extract the matched transition log as URI-first JSON, then play, step, and scrub it on the Observed canvas. Replay does not re-navigate the live app.
 - **Screen Previews**: See low-resolution screenshots of the real app screen inside Observed flow nodes, with an in-panel privacy toggle and bounded memory use.
 - **Resizable Debug Panel**: Drag the panel's top-left corner to resize it, or maximize and restore it from the header when a large graph needs more space.
 - **Movable Launcher**: Drag the collapsed URI pill and bug button anywhere in the safe viewport; its position survives opening and closing the panel.
@@ -96,7 +97,7 @@ The expanded panel preserves your custom resized dimensions and supports fullscr
 
 - **Inspect Tab**: Shows the current navigation tree. You can see active paths, pop routes, and switch between stateful shell branches.
 - **Graph Tab / Topology**: Shows coordinators, layouts, and routes from `routeManifest`. Pan or zoom the canvas, select nodes for details, and follow the green path to the route matching the current URI.
-- **Graph Tab / Observed**: Builds a directed journey graph from real navigation commits. Edges show the latest action and traversal count; nodes show visits, the last concrete URI, and a preview of the real app screen. Recording and preview capture start automatically when the devtool attaches. Use the camera button to pause capture or the trash button to clear the graph. Play/Pause/step replay the extracted session on the canvas. It does **not** re-navigate the live app. Export copies URI-first JSON (no screenshots). Import rematches URIs against the current manifest.
+- **Graph Tab / Observed**: Builds a directed journey graph from real navigation commits. Edges show the latest action and traversal count; nodes show visits, the last concrete URI, and a preview of the real app screen. Recording and preview capture start automatically when the devtool attaches. Use the camera button to pause capture or the trash button to clear the graph.
 - **Routes Tab**: Lists your `debugRoutes` for quick navigation.
 - **Input Area**: Type a URI (e.g., `/user/123`) and click "Push" or "Replace" to navigate.
 
@@ -109,4 +110,58 @@ onPressed: () => coordinator.debugFlowAction(
 );
 ```
 
-Screen previews capture only the app layer, not the devtool overlay. They are downscaled, kept in memory only, limited to the 24 most recently previewed routes, and discarded when the Observed flow is cleared. Capture can fail gracefully for platform views or cross-origin web images that Flutter cannot rasterize.
+## Observed session extract and replay
+
+The Observed canvas records every **matched** navigation commit as a chronological log and collapses that log into the directed journey graph. The replayable unit is that matched log, extracted as a versioned, URI-first JSON document (`NavigationFlowSession`). Unmatched commits stay out of the log; they only increment the header unmatched count.
+
+Replay is graph and timeline playback of that document. It does **not** re-navigate the live app, re-run `RouteRedirect` / `RouteGuard`, or restore stacks. Compass on a card and **Navigate Here** in the zoom footer still perform a live jump via `navigate`.
+
+### Session JSON
+
+`NavigationFlowSession` stores `initialUri`, timestamps, history intent, optional `debugFlowAction` labels, and URI pairs. Optional route ids are display hints only. The document does **not** include screen previews or PNG / base64 image data.
+
+**Export** copies that JSON to the clipboard and leaves you on the live graph. **Import** pastes the same JSON and rematches each URI against the **current** `RouteManifest`. Unmatched URIs are skipped. If every imported row fails rematch, transport stays disabled and the banner says `Imported session did not match this manifest`.
+
+```json
+{
+  "schemaVersion": 1,
+  "kind": "zenrouter.devtools.observedSession",
+  "exportedAt": "2026-08-17T12:00:00.000Z",
+  "initialUri": "/",
+  "ignoredTransitionCount": 0,
+  "transitions": [
+    {
+      "revision": 1,
+      "previousUri": "/",
+      "currentUri": "/profile",
+      "historyIntent": "push",
+      "actionLabel": "Open profile",
+      "occurredAt": "2026-08-17T12:00:01.250Z"
+    }
+  ]
+}
+```
+
+### Canvas playback
+
+When the matched log is not empty, a transport row appears under the Observed header:
+
+- **Play / Pause**, step back / forward, and jump to start / end
+- **Speed** cycles 0.5× / 1× / 2× / 4×
+- **Timeline** opens a slider and a collapsible event list for scrubbing
+- **Export** / **Import** for the session document
+- **Exit replay** (visible only while replaying)
+
+Play highlights the playhead's from / to nodes on the existing canvas, shows the best available in-memory preview (live export only), and updates `REPLAY i / n`. Opening the timeline from live enters paused replay on the last event. Tap a timeline row or drag the slider to seek.
+
+### Recording during replay
+
+**Live Play** (Play, step, jump, or timeline from the current session) exports the in-memory log and **pauses recording**. Navigations during that replay are not added to the session. The banner says `Recording paused for replay. Navigations will not be added to this session.` Recording resumes when you Exit replay, leave Observed, leave Graph, or close the overlay.
+
+**Import** loads a pasted document and does **not** pause live recording. The live recorder keeps recording; Exit discards the imported document and shows the live graph again.
+
+### Previews and privacy
+
+Screen previews capture only the app layer, not the devtool overlay. They are downscaled, kept **in memory only**, limited to the 24 most recently previewed routes, and discarded when the Observed flow is cleared. Capture can fail gracefully for platform views or cross-origin web images that Flutter cannot rasterize.
+
+Replay never writes previews to disk or into the extract. The document contains only URIs and labels the developer already saw in the overlay. Previews are latest-per-route, not per-event. When replay falls back to a later visit's frame, the caption is `Preview from a later visit`. Imported documents have no previews.
