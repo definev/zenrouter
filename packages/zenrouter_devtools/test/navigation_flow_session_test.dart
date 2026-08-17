@@ -232,6 +232,29 @@ void main() {
       },
     );
 
+    test('exportSession keeps unmatched seed URI and does not invent home', () {
+      final seed = Uri.parse('/outside');
+      final recorder = NavigationFlowRecorder<String>(
+        manifest: _manifest,
+        initialUri: seed,
+      );
+      addTearDown(recorder.dispose);
+
+      expect(recorder.nodes, isEmpty);
+      expect(recorder.entryNodeId, isNull);
+
+      final session = recorder.exportSession();
+      expect(session.initialUri, seed);
+      expect(session.transitions, isEmpty);
+
+      final hydrated = NavigationFlowRecorder.fromSession(_manifest, session);
+      addTearDown(hydrated.dispose);
+
+      expect(hydrated.exportSession().initialUri, seed);
+      expect(hydrated.nodes, isEmpty);
+      expect(hydrated.entryNodeId, isNull);
+    });
+
     test('exportSession encodes enum route ids with idCodec wire names', () {
       final recorder = NavigationFlowRecorder<_SessionId>(
         manifest: _enumManifest,
