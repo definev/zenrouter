@@ -520,6 +520,107 @@ void main() {
     });
   });
 
+  group('URI coordinator actions', () {
+    test('uri.navigateWith parses then navigates', () async {
+      final coordinator = FullCapabilityCoordinator();
+
+      await Uri.parse('/navigated').navigateWith(coordinator);
+
+      expect(coordinator.root.activeRoute?.id, 'navigated');
+      coordinator.root.reset();
+    });
+
+    test('uri.pushWith waits for the parsed route result', () async {
+      final coordinator = FullCapabilityCoordinator();
+      await coordinator.pushSilently(ComposeRoute('base'));
+
+      final Future<String?> result = Uri.parse('/pushed').pushWith(coordinator);
+      await pumpEventQueue();
+      expect(coordinator.root.activeRoute!.id, 'pushed');
+
+      await coordinator.pop('done');
+      expect(await result, 'done');
+      coordinator.root.reset();
+    });
+
+    test('uri.pushSilentlyWith completes after commit', () async {
+      final coordinator = FullCapabilityCoordinator();
+
+      await Uri.parse('/silent').pushSilentlyWith(coordinator);
+
+      final route = coordinator.root.activeRoute!;
+      expect(route.id, 'silent');
+      expect(route.onResult.isCompleted, isFalse);
+      coordinator.root.reset();
+    });
+
+    test('uri.replaceWith parses then replaces', () async {
+      final coordinator = FullCapabilityCoordinator();
+      await coordinator.pushSilently(ComposeRoute('old'));
+
+      await Uri.parse('/replacement').replaceWith(coordinator);
+
+      expect(coordinator.root.stack.map((route) => route.id), ['replacement']);
+      coordinator.root.reset();
+    });
+
+    test('uri.recoverWith parses then applies deep-link behavior', () async {
+      final coordinator = FullCapabilityCoordinator();
+      await coordinator.pushSilently(ComposeRoute('old'));
+
+      await Uri.parse('/recovered').recoverWith(coordinator);
+
+      expect(coordinator.root.stack.map((route) => route.id), ['recovered']);
+      coordinator.root.reset();
+    });
+
+    test('uri.pushReplacementWith replaces the current route', () async {
+      final coordinator = FullCapabilityCoordinator();
+      await coordinator.pushSilently(ComposeRoute('old'));
+
+      final replacement = Uri.parse(
+        '/replacement',
+      ).pushReplacementWith(coordinator, result: 'done');
+      await pumpEventQueue();
+
+      expect(coordinator.root.stack.map((route) => route.id), ['replacement']);
+      coordinator.root.reset();
+      await replacement;
+    });
+
+    test(
+      'uri.pushOrMoveToTopWith moves an existing route to the top',
+      () async {
+        final coordinator = FullCapabilityCoordinator();
+        await coordinator.pushSilently(ComposeRoute('first'));
+        await coordinator.pushSilently(ComposeRoute('second'));
+
+        await Uri.parse('/first').pushOrMoveToTopWith(coordinator);
+
+        expect(coordinator.root.stack.map((route) => route.id), [
+          'second',
+          'first',
+        ]);
+        coordinator.root.reset();
+      },
+    );
+
+    test('throws when no route matches the location', () async {
+      final coordinator = _NullParseCoordinator();
+
+      await expectLater(
+        Uri.parse('/missing').pushSilentlyWith(coordinator),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            contains('parseRouteFromUri'),
+          ),
+        ),
+      );
+    });
+  });
+
   group('Shared contracts', () {
     test('StackMutatable implements Mutatable and Navigatable', () {
       final path = ComposeStackPath();

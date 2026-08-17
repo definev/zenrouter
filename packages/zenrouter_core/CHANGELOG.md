@@ -73,7 +73,9 @@
 - **URI-based coordinator actions**: `navigateUri`, `pushUri`,
   `pushSilentlyUri`, `replaceUri`, `recoverUri`, `pushReplacementUri`, and
   `pushOrMoveToTopUri` parse a URI before delegating to the corresponding route
-  operation.
+  operation. The same operations are also available on `Uri`
+  (`uri.pushWith(coordinator)`, `uri.navigateWith(coordinator)`,
+  `uri.replaceWith(coordinator)`, …).
 - **`markNeedRebuild`** on `CoordinatorCore`.
 - **`CoordinatorMutatable.pushOrMoveToTop`** now returns `Future<void>`
   (aligned with `StackMutatable`).

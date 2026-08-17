@@ -14,6 +14,9 @@
   use enum or domain ID types.
 - Generate `AppCoordinator.location.{route}` reverse-routing helpers
   (`location.home`, `location.profileId(...)`) instead of `{route}Location()`.
+- `NavContext` now forwards every destination operation (`push`,
+  `pushSilently`, `navigate`, `replace`, `pushReplacement`,
+  `pushOrMoveToTop`, `recover`). `pop` / `tryPop` stay on the coordinator.
 - Reject duplicate and equally-specific ambiguous route patterns during code
   generation.
 - Generated not-found routes preserve the requested URI and implement

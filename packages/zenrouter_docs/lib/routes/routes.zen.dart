@@ -598,14 +598,22 @@ extension DocsCoordinatorGetter on BuildContext {
   DocsCoordinator get docsCoordinator => DocsCoordinatorProvider.of(this);
 }
 
-/// Extension on [DocsRoute] for navigation methods.
+/// Destination navigation for [DocsRoute] instances.
 extension DocsCoordinatorNavContext on DocsRoute {
   Future<void> navigate(BuildContext context) =>
       context.docsCoordinator.navigate(this);
   Future<T?> push<T extends Object>(BuildContext context) =>
       context.docsCoordinator.push<T>(this);
+  Future<void> pushSilently(BuildContext context) =>
+      context.docsCoordinator.pushSilently(this);
   Future<void> replace(BuildContext context) =>
       context.docsCoordinator.replace(this);
+  Future<R?> pushReplacement<R extends Object, RO extends Object>(
+    BuildContext context, {
+    RO? result,
+  }) => context.docsCoordinator.pushReplacement<R, RO>(this, result: result);
+  Future<void> pushOrMoveToTop(BuildContext context) =>
+      context.docsCoordinator.pushOrMoveToTop(this);
   Future<void> recover(BuildContext context) =>
       context.docsCoordinator.recover(this);
 }
