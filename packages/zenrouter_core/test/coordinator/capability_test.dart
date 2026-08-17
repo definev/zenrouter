@@ -87,6 +87,18 @@ class ComposeStackPath extends StackPath<ComposeRoute>
   Future<void> activateRoute(ComposeRoute route) => pushSilently(route);
 }
 
+/// Path that always defers reset notification, even inside a transaction.
+class DeferredResetPath extends ComposeStackPath {
+  DeferredResetPath({super.coordinator});
+
+  @override
+  void reset() {
+    super.reset();
+    clear();
+    scheduleMicrotask(notifyListeners);
+  }
+}
+
 /// Mutatable-only: can push/pop/replace, no navigate/recover.
 class MutatableOnlyCoordinator extends CoordinatorCore<ComposeRoute>
     with
@@ -94,6 +106,21 @@ class MutatableOnlyCoordinator extends CoordinatorCore<ComposeRoute>
         CoordinatorLayoutCore<ComposeRoute>,
         CoordinatorMutatable<ComposeRoute> {
   late final ComposeStackPath _root = ComposeStackPath(coordinator: this);
+
+  @override
+  StackPath<ComposeRoute> get root => _root;
+
+  @override
+  FutureOr<ComposeRoute?> parseRouteFromUri(Uri uri) =>
+      ComposeRoute(uri.pathSegments.isEmpty ? 'home' : uri.pathSegments.last);
+}
+
+class DeferredResetCoordinator extends CoordinatorCore<ComposeRoute>
+    with
+        _TestListenable,
+        CoordinatorLayoutCore<ComposeRoute>,
+        CoordinatorMutatable<ComposeRoute> {
+  late final DeferredResetPath _root = DeferredResetPath(coordinator: this);
 
   @override
   StackPath<ComposeRoute> get root => _root;
@@ -280,6 +307,53 @@ void main() {
         Uri.parse('/committed-before-error'),
       );
       coordinator.root.reset();
+    });
+
+    test('a failed transaction does not stall later mutations', () async {
+      final coordinator = MutatableOnlyCoordinator();
+
+      await expectLater(
+        coordinator.runNavigationTransaction(() async {
+          await (coordinator.root as ComposeStackPath).pushSilently(
+            ComposeRoute('before-error'),
+          );
+          throw StateError('transaction failed');
+        }),
+        throwsA(isA<StateError>()),
+      );
+
+      await coordinator.pushSilently(ComposeRoute('after-error'));
+      expect(coordinator.root.stack.map((route) => route.id), [
+        'before-error',
+        'after-error',
+      ]);
+      coordinator.root.reset();
+    });
+
+    test('sequential awaited mutations each publish a commit', () async {
+      final coordinator = MutatableOnlyCoordinator();
+      var notifications = 0;
+      coordinator.addListener(() => notifications++);
+
+      await coordinator.pushSilently(ComposeRoute('a'));
+      await coordinator.pushSilently(ComposeRoute('b'));
+
+      expect(notifications, 2);
+      expect(coordinator.lastNavigationCommit?.revision, 2);
+      coordinator.root.reset();
+    });
+
+    test('absorbs a deferred path notify into the same commit', () async {
+      final coordinator = DeferredResetCoordinator();
+      await coordinator.pushSilently(ComposeRoute('seed'));
+      var notifications = 0;
+      coordinator.addListener(() => notifications++);
+
+      await coordinator.runNavigationTransaction(coordinator.root.reset);
+
+      expect(notifications, 1);
+      expect(coordinator.root.stack, isEmpty);
+      expect(coordinator.lastNavigationCommit?.currentUri, Uri.parse('/'));
     });
   });
 

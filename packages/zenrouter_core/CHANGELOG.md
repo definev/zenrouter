@@ -95,7 +95,10 @@
   `NavigationCommit`; concurrent top-level mutations serialize without being
   mistaken for nested work. `isInNavigationTransaction` lets paths notify
   synchronously inside a transaction so multi-path `reset` does not leak extra
-  commits.
+  commits. Sequential `await` of coordinator mutations restores queue idle in
+  the transaction `finally` and serializes overlapping work on a side
+  Completer, so the caller's future has no extra listeners. The trailing
+  microtask drain runs only when no path has already notified synchronously.
 - **Cooperative route cancellation** via `RouteCancellationToken`, propagated
   across redirect requests and kept distinct from typed 500 failures.
 - **Redirect continuation semantics** for 301, 302, 303, 307, and 308,

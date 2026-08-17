@@ -70,4 +70,5 @@ transition animation, browser history, or application startup.
 
 ## Recorded baselines
 
+- [2026-08-17](results/2026-08-17.md) — Dart 3.13.0 AOT on macOS arm64
 - [2026-08-13](results/2026-08-13.md) — Dart 3.13.0 AOT on macOS arm64

@@ -150,6 +150,7 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
   final Object _transactionZoneKey = Object();
   Future<void> _transactionQueue = Future<void>.value();
   bool _transactionQueueIdle = true;
+  Object? _activeQueueToken;
 
   /// Whether a navigation transaction is currently running for this coordinator.
   ///
@@ -214,28 +215,34 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
       return _runNavigationTransaction(operation, historyIntent: historyIntent);
     }
 
+    final wasIdle = _transactionQueueIdle;
+    final previous = _transactionQueue;
+    final token = Object();
+    final done = Completer<void>();
+    _transactionQueueIdle = false;
+    _activeQueueToken = token;
+    _transactionQueue = done.future;
+
     Future<R> startTransaction() => runZoned(
-      () => _runNavigationTransaction(operation, historyIntent: historyIntent),
+      () => _runNavigationTransaction(
+        operation,
+        historyIntent: historyIntent,
+        queueToken: token,
+        queueDone: done,
+      ),
       zoneValues: {_transactionZoneKey: true},
     );
 
-    final transaction = _transactionQueueIdle
+    return wasIdle
         ? startTransaction()
-        : _transactionQueue.then<R>((_) => startTransaction());
-    _transactionQueueIdle = false;
-    final tail = transaction.then<void>((_) {}, onError: (_, _) {});
-    _transactionQueue = tail;
-    tail.whenComplete(() {
-      if (identical(_transactionQueue, tail)) {
-        _transactionQueueIdle = true;
-      }
-    });
-    return transaction;
+        : previous.then<R>((_) => startTransaction());
   }
 
   Future<R> _runNavigationTransaction<R>(
     FutureOr<R> Function() operation, {
     required NavigationHistoryIntent historyIntent,
+    Object? queueToken,
+    Completer<void>? queueDone,
   }) async {
     final isOutermost = _transactionDepth == 0;
     final previousIntent = _pendingHistoryIntent;
@@ -245,22 +252,25 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
     if (isOutermost) _transactionChanged = false;
     _transactionDepth++;
 
-    if (hasHistoryScope) {
-      _historyIntentScopes.add(historyIntent);
-      recordHistoryIntent(historyIntent);
-    }
-
     try {
+      if (hasHistoryScope) {
+        _historyIntentScopes.add(historyIntent);
+        recordHistoryIntent(historyIntent);
+      }
+
       return await operation();
     } finally {
-      if (isOutermost) {
-        // NavigationPath.reset publishes in a microtask so it remains safe
-        // during Flutter builds and in headless use. Drain those callbacks
-        // before deciding whether this transaction changed state.
+      if (isOutermost && !_transactionChanged) {
+        // NavigationPath.reset still defers when it is not in a transaction
+        // (or has no coordinator). Drain that notify before treating this as
+        // a no-op. Skip the drain when a path already notified synchronously;
+        // in-transaction NavigationPath.reset does that on purpose.
         await Future<void>.microtask(() {});
       }
 
-      if (hasHistoryScope) _historyIntentScopes.removeLast();
+      if (hasHistoryScope && _historyIntentScopes.isNotEmpty) {
+        _historyIntentScopes.removeLast();
+      }
       _transactionDepth--;
 
       if (isOutermost) {
@@ -270,6 +280,16 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
           _pendingHistoryIntent = previousIntent;
         }
         _transactionChanged = false;
+        // Restore idle and release the queue before this future completes so
+        // a sequential `await` does not chain onto [_transactionQueue] and
+        // the caller's future has no extra listeners. Overlapping calls
+        // replace [_activeQueueToken] and wait on [queueDone].
+        if (queueToken != null && identical(_activeQueueToken, queueToken)) {
+          _transactionQueueIdle = true;
+        }
+        if (queueDone != null && !queueDone.isCompleted) {
+          queueDone.complete();
+        }
       }
     }
   }

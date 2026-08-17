@@ -147,7 +147,8 @@ List<BenchmarkCase> createBenchmarkCases(CoordinatorFactory createCoordinator) {
           final pendingResult = path.push<int>(route);
           await Future<void>.value();
           await path.pop(i);
-          route.completeOnResult(i, null);
+          // 2.1.0 pop does not complete the result; current pop does.
+          route.completeOnResult(i, null, true);
           route.onDidPop(i, null);
           _blackHole ^= (await pendingResult) ?? 0;
         }
