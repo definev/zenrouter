@@ -230,6 +230,41 @@ void main() {
       );
     });
 
+    test('rejects indexed children that are not direct children', () {
+      expect(
+        () => RouteManifest(
+          name: 'app',
+          routes: [
+            RouteManifestRoute(
+              id: 'home',
+              path: '/other',
+              parentId: 'other-shell',
+            ),
+          ],
+          layouts: [
+            RouteManifestLayout(
+              id: 'tabs',
+              path: '/',
+              kind: RouteManifestLayoutKind.indexed,
+              indexedChildIds: ['home'],
+            ),
+            RouteManifestLayout(
+              id: 'other-shell',
+              path: '/other',
+              kind: RouteManifestLayoutKind.stack,
+            ),
+          ],
+        ),
+        throwsA(
+          isA<RouteManifestValidationException>().having(
+            (error) => error.message,
+            'message',
+            contains('must be a direct child'),
+          ),
+        ),
+      );
+    });
+
     test('validates indexed children and freezes all collections', () {
       final indexedChildren = <String>['home'];
       final route = RouteManifestRoute(id: 'home', path: '/', parentId: 'tabs');

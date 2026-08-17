@@ -90,6 +90,24 @@ void main() {
       );
       expect(
         CoordinatorRouteInformationProvider.resolveReportingType(
+          NavigationHistoryIntent.traverse,
+          RouteInformationReportingType.navigate,
+          reportedUri: Uri.parse('/b'),
+          engineUri: Uri.parse('/a'),
+        ),
+        RouteInformationReportingType.neglect,
+      );
+      expect(
+        CoordinatorRouteInformationProvider.resolveReportingType(
+          NavigationHistoryIntent.traverse,
+          RouteInformationReportingType.navigate,
+          reportedUri: Uri.parse('/a'),
+          engineUri: Uri.parse('/a'),
+        ),
+        RouteInformationReportingType.none,
+      );
+      expect(
+        CoordinatorRouteInformationProvider.resolveReportingType(
           NavigationHistoryIntent.automatic,
           RouteInformationReportingType.navigate,
         ),

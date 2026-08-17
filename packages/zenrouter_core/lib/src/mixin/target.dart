@@ -88,8 +88,13 @@ abstract class RouteTarget extends Equatable {
   ///
   /// This is invoked during navigation cleanup. The route is removed
   /// from its path and its result is completed.
+  bool _didPop = false;
+
   @mustCallSuper
   void onDidPop(Object? result, covariant CoordinatorCore? coordinator) {
+    if (_didPop) return;
+    _didPop = true;
+
     onDiscard();
 
     if (isPopByPath == false && _path?.stack.contains(this) == true) {

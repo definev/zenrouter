@@ -34,11 +34,14 @@ mixin CoordinatorRecoverable<T extends RouteUri>
     DeeplinkStrategy strategy,
     CoordinatorDeeplinkHandler<T> handler,
   ) {
-    assert(
-      strategy != DeeplinkStrategy.custom,
-      'DeeplinkStrategy.custom always uses RouteDeepLink.deeplinkHandler; '
-      'defineDeeplinkHandler(custom, ...) has no effect.',
-    );
+    if (strategy == DeeplinkStrategy.custom) {
+      assert(
+        false,
+        'DeeplinkStrategy.custom always uses RouteDeepLink.deeplinkHandler; '
+        'defineDeeplinkHandler(custom, ...) has no effect.',
+      );
+      return;
+    }
     _deeplinkHandlers[strategy] = handler;
   }
 

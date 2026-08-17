@@ -314,6 +314,18 @@ void main() {
 
       // Should have notified listeners to restore URL
       expect(capturedNotification, isTrue);
+
+      // A blocked traversal must restore the current history entry (neglect),
+      // not push a new one. Flutter maps `none` + mismatched URIs to push.
+      expect(
+        CoordinatorRouteInformationProvider.resolveReportingType(
+          NavigationHistoryIntent.traverse,
+          RouteInformationReportingType.none,
+          reportedUri: coordinator.currentUri,
+          engineUri: Uri.parse('/'),
+        ),
+        RouteInformationReportingType.neglect,
+      );
     });
 
     testWidgets('IndexedStackPath switches tabs', (tester) async {

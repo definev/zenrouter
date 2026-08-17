@@ -174,6 +174,22 @@ void main() {
       expect(coordinator.root.stack, isEmpty);
     });
 
+    testWidgets('does not navigate after dispose during async parse', (
+      tester,
+    ) async {
+      final coordinator = ViewTestCoordinator(asyncParse: true);
+
+      await tester.pumpWidget(
+        _host(coordinator: coordinator, initialUri: Uri.parse('/settings')),
+      );
+      await tester.pump();
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+
+      expect(coordinator.root.stack, isEmpty);
+    });
+
     testWidgets('does not navigate when parseRouteFromUri returns null', (
       tester,
     ) async {

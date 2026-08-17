@@ -37,21 +37,20 @@ class _CoordinatorViewState<T extends RouteUri>
     final route = await widget.coordinator.parseRouteFromUri(
       widget.initialUri!,
     );
-    if (route == null) return;
+    if (!mounted || route == null) return;
 
-    // coverage:ignore-start
-    assert(
-      widget.coordinator is CoordinatorNavigatable<T>,
-      'CoordinatorView.initialUri requires a coordinator that mixes in '
-      'CoordinatorNavigatable (e.g. Coordinator). Received '
-      '${widget.coordinator.runtimeType}.',
-    );
-    // coverage:ignore-end
-    final coordinator = widget.coordinator as CoordinatorNavigatable<T>;
-    await coordinator.navigate(route);
-    // coverage:ignore-start
+    final host = widget.coordinator;
+    if (host is! CoordinatorNavigatable<T>) {
+      assert(
+        false,
+        'CoordinatorView.initialUri requires a coordinator that mixes in '
+        'CoordinatorNavigatable (e.g. Coordinator). Received '
+        '${host.runtimeType}.',
+      );
+      return;
+    }
+    await (host as CoordinatorNavigatable<T>).navigate(route);
     if (mounted) setState(() {});
-    // coverage:ignore-end
   }
 
   @override

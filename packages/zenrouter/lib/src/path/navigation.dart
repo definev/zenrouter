@@ -63,6 +63,14 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
   void reset() {
     if (stack.isEmpty) return;
     clear();
+    // Inside a transaction the coordinator drains at most one microtask
+    // before committing. Notify synchronously so every reset is folded into
+    // that single commit. Outside a transaction, defer so reset stays safe
+    // during a Flutter build and in headless use.
+    if (coordinator?.isInNavigationTransaction == true) {
+      notifyListeners();
+      return;
+    }
     _notifyResetListeners();
   }
 

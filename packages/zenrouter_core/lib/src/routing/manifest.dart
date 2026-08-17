@@ -764,9 +764,16 @@ void _validateRelationships<I extends Object>(
 
   for (final layout in layouts) {
     for (final childId in layout.indexedChildIds) {
-      if (!nodes.containsKey(childId)) {
+      final child = nodes[childId];
+      if (child == null) {
         throw RouteManifestValidationException(
           'Indexed child $childId of ${layout.id} is unknown',
+          nodeIds: [layout.id, childId],
+        );
+      }
+      if (child.parentId != layout.id) {
+        throw RouteManifestValidationException(
+          'Indexed child $childId must be a direct child of ${layout.id}',
           nodeIds: [layout.id, childId],
         );
       }
