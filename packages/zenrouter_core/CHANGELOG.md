@@ -1,10 +1,10 @@
-## 2.2.0
+## 2.3.0
 
 ### Breaking Changes
 
 - **`GuardRule` contract renamed** for coordinator-optional use. The 2.1.0 methods are removed:
 
-  | Removed (2.1.0) | Replacement |
+  | Removed (2.2.0) | Replacement |
   |-----------------|-------------|
   | `canPop(route)` | `canPopRule(route)` / `canPopRuleWith(coordinator, route)` |
   | `canPopListenable(route)` | `canPopListenableRule(route)` / `canPopListenableRuleWith(coordinator, route)` |
@@ -13,7 +13,7 @@
   Migration:
 
   ```dart
-  // Before (2.1.0)
+  // Before (2.2.0)
   class UnsavedChangesRule extends GuardRule<AppRoute> {
     @override
     bool canPop(AppRoute route) => !route.hasUnsavedChanges;
@@ -22,7 +22,7 @@
     FutureOr<bool?> guard(CoordinatorCore c, AppRoute route) async { /* ... */ }
   }
 
-  // After (2.2.0) — route-only
+  // After (2.3.0) — route-only
   class UnsavedChangesRule extends GuardRule<AppRoute> {
     @override
     bool canPopRule(AppRoute route) => !route.hasUnsavedChanges;
@@ -31,7 +31,7 @@
     FutureOr<bool?> guardRule(AppRoute route) async { /* ... */ }
   }
 
-  // After (2.2.0) — needs coordinator (dialogs, app state)
+  // After (2.3.0) — needs coordinator (dialogs, app state)
   class UnsavedChangesRule extends GuardRule<AppRoute> {
     @override
     bool canPopRule(AppRoute route) => !route.hasUnsavedChanges;
@@ -48,7 +48,7 @@
 - **`RouteGuard.canPopWith` / `canPopListenableWith`**: Coordinator-aware PopScope hints (default to `canPop` / `canPopListenable`).
 - **`RouteGuardRule.popGuard`**: Now runs the `guardRule` chain (no coordinator), matching `popGuardWith` → `guardRuleWith`.
 
-## 2.1.0
+## 2.2.0
 
 ### New Features
 

@@ -2,7 +2,7 @@
 
 ### ⚠️ Breaking Changes
 
-- **`GuardRule` contract renamed** (via `zenrouter_core` 2.2.0). The 2.1.0 / 2.2.0 methods are removed:
+- **`GuardRule` contract renamed** (via `zenrouter_core` 2.3.0). The 2.2.0 methods are removed:
 
   | Removed | Replacement |
   |---------|-------------|
