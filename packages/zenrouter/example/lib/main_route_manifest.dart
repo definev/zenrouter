@@ -107,34 +107,46 @@ class ManualManifestCoordinator extends Coordinator<ManualManifestRoute>
   );
 
   /// Reverse routing uses the same patterns as forward matching.
-  static Uri homeLocation() => manifest.location(AppShellRouteId.home);
+  static const location = ManualManifestCoordinatorLocation();
+}
 
-  static Uri profileLocation(String profileId) => manifest.location(
+/// Type-safe reverse routing without constructing presentation routes.
+final class ManualManifestCoordinatorLocation {
+  const ManualManifestCoordinatorLocation();
+
+  Uri get home =>
+      ManualManifestCoordinator.manifest.location(AppShellRouteId.home);
+
+  Uri profile(String profileId) => ManualManifestCoordinator.manifest.location(
     AccountsRouteId.profile,
     pathParameters: {'profileId': profileId},
   );
 
-  static Uri docsLocation(List<String> slugs) => manifest.location(
+  Uri docs(List<String> slugs) => ManualManifestCoordinator.manifest.location(
     KnowledgeBaseRouteId.article,
     restParameters: {'slugs': slugs},
   );
+}
+
+extension ManualManifestCoordinatorNav on ManualManifestCoordinator {
+  /// Type-safe reverse routing without constructing presentation routes.
+  ManualManifestCoordinatorLocation get location =>
+      ManualManifestCoordinator.location;
 }
 
 abstract class ManualManifestRoute extends RouteTarget with RouteUnique {}
 
 class ManualHomeRoute extends ManualManifestRoute {
   @override
-  Uri toUri() => ManualManifestCoordinator.homeLocation();
+  Uri toUri() => ManualManifestCoordinator.location.home;
 
   @override
   Widget build(
     covariant ManualManifestCoordinator coordinator,
     BuildContext context,
   ) {
-    final profileLocation = ManualManifestCoordinator.profileLocation(
-      'core team',
-    );
-    final docsLocation = ManualManifestCoordinator.docsLocation([
+    final profileLocation = coordinator.location.profile('core team');
+    final docsLocation = coordinator.location.docs([
       'guides',
       'web navigation',
     ]);
@@ -179,7 +191,7 @@ class ManualProfileRoute extends ManualManifestRoute {
   final String profileId;
 
   @override
-  Uri toUri() => ManualManifestCoordinator.profileLocation(profileId);
+  Uri toUri() => ManualManifestCoordinator.location.profile(profileId);
 
   @override
   List<Object?> get props => [profileId];
@@ -212,7 +224,7 @@ class ManualDocsRoute extends ManualManifestRoute {
   final List<String> slugs;
 
   @override
-  Uri toUri() => ManualManifestCoordinator.docsLocation(slugs);
+  Uri toUri() => ManualManifestCoordinator.location.docs(slugs);
 
   @override
   List<Object?> get props => [slugs];

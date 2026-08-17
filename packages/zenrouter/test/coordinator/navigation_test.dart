@@ -694,6 +694,24 @@ void main() {
       },
     );
 
+    test(
+      'pushReplacement activates a tab when parent is IndexedStackPath',
+      () async {
+        await coordinator.pushSilently(HomeTab());
+        await Future<void>.delayed(Duration.zero);
+
+        expect(coordinator.tabStack.activeIndex, 0);
+        expect(coordinator.root.stack.last, isA<TabLayout>());
+
+        await coordinator.pushReplacement(SearchTab());
+        await Future<void>.delayed(Duration.zero);
+
+        expect(coordinator.root.stack.last, isA<TabLayout>());
+        expect(coordinator.tabStack.activeRoute, isA<SearchTab>());
+        expect(coordinator.tabStack.activeIndex, 1);
+      },
+    );
+
     testWidgets('pushReplacement with different layout replaces correctly', (
       tester,
     ) async {

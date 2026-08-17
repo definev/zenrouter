@@ -105,9 +105,11 @@ class DocsLayout extends _$DocsLayout {
         return DocsLayoutBuilder(
           navTree: _navTree,
           currentPath: currentPath,
-          onNavigate: (path) async => coordinator.navigate(
-            await coordinator.parseRouteFromUri(Uri.parse(path)),
-          ),
+          onNavigate: (path) async {
+            final route = await coordinator.parseRouteFromUri(Uri.parse(path));
+            if (route == null) return;
+            await coordinator.navigate(route);
+          },
           child: buildPath(coordinator),
         );
       },

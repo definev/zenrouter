@@ -91,22 +91,24 @@ import 'about.dart' deferred as about;
 import 'admin.dart' deferred as admin;
 import 'home.dart';  // Non-deferred (explicit or IndexedStack)
 
-// Generated parseRouteFromUri (now async)
+// Generated bindings — deferred routes load their library first
 @override
-Future<AppRoute> parseRouteFromUri(Uri uri) async {
-  return switch (uri.pathSegments) {
-    [] => HomeRoute(),  // Immediate
-    ['about'] => await () async {
-      await about.loadLibrary();
-      return about.AboutRoute();
-    }(),
-    ['admin'] => await () async {
-      await admin.loadLibrary();
-      return admin.AdminPanelRoute();
-    }(),
-    _ => NotFoundRoute(uri: uri),
-  };
-}
+late final routeBindings = manifest.bind<AppRoute>(
+  bindings: [
+    RouteBinding(id: 'HomeRoute', create: (_) => HomeRoute()),
+    RouteBinding.deferred(
+      id: 'AboutRoute',
+      loadLibrary: about.loadLibrary,
+      create: (_) => about.AboutRoute(),
+    ),
+    RouteBinding.deferred(
+      id: 'AdminPanelRoute',
+      loadLibrary: admin.loadLibrary,
+      create: (_) => admin.AdminPanelRoute(),
+    ),
+  ],
+  notFound: (uri) => NotFoundRoute(uri: uri),
+);
 
 // Generated navigation (also async)
 Future<T?> pushAbout<T extends Object>() async => push(await () async {

@@ -204,17 +204,21 @@ class DocsItemRoute extends _$DocsItemRoute {
 
 #### Generated pattern matching
 
-The generator uses Dart's rest patterns for URL parsing:
+Catch-all segments become `restParameters` on the manifest match. The
+generated coordinator binds them through `RouteBinding`:
 
 ```dart
-// Generated parseRouteFromUri
-AppRoute parseRouteFromUri(Uri uri) {
-  return switch (uri.pathSegments) {
-    ['docs', ...final slugs] => DocsRoute(slugs: slugs),
-    ['docs', ...final slugs, final id] => DocsItemRoute(slugs: slugs, id: id),
-    _ => NotFoundRoute(uri: uri),
-  };
-}
+RouteBinding(
+  id: 'DocsRoute',
+  create: (match) => DocsRoute(slugs: match.restParameters['slugs']!),
+),
+RouteBinding(
+  id: 'DocsItemRoute',
+  create: (match) => DocsItemRoute(
+    slugs: match.restParameters['slugs']!,
+    id: match.pathParameters['id']!,
+  ),
+),
 
 // Generated navigation methods
 extension AppCoordinatorNav on AppCoordinator {
@@ -416,18 +420,13 @@ class LoginRoute extends _$LoginRoute {
 
 ### Generated Code
 
-The generator correctly handles route groups:
+The generator correctly handles route groups. Parentheses folders do not
+appear in the URI; bindings still wrap those routes in the group layout:
 
 ```dart
-// Generated parseRouteFromUri
-AppRoute parseRouteFromUri(Uri uri) {
-  return switch (uri.pathSegments) {
-    ['login'] => LoginRoute(),      // /login - wrapped by AuthLayout
-    ['register'] => RegisterRoute(), // /register - wrapped by AuthLayout
-    ['dashboard'] => DashboardRoute(),
-    _ => NotFoundRoute(uri: uri),
-  };
-}
+RouteBinding(id: 'LoginRoute', create: (_) => LoginRoute()),
+RouteBinding(id: 'RegisterRoute', create: (_) => RegisterRoute()),
+RouteBinding(id: 'DashboardRoute', create: (_) => DashboardRoute()),
 
 // Generated navigation methods
 extension AppCoordinatorNav on AppCoordinator {
@@ -731,16 +730,17 @@ The generator creates `routes.zen.dart` with:
 
 - `AppRoute` base class (or custom name via `@ZenCoordinator`)
 - `AppCoordinator.manifest`, an immutable `RouteManifest`
-- `parseRouteFromUri`, backed by manifest matching and generated Flutter bindings
+- `CoordinatorRouteBinding` and generated `RouteBinding` / `RouteBinding.deferred` adapters
 - Navigation path definitions for layouts
-- Static, type-safe `{route}Location()` reverse-routing methods
+- Static, type-safe `AppCoordinator.location.{route}` reverse-routing helpers
 - Type-safe navigation extension methods (push/replace/recover)
 
 ```dart
 // routes.zen.dart (generated)
 abstract class AppRoute extends RouteTarget with RouteUnique {}
 
-class AppCoordinator extends Coordinator<AppRoute> {
+class AppCoordinator extends Coordinator<AppRoute>
+    with CoordinatorRouteBinding<AppRoute, String> {
   static final RouteManifest<String> manifest = RouteManifest<String>(
     name: 'AppCoordinator',
     routes: [
@@ -751,28 +751,34 @@ class AppCoordinator extends Coordinator<AppRoute> {
   );
 
   @override
-  RouteManifest<String> get routeManifest => manifest;
+  late final routeBindings = manifest.bind<AppRoute>(
+    bindings: [
+      RouteBinding(id: 'IndexRoute', create: (_) => IndexRoute()),
+      RouteBinding(id: 'AboutRoute', create: (_) => AboutRoute()),
+      RouteBinding(
+        id: 'ProfileIdRoute',
+        create: (match) => ProfileIdRoute(
+          id: match.pathParameters['id']!,
+        ),
+      ),
+    ],
+    notFound: (uri) => NotFoundRoute(uri: uri),
+  );
 
   final IndexedStackPath<AppRoute> tabsPath = IndexedStackPath([...]);
   
   @override
   List<StackPath> get paths => [root, tabsPath];
-  
-  @override
-  AppRoute parseRouteFromUri(Uri uri) {
-    final match = routeManifest.match(uri);
-    if (match == null) return NotFoundRoute(uri: uri);
-    return switch (match.route.id) {
-      'IndexRoute' => IndexRoute(),
-      'AboutRoute' => AboutRoute(),
-      'ProfileIdRoute' => ProfileIdRoute(
-        id: match.pathParameters['id']!,
-      ),
-      _ => NotFoundRoute(uri: uri),
-    };
-  }
 
-  static Uri profileIdLocation({required String id}) => manifest.location(
+  static const location = AppCoordinatorLocation();
+}
+
+final class AppCoordinatorLocation {
+  const AppCoordinatorLocation();
+
+  Uri get about => AppCoordinator.manifest.location('AboutRoute');
+
+  Uri profileId({required String id}) => AppCoordinator.manifest.location(
     'ProfileIdRoute',
     pathParameters: {'id': id},
   );
@@ -780,6 +786,8 @@ class AppCoordinator extends Coordinator<AppRoute> {
 
 // Type-safe navigation extensions
 extension AppCoordinatorNav on AppCoordinator {
+  AppCoordinatorLocation get location => AppCoordinator.location;
+
   // Push, Replace, Recover methods for each route
   Future<dynamic> pushAbout() => push(AboutRoute());
   void replaceAbout() => replace(AboutRoute());
@@ -795,7 +803,7 @@ extension AppCoordinatorNav on AppCoordinator {
 The same path pattern drives parsing and link generation:
 
 ```dart
-final uri = AppCoordinator.profileIdLocation(id: 'core team');
+final uri = coordinator.location.profileId(id: 'core team');
 // /profile/core%20team
 ```
 

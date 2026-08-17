@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zenrouter_core/src/internal/reactive.dart';
+import 'package:zenrouter_core/src/path/commit.dart';
 import 'package:zenrouter_core/zenrouter_core.dart';
 
 class ComposeRoute extends RouteUri {
@@ -23,6 +24,18 @@ class ComposeRoute extends RouteUri {
 
   @override
   List<Object?> get props => [id];
+}
+
+class SelfRedirectRoute extends ComposeRoute with RouteRedirect<ComposeRoute> {
+  SelfRedirectRoute(super.id);
+
+  int redirectCalls = 0;
+
+  @override
+  FutureOr<ComposeRoute> redirect() {
+    redirectCalls++;
+    return this;
+  }
 }
 
 class DeeplinkComposeRoute extends ComposeRoute with RouteDeepLink {
@@ -162,6 +175,17 @@ void main() {
 
       expect(coordinator.root.activeRoute, route);
       expect(route.onResult.isCompleted, isFalse);
+      coordinator.root.reset();
+    });
+
+    test('Mutatable.pushSilently is callable on the shared contract', () async {
+      final coordinator = MutatableOnlyCoordinator();
+      final Mutatable<ComposeRoute> mutatable = coordinator;
+      final route = ComposeRoute('via-contract');
+
+      await mutatable.pushSilently(route);
+
+      expect(coordinator.root.activeRoute, route);
       coordinator.root.reset();
     });
   });
@@ -501,6 +525,83 @@ void main() {
       final path = ComposeStackPath();
       expect(path, isA<Mutatable>());
       expect(path, isA<Navigatable>());
+      expect(path, isA<StackCommit>());
+    });
+  });
+
+  group('Coordinator resolves redirects once', () {
+    test(
+      'pushOrMoveToTop does not re-enter path redirect resolution',
+      () async {
+        final coordinator = FullCapabilityCoordinator();
+        final route = SelfRedirectRoute('once');
+
+        await coordinator.pushOrMoveToTop(route);
+
+        expect(route.redirectCalls, 1);
+        expect(coordinator.root.activeRoute, route);
+        coordinator.root.reset();
+      },
+    );
+
+    test('navigate does not re-enter path redirect resolution', () async {
+      final coordinator = FullCapabilityCoordinator();
+      final route = SelfRedirectRoute('once');
+
+      await coordinator.navigate(route);
+
+      expect(route.redirectCalls, 1);
+      expect(coordinator.root.activeRoute, route);
+      coordinator.root.reset();
+    });
+
+    test('push does not re-enter path redirect resolution', () async {
+      final coordinator = FullCapabilityCoordinator();
+      final route = SelfRedirectRoute('once');
+
+      unawaited(coordinator.push(route));
+      await pumpEventQueue();
+
+      expect(route.redirectCalls, 1);
+      expect(coordinator.root.activeRoute, route);
+      coordinator.root.reset();
+    });
+
+    test('pushSilently does not re-enter path redirect resolution', () async {
+      final coordinator = FullCapabilityCoordinator();
+      final route = SelfRedirectRoute('once');
+
+      await coordinator.pushSilently(route);
+
+      expect(route.redirectCalls, 1);
+      expect(coordinator.root.activeRoute, route);
+      coordinator.root.reset();
+    });
+
+    test(
+      'pushReplacement does not re-enter path redirect resolution',
+      () async {
+        final coordinator = FullCapabilityCoordinator();
+        final route = SelfRedirectRoute('once');
+
+        unawaited(coordinator.pushReplacement(route));
+        await pumpEventQueue();
+
+        expect(route.redirectCalls, 1);
+        expect(coordinator.root.activeRoute, route);
+        coordinator.root.reset();
+      },
+    );
+
+    test('path-level navigate still resolves redirects itself', () async {
+      final path = ComposeStackPath();
+      final route = SelfRedirectRoute('path');
+
+      await path.navigate(route);
+
+      expect(route.redirectCalls, 1);
+      expect(path.activeRoute, route);
+      path.reset();
     });
   });
 }

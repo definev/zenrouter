@@ -9,6 +9,7 @@ When to use each navigation method on `Coordinator` / `CoordinatorCore`.
 | Method | Stack effect | Use when |
 |:-------|:-------------|:---------|
 | `push(route)` | Adds to top | Going forward to a new screen |
+| `pushSilently(route)` | Adds to top; completes at commit | Router, deep link, or orchestration that must not wait for pop |
 | `pop([result])` | Removes top | Going back; optionally returns a result |
 | `navigate(route)` | Pops to existing or pushes new | Sidebar/breadcrumb taps; browser back/forward |
 | `replace(route)` | Clears **all** paths, sets one route | Full state reset (e.g. sign-out → sign-in) |
@@ -40,6 +41,20 @@ coordinator.push(ProductDetailRoute(id: '42'));
 final confirmed = await coordinator.push<bool>(ConfirmationRoute());
 if (confirmed == true) { /* proceed */ }
 ```
+
+---
+
+### pushSilently
+
+```dart
+await coordinator.pushSilently(ProductDetailRoute(id: '42'));
+```
+
+- Same stack mutation as `push`.
+- Completes when the route is committed, not when it is later popped.
+- Does not return a pop result.
+
+**Use for:** Router, deep-link, and orchestration code that needs to await navigation completion without subscribing to the route result.
 
 ---
 
@@ -161,7 +176,8 @@ coordinator.recover(route);
 What kind of navigation?
 │
 ├─ Going forward to a new screen
-│  └─ push()
+│  ├─ Need the later pop result → push()
+│  └─ Only need the commit → pushSilently()
 │
 ├─ Going back
 │  ├─ Just go back → pop()

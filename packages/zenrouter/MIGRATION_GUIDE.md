@@ -26,7 +26,7 @@ Navigation operations moved off `CoordinatorCore` into capability mixins:
 |-------|--------------|
 | `CoordinatorLayoutCore` | Layout-parent registration / hierarchy activation |
 | `CoordinatorNavigatable` | `navigate` |
-| `CoordinatorMutatable` | `push`, `pop`, `replace`, `pushReplacement`, `pushOrMoveToTop`, `tryPop` |
+| `CoordinatorMutatable` | `push`, `pushSilently`, `pop`, `replace`, `pushReplacement`, `pushOrMoveToTop`, `tryPop` |
 | `CoordinatorRecoverable` | `recover`, `recoverUri`, `defineDeeplinkHandler` |
 
 URI helpers (`navigateUri`, `pushUri`, …) are an extension on `CoordinatorRecoverable`.

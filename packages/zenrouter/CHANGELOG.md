@@ -21,6 +21,8 @@
 
 ### 🚀 New Features
 
+- **`pushReplacement` on indexed/branched parents** now activates the
+  destination instead of no-oping after a possible pop of the current path.
 - **Stateful branch navigation** via `BranchedStackPath`: fixed branch layout
   roots retain an independent child stack while branch selection and
   restoration reuse indexed-path semantics.
@@ -35,6 +37,9 @@
 - **Codegen-free Coordinator bindings**: `CoordinatorRouteBinding` connects a
   validated `RouteBindingRegistry` to `routeManifest`, URI parsing, Flutter
   Router resolution, and typed not-found handling.
+- **Reverse routing as `coordinator.location.home`**: generated and handwritten
+  coordinators expose a `location` namespace (`location.home`,
+  `location.profile(...)`) instead of reversed `{route}Location()` helpers.
 - **Compose-your-own coordinator** (via `zenrouter_core`): mix only the
   capabilities you need. `CoordinatorView.initialUri` asserts in debug when
   the host lacks `CoordinatorNavigatable`.

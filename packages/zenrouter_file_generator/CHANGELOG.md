@@ -5,12 +5,15 @@
 - Emit sealed `RouteManifestLayoutKind.stack()` / `.indexed([...])` /
   `.branched([...])` values so generated manifests keep fixed children on
   the kind.
-- Generate `Coordinator.manifest` as the static route topology used by the
-  generated URI parser.
+- Generate `Coordinator.manifest` as the static route topology used by
+  `CoordinatorRouteBinding` and generated `RouteBinding` adapters.
+- Mix `CoordinatorRouteBinding` into the generated coordinator and emit
+  `RouteBinding` / `RouteBinding.deferred` instead of a `parseRouteFromUri`
+  switch.
 - Emit `RouteManifest<String>` explicitly while handwritten coordinators may
   use enum or domain ID types.
-- Generate static, type-safe `{route}Location()` methods for reverse routing
-  without constructing presentation routes.
+- Generate `AppCoordinator.location.{route}` reverse-routing helpers
+  (`location.home`, `location.profileId(...)`) instead of `{route}Location()`.
 - Reject duplicate and equally-specific ambiguous route patterns during code
   generation.
 - Generated not-found routes preserve the requested URI and implement

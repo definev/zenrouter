@@ -114,38 +114,50 @@ routes/docs/
 /docs/api/coordinator/v2      → DocsVersionRoute(slugs: ['api', 'coordinator'], version: 'v2')
 ```
 
-## Generated Pattern Matching
+## Generated Bindings
 
-The generator creates Dart pattern matching code that handles all these cases. Here's what it produces:
+The manifest owns matching precedence. The generator only binds each route ID
+to a constructor:
 
 ```dart
 @override
-AppRoute parseRouteFromUri(Uri uri) {
-  return switch (uri.pathSegments) {
-    // Static routes first (more specific)
-    [] => IndexRoute(),
-    ['about'] => AboutRoute(),
-    
-    // Single-segment parameters
-    ['profile', final userId] => ProfileUserIdRoute(userId: userId),
-    
-    // Catch-all with additional segments (more specific first)
-    ['docs', ...final slugs, 'edit'] => DocsEditRoute(slugs: slugs),
-    ['docs', ...final slugs, final version] => DocsVersionRoute(
-      slugs: slugs,
-      version: version,
+late final routeBindings = manifest.bind<AppRoute>(
+  bindings: [
+    RouteBinding(id: 'IndexRoute', create: (_) => IndexRoute()),
+    RouteBinding(id: 'AboutRoute', create: (_) => AboutRoute()),
+    RouteBinding(
+      id: 'ProfileUserIdRoute',
+      create: (match) => ProfileUserIdRoute(
+        userId: match.pathParameters['userId']!,
+      ),
     ),
-    
-    // Pure catch-all (least specific)
-    ['docs', ...final slugs] => DocsRoute(slugs: slugs),
-    
-    // Fallback
-    _ => NotFoundRoute(uri: uri),
-  };
-}
+    RouteBinding(
+      id: 'DocsEditRoute',
+      create: (match) => DocsEditRoute(
+        slugs: match.restParameters['slugs']!,
+      ),
+    ),
+    RouteBinding(
+      id: 'DocsVersionRoute',
+      create: (match) => DocsVersionRoute(
+        slugs: match.restParameters['slugs']!,
+        version: match.pathParameters['version']!,
+      ),
+    ),
+    RouteBinding(
+      id: 'DocsRoute',
+      create: (match) => DocsRoute(
+        slugs: match.restParameters['slugs']!,
+      ),
+    ),
+  ],
+  notFound: (uri) => NotFoundRoute(uri: uri),
+);
 ```
 
-> Note the ordering: more specific patterns come before less specific ones. The generator handles this automatically, ensuring `/docs/api/edit` matches the edit route, not the catch-all.
+> Overlapping patterns are rejected or ordered by specificity when the
+> manifest is constructed. `/docs/api/edit` matches the edit route, not the
+> catch-all.
 ''',
     );
   }

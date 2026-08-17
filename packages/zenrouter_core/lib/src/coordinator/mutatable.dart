@@ -48,8 +48,8 @@ mixin CoordinatorMutatable<T extends RouteUri> on CoordinatorLayoutCore<T>
 
       final parentPath = parentLayout?.resolvePath(this) ?? root;
       switch (parentPath) {
-        case final StackMutatable<T> mutablePath:
-          committedRoute = mutablePath.commitResolvedRoute(target);
+        case final StackCommit<T> commit:
+          committedRoute = commit.commitResolvedRoute(target);
         default:
           await parentPath.activateRoute(target);
       }
@@ -65,6 +65,7 @@ mixin CoordinatorMutatable<T extends RouteUri> on CoordinatorLayoutCore<T>
   /// Unlike [push], this method does not wait for the route to be popped and
   /// does not return a pop result. Router/deep-link integrations should use
   /// this method when they need to await navigation completion.
+  @override
   Future<void> pushSilently(T route) => runNavigationTransaction(() async {
     final target = await RouteRedirect.resolve(route, this);
     if (target == null) return;
@@ -79,8 +80,8 @@ mixin CoordinatorMutatable<T extends RouteUri> on CoordinatorLayoutCore<T>
 
     final parentPath = parentLayout?.resolvePath(this) ?? root;
     switch (parentPath) {
-      case final StackMutatable<T> mutablePath:
-        mutablePath.commitResolvedRoute(target);
+      case final StackCommit<T> commit:
+        commit.commitResolvedRoute(target);
       default:
         await parentPath.activateRoute(target);
     }
@@ -105,8 +106,8 @@ mixin CoordinatorMutatable<T extends RouteUri> on CoordinatorLayoutCore<T>
     final parentPath = parentLayout?.resolvePath(this) ?? root;
 
     switch (parentPath) {
-      case StackMutatable():
-        await parentPath.pushOrMoveToTop(target);
+      case final StackCommit<T> commit:
+        commit.commitResolvedMoveToTop(target);
       default:
         await parentPath.activateRoute(target);
     }
@@ -148,11 +149,13 @@ mixin CoordinatorMutatable<T extends RouteUri> on CoordinatorLayoutCore<T>
         );
       }
 
-      if (parentPath case final StackMutatable<T> mutablePath) {
-        committedRoute = await mutablePath.commitResolvedReplacement(
+      if (parentPath case final StackCommit<T> commit) {
+        committedRoute = await commit.commitResolvedReplacement(
           target,
           result: result,
         );
+      } else {
+        await parentPath.activateRoute(target);
       }
     }, historyIntent: NavigationHistoryIntent.replace);
 

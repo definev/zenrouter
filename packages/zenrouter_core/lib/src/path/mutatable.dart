@@ -10,7 +10,7 @@ part of 'base.dart';
 /// Implements the shared [Mutatable] contract also used by
 /// [CoordinatorMutatable].
 mixin StackMutatable<T extends RouteTarget> on StackPath<T>
-    implements StackNavigatable<T>, Mutatable<T> {
+    implements StackNavigatable<T>, Mutatable<T>, StackCommit<T> {
   /// Replaces the entire stack as one observable mutation.
   ///
   /// Route instances retained by identity keep their lifecycle. Removed
@@ -60,6 +60,7 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
   }
 
   /// Commits a route whose redirect and layout have already been resolved.
+  @override
   @internal
   T commitResolvedRoute(T target) {
     _addRouteToStack(target);
@@ -70,6 +71,7 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
   ///
   /// Same stack mutation as [push], but the returned future completes once
   /// the route is on the stack instead of when it is later popped.
+  @override
   Future<void> pushSilently(T element) async {
     await commitRoute(element);
   }
@@ -113,6 +115,7 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
   }
 
   /// Commits an already-resolved replacement route.
+  @override
   @internal
   Future<T?> commitResolvedReplacement<RO extends Object>(
     T target, {
@@ -142,7 +145,13 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
   Future<void> pushOrMoveToTop(T element) async {
     T? target = await RouteRedirect.resolve(element, coordinator);
     if (target == null) return;
+    commitResolvedMoveToTop(target);
+  }
 
+  /// Moves an already-resolved route to the top, or appends it.
+  @override
+  @internal
+  void commitResolvedMoveToTop(T target) {
     target.isPopByPath = false;
     target.bindStackPath(this);
     final index = _stack.indexOf(target);
@@ -219,7 +228,13 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
   Future<void> navigate(T route) async {
     T? target = await RouteRedirect.resolve(route, coordinator);
     if (target == null) return;
+    await commitResolvedNavigate(target);
+  }
 
+  /// Pops back to an already-resolved route, or commits it as a new entry.
+  @override
+  @internal
+  Future<void> commitResolvedNavigate(T target) async {
     final routeIndex = stack.indexOf(target);
     if (routeIndex != -1) {
       while (stack.length > routeIndex + 1) {
@@ -237,8 +252,9 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
       if (!existingRoute.deepEquals(target)) {
         target.onDiscard();
       }
-    } else {
-      await pushSilently(target);
+      return;
     }
+
+    commitResolvedRoute(target);
   }
 }

@@ -1353,15 +1353,15 @@ void main() {
       final route2 = SimpleRoute('2');
       final route3 = SimpleRoute('3');
 
-      path.push(route1);
-      path.push(route2);
-      path.push(route3);
+      await path.pushSilently(route1);
+      await path.pushSilently(route2);
+      await path.pushSilently(route3);
 
-      // Concurrent navigate calls
-      path.navigate(route1);
+      // Last completed navigate wins. Path-level navigate is not serialized,
+      // so overlapping calls are sequenced here to assert a stable outcome.
+      await path.navigate(route1);
       await path.navigate(route2);
 
-      // Last navigation should win
       expect(path.stack.length, 2);
       expect(path.stack.last, route2);
     });

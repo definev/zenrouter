@@ -12,6 +12,12 @@ abstract interface class Mutatable<T> {
   /// Returns a future that completes when the route is later popped.
   Future<R?> push<R extends Object>(T route);
 
+  /// Adds [route] and completes once the stack mutation is committed.
+  ///
+  /// Unlike [push], this does not wait for the route to be popped and does
+  /// not return a pop result.
+  Future<void> pushSilently(T route);
+
   /// Pushes [route], or moves an existing equal route to the top.
   Future<void> pushOrMoveToTop(T route);
 
