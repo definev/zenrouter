@@ -269,7 +269,30 @@ void main() {
       expect(row.fromId, 'home');
       expect(row.toId, 'profile');
     });
+
+    test(
+      'exportSession encodes Object-recorder ids with the typed codec wire names',
+      () {
+        final recorder = NavigationFlowRecorder<Object>(
+          manifest: _ObjectManifestView().routeManifest,
+          initialUri: Uri.parse('/'),
+        );
+        addTearDown(recorder.dispose);
+        recorder.record(
+          _commit(1, '/', '/profile', NavigationHistoryIntent.push),
+        );
+
+        final row = recorder.exportSession().transitions.single;
+        expect(row.fromId, 'home');
+        expect(row.toId, 'profile');
+      },
+    );
   });
+}
+
+/// Erases [RouteManifest<_SessionId>] the same way [Coordinator.routeManifest] does.
+final class _ObjectManifestView {
+  RouteManifest<Object> get routeManifest => _enumManifest;
 }
 
 enum _SessionId { home, profile, settings }
