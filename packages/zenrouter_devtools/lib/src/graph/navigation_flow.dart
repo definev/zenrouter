@@ -204,6 +204,7 @@ final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
   final Map<_NavigationFlowEdgeKey<I>, NavigationFlowEdge<I>> _edges = {};
   final List<NavigationFlowTransition<I>> _transitions = [];
   final LinkedHashSet<I> _screenPreviewOrder = LinkedHashSet();
+  final Map<int, NavigationFlowScreenPreview> _previewsByRevision = {};
   int _lastRecordedRevision;
   int _ignoredTransitionCount = 0;
   I? _entryNodeId;
@@ -225,6 +226,11 @@ final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
   int get lastRecordedRevision => _lastRecordedRevision;
   int get ignoredTransitionCount => _ignoredTransitionCount;
   bool get isEmpty => _edges.isEmpty;
+
+  /// The node-latest preview whose [NavigationFlowScreenPreview.revision]
+  /// equals [revision], if any. Same instance as `nodes[id].screenPreview`.
+  NavigationFlowScreenPreview? previewForRevision(int revision) =>
+      _previewsByRevision[revision];
 
   /// Captures [commit] once, returning whether recorder state changed.
   bool record(NavigationCommit commit, {String? actionLabel}) {
@@ -347,16 +353,20 @@ final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
       return false;
     }
 
-    _nodes[id] = _copyNode(
-      node,
-      screenPreview: NavigationFlowScreenPreview(
-        bytes: pngBytes,
-        revision: revision,
-        capturedAt: _clock(),
-        width: width,
-        height: height,
-      ),
+    final previousPreview = node.screenPreview;
+    if (previousPreview != null) {
+      _previewsByRevision.remove(previousPreview.revision);
+    }
+
+    final preview = NavigationFlowScreenPreview(
+      bytes: pngBytes,
+      revision: revision,
+      capturedAt: _clock(),
+      width: width,
+      height: height,
     );
+    _nodes[id] = _copyNode(node, screenPreview: preview);
+    _previewsByRevision[revision] = preview;
     _screenPreviewOrder
       ..remove(id)
       ..add(id);
@@ -366,6 +376,10 @@ final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
       _screenPreviewOrder.remove(evictedId);
       final evictedNode = _nodes[evictedId];
       if (evictedNode != null) {
+        final evictedPreview = evictedNode.screenPreview;
+        if (evictedPreview != null) {
+          _previewsByRevision.remove(evictedPreview.revision);
+        }
         _nodes[evictedId] = _copyNode(evictedNode, clearScreenPreview: true);
       }
     }
@@ -379,6 +393,7 @@ final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
     _edges.clear();
     _transitions.clear();
     _screenPreviewOrder.clear();
+    _previewsByRevision.clear();
     _ignoredTransitionCount = 0;
     _entryNodeId = null;
     _initialUri = initialUri;
