@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vyuh_node_flow/vyuh_node_flow.dart';
@@ -764,6 +765,80 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('opening timeline from live enters replay', (tester) async {
+    await _pumpObservedWithTransitions(tester);
+    expect(find.textContaining('REPLAY'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('observed-replay-timeline')));
+    await tester.pump();
+    expect(find.textContaining('REPLAY 2 / 2'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('observed-replay-slider')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('observed-replay-event-0')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('observed-replay-event-1')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('tapping a timeline row seeks the playhead', (tester) async {
+    await _pumpObservedWithTransitions(tester);
+    await tester.tap(find.byKey(const ValueKey('observed-replay-timeline')));
+    await tester.pump();
+    expect(find.textContaining('REPLAY 2 / 2'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('observed-replay-event-0')));
+    await tester.pump();
+    expect(find.textContaining('REPLAY 1 / 2'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('slider seeks replay playhead', (tester) async {
+    await _pumpObservedWithTransitions(tester);
+    await tester.tap(find.byKey(const ValueKey('observed-replay-timeline')));
+    await tester.pump();
+    final slider = tester.widget<Slider>(
+      find.byKey(const ValueKey('observed-replay-slider')),
+    );
+    expect(slider.min, 0);
+    expect(slider.max, 1);
+    expect(slider.value, 1);
+    expect(slider.divisions, 1);
+    expect(slider.semanticFormatterCallback?.call(1), 'Event 2 of 2');
+    expect(slider.semanticFormatterCallback?.call(0), 'Event 1 of 2');
+    slider.onChanged!(0);
+    await tester.pump();
+    expect(find.textContaining('REPLAY 1 / 2'), findsOneWidget);
+    expect(
+      tester
+          .widget<Slider>(find.byKey(const ValueKey('observed-replay-slider')))
+          .value,
+      0,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('node info chrome seeks to the latest matching arrival', (
+    tester,
+  ) async {
+    await _pumpObservedWithTransitions(tester);
+    await tester.tap(find.byKey(const ValueKey('observed-replay-next')));
+    await tester.pump();
+    expect(find.textContaining('REPLAY 1 / 2'), findsOneWidget);
+    tester
+        .widget<GestureDetector>(
+          find.byKey(const ValueKey('observed-node-info-home')),
+        )
+        .onTap!();
+    await tester.pump();
+    expect(find.textContaining('REPLAY 2 / 2'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('trash after play does not throw', (tester) async {
     await _pumpObservedWithTransitions(tester);

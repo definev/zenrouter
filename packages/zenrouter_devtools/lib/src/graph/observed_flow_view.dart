@@ -13,6 +13,7 @@ import 'navigation_flow_session.dart';
 import 'navigation_graph.dart';
 import 'node_flow_canvas.dart';
 import 'observed_replay_controls.dart';
+import 'observed_replay_timeline.dart';
 
 enum _ObservedReplayMode { live, replayPaused, replayPlaying }
 
@@ -63,6 +64,7 @@ class _ObservedNavigationFlowViewState
   bool _importedUnmatched = false;
   bool _importFailed = false;
   double _speed = 1;
+  bool _listExpanded = false;
   VoidCallback _releaseRecordingPause = _noopRelease;
 
   static void _noopRelease() {}
@@ -285,6 +287,7 @@ class _ObservedNavigationFlowViewState
     _replayFromLiveExport = false;
     _importedUnmatched = false;
     _importFailed = false;
+    _listExpanded = false;
     if (!mounted) return;
     final previousPositions = <Object, Offset>{
       for (final node in _controller.nodes.values)
@@ -443,6 +446,35 @@ class _ObservedNavigationFlowViewState
     );
   }
 
+  void _toggleTimeline() {
+    if (_isLive) {
+      final last = widget.flow.transitions.length - 1;
+      if (last < 0) return;
+      // 400px mobile overlay: keep the list collapsed; slider stays.
+      _listExpanded = MediaQuery.sizeOf(context).width >= 600;
+      _enterReplayFromLive(initialIndex: last, play: false);
+      return;
+    }
+    setState(() {
+      _listExpanded = !_listExpanded;
+    });
+  }
+
+  void _seekTimeline(int index) {
+    _player?.seek(index);
+  }
+
+  void _seekToLatestArrival(Object id) {
+    final transitions = _hydrated?.transitions;
+    if (transitions == null || transitions.isEmpty) return;
+    for (var i = transitions.length - 1; i >= 0; i--) {
+      if (transitions[i].toId == id) {
+        _player?.seek(i);
+        return;
+      }
+    }
+  }
+
   void _cycleSpeed() {
     final index = _speeds.indexOf(_speed);
     _speed = _speeds[(index + 1) % _speeds.length];
@@ -546,6 +578,7 @@ class _ObservedNavigationFlowViewState
                 isLive: _isLive,
                 isPlaying: _mode == _ObservedReplayMode.replayPlaying,
                 enabled: canvasFlow.transitions.isNotEmpty,
+                timelineOpen: _listExpanded,
                 speed: _speed,
                 banner: _replayBanner,
                 onJumpStart: _jumpStart,
@@ -555,61 +588,108 @@ class _ObservedNavigationFlowViewState
                 onJumpEnd: _jumpEnd,
                 onExit: _exitReplay,
                 onCycleSpeed: _cycleSpeed,
+                onToggleTimeline: _toggleTimeline,
                 onExport: _exportSession,
                 onImport: _importSession,
               ),
             Expanded(
               child: canvasFlow.edges.isEmpty
                   ? const _EmptyObservedFlow()
-                  : NavigationNodeFlowAutoFit(
-                      onFit: _controller.fitToView,
-                      child: NodeFlowEditor<_ObservedNodeData, Object?>(
-                        key: const ValueKey('observed-node-flow'),
-                        controller: _controller,
-                        theme: _observedNodeFlowTheme,
-                        behavior: _isReadOnly
-                            ? NodeFlowBehavior.inspect
-                            : NodeFlowBehavior.preview,
-                        events: NodeFlowEvents<_ObservedNodeData, Object?>(
-                          onInit: _controller.fitToView,
-                          node: NodeEvents<_ObservedNodeData>(
-                            onTap: (node) => setState(() {
-                              _selectedNodeId = node.data.id;
-                            }),
-                            onDoubleTap: (node) => _openZoomModal(node.data.id),
-                          ),
-                        ),
-                        nodeBuilder: (context, node) {
-                          final id = node.data.id;
-                          final graphNode = widget.graph.nodes[id]!;
-                          final flowNode = canvasFlow.nodes[id]!;
-                          return _ObservedFlowNodeCard(
-                            key: ValueKey('observed-flow-node-$id'),
-                            graphNode: graphNode,
-                            flowNode: flowNode,
-                            preview: _previewFor(id),
-                            isCurrent: _isLive && currentId == id,
-                            isReplay: !_isLive && playheadToId == id,
-                            isReplayFrom:
-                                !_isLive &&
-                                playheadFromId == id &&
-                                playheadToId != id,
-                            isSelected: _selectedNodeId == id,
-                            captureEnabled: widget.captureEnabled,
-                            onZoom: () => _openZoomModal(id),
-                            onNavigate: widget.onNavigate != null
-                                ? () => widget.onNavigate!(
-                                    flowNode.lastUri.toString(),
-                                  )
-                                : null,
-                            onCopy: widget.onCopy != null
-                                ? () => widget.onCopy!(
-                                    flowNode.lastUri.toString(),
-                                  )
-                                : null,
-                          );
-                        },
-                      ),
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        final showTimeline =
+                            !_isLive && (_player?.length ?? 0) > 0;
+                        final timelineHeight = !showTimeline
+                            ? 0.0
+                            : _listExpanded
+                            ? math.max(140.0, constraints.maxHeight * 0.36)
+                            : 44.0;
+                        return Column(
+                          children: [
+                            Expanded(
+                              child: NavigationNodeFlowAutoFit(
+                                onFit: _controller.fitToView,
+                                child:
+                                    NodeFlowEditor<_ObservedNodeData, Object?>(
+                                      key: const ValueKey('observed-node-flow'),
+                                      controller: _controller,
+                                      theme: _observedNodeFlowTheme,
+                                      behavior: _isReadOnly
+                                          ? NodeFlowBehavior.inspect
+                                          : NodeFlowBehavior.preview,
+                                      events:
+                                          NodeFlowEvents<
+                                            _ObservedNodeData,
+                                            Object?
+                                          >(
+                                            onInit: _controller.fitToView,
+                                            node: NodeEvents<_ObservedNodeData>(
+                                              onTap: (node) => setState(() {
+                                                _selectedNodeId = node.data.id;
+                                              }),
+                                              onDoubleTap: (node) =>
+                                                  _openZoomModal(node.data.id),
+                                            ),
+                                          ),
+                                      nodeBuilder: (context, node) {
+                                        final id = node.data.id;
+                                        final graphNode =
+                                            widget.graph.nodes[id]!;
+                                        final flowNode = canvasFlow.nodes[id]!;
+                                        return _ObservedFlowNodeCard(
+                                          key: ValueKey(
+                                            'observed-flow-node-$id',
+                                          ),
+                                          graphNode: graphNode,
+                                          flowNode: flowNode,
+                                          preview: _previewFor(id),
+                                          isCurrent: _isLive && currentId == id,
+                                          isReplay:
+                                              !_isLive && playheadToId == id,
+                                          isReplayFrom:
+                                              !_isLive &&
+                                              playheadFromId == id &&
+                                              playheadToId != id,
+                                          isSelected: _selectedNodeId == id,
+                                          captureEnabled: widget.captureEnabled,
+                                          onZoom: () => _openZoomModal(id),
+                                          onInfoTap: _isLive
+                                              ? null
+                                              : () {
+                                                  setState(() {
+                                                    _selectedNodeId = id;
+                                                  });
+                                                  _seekToLatestArrival(id);
+                                                },
+                                          onNavigate: widget.onNavigate != null
+                                              ? () => widget.onNavigate!(
+                                                  flowNode.lastUri.toString(),
+                                                )
+                                              : null,
+                                          onCopy: widget.onCopy != null
+                                              ? () => widget.onCopy!(
+                                                  flowNode.lastUri.toString(),
+                                                )
+                                              : null,
+                                        );
+                                      },
+                                    ),
+                              ),
+                            ),
+                            if (showTimeline)
+                              SizedBox(
+                                height: timelineHeight,
+                                child: ObservedReplayTimeline(
+                                  transitions: _hydrated!.transitions,
+                                  index: _player!.index,
+                                  listExpanded: _listExpanded,
+                                  onSeek: _seekTimeline,
+                                  onToggleList: _toggleTimeline,
+                                ),
+                              ),
+                          ],
+                        );
+                      },
                     ),
             ),
           ],
@@ -845,6 +925,7 @@ class _ObservedFlowNodeCard extends StatelessWidget {
     required this.isSelected,
     required this.captureEnabled,
     required this.onZoom,
+    this.onInfoTap,
     this.onNavigate,
     this.onCopy,
   });
@@ -858,6 +939,7 @@ class _ObservedFlowNodeCard extends StatelessWidget {
   final bool isSelected;
   final bool captureEnabled;
   final VoidCallback onZoom;
+  final VoidCallback? onInfoTap;
   final VoidCallback? onNavigate;
   final VoidCallback? onCopy;
 
@@ -939,119 +1021,126 @@ class _ObservedFlowNodeCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-            decoration: BoxDecoration(
-              color: DebugTheme.backgroundDark,
-              borderRadius: BorderRadius.circular(DebugTheme.radiusMd),
-              border: Border.all(
-                color: infoBorderColor,
-                width: isHighlighted ? 1.5 : 1.0,
+          GestureDetector(
+            key: ValueKey('observed-node-info-${graphNode.id}'),
+            behavior: HitTestBehavior.opaque,
+            onTap: onInfoTap,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+              decoration: BoxDecoration(
+                color: DebugTheme.backgroundDark,
+                borderRadius: BorderRadius.circular(DebugTheme.radiusMd),
+                border: Border.all(
+                  color: infoBorderColor,
+                  width: isHighlighted ? 1.5 : 1.0,
+                ),
               ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              spacing: 2,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        graphNode.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: DebugTheme.textPrimary,
-                          fontSize: DebugTheme.fontSizeSm,
-                          fontWeight: FontWeight.w700,
-                          decoration: TextDecoration.none,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                spacing: 2,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          graphNode.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: DebugTheme.textPrimary,
+                            fontSize: DebugTheme.fontSizeSm,
+                            fontWeight: FontWeight.w700,
+                            decoration: TextDecoration.none,
+                          ),
                         ),
                       ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4.5,
-                        vertical: 1,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _ObservedFlowColors.edge.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(
-                          DebugTheme.radiusSm,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4.5,
+                          vertical: 1,
                         ),
-                        border: Border.all(
+                        decoration: BoxDecoration(
                           color: _ObservedFlowColors.edge.withValues(
-                            alpha: 0.3,
+                            alpha: 0.14,
                           ),
-                          width: 0.6,
-                        ),
-                      ),
-                      child: Text(
-                        '×${flowNode.visitCount}',
-                        style: const TextStyle(
-                          color: _ObservedFlowColors.edge,
-                          fontSize: 7.5,
-                          fontWeight: FontWeight.w700,
-                          decoration: TextDecoration.none,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 3),
-                Row(
-                  spacing: 4,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        flowNode.lastUri.toString(),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: DebugTheme.textSecondary,
-                          fontSize: 8.5,
-                          fontFamily: 'monospace',
-                          decoration: TextDecoration.none,
-                        ),
-                      ),
-                    ),
-                    if (onNavigate != null) ...[
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: onNavigate,
-                        child: MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            child: const Icon(
-                              CupertinoIcons.compass,
-                              size: 11,
-                              color: DebugTheme.textSecondary,
+                          borderRadius: BorderRadius.circular(
+                            DebugTheme.radiusSm,
+                          ),
+                          border: Border.all(
+                            color: _ObservedFlowColors.edge.withValues(
+                              alpha: 0.3,
                             ),
+                            width: 0.6,
+                          ),
+                        ),
+                        child: Text(
+                          '×${flowNode.visitCount}',
+                          style: const TextStyle(
+                            color: _ObservedFlowColors.edge,
+                            fontSize: 7.5,
+                            fontWeight: FontWeight.w700,
+                            decoration: TextDecoration.none,
                           ),
                         ),
                       ),
                     ],
-                    if (onCopy != null) ...[
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: onCopy,
-                        child: MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            child: const Icon(
-                              CupertinoIcons.doc_on_doc,
-                              size: 11,
-                              color: DebugTheme.textSecondary,
-                            ),
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    spacing: 4,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          flowNode.lastUri.toString(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: DebugTheme.textSecondary,
+                            fontSize: 8.5,
+                            fontFamily: 'monospace',
+                            decoration: TextDecoration.none,
                           ),
                         ),
                       ),
+                      if (onNavigate != null) ...[
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: onNavigate,
+                          child: MouseRegion(
+                            cursor: SystemMouseCursors.click,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              child: const Icon(
+                                CupertinoIcons.compass,
+                                size: 11,
+                                color: DebugTheme.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (onCopy != null) ...[
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: onCopy,
+                          child: MouseRegion(
+                            cursor: SystemMouseCursors.click,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              child: const Icon(
+                                CupertinoIcons.doc_on_doc,
+                                size: 11,
+                                color: DebugTheme.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],

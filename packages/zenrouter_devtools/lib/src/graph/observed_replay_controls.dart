@@ -35,13 +35,16 @@ class ObservedReplayTransport extends StatelessWidget {
     required this.onJumpEnd,
     required this.onExit,
     required this.onCycleSpeed,
+    required this.onToggleTimeline,
     required this.onExport,
     required this.onImport,
+    this.timelineOpen = false,
   });
 
   final bool isLive;
   final bool isPlaying;
   final bool enabled;
+  final bool timelineOpen;
   final double speed;
   final String? banner;
   final VoidCallback onJumpStart;
@@ -51,6 +54,7 @@ class ObservedReplayTransport extends StatelessWidget {
   final VoidCallback onJumpEnd;
   final VoidCallback onExit;
   final VoidCallback onCycleSpeed;
+  final VoidCallback onToggleTimeline;
   final VoidCallback onExport;
   final VoidCallback onImport;
 
@@ -115,6 +119,19 @@ class ObservedReplayTransport extends StatelessWidget {
                     onTap: onExit,
                   ),
                 _ReplaySpeedButton(speed: speed, onTap: onCycleSpeed),
+                _ReplayTransportButton(
+                  key: const ValueKey('observed-replay-timeline'),
+                  semanticsLabel: timelineOpen
+                      ? 'Hide replay event list'
+                      : 'Show replay event list',
+                  icon: CupertinoIcons.list_bullet,
+                  color: !enabled
+                      ? DebugTheme.textDisabled
+                      : timelineOpen
+                      ? const Color(0xFF60A5FA)
+                      : DebugTheme.textSecondary,
+                  onTap: enabled ? onToggleTimeline : null,
+                ),
                 _ReplayTransportButton(
                   key: const ValueKey('observed-replay-export'),
                   semanticsLabel: 'Export observed session JSON',
