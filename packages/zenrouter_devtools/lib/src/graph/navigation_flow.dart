@@ -265,10 +265,12 @@ final class NavigationFlowRecorder<I extends Object> extends ChangeNotifier {
     final codec = manifest.idCodec;
     if (codec == null) return id.toString();
     try {
-      return codec.encode(id);
-    } catch (_) {
-      return id.toString();
-    }
+      // Object-typed recorders still hold a typed RouteIdCodec. Call through
+      // dynamic so encode is the real function, not String Function(Object).
+      final encoded = (codec as dynamic).encode(id);
+      if (encoded is String) return encoded;
+    } catch (_) {}
+    return id.toString();
   }
 
   bool _record(NavigationCommit commit, {String? actionLabel}) {

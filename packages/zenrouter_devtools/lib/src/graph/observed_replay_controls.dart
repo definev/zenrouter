@@ -13,6 +13,12 @@ const observedReplayImportBanner = 'Replaying imported session.';
 const observedReplayUnmatchedBanner =
     'Imported session did not match this manifest.';
 
+/// Copy shown when the playhead preview is an id fallback, not this revision.
+const observedReplayStalePreviewCaption = 'Preview from a later visit';
+
+/// Copy shown when pasted JSON cannot be decoded.
+const observedReplayImportFailedBanner = 'Could not import session.';
+
 /// Second Observed header row: playhead transport, speed, export/import.
 class ObservedReplayTransport extends StatelessWidget {
   const ObservedReplayTransport({

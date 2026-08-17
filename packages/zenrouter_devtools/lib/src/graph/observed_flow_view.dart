@@ -61,6 +61,7 @@ class _ObservedNavigationFlowViewState
   Map<Object, NavigationFlowScreenPreview> _replayLatestPreviews = const {};
   bool _replayFromLiveExport = false;
   bool _importedUnmatched = false;
+  bool _importFailed = false;
   double _speed = 1;
   VoidCallback _releaseRecordingPause = _noopRelease;
 
@@ -249,6 +250,7 @@ class _ObservedNavigationFlowViewState
     );
     _model = _frozenModel!;
     _replayFromLiveExport = pauseLiveRecording;
+    _importFailed = false;
     _importedUnmatched =
         !pauseLiveRecording &&
         session.transitions.isNotEmpty &&
@@ -282,6 +284,7 @@ class _ObservedNavigationFlowViewState
     _mode = _ObservedReplayMode.live;
     _replayFromLiveExport = false;
     _importedUnmatched = false;
+    _importFailed = false;
     if (!mounted) return;
     final previousPositions = <Object, Offset>{
       for (final node in _controller.nodes.values)
@@ -465,7 +468,9 @@ class _ObservedNavigationFlowViewState
         pauseLiveRecording: false,
       );
     } on FormatException {
-      // Invalid document stays on the current canvas.
+      setState(() {
+        _importFailed = true;
+      });
     }
   }
 
@@ -478,10 +483,17 @@ class _ObservedNavigationFlowViewState
   }
 
   String? get _replayBanner {
+    if (_importFailed) return observedReplayImportFailedBanner;
     if (_isLive) return null;
-    if (_importedUnmatched) return observedReplayUnmatchedBanner;
-    if (_replayFromLiveExport) return observedReplayLiveExportBanner;
-    return observedReplayImportBanner;
+    final base = _importedUnmatched
+        ? observedReplayUnmatchedBanner
+        : _replayFromLiveExport
+        ? observedReplayLiveExportBanner
+        : observedReplayImportBanner;
+    if (_player?.currentPreviewIsStale == true) {
+      return '$base $observedReplayStalePreviewCaption';
+    }
+    return base;
   }
 
   String get _transitionLabel {
@@ -490,8 +502,8 @@ class _ObservedNavigationFlowViewState
     }
     final player = _player;
     if (player == null || player.length == 0) return 'REPLAY 0 / 0';
-    final index = player.index < 0 ? 0 : player.index + 1;
-    return 'REPLAY $index / ${player.length}';
+    if (player.index < 0) return 'REPLAY — / ${player.length}';
+    return 'REPLAY ${player.index + 1} / ${player.length}';
   }
 
   @override

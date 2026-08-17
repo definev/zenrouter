@@ -468,6 +468,13 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('observed-replay-next')));
     await tester.pump();
     expect(find.textContaining('REPLAY 2 / 2'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('observed-replay-prev')));
+    await tester.pump();
+    expect(find.textContaining('REPLAY 1 / 2'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('observed-replay-prev')));
+    await tester.pump();
+    expect(find.textContaining('REPLAY — / 2'), findsOneWidget);
+    expect(find.textContaining('REPLAY 1 / 2'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -619,6 +626,43 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('observed-replay-play')));
     await tester.pump();
     expect(find.textContaining('REPLAY 0 / 0'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('import of invalid JSON shows could-not-import banner', (
+    tester,
+  ) async {
+    await _pumpObservedWithTransitions(tester);
+    await tester.tap(find.byKey(const ValueKey('observed-replay-import')));
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const ValueKey('observed-replay-import-field')),
+      '{not-a-session}',
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('observed-replay-import-confirm')),
+    );
+    await tester.pump();
+    expect(find.text('Could not import session.'), findsOneWidget);
+    expect(find.textContaining('REPLAY'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('stale playhead preview shows later-visit caption', (
+    tester,
+  ) async {
+    final coordinator = await _pumpObservedWithTransitions(tester);
+    const png =
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4'
+        '2mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+    coordinator.debugNavigationFlow.attachScreenPreview(
+      'profile',
+      base64Decode(png),
+      revision: coordinator.lastNavigationCommit!.revision,
+    );
+    await tester.tap(find.byKey(const ValueKey('observed-replay-next')));
+    await tester.pump();
+    expect(find.textContaining('Preview from a later visit'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
