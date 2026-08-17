@@ -120,7 +120,7 @@ Replay is graph and timeline playback of that document. It does **not** re-navig
 
 `NavigationFlowSession` stores `initialUri`, timestamps, history intent, optional `debugFlowAction` labels, and URI pairs. Optional route ids are display hints only. The document does **not** include screen previews or PNG / base64 image data.
 
-**Export** copies that JSON to the clipboard and leaves you on the live graph. **Import** pastes the same JSON and rematches each URI against the **current** `RouteManifest`. Unmatched URIs are skipped. If every imported row fails rematch, transport stays disabled and the banner says `Imported session did not match this manifest`.
+**Export** always copies the current live `NavigationFlowSession` to the clipboard — never the hydrated or imported document — and does not exit replay. From live, you stay on the live graph. **Import** pastes the same JSON and rematches each URI against the **current** `RouteManifest`. Unmatched URIs are skipped. If every imported row fails rematch, transport stays disabled and the banner says `Imported session did not match this manifest.`
 
 ```json
 {
@@ -149,7 +149,7 @@ When the matched log is not empty, a transport row appears under the Observed he
 - **Play / Pause**, step back / forward, and jump to start / end
 - **Speed** cycles 0.5× / 1× / 2× / 4×
 - **Timeline** opens a slider and a collapsible event list for scrubbing
-- **Export** / **Import** for the session document
+- **Export** copies the live session JSON (even during replay); **Import** loads a pasted document
 - **Exit replay** (visible only while replaying)
 
 Play highlights the playhead's from / to nodes on the existing canvas, shows the best available in-memory preview (live export only), and updates `REPLAY i / n`. Opening the timeline from live enters paused replay on the last event. Tap a timeline row or drag the slider to seek.
