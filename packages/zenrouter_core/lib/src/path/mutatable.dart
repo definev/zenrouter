@@ -235,39 +235,39 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
   @override
   @internal
   Future<void> commitResolvedNavigate(T target) async {
-    final routeIndex = _indexOfNavigateTarget(target);
-    if (routeIndex != -1) {
-      while (stack.length > routeIndex + 1) {
-        final allowPop = await pop();
-        if (allowPop == null || !allowPop) {
-          notifyListeners();
-          return;
-        }
-      }
-
-      final existingRoute = stack[routeIndex];
-      existingRoute.onUpdate(target);
+    // Same lifecycle entry: pop back to it. Never discard a live stack member.
+    final identityIndex = _stack.indexWhere(
+      (route) => route.deepEquals(target),
+    );
+    if (identityIndex != -1) {
+      if (!await _popBackTo(identityIndex)) return;
       notifyListeners();
+      return;
+    }
 
-      if (!existingRoute.deepEquals(target)) {
-        target.onDiscard();
-      }
+    // New instance that compares equal: merge into the existing occupant and
+    // discard the unused incoming route. It was never on this stack, so pop()
+    // cannot have disposed it.
+    final equalIndex = _stack.indexOf(target);
+    if (equalIndex != -1) {
+      if (!await _popBackTo(equalIndex)) return;
+      _stack[equalIndex].onUpdate(target);
+      notifyListeners();
+      target.onDiscard();
       return;
     }
 
     commitResolvedRoute(target);
   }
 
-  /// Prefers the same lifecycle entry over the first value-equal route.
-  ///
-  /// `navigate(existingInstance)` must pop back to that instance even when an
-  /// earlier stack entry compares equal (empty `props`, shared path params).
-  /// A newly parsed, value-equal instance still matches the first occupant.
-  int _indexOfNavigateTarget(T target) {
-    final identityIndex = _stack.indexWhere(
-      (route) => route.deepEquals(target),
-    );
-    if (identityIndex != -1) return identityIndex;
-    return _stack.indexOf(target);
+  Future<bool> _popBackTo(int routeIndex) async {
+    while (_stack.length > routeIndex + 1) {
+      final allowPop = await pop();
+      if (allowPop == null || !allowPop) {
+        notifyListeners();
+        return false;
+      }
+    }
+    return true;
   }
 }

@@ -98,13 +98,9 @@ mixin RouteQueryParameters on RouteUnique {
     ); // Sync browser URL without adding a history entry.
   }
 
-  bool _queryNotifierDisposed = false;
-
   @override
   void onDiscard() {
     super.onDiscard();
-    if (_queryNotifierDisposed) return;
-    _queryNotifierDisposed = true;
     queryNotifier.dispose();
   }
 
