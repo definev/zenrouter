@@ -163,6 +163,45 @@ void main() {
       expect(events, ['load', 'create']);
     });
 
+    test(
+      'loads a deferred library before creating a not-found route',
+      () async {
+        final loadGate = Completer<void>();
+        final events = <String>[];
+        final registry = RouteBindingRegistry<Object, _TestRoute>(
+          manifest: manifest,
+          bindings: [
+            RouteBinding(
+              id: _ShellId.home,
+              create: (match) => _TestRoute('home', match.uri),
+            ),
+            RouteBinding(
+              id: _AccountId.profile,
+              create: (match) => _TestRoute('profile', match.uri),
+            ),
+          ],
+          notFound: deferredRouteNotFoundBinding(
+            loadLibrary: () async {
+              events.add('load');
+              await loadGate.future;
+            },
+            create: (uri) {
+              events.add('create');
+              return _TestRoute('not-found', uri);
+            },
+          ),
+        );
+
+        final resolution = registry.resolve(Uri.parse('/missing'));
+        await pumpEventQueue();
+        expect(events, ['load']);
+
+        loadGate.complete();
+        expect((await resolution)?.name, 'not-found');
+        expect(events, ['load', 'create']);
+      },
+    );
+
     test('uses an optional not-found binding', () async {
       final registry = RouteBindingRegistry<Object, _TestRoute>(
         manifest: manifest,

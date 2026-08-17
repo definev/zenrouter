@@ -18,6 +18,39 @@ typedef RouteBindingFactory<T extends RouteUri> =
 typedef RouteNotFoundBinding<T extends RouteUri> =
     FutureOr<T?> Function(Uri uri);
 
+/// Loads a deferred library before a binding factory runs.
+typedef RouteLibraryLoader = Future<dynamic> Function();
+
+/// Wraps [create] so [loadLibrary] completes first.
+///
+/// Use with [RouteBindingFactory] or [RouteNotFoundBinding]:
+///
+/// ```dart
+/// RouteBinding.deferred(
+///   id: HomeRouteId.home,
+///   loadLibrary: home.loadLibrary,
+///   create: (_) => home.HomeRoute(),
+/// );
+///
+/// notFound: deferredRouteNotFoundBinding(
+///   loadLibrary: missing.loadLibrary,
+///   create: (uri) => missing.NotFoundRoute(uri),
+/// );
+/// ```
+Future<R> Function(A) deferredBindingFactory<A, R>({
+  required RouteLibraryLoader loadLibrary,
+  required FutureOr<R> Function(A) create,
+}) => (argument) async {
+  await loadLibrary();
+  return await create(argument);
+};
+
+/// Deferred [RouteNotFoundBinding] using [deferredBindingFactory].
+RouteNotFoundBinding<T> deferredRouteNotFoundBinding<T extends RouteUri>({
+  required RouteLibraryLoader loadLibrary,
+  required RouteNotFoundBinding<T> create,
+}) => deferredBindingFactory(loadLibrary: loadLibrary, create: create);
+
 /// Presentation adapter for one route-manifest ID.
 ///
 /// [I] remains strongly typed for declaration and validation. The factory only
@@ -28,14 +61,11 @@ final class RouteBinding<I extends Object, T extends RouteUri> {
 
   factory RouteBinding.deferred({
     required I id,
-    required Future<dynamic> Function() loadLibrary,
+    required RouteLibraryLoader loadLibrary,
     required RouteBindingFactory<T> create,
   }) => RouteBinding(
     id: id,
-    create: (match) async {
-      await loadLibrary();
-      return create(match);
-    },
+    create: deferredBindingFactory(loadLibrary: loadLibrary, create: create),
   );
 
   final I id;
