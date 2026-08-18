@@ -215,6 +215,8 @@ final class RoutePattern {
         _validateParameterName(source, name);
         parsed = RoutePatternSegment.parameter(name);
       } else {
+        // Empty segments are rejected by the `//` / trailing-`/` checks above.
+        // coverage:ignore-start
         if (segment.isEmpty) {
           throw ArgumentError.value(
             source,
@@ -222,6 +224,7 @@ final class RoutePattern {
             'must not contain empty path segments',
           );
         }
+        // coverage:ignore-end
         parsed = RoutePatternSegment.literal(segment);
       }
 
@@ -316,8 +319,11 @@ final class RoutePattern {
       case RoutePatternSegmentKind.parameter:
         parameters[pattern.value] = actual;
         return true;
+      // Rest segments are matched in _match(), never here.
+      // coverage:ignore-start
       case RoutePatternSegmentKind.rest:
         throw StateError('Rest segments are matched separately');
+      // coverage:ignore-end
     }
   }
 
@@ -985,9 +991,12 @@ int _comparePatternSpecificity(
   if (leftPattern.segments.length != rightPattern.segments.length) {
     return rightPattern.segments.length - leftPattern.segments.length;
   }
+  // Same rest-ness, static count, and length imply the same dynamic count.
+  // coverage:ignore-start
   if (leftPattern.dynamicSegmentCount != rightPattern.dynamicSegmentCount) {
     return leftPattern.dynamicSegmentCount - rightPattern.dynamicSegmentCount;
   }
+  // coverage:ignore-end
   return 0;
 }
 
@@ -997,15 +1006,22 @@ bool _patternsOverlap(RoutePattern left, RoutePattern right) {
     return _patternsOverlapAtLength(left, right, left.segments.length);
   }
 
+  // _validateRouteConflicts only calls this when specificity is 0, which
+  // already requires matching hasRestParameter. Mixed-rest arms are dead.
+  // coverage:ignore-start
   if (!left.hasRestParameter) {
     return _patternsOverlapAtLength(left, right, left.segments.length);
   }
   if (!right.hasRestParameter) {
     return _patternsOverlapAtLength(left, right, right.segments.length);
   }
+  // coverage:ignore-end
 
+  // Equal specificity + both rest => equal minimumSegmentCount.
   final minimum = left.minimumSegmentCount > right.minimumSegmentCount
+      // coverage:ignore-start
       ? left.minimumSegmentCount
+      // coverage:ignore-end
       : right.minimumSegmentCount;
   final upperBound = left.minimumSegmentCount + right.minimumSegmentCount + 1;
   for (var length = minimum; length <= upperBound; length += 1) {

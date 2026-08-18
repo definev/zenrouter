@@ -51,7 +51,10 @@ mixin CoordinatorRecoverable<T extends RouteUri>
     DeeplinkStrategy.navigate => (c, r) => c.navigate(r),
     DeeplinkStrategy.push => (c, r) => c.pushSilently(r),
     DeeplinkStrategy.replace => (c, r) => c.replace(r),
+    // recover() handles custom via RouteDeepLink.deeplinkHandler.
+    // coverage:ignore-start
     DeeplinkStrategy.custom => (c, r) => c.replace(r),
+    // coverage:ignore-end
   };
 
   Future<void> _handleDeeplinkStrategy(
@@ -83,9 +86,9 @@ mixin CoordinatorRecoverable<T extends RouteUri>
       switch (deeplinkStrategy) {
         case DeeplinkStrategy.custom:
           await deeplinkHandler(this, identifier);
-        case DeeplinkStrategy.navigate:
-        case DeeplinkStrategy.push:
-        case DeeplinkStrategy.replace:
+        case DeeplinkStrategy.navigate ||
+            DeeplinkStrategy.push ||
+            DeeplinkStrategy.replace: // coverage:ignore-line
           await _handleDeeplinkStrategy(deeplinkStrategy, target);
       }
     } else {

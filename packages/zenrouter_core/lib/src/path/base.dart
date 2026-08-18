@@ -19,7 +19,9 @@ part 'mutatable.dart';
 /// Each [StackPath] subclass defines a unique [PathKey] used for:
 /// - Registering layout builders in [CoordinatorCore]
 /// - Looking up the appropriate builder when rendering pages
+// coverage:ignore-start
 extension type const PathKey(String key) {}
+// coverage:ignore-end
 
 /// A container managing a stack of [RouteTarget]s for navigation.
 ///
