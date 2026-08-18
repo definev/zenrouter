@@ -22,7 +22,10 @@ void main() {
         'shell',
         (key) => AppLayout('other', layoutKey: key, path: coordinator.nested),
       );
-      expect((coordinator.createLayoutParent('shell') as AppLayout).id, 'other');
+      expect(
+        (coordinator.createLayoutParent('shell') as AppLayout).id,
+        'other',
+      );
     });
 
     test(

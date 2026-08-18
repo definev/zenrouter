@@ -122,7 +122,10 @@ void main() {
       final target = AppRoute('async-target');
       final route = _RuleRoute('async', redirectRules: [_AsyncToRule(target)]);
 
-      expect(await RouteRedirect.resolve<AppRoute>(route, coordinator), same(target));
+      expect(
+        await RouteRedirect.resolve<AppRoute>(route, coordinator),
+        same(target),
+      );
     });
   });
 }
