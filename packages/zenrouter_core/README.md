@@ -213,14 +213,15 @@ override `routeManifest`; parser-only coordinators remain compatible through
 
 `RouteBindingRegistry` is the runtime presentation adapter for a manifest. It
 validates that every route ID has exactly one binding, then owns URI matching
-and sync or async route construction. `CoordinatorRouteBinding` supplies
-`routeManifest` and `parseRouteFromUri`, so a coordinator no longer needs a
-handwritten parser switch. `RouteManifest.bind<T>` infers the registry ID type
-from the manifest while keeping its bindings and lookup API strongly typed.
+and sync or async route construction. `RouteModuleBinding` supplies
+`routeManifest` and `parseRouteFromUri`, so a coordinator or module no
+longer needs a handwritten parser switch. `RouteManifest.bind<T>` infers
+the registry ID type from the manifest while keeping its bindings and
+lookup API strongly typed.
 
 ```dart
 class AppCoordinator extends Coordinator<AppRoute>
-    with CoordinatorRouteBinding<AppRoute, AppRouteId> {
+    with RouteModuleBinding<AppRoute, AppRouteId> {
   static final manifest = RouteManifest<AppRouteId>(
     name: 'app',
     idCodec: RouteIdCodec.enumValues(AppRouteId.values),

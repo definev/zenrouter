@@ -71,7 +71,7 @@ final knowledgeBaseManifestFragment =
 
 class ManualManifestCoordinator extends Coordinator<ManualManifestRoute>
     with
-        CoordinatorRouteBinding<ManualManifestRoute, Object>,
+        RouteModuleBinding<ManualManifestRoute, Object>,
         CoordinatorDebug {
   /// Composition validates duplicate IDs, ambiguous paths, and graph
   /// relationships across all feature boundaries in one place.

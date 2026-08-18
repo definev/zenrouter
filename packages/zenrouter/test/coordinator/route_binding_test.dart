@@ -57,7 +57,7 @@ final class _NotFoundRoute extends _AppRoute with RouteNotFound {
 }
 
 class _BoundCoordinator extends Coordinator<_AppRoute>
-    with CoordinatorRouteBinding<_AppRoute, _AppRouteId> {
+    with RouteModuleBinding<_AppRoute, _AppRouteId> {
   static final manifest = RouteManifest<_AppRouteId>(
     name: 'bound-coordinator',
     idCodec: RouteIdCodec.enumValues(_AppRouteId.values),
@@ -116,7 +116,7 @@ class _ModularCoordinator extends Coordinator<_AppRoute>
 }
 
 void main() {
-  group('CoordinatorRouteBinding', () {
+  group('RouteModuleBinding on Coordinator', () {
     test(
       'provides manifest-backed parsing without a parser override',
       () async {

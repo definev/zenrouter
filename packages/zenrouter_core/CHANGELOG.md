@@ -60,7 +60,8 @@
   composes fragment-scoped JSON codecs. Hand-written parser-only coordinators
   still default to `RouteManifest.empty` for compatibility.
 - **Runtime Route Bindings** via the validated `RouteBindingRegistry`.
-  `CoordinatorRouteBinding` and `RouteModuleBinding` provide manifest-backed
+  `RouteModuleBinding` is the single adapter (coordinator implements
+  `RouteModule`). It provides manifest-backed
   URI parsing without handwritten parser switches while supporting sync,
   async, not-found, and heterogeneous typed-ID bindings.
   `deferredBindingFactory` / `deferredRouteNotFoundBinding` wrap any

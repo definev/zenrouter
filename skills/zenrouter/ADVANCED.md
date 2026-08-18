@@ -71,7 +71,7 @@ of `localRouteManifestFragment` plus every nested module fragment. IDs stay
 their original runtime values (enums are not stringified).
 
 Hand-composed apps without modules bind **after** `fromFragments` (the
-composed graph is complete, so `CoordinatorRouteBinding` is valid):
+composed graph is complete, so `RouteModuleBinding` on the coordinator is valid):
 
 ```dart
 static final manifest = RouteManifest<Object>.fromFragments(
@@ -152,7 +152,7 @@ File-based coordinators emit this automatically when `deferredImport: true`.
 When a feature group itself has sub-modules, use a `Coordinator<T>` with
 `CoordinatorModular<T>` and override `coordinator` to point at the parent.
 Keep destinations on child `RouteModuleBinding` modules — do not mix
-`CoordinatorRouteBinding` onto this class.
+`RouteModuleBinding` onto this grouping coordinator.
 
 ```dart
 class ShopCoordinator extends Coordinator<AppRoute>

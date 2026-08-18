@@ -730,7 +730,7 @@ The generator creates `routes.zen.dart` with:
 
 - `AppRoute` base class (or custom name via `@ZenCoordinator`)
 - `AppCoordinator.manifest`, an immutable `RouteManifest`
-- `CoordinatorRouteBinding` and generated `RouteBinding` / `RouteBinding.deferred` adapters
+- `RouteModuleBinding` and generated `RouteBinding` / `RouteBinding.deferred` adapters
 - Navigation path definitions for layouts
 - Static, type-safe `AppCoordinator.location.{route}` reverse-routing helpers
 - Type-safe navigation extension methods (push/replace/recover)
@@ -740,7 +740,7 @@ The generator creates `routes.zen.dart` with:
 abstract class AppRoute extends RouteTarget with RouteUnique {}
 
 class AppCoordinator extends Coordinator<AppRoute>
-    with CoordinatorRouteBinding<AppRoute, String> {
+    with RouteModuleBinding<AppRoute, String> {
   static final RouteManifest<String> manifest = RouteManifest<String>(
     name: 'AppCoordinator',
     routes: [

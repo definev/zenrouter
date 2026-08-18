@@ -46,7 +46,7 @@ abstract class DocsRoute extends RouteTarget with RouteUnique {}
 
 /// Generated coordinator managing all routes.
 class DocsCoordinator extends Coordinator<DocsRoute>
-    with CoordinatorRouteBinding<DocsRoute, String> {
+    with RouteModuleBinding<DocsRoute, String> {
   /// Immutable application route topology.
   static final RouteManifest<String> manifest = RouteManifest<String>(
     name: 'DocsCoordinator',

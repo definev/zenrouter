@@ -717,7 +717,7 @@ class CoordinatorGenerator implements Builder {
     buffer.writeln('/// Generated coordinator managing all routes.');
     buffer.writeln(
       'class $coordinatorName extends Coordinator<$routeBaseName> '
-      'with CoordinatorRouteBinding<$routeBaseName, String> {',
+      'with RouteModuleBinding<$routeBaseName, String> {',
     );
 
     _writeRouteManifest(buffer, tree, coordinatorName);

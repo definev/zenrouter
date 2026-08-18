@@ -136,7 +136,7 @@ Use `hydration?.data`. Passing legacy `data:` still wraps it in a `RouteHydratio
 
 ### Optional: manifests and bindings
 
-3.0 adds `RouteManifest`, `RouteBindingRegistry`, `CoordinatorRouteBinding`, and `RouteModuleBinding`. Hand-written `parseRouteFromUri` coordinators keep working with `RouteManifest.empty`. Adopt the manifest seam when you want validated topology, reverse routing, or codegen-free URI parsing.
+3.0 adds `RouteManifest`, `RouteBindingRegistry`, and `RouteModuleBinding`. Hand-written `parseRouteFromUri` coordinators keep working with `RouteManifest.empty`. Adopt the manifest seam when you want validated topology, reverse routing, or codegen-free URI parsing.
 
 Indexed manifest children must be **direct** children of that layout (`parentId` matches). Branched children must be layouts declared on the parent.
 

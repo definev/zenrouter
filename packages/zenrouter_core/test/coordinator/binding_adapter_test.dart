@@ -7,7 +7,7 @@ class _BindingCoordinator extends CoordinatorCore<AppRoute>
     with
         RecordingListenable,
         CoordinatorLayoutCore<AppRoute>,
-        CoordinatorRouteBinding<AppRoute, String> {
+        RouteModuleBinding<AppRoute, String> {
   _BindingCoordinator(this.routeBindings);
 
   @override
@@ -47,7 +47,7 @@ RouteBindingRegistry<String, AppRoute> _registry() {
 }
 
 void main() {
-  group('CoordinatorRouteBinding', () {
+  group('RouteModuleBinding on CoordinatorCore', () {
     test(
       'exposes the registry manifest and resolves URIs through bindings',
       () async {

@@ -379,7 +379,7 @@ Dart object pattern trên `RouteManifestMatch.id`. `RouteIdCodec<I>` chỉ chuy�
 ID typed sang stable string khi encode/decode JSON; serialization concern không
 còn rò vào matching hoặc reverse-routing interface.
 
-File generator sinh `Coordinator.manifest`, mix `CoordinatorRouteBinding`,
+File generator sinh `Coordinator.manifest`, mix `RouteModuleBinding`,
 emit `RouteBinding` / `RouteBinding.deferred`, và sinh
 `coordinator.location.{route}` helpers.
 Widget, `BuildContext`, transition và constructor closure không đi vào manifest.
@@ -399,10 +399,10 @@ binding set khi khởi tạo:
 - Compose an toàn các binding có feature-owned typed ID vào root registry dùng
   `Object` ID view.
 
-`CoordinatorRouteBinding<T, I>` là adapter tại Coordinator seam: nó expose
-manifest từ registry và implement `parseRouteFromUri()` bằng manifest matching
-rồi binding. `RouteModuleBinding<T, I>` cung cấp cùng behavior cho module. Code
-cũ tự override parser tiếp tục hoạt động vì hai mixin đều opt-in.
+`RouteModuleBinding<T, I>` là adapter tại RouteModule seam (coordinator
+implement RouteModule nên dùng chung mixin): nó expose manifest từ registry
+và implement `parseRouteFromUri()` bằng manifest matching rồi binding. Code
+cũ tự override parser tiếp tục hoạt động vì mixin là opt-in.
 
 ## 6. SPA flow sau thay đổi
 
@@ -487,7 +487,7 @@ Future<HttpResponse> handle(HttpRequest httpRequest) async {
 - `RoutePattern` và `RouteManifestMatch`
 - `RouteIdCodec<I>`
 - `RouteBinding<I, T>` và `RouteBindingRegistry<I, T>`
-- `CoordinatorRouteBinding<T, I>` và `RouteModuleBinding<T, I>`
+- `RouteModuleBinding<T, I>`
 - `NavigationCommit`
 - `NavigationHistoryIntent`
 - `CoordinatorCore.withHistoryIntent()`

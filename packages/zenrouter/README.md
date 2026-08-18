@@ -421,7 +421,7 @@ class MyApp extends StatelessWidget {
 ```
 
 For a manifest-backed Coordinator without code generation, use
-`CoordinatorRouteBinding` and `RouteBindingRegistry` instead of overriding
+`RouteModuleBinding` and `RouteBindingRegistry` instead of overriding
 `parseRouteFromUri`. See the runnable
 [`main_route_manifest.dart`](example/lib/main_route_manifest.dart) example.
 

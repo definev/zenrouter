@@ -5,7 +5,7 @@ description: >
   and RouteBinding APIs. Use when adding a route, feature module, layout,
   redirect, guard, nested coordinator, deep link, or programmatic navigation.
   Triggers on: route, router, routing, coordinator, CoordinatorModular,
-  CoordinatorRouteBinding, RouteModule, RouteModuleBinding, RouteManifest,
+  RouteModule, RouteModuleBinding, RouteManifest,
   RouteManifestFragment, RouteBinding, RouteBindingRegistry, NavigationPath,
   IndexedStackPath, BranchedStackPath, RouteLayout, parentId, parentLayoutKey,
   layoutKey, bindLayout, RouteUnique, RouteNotFound, parseRouteFromUri, push,
@@ -37,7 +37,7 @@ Inspect the repo, then follow **one** style:
 | What you see | What to do |
 |:-------------|:-----------|
 | `@ZenRoute` / `@ZenLayout` / `routes.zen.dart` | File-based. Add an annotated file under `lib/routes/`. Run `dart run build_runner build`. **Never** edit `*.g.dart` or `routes.zen.dart`. |
-| `CoordinatorRouteBinding` or `RouteModuleBinding` | Manifest-bound. Add a manifest node, a binding, and a route class. |
+| `RouteModuleBinding` | Manifest-bound. Add a manifest node, a binding, and a route class. |
 | `parseRouteFromUri` switch and no binding mixin | Parser-era. Add a switch case. Do **not** migrate onto a manifest unless asked. |
 
 Import `package:zenrouter/zenrouter.dart` (re-exports `zenrouter_core`).
@@ -66,8 +66,7 @@ delegate to that helper — never hand-build a parallel path string.
 | `RouteManifestFragment<I>` | One module's contribution; composed by `CoordinatorModular` |
 | `RouteBinding<I, T>` | Adapter from a matched ID to a `RouteTarget` |
 | `RouteBindingRegistry<I, T>` | Validated complete set of bindings for one manifest |
-| `CoordinatorRouteBinding<T, I>` | Coordinator mixin — `parseRouteFromUri` = `routeBindings.resolve` |
-| `RouteModuleBinding<T, I>` | Same adapter on a `RouteModule` |
+| `RouteModuleBinding<T, I>` | Mixin on `RouteModule` / Coordinator — `parseRouteFromUri` = `routeBindings.resolve` |
 | `Coordinator<T>` | Flutter hub: paths, layouts, `MaterialApp.router` |
 | `CoordinatorModular<T>` | Delegates parsing to modules and composes their fragments |
 | `RouteModule<T>` | One feature's paths, layouts, and (via binding) URI parsing |
@@ -111,13 +110,13 @@ abstract class AppRoute extends RouteTarget with RouteUnique {
 ## 2. Single Coordinator
 
 Use when the app is one graph (no feature modules). Mix
-`CoordinatorRouteBinding` and **do not** override `parseRouteFromUri`.
+`RouteModuleBinding` and **do not** override `parseRouteFromUri`.
 
 ```dart
 enum AppRouteId { home, product }
 
 class AppCoordinator extends Coordinator<AppRoute>
-    with CoordinatorRouteBinding<AppRoute, AppRouteId> {
+    with RouteModuleBinding<AppRoute, AppRouteId> {
   static final manifest = RouteManifest<AppRouteId>(
     name: 'app',
     idCodec: RouteIdCodec.enumValues(AppRouteId.values),
@@ -168,7 +167,7 @@ MaterialApp.router(routerConfig: AppCoordinator())
 
 Split parsing across `RouteModule`s with `RouteModuleBinding`. The app
 coordinator mixes **only** `CoordinatorModular` — never also
-`CoordinatorRouteBinding` (the two both override `parseRouteFromUri`).
+`RouteModuleBinding` (the two both override `parseRouteFromUri`).
 
 ```dart
 enum ShopRouteId { layout, home, product }
@@ -388,7 +387,7 @@ class ProductIdRoute extends _$ProductIdRoute {
 | `shop.products.[id].dart` | `/shop/products/:id` (dot nesting) |
 
 `@ZenLayout(type: LayoutType.stack|indexed|branched)` on `_layout.dart`.
-Generated `AppCoordinator` already mixes `CoordinatorRouteBinding<AppRoute, String>`
+Generated `AppCoordinator` already mixes `RouteModuleBinding<AppRoute, String>`
 and exposes `AppCoordinator.location` / `pushProductId(id)`.
 
 ---
@@ -475,8 +474,8 @@ Kebab-case segments. Singular resource details (`/transaction/:id`).
 
 | Mistake | Fix |
 |:--------|:----|
-| `parseRouteFromUri` switch on new work | Use `CoordinatorRouteBinding` / `RouteModuleBinding` |
-| Mixing `CoordinatorRouteBinding` with `CoordinatorModular` | Modular root uses only `CoordinatorModular`; modules use `RouteModuleBinding` |
+| `parseRouteFromUri` switch on new work | Use `RouteModuleBinding` |
+| Mixing `RouteModuleBinding` with `CoordinatorModular` | Modular root uses only `CoordinatorModular`; child modules use `RouteModuleBinding` |
 | Module binding sets `notFound` | Omit it so other modules can match |
 | Binding a layout ID, or leaving a route unbound | Bind every `RouteManifestRoute`; never bind a layout |
 | `toUri()` via `Uri.parse('/…')` | `manifest.location(id, pathParameters: …)` |

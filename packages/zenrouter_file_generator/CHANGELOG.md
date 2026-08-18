@@ -6,8 +6,8 @@
   `.branched([...])` values so generated manifests keep fixed children on
   the kind.
 - Generate `Coordinator.manifest` as the static route topology used by
-  `CoordinatorRouteBinding` and generated `RouteBinding` adapters.
-- Mix `CoordinatorRouteBinding` into the generated coordinator and emit
+  `RouteModuleBinding` and generated `RouteBinding` adapters.
+- Mix `RouteModuleBinding` into the generated coordinator and emit
   `RouteBinding` / `RouteBinding.deferred` instead of a `parseRouteFromUri`
   switch.
 - Emit `RouteManifest<String>` explicitly while handwritten coordinators may

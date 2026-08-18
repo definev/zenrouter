@@ -44,9 +44,11 @@
 - **Modular manifest composition**: `CoordinatorModular` now exposes one root
   graph assembled from local and nested `RouteModule` manifests. Cross-module
   layout relationships and URI conflicts are validated after composition.
-- **Codegen-free Coordinator bindings**: `CoordinatorRouteBinding` connects a
+- **Codegen-free Coordinator bindings**: `RouteModuleBinding` connects a
   validated `RouteBindingRegistry` to `routeManifest`, URI parsing, Flutter
-  Router resolution, and typed not-found handling.
+  Router resolution, and typed not-found handling. A coordinator implements
+  `RouteModule`, so the same mixin covers standalone coordinators and child
+  modules.
 - **Reverse routing as `coordinator.location.home`**: generated and handwritten
   coordinators expose a `location` namespace (`location.home`,
   `location.profile(...)`) instead of reversed `{route}Location()` helpers.

@@ -51,7 +51,7 @@ export '_route.dart';
 
 /// Generated coordinator managing all routes.
 class AppCoordinator extends Coordinator<AppRoute>
-    with CoordinatorRouteBinding<AppRoute, String>, CoordinatorDebug {
+    with RouteModuleBinding<AppRoute, String>, CoordinatorDebug {
   /// Immutable application route topology.
   static final RouteManifest<String> manifest = RouteManifest<String>(
     name: 'AppCoordinator',

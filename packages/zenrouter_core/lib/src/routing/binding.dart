@@ -137,8 +137,8 @@ final class RouteBindingRegistry<I extends Object, T extends RouteUri> {
 
   final RouteManifest<I> manifest;
   final List<RouteBinding<I, T>> bindings;
-  final Map<I, RouteBinding<I, T>> _bindingsById;
   final RouteNotFoundBinding<T>? notFound;
+  final Map<I, RouteBinding<I, T>> _bindingsById;
 
   RouteBinding<I, T>? operator [](I id) => _bindingsById[id];
 
