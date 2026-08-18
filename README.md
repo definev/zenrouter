@@ -6,7 +6,7 @@
   <img alt="ZenRouter Logo" src="https://github.com/definev/zenrouter/blob/main/assets/zenrouter_light.png?raw=true">
 </picture>
 
-**Flutter router for imperative, declarative, and URL-based navigation**
+**Navigation as a typed graph.**
 
 [![pub package](https://img.shields.io/pub/v/zenrouter.svg)](https://pub.dev/packages/zenrouter)
 [![Test](https://github.com/definev/zenrouter/actions/workflows/test.yml/badge.svg)](https://github.com/definev/zenrouter/actions/workflows/test.yml)

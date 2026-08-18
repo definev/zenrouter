@@ -2,7 +2,7 @@
 
 <img alt="ZenRouter Logo" src="https://raw.githubusercontent.com/definev/zenrouter/main/assets/zenrouter_light_solid.png">
 
-**Flutter router for imperative, declarative, and URL-based navigation**
+**Type-safe navigation for Flutter apps.**
 
 [![pub package](https://img.shields.io/pub/v/zenrouter.svg)](https://pub.dev/packages/zenrouter)
 [![Test](https://github.com/definev/zenrouter/actions/workflows/test.yml/badge.svg)](https://github.com/definev/zenrouter/actions/workflows/test.yml)
@@ -12,8 +12,9 @@
 
 ---
 
-Routes are `RouteTarget` classes. Push them on a `NavigationPath`,
-rebuild a stack from state, or give a `Coordinator` the browser URL.
+Define each screen as a type and compose routes as a graph. That gives you
+type-safe navigation, deep linking, browser back-button support, and a clear
+view of how screens connect.
 
 ## Install
 
@@ -59,8 +60,7 @@ path.pop();
 
 ## Declarative
 
-`NavigationStack.declarative` diffs the list (Myers) and applies the
-minimum push/pop set. Override `props` on parameterized routes.
+`NavigationStack.declarative` diffs the list (Myers) and applies the minimum push/pop set. Override `props` on parameterized routes.
 
 ```dart
 NavigationStack.declarative(
@@ -76,8 +76,7 @@ NavigationStack.declarative(
 
 ## Coordinator
 
-`Coordinator` is `RouterConfig`. Routes mix `RouteUnique` and implement
-`toUri()`. `parseRouteFromUri` turns a URI into a route.
+`Coordinator` is `RouterConfig`. Routes mix `RouteUnique` and implement `toUri()`. `parseRouteFromUri` turns a URI into a route.
 
 ```dart
 abstract class AppRoute extends RouteTarget with RouteUnique {}
@@ -131,13 +130,11 @@ await coordinator.pushUri(Uri.parse('/products/42'));
 [Example](example/lib/main_coordinator.dart) ·
 [Coordinator guide](doc/paradigms/coordinator/coordinator.md)
 
-New Coordinator apps should declare a
-[RouteManifest](#routemanifest) instead of growing that `switch`.
+New Coordinator apps should declare a [RouteManifest](#routemanifest) instead of growing that `switch`.
 
 ## Layouts
 
-A `RouteLayout` owns a `StackPath`. Bind the constructor on the path and
-set `layout` on children.
+A `RouteLayout` owns a `StackPath`. Bind the constructor on the path and set `layout` on children.
 
 ```dart
 late final shopStack = NavigationPath<AppRoute>.createWith(
@@ -183,21 +180,15 @@ class AppCoordinator extends Coordinator<AppRoute>
     with CoordinatorDebug<AppRoute> {}
 ```
 
-The overlay inspects stacks and can push a URI. Off in release
-(`debugEnabled` defaults to `kDebugMode`).
+The overlay inspects stacks and can push a URI. Off in release (`debugEnabled` defaults to `kDebugMode`).
 
 ## RouteManifest
 
 The recommended way to declare Coordinator routes in 3.0.
 
-A `parseRouteFromUri` switch and each route's `toUri()` are two copies
-of the same paths. They drift. Overlaps (`/products/new` vs
-`/products/:id`) fail when a user hits the link, not when you ship.
-Layouts have no check that the shell in code matches the URL tree.
+A `parseRouteFromUri` switch and each route's `toUri()` are two copies of the same paths. They drift. Overlaps (`/products/new` vs `/products/:id`) fail when a user hits the link, not when you ship. Layouts have no check that the shell in code matches the URL tree.
 
-`RouteManifest` is the URI graph. `RouteBinding` is the only place that
-constructs a `RouteTarget`. Matching, reverse URLs, and the DevTools
-Graph tab all read that graph.
+`RouteManifest` is the URI graph. `RouteBinding` is the only place that constructs a `RouteTarget`. Matching, reverse URLs, and the DevTools Graph tab all read that graph.
 
 | Benefit | What it replaces |
 |---------|------------------|
@@ -235,9 +226,7 @@ class AppCoordinator extends Coordinator<AppRoute>
 }
 ```
 
-The manifest has no widgets. `RouteBinding` is the factory from a match
-to a screen. `RouteModuleBinding` implements `parseRouteFromUri`. Bind
-every `RouteManifestRoute`; do not bind layout IDs.
+The manifest has no widgets. `RouteBinding` is the factory from a match to a screen. `RouteModuleBinding` implements `parseRouteFromUri`. Bind every `RouteManifestRoute`; do not bind layout IDs.
 
 ```dart
 Uri toUri() => AppCoordinator.manifest.location(
@@ -246,24 +235,18 @@ Uri toUri() => AppCoordinator.manifest.location(
 );
 ```
 
-`:id` is one segment. `...:slugs` is a catch-all
-(`match.restParameters['slugs']`). Query strings are not part of the
-pattern.
+`:id` is one segment. `...:slugs` is a catch-all (`match.restParameters['slugs']`). Query strings are not part of the pattern.
 
-With a manifest, also declare layouts as `RouteManifestLayout` and set
-`parentId` on children. A non-empty `routeManifest` enables the Graph
-tab in DevTools (topology + observed flow).
+With a manifest, also declare layouts as `RouteManifestLayout` and set `parentId` on children. A non-empty `routeManifest` enables the Graph tab in DevTools (topology + observed flow).
 
-[`zenrouter_file_generator`](https://pub.dev/packages/zenrouter_file_generator)
-emits a coordinator, manifest, and bindings from `lib/routes/`.
+[`zenrouter_file_generator`](https://pub.dev/packages/zenrouter_file_generator) emits a coordinator, manifest, and bindings from `lib/routes/`.
 
 [Getting Started](doc/guides/getting-started.md#routemanifest) ·
 [Manifest example](example/lib/main_route_manifest.dart)
 
 ## Migrating from 2.x
 
-Apps that `extend Coordinator` still compile. `parseRouteFromUri` is
-unchanged.
+Apps that `extend Coordinator` still compile. `parseRouteFromUri` is unchanged.
 
 | Deprecated | Replacement |
 |------------|-------------|

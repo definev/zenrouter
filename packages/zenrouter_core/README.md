@@ -4,9 +4,9 @@
 [![Test](https://github.com/definev/zenrouter/actions/workflows/test.yml/badge.svg)](https://github.com/definev/zenrouter/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/definev/zenrouter/graph/badge.svg?flag=zenrouter_core)](https://app.codecov.io/gh/definev/zenrouter?flag=zenrouter_core)
 
-Platform-independent engine for
-[zenrouter](https://pub.dev/packages/zenrouter): `RouteTarget`,
-`StackPath`, `CoordinatorCore`, and route mixins.
+**The graph, without Flutter.**
+
+Routing engine for [zenrouter](https://pub.dev/packages/zenrouter). Same model on a server, in tests, or behind any UI.
 
 Flutter apps should depend on `zenrouter`, which re-exports this package.
 
@@ -33,8 +33,7 @@ class ProfileRoute extends RouteTarget {
 
 ## StackPath
 
-A stack of `RouteTarget`s. `StackMutatable` adds `push`, `pop`,
-`navigate`, `pushReplacement`, `pushOrMoveToTop`, `replaceAll`.
+A stack of `RouteTarget`s. `StackMutatable` adds `push`, `pop`, `navigate`, `pushReplacement`, `pushOrMoveToTop`, `replaceAll`.
 
 ```dart
 path.stack;
@@ -43,8 +42,7 @@ path.activeRoute;
 
 ## CoordinatorCore
 
-Holds paths and implements `parseRouteFromUri`. Navigation methods live
-on mixins. Flutter `Coordinator` mixes all of them.
+Holds paths and implements `parseRouteFromUri`. Navigation methods live on mixins. Flutter `Coordinator` mixes all of them.
 
 | Mixin | Methods |
 |-------|---------|
@@ -61,8 +59,7 @@ class HeadlessCoordinator extends CoordinatorCore<AppRoute>
 }
 ```
 
-Nested mutations publish one `NavigationCommit`.
-`uri.pushWith(coordinator)` parses, then delegates.
+Nested mutations publish one `NavigationCommit`. `uri.pushWith(coordinator)` parses, then delegates.
 
 ## Route mixins
 
@@ -92,15 +89,11 @@ class AppCoordinator extends CoordinatorCore<AppRoute>
 }
 ```
 
-Each module implements `parseRouteFromUri` and returns `null` for URLs
-it does not own. First non-null wins.
+Each module implements `parseRouteFromUri` and returns `null` for URLs it does not own. First non-null wins.
 
 ## RouteManifest
 
-Recommended for new coordinators. The graph is IDs, URI patterns, and
-layout parents. Matching and `location()` share the same pattern, so
-`toUri()` cannot drift from the parser. Construction rejects duplicate
-IDs, unknown parents, cycles, and equally specific overlapping paths.
+Recommended for new coordinators. The graph is IDs, URI patterns, and layout parents. Matching and `location()` share the same pattern, so `toUri()` cannot drift from the parser. Construction rejects duplicate IDs, unknown parents, cycles, and equally specific overlapping paths.
 
 Parser-only coordinators keep `RouteManifest.empty`.
 
@@ -125,20 +118,15 @@ final uri = manifest.location(
 );
 ```
 
-`:name` is one segment. `...:name` is a catch-all. Query and fragment
-are not in the pattern.
+`:name` is one segment. `...:name` is a catch-all. Query and fragment are not in the pattern.
 
-Layouts: `RouteManifestLayout.stack` / `.indexed` / `.branched`.
-Indexed children must be direct children. Branched children must be
-layouts.
+Layouts: `RouteManifestLayout.stack` / `.indexed` / `.branched`. Indexed children must be direct children. Branched children must be layouts.
 
-`fromFragments` composes module fragments and validates the complete
-graph. `encode()` / `decode()` use `RouteIdCodec`.
+`fromFragments` composes module fragments and validates the complete graph. `encode()` / `decode()` use `RouteIdCodec`.
 
 ## RouteBinding
 
-The manifest has no widgets. A binding is the factory from a match to a
-`RouteTarget`. Bind every route ID; do not bind layouts.
+The manifest has no widgets. A binding is the factory from a match to a `RouteTarget`. Bind every route ID; do not bind layouts.
 
 ```dart
 late final routeBindings = manifest.bind<AppRoute>(
@@ -153,21 +141,15 @@ late final routeBindings = manifest.bind<AppRoute>(
 );
 ```
 
-`RouteModuleBinding` sets `routeManifest` and `parseRouteFromUri` from
-`routeBindings`. Standalone registries pass `notFound`. Child modules
-omit it. `RouteBinding.deferred` loads a library first.
+`RouteModuleBinding` sets `routeManifest` and `parseRouteFromUri` from `routeBindings`. Standalone registries pass `notFound`. Child modules omit it. `RouteBinding.deferred` loads a library first.
 
-Do not mix `RouteModuleBinding` and `CoordinatorModular` on the same
-class. A contribution that references a foreign layout should expose
-`routeManifestFragment`, not a complete `RouteManifest`.
+Do not mix `RouteModuleBinding` and `CoordinatorModular` on the same class. A contribution that references a foreign layout should expose `routeManifestFragment`, not a complete `RouteManifest`.
 
 This graph is what the DevTools Graph tab renders.
 
 ## Route resolution
 
-`CoordinatorCore` implements `RouteResolver`. Override `resolveRoute`
-for SSR (`RouteRequest` → matched / redirect / not-found / error).
-`RouteNotFound` keeps the requested URI and reports 404.
+`CoordinatorCore` implements `RouteResolver`. Override `resolveRoute` for SSR (`RouteRequest` → matched / redirect / not-found / error). `RouteNotFound` keeps the requested URI and reports 404.
 
 ## Migrating from 2.x
 
@@ -178,9 +160,7 @@ for SSR (`RouteRequest` → matched / redirect / not-found / error).
 | `defineLayout()` | Flutter: `..bindLayout(...)` on the path. Headless: `defineLayoutParentConstructor` in `init()` |
 | `defineConverter()` | `defineRestorableConverter(...)` in `init()` |
 
-Custom `CoordinatorCore` subclasses must mix in the capabilities they
-call. `Equatable.internalProps` is removed. `pop()` completes
-`onResult`. `defineModules` returns `Iterable`.
+Custom `CoordinatorCore` subclasses must mix in the capabilities they call. `Equatable.internalProps` is removed. `pop()` completes `onResult`. `defineModules` returns `Iterable`.
 
 [Migration guide](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/MIGRATION_GUIDE.md#300-manifests-capability-mixins-and-lifecycle)
 
