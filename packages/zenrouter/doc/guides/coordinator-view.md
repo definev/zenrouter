@@ -1,6 +1,12 @@
-# CoordinatorView Guide
+# CoordinatorView
 
-`CoordinatorView` embeds a standalone [`Coordinator`](../api/coordinator.md) in any widget tree **without** wrapping the subtree in Flutter's `Router`. Use it when navigation state should live inside a surface the host owns—super apps, plugin panes, side-by-side panels, or dialogs—while the outer app keeps a normal `MaterialApp` (or its own `MaterialApp.router`).
+Embeds a `Coordinator` without Flutter's `Router`. Use it for a mini-app,
+side panel, or dialog when the host already owns the platform URL and
+back button.
+
+The coordinator's `RouteManifest` and bindings are unchanged. See
+[Getting Started](getting-started.md). `CoordinatorView` builds
+`layoutBuilder` and optionally applies `initialUri` once.
 
 ---
 
@@ -75,7 +81,9 @@ CoordinatorView<AppRoute>(
 - Not aware of routes on **non-root** paths (tabs, nested stacks) when root is empty.
 - Not a substitute for `CoordinatorRouterDelegate.setNewRoutePath`.
 
-For host-driven navigation after the surface is running, call `coordinator.navigate(...)`, `push`, or your own `openUri(Uri)` wrapper explicitly.
+For host-driven navigation after the surface is running, call
+`coordinator.navigate(...)`, `push`, `pushUri`, or `recoverUri`
+explicitly. `CoordinatorView` will not keep listening to new links.
 
 ---
 

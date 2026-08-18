@@ -1,22 +1,19 @@
-# Query Parameters Guide
+# Query parameters
 
-The `RouteQueryParameters` mixin provides a powerful way to handle query parameters in your routes efficiently. It allows for fine-grained updates to the UI without rebuilding the entire route or triggering unnecessary navigation transitions.
+`RouteQueryParameters` updates `?page=2` on the current route without
+pushing a new screen. It requires `RouteUnique` (already on `AppRoute`).
+Selected widgets rebuild; the route instance stays the same; the URL
+syncs.
 
-> [!IMPORTANT]
-> The `RouteQueryParameters` mixin requires your route to also use the `RouteUnique` mixin.
+To read query strings only at construction, use
+`uri.queryParameters` (or `match.uri.queryParameters` in a binding).
 
-## Key Benefits
-
-1.  **Granular Rebuilds**: Listen to specific query parameters and rebuild only the parts of the UI that depend on them.
-2.  **Performance**: Avoid rebuilding the entire page when only a small part of the state (like a page number or filter) changes.
-3.  **URL Sync**: Update the browser URL to reflect the current state without triggering a full navigation cycle.
-4.  **State Preservation**: Keep the same route instance alive while updating its parameters.
-
-## Usage Guide
+## Usage
 
 ### Setup
 
-To use query parameters, mix `RouteQueryParameters` into your `RouteTarget`.
+Mix `RouteQueryParameters` into the route. Change values with
+`updateQueries`, not by building a new URI in `toUri()`.
 
 > [!TIP]
 > This mixin is designed to be used with a base abstract class (e.g. `AppRoute`) that already implements `RouteTarget` and `RouteUnique`.
@@ -192,3 +189,9 @@ class CollectionListRoute extends AppRoute with RouteQueryParameters {
   }
 }
 ```
+
+## See also
+
+- [Getting Started](getting-started.md)
+- [State restoration](state-restoration.md)
+- [URL strategies](../recipes/url-strategies.md)

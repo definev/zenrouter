@@ -130,10 +130,6 @@ expect(await pushFuture, 'done');
 
 Do not put mutable lifecycle state in `props`. Delete any `internalProps` overrides — they no longer compile. If you compared `deepEquals` for “same screen, same params”, use `==` instead.
 
-### Deprecated `RouteResolution.data`
-
-Use `hydration?.data`. Passing legacy `data:` still wraps it in a `RouteHydrationPayload`. Do not pass both `hydration` and `data`.
-
 ### Optional: manifests and bindings
 
 3.0 adds `RouteManifest`, `RouteBindingRegistry`, and `RouteModuleBinding`. Hand-written `parseRouteFromUri` coordinators keep working with `RouteManifest.empty`. Adopt the manifest seam when you want validated topology, reverse routing, or codegen-free URI parsing.

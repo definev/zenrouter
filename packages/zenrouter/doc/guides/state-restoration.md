@@ -1,42 +1,34 @@
-# State Restoration Guide
+# State restoration
 
-State restoration allows your Flutter app to save its state before the operating system kills the process (to free up resources) and restore it when the user returns. This is crucial for a seamless user experience, especially on Android.
+Restores the navigation stack after the OS kills the process (common on
+Android). Nested layouts are restored from the same URIs.
 
-ZenRouter makes state restoration simple and type-safe, handling deeply nested navigation stacks and complex route parameters automatically.
-
----
-
-## 🚀 Basic Setup
-
-To enable state restoration, you need to configure two things:
-
-### 1. Enable Restoration in MaterialApp
-
-Add a `restorationScopeId` to your `MaterialApp.router`. This ID tells Flutter to enable the restoration subsystem.
+## Setup
 
 ```dart
 MaterialApp.router(
-  restorationScopeId: 'app_state', // Required to enable restoration
+  restorationScopeId: 'app_state',
   routerConfig: coordinator,
 )
 ```
 
-### 2. Ensure Synchronous Parsing
+Restoration applies the stack before the first frame, so parsing must be
+synchronous. Sync `RouteBinding` factories are sufficient.
 
-When the app restarts, the restoration system needs to modify the route stack *synchronously* before the first frame. Therefore, your URI parsing logic must be synchronous.
-
-If your standard `parseRouteFromUri` is already synchronous, you're good to go. If it's asynchronous (e.g., waiting for async loading), you **must** override `parseRouteFromUriSync`:
+If a factory is async (`RouteBinding.deferred`, or `await` in `create`),
+override `parseRouteFromUriSync`:
 
 ```dart
-class AppCoordinator extends Coordinator<AppRoute> {
-  // ...
-  
+class AppCoordinator extends Coordinator<AppRoute>
+    with RouteModuleBinding<AppRoute, AppRouteId> {
   @override
   AppRoute parseRouteFromUriSync(Uri uri) {
-    // Must return an AppRoute synchronously
-    return switch (uri.pathSegments) {
-      [] => HomeRoute(),
-      _ => NotFoundRoute(),
+    final match = manifest.match(uri);
+    if (match == null) return NotFoundRoute(uri);
+    return switch (match.id) {
+      AppRouteId.home => HomeRoute(),
+      AppRouteId.product =>
+        ProductRoute(id: match.pathParameters['id']!),
     };
   }
 }
@@ -44,11 +36,10 @@ class AppCoordinator extends Coordinator<AppRoute> {
 
 ---
 
-## 🧩 Strategy 1: URI-Based Restoration
+## URI restoration
 
-This is the default and simplest strategy. It works for any route that implements `RouteUnique`. ZenRouter simply saves the route's URI and restores it by re-parsing that URI.
-
-**Best for:** Routes where all state is contained in the URL (e.g., `/product/123`).
+Default. Saves `toUri()` and recreates the route via the binding (or
+`parseRouteFromUri`). Use when all state is in the URL.
 
 ```dart
 class ProductRoute extends AppRoute {
@@ -56,7 +47,10 @@ class ProductRoute extends AppRoute {
   final String id;
 
   @override
-  Uri toUri() => Uri.parse('/product/$id');
+  Uri toUri() => AppCoordinator.manifest.location(
+    AppRouteId.product,
+    pathParameters: {'id': id},
+  );
   
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) {
@@ -65,11 +59,11 @@ class ProductRoute extends AppRoute {
 }
 ```
 
-Nothing else is needed! When the app is restored, ZenRouter calls `parseRouteFromUri` with `/product/123` and recreates the route.
+On restore, the URI is matched again and the binding reconstructs the route.
 
 ---
 
-## 🛠️ Strategy 2: Custom Restoration
+## Converter restoration
 
 Sometimes your route contains complex state that can't (or shouldn't) be put into the URL—like a large form object, a specific filter configuration, or private data.
 
@@ -95,7 +89,7 @@ class FilterRoute extends AppRoute with RouteRestorable<FilterRoute> {
   RestorableConverter<FilterRoute> get converter => const FilterConverter();
 
   @override
-  Uri toUri() => Uri.parse('/filters'); // URL doesn't contain the data
+  Uri toUri() => AppCoordinator.manifest.location(AppRouteId.filters);
   
   // ... build method
 }
@@ -137,7 +131,8 @@ class FilterConverter extends RestorableConverter<FilterRoute> {
 
 ### 3. Register the Converter
 
-Finally, register your converter in your Coordinator. This is required so ZenRouter knows how to find it during startup.
+Register the converter in `init()`. Do not use the deprecated
+`defineConverter` hook.
 
 ```dart
 class AppCoordinator extends Coordinator<AppRoute> {
@@ -156,7 +151,7 @@ class AppCoordinator extends Coordinator<AppRoute> {
 
 ---
 
-## 🧪 How to Test
+## How to test
 
 You can simulate process death to verify your restoration logic.
 

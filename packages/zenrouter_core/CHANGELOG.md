@@ -27,9 +27,6 @@
   `runtimeType` + `props` only. Delete any leftover subclass overrides.
 - **`CoordinatorModular.defineModules` now returns `Iterable`** and snapshots
   its deterministic iteration order. Duplicate module runtime types throw.
-- **`RouteResolution.data` is deprecated** in favor of the versioned
-  `RouteResolution.hydration` payload. Legacy JSON-compatible data is wrapped
-  automatically for migration.
 - **`defineLayout` and `defineConverter` are deprecated.** Bind layouts on
   the path with `bindLayout` (`NavigationPath.createWith(...)..bindLayout(...)`).
   Register restorable converters in `init()` via `defineRestorableConverter`.

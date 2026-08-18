@@ -30,13 +30,6 @@ mixin RouteUnique on RouteTarget implements RouteUri {
   @override
   Object? get parentLayoutKey => layout;
 
-  // coverage:ignore-start
-  /// Creates an instance of the layout for this route.
-  @Deprecated('Use `createParentLayout` instead.')
-  RouteLayout createLayout(covariant Coordinator coordinator) =>
-      createParentLayout(coordinator);
-  // coverage:ignore-end
-
   @override
   RouteLayout createParentLayout(covariant CoordinatorCore coordinator) {
     final constructor = _proxy.createParentLayout(coordinator);
@@ -50,16 +43,6 @@ mixin RouteUnique on RouteTarget implements RouteUri {
 
     return constructor as RouteLayout;
   }
-
-  // coverage:ignore-start
-  /// Resolves the parent layout for this route.
-  ///
-  /// Checks if an instance of the required layout is already active in the
-  /// coordinator. If so, returns it. Otherwise, creates a new one.
-  @Deprecated('use `resolveParentLayout` instead.')
-  RouteLayout? resolveLayout(covariant CoordinatorCore coordinator) =>
-      resolveParentLayout(coordinator);
-  // coverage:ignore-end
 
   late final _proxy = RouteLayoutChild.proxy(this);
 

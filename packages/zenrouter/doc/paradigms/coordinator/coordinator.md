@@ -1,8 +1,10 @@
-# Write your first Coordinator
+# Coordinator
 
-> **Centralize routing, handle deep links, manage nested navigation**
+> Deep linking, URL sync, nested navigation
 
-You are now starting the quick start guide to create your first Coordinator to enable handling routing in your app. In about 15 minutes, you will learn the basics. Now let's start!
+This walkthrough builds a sample app with `parseRouteFromUri`. For the
+other styles and for `RouteManifest`, see
+[Getting Started](../../guides/getting-started.md).
 
 ## What is a Coordinator?
 
@@ -61,7 +63,9 @@ A `Coordinator` manages multiple `StackPath`s and provides:
 3. **Deep Linking** - Handles incoming deep links
 4. **Nested Navigation** - Manages multiple navigation stacks
 
-When using Coordinator you must override `parseRouteFromUri` method to convert **URI** to **Route**.
+Override `parseRouteFromUri` to map a URI to a route. Alternatively,
+mix `RouteModuleBinding` and declare a `RouteManifest`
+([Getting Started](../../guides/getting-started.md#routemanifest)).
 
 The AppRoute class represents a route in the application. It extends the RouteTarget class and implements the RouteUnique mixin. This ensures that each route has a unique identifier. See more at [Mixin Section](#routeunique).
 
