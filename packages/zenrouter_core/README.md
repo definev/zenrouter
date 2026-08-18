@@ -1,5 +1,9 @@
 # zenrouter_core
 
+[![pub package](https://img.shields.io/pub/v/zenrouter_core.svg)](https://pub.dev/packages/zenrouter_core)
+[![Test](https://github.com/definev/zenrouter/actions/workflows/test.yml/badge.svg)](https://github.com/definev/zenrouter/actions/workflows/test.yml)
+[![codecov](https://codecov.io/gh/definev/zenrouter/graph/badge.svg?flag=zenrouter_core)](https://app.codecov.io/gh/definev/zenrouter?flag=zenrouter_core)
+
 Platform-independent routing framework for building custom navigation systems.
 
 ## What is zenrouter_core?
