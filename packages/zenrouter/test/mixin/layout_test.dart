@@ -243,6 +243,16 @@ class _ParentModularCoordinator extends Coordinator<LayoutTestRoute>
 
 void main() {
   group('RouteLayout Mixin Tests', () {
+    test('equality and hashCode follow layout identity', () {
+      final left = AllowPopLayout();
+      final right = AllowPopLayout();
+      final other = NotAllowPopLayout();
+
+      expect(left, equals(right));
+      expect(left.hashCode, right.hashCode);
+      expect(left, isNot(equals(other)));
+    });
+
     testWidgets('Layout renders correctly with child', (tester) async {
       final coordinator = LayoutTestCoordinator();
 

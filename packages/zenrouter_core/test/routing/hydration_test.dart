@@ -74,6 +74,24 @@ void main() {
       }
     });
 
+    test('rejects a non-positive version', () {
+      expect(
+        () => RouteHydrationPayload(routeUri: Uri.parse('/'), version: 0),
+        throwsArgumentError,
+      );
+    });
+
+    test('describes an unsupported version', () {
+      const error = UnsupportedHydrationVersion(
+        version: 9,
+        supportedVersion: 1,
+      );
+      expect(
+        error.toString(),
+        'Unsupported hydration version 9; supported version is 1',
+      );
+    });
+
     test('rejects unknown schemas and versions', () {
       expect(
         () => RouteHydrationPayload.fromJson(const {

@@ -1,5 +1,9 @@
+// ignore_for_file: invalid_use_of_protected_member
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zenrouter_core/zenrouter_core.dart';
+
+import '../support/harness.dart';
 
 class TestRoute extends RouteTarget {
   TestRoute(this.id);
@@ -99,6 +103,39 @@ void main() {
       expect(await denyRoute.popGuard(), isFalse);
     });
 
+    test(
+      'popGuardWith delegates after checking the path coordinator',
+      () async {
+        final coordinator = AppCoordinator();
+        final route = TestGuardedRoute('1', allowPop: false);
+        route.bindStackPath(coordinator.root);
+
+        expect(await route.popGuardWith(coordinator), isFalse);
+      },
+    );
+
+    test('popGuardWith asserts when the path coordinator does not match', () {
+      final coordinator = AppCoordinator();
+      final route = _DefaultGuardRoute('1');
+      route.bindStackPath(_ForeignPath());
+
+      expect(
+        () => route.popGuardWith(coordinator),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+
+    test(
+      'canPopWith and canPopListenableWith default to the non-coordinator APIs',
+      () {
+        final coordinator = AppCoordinator();
+        final route = _DefaultGuardRoute('1');
+
+        expect(route.canPopWith(coordinator), isFalse);
+        expect(route.canPopListenableWith(coordinator), isNull);
+      },
+    );
+
     test('popGuard can be async', () async {
       final route = TestGuardedRoute(
         '1',
@@ -175,4 +212,53 @@ void main() {
 
 class _DefaultGuardRoute extends TestRoute with RouteGuard {
   _DefaultGuardRoute(super.id);
+}
+
+class _ForeignCoordinator implements CoordinatorCore<RouteUri> {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _ForeignPath implements StackPath<TestRoute> {
+  @override
+  CoordinatorCore? get coordinator => _ForeignCoordinator();
+
+  @override
+  TestRoute? get activeRoute => null;
+
+  @override
+  PathKey get pathKey => const PathKey('foreign');
+
+  @override
+  List<TestRoute> get stack => const [];
+
+  @override
+  String? get debugLabel => null;
+
+  @override
+  CoordinatorCore? get proxyCoordinator => null;
+
+  @override
+  void addListener(void Function() listener) {}
+
+  @override
+  void removeListener(void Function() listener) {}
+
+  @override
+  void notifyListeners() {}
+
+  @override
+  void clear() {}
+
+  @override
+  void bindStack(List<TestRoute> stack) {}
+
+  @override
+  void reset() {}
+
+  @override
+  Future<void> activateRoute(TestRoute route) async {}
+
+  @override
+  void dispose() {}
 }

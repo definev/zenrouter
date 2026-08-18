@@ -265,6 +265,7 @@ void main() {
 
       expect(token.cancel('newer navigation'), isTrue);
       expect(token.cancel('ignored'), isFalse);
+      expect(token.reason, 'newer navigation');
       expect(await token.whenCancelled, 'newer navigation');
       expect(
         token.throwIfCancelled,
@@ -275,6 +276,14 @@ void main() {
             'newer navigation',
           ),
         ),
+      );
+      expect(
+        const RouteResolutionCancelled().toString(),
+        'Route resolution cancelled',
+      );
+      expect(
+        const RouteResolutionCancelled('gone').toString(),
+        'Route resolution cancelled: gone',
       );
     });
 

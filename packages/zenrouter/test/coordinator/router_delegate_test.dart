@@ -189,6 +189,14 @@ class ResolutionTestCoordinator extends TestCoordinator {
         location: Uri.parse('/settings'),
         statusCode: 308,
       ),
+      '/loop' => RedirectRouteResolution(
+        request: request,
+        location: Uri.parse('/loop-b'),
+      ),
+      '/loop-b' => RedirectRouteResolution(
+        request: request,
+        location: Uri.parse('/loop'),
+      ),
       '/broken' => ErrorRouteResolution(
         request: request,
         error: StateError('resolution failed'),
@@ -440,6 +448,24 @@ void main() {
       expect(
         resolutionCoordinator.consumeHistoryIntent(),
         NavigationHistoryIntent.replace,
+      );
+      resolutionCoordinator.dispose();
+    });
+
+    test('rejects a cyclic typed redirect chain', () async {
+      final resolutionCoordinator = ResolutionTestCoordinator();
+
+      await expectLater(
+        resolutionCoordinator.routerDelegate.setNewRoutePath(
+          Uri.parse('/loop'),
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            contains('Redirect loop detected'),
+          ),
+        ),
       );
       resolutionCoordinator.dispose();
     });

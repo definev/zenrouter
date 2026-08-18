@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zenrouter/zenrouter.dart';
 
@@ -85,6 +85,19 @@ class _SettingsRoute extends _BranchRoute {
 class _PlainRoute extends _BranchRoute {
   @override
   Uri toUri() => Uri.parse('/plain');
+
+  @override
+  Widget build(covariant CoordinatorCore coordinator, BuildContext context) =>
+      const SizedBox.shrink();
+}
+
+/// Declares [_ShellLayout] as its parent even though it is not a branch root.
+class _RogueBranchRoute extends _BranchRoute {
+  @override
+  Type get layout => _ShellLayout;
+
+  @override
+  Uri toUri() => Uri.parse('/rogue');
 
   @override
   Widget build(covariant CoordinatorCore coordinator, BuildContext context) =>
@@ -209,6 +222,47 @@ void main() {
     test('has a built-in Flutter layout builder', () {
       expect(kDefaultLayoutBuilderTable[BranchedStackPath.key], isNotNull);
     });
+
+    testWidgets('renders branch children through the default layout builder', (
+      tester,
+    ) async {
+      final coordinator = _BranchCoordinator();
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('home:root'), findsOneWidget);
+
+      await coordinator.pushSilently(_SettingsRoute('prefs'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('settings:prefs'), findsOneWidget);
+      coordinator.dispose();
+    });
+
+    test(
+      'asserts when a non-branch route claims a branched layout parent',
+      () async {
+        final coordinator = _BranchCoordinator();
+
+        await expectLater(
+          coordinator.pushSilently(_RogueBranchRoute()),
+          throwsA(
+            isA<AssertionError>().having(
+              (error) => error.toString(),
+              'message',
+              contains('not declared as a branch root'),
+            ),
+          ),
+        );
+        coordinator.dispose();
+      },
+    );
 
     test('replace publishes one commit across every NavigationPath', () async {
       final coordinator = _BranchCoordinator();

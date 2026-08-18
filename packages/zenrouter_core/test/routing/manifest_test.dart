@@ -591,4 +591,441 @@ void main() {
       expect(() => manifest.toJson(idCodec: invalidCodec), throwsStateError);
     });
   });
+
+  group('RoutePattern remaining validation and diagnostics', () {
+    test('describes literal, parameter, and rest segments', () {
+      final pattern = RoutePattern('/docs/:id/...:rest');
+      expect(pattern.segments.map((segment) => segment.toString()), [
+        'docs',
+        ':id',
+        '...:rest',
+      ]);
+      expect(pattern.canonicalShape, '=docs/:/...');
+      expect(pattern.toString(), '/docs/:id/...:rest');
+    });
+
+    test('rejects queries, fragments, and empty names', () {
+      expect(() => RoutePattern('/users?id=1'), throwsArgumentError);
+      expect(() => RoutePattern('/users#top'), throwsArgumentError);
+      expect(
+        () => RouteManifestRoute(id: '  ', path: '/'),
+        throwsArgumentError,
+      );
+      expect(
+        () => RouteManifestRoute(id: 'home', path: '/', parentId: '  '),
+        throwsArgumentError,
+      );
+      expect(
+        () => RouteManifestFragment<String>(name: '  '),
+        throwsArgumentError,
+      );
+    });
+
+    test('buildSegments requires rest values and rejects empty rest items', () {
+      final pattern = RoutePattern('/docs/...:slugs');
+      expect(pattern.buildSegments, throwsArgumentError);
+      expect(
+        () => pattern.buildSegments(
+          restParameters: const {
+            'slugs': [''],
+          },
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test(
+      'kind childIds default to empty and indexed JSON includes children',
+      () {
+        expect(const RouteManifestStackKind<String>().childIds, isEmpty);
+        expect(
+          () => RouteManifestLayoutKind<String>.indexed(['home', 'home']),
+          throwsArgumentError,
+        );
+        expect(
+          () => RouteManifestLayoutKind<String>.branched(['home', 'home']),
+          throwsArgumentError,
+        );
+
+        final manifest = RouteManifest(
+          name: 'tabs',
+          routes: [RouteManifestRoute(id: 'home', path: '/', parentId: 'tabs')],
+          layouts: [
+            RouteManifestLayout.indexed(
+              id: 'tabs',
+              path: '/',
+              childIds: ['home'],
+            ),
+          ],
+        );
+        expect(
+          (manifest.toJson()['layouts'] as List).single,
+          containsPair('indexedChildIds', ['home']),
+        );
+        expect(
+          RouteManifest<String>.decode(manifest.encode()).layouts.single.kind,
+          isA<RouteManifestIndexedKind<String>>(),
+        );
+      },
+    );
+  });
+
+  group('RouteManifest matching precedence and overlap', () {
+    test('prefers longer paths then fewer dynamic segments', () {
+      final manifest = RouteManifest(
+        name: 'app',
+        routes: [
+          RouteManifestRoute(id: 'short', path: '/a/:b'),
+          RouteManifestRoute(id: 'long', path: '/a/:b/:c'),
+          RouteManifestRoute(id: 'static-pair', path: '/x/y'),
+          RouteManifestRoute(id: 'dynamic-pair', path: '/x/:id'),
+        ],
+      );
+
+      expect(manifest.match(Uri.parse('/a/1/2'))?.id, 'long');
+      expect(manifest.match(Uri.parse('/x/y'))?.id, 'static-pair');
+    });
+
+    test('allows rest patterns whose suffix literals cannot overlap', () {
+      final manifest = RouteManifest(
+        name: 'docs',
+        routes: [
+          RouteManifestRoute(id: 'end', path: '/docs/...:slugs/end'),
+          RouteManifestRoute(id: 'other', path: '/docs/...:slugs/other'),
+        ],
+      );
+
+      expect(manifest.match(Uri.parse('/docs/a/end'))?.id, 'end');
+      expect(manifest.match(Uri.parse('/docs/a/other'))?.id, 'other');
+    });
+
+    test('rejects equally specific overlapping rest patterns', () {
+      expect(
+        () => RouteManifest(
+          name: 'app',
+          routes: [
+            RouteManifestRoute(id: 'left', path: '/:a/...:rest'),
+            RouteManifestRoute(id: 'right', path: '/:b/...:other'),
+          ],
+        ),
+        throwsA(isA<RouteManifestValidationException>()),
+      );
+    });
+  });
+
+  group('RouteManifest JSON and codec edge cases', () {
+    test('requires a codec to decode a non-string manifest', () {
+      expect(
+        () => RouteManifest<_TypedRouteId>.fromJson(const {
+          'schema': RouteManifest.schemaName,
+          'version': 1,
+          'name': 'typed',
+          'routes': [],
+          'layouts': [],
+        }),
+        throwsStateError,
+      );
+    });
+
+    test('empty manifest is reusable and exceptions stringify', () {
+      expect(RouteManifest.empty.nodes, isEmpty);
+      expect(
+        RouteManifestValidationException(
+          'cycle',
+          nodeIds: const ['a'],
+        ).toString(),
+        'RouteManifestValidationException: cycle',
+      );
+      expect(
+        const UnsupportedRouteManifestVersion(4).toString(),
+        'Unsupported route manifest version: 4',
+      );
+    });
+
+    test('rejects malformed JSON payloads', () {
+      final valid = RouteManifest(
+        name: 'app',
+        routes: [RouteManifestRoute(id: 'home', path: '/')],
+      ).toJson();
+
+      expect(() => RouteManifest<String>.decode('[]'), throwsFormatException);
+      expect(
+        () => RouteManifest<String>.fromJson({...valid, 'version': '1'}),
+        throwsFormatException,
+      );
+      expect(
+        () => RouteManifest<String>.fromJson({...valid, 'name': ''}),
+        throwsFormatException,
+      );
+      expect(
+        () => RouteManifest<String>.fromJson({...valid, 'routes': 'nope'}),
+        throwsFormatException,
+      );
+      expect(
+        () => RouteManifest<String>.fromJson({
+          ...valid,
+          'routes': ['not-an-object'],
+        }),
+        throwsFormatException,
+      );
+      expect(
+        () => RouteManifest<String>.fromJson({
+          ...valid,
+          'layouts': [
+            {
+              'id': 'tabs',
+              'path': '/',
+              'kind': 'indexed',
+              'indexedChildIds': [1],
+            },
+          ],
+        }),
+        throwsFormatException,
+      );
+      expect(
+        () => RouteManifest<String>.fromJson({
+          ...valid,
+          'layouts': [
+            {'id': 'tabs', 'path': '/', 'kind': 'indexed', 'parentId': ''},
+          ],
+        }),
+        throwsFormatException,
+      );
+      expect(
+        () => RouteManifest<String>.fromJson({
+          ...valid,
+          'layouts': [
+            {'id': 'tabs', 'path': '/', 'kind': 'mystery'},
+          ],
+        }),
+        throwsFormatException,
+      );
+    });
+
+    test('rejects layout kinds that declare the wrong child lists', () {
+      final valid = RouteManifest(
+        name: 'app',
+        routes: [RouteManifestRoute(id: 'home', path: '/')],
+      ).toJson();
+
+      expect(
+        () => RouteManifest<String>.fromJson({
+          ...valid,
+          'layouts': [
+            {
+              'id': 'shell',
+              'path': '/',
+              'kind': 'stack',
+              'indexedChildIds': ['home'],
+            },
+          ],
+        }),
+        throwsFormatException,
+      );
+      expect(
+        () => RouteManifest<String>.fromJson({
+          ...valid,
+          'layouts': [
+            {
+              'id': 'shell',
+              'path': '/',
+              'kind': 'stack',
+              'branchChildIds': ['home'],
+            },
+          ],
+        }),
+        throwsFormatException,
+      );
+      expect(
+        () => RouteManifest<String>.fromJson({
+          ...valid,
+          'layouts': [
+            {
+              'id': 'tabs',
+              'path': '/',
+              'kind': 'indexed',
+              'branchChildIds': ['home'],
+            },
+          ],
+        }),
+        throwsFormatException,
+      );
+      expect(
+        () => RouteManifest<String>.fromJson({
+          ...valid,
+          'layouts': [
+            {
+              'id': 'shell',
+              'path': '/',
+              'kind': 'branched',
+              'indexedChildIds': ['home'],
+              'branchChildIds': ['home'],
+            },
+          ],
+        }),
+        throwsFormatException,
+      );
+    });
+
+    test('enum codec rejects unknown wire IDs', () {
+      expect(
+        () => RouteIdCodec.enumValues(_TypedRouteId.values).decode('nope'),
+        throwsFormatException,
+      );
+    });
+
+    test(
+      'rejects unknown indexed children and mis-parented branch children',
+      () {
+        expect(
+          () => RouteManifest(
+            name: 'app',
+            layouts: [
+              RouteManifestLayout.indexed(
+                id: 'tabs',
+                path: '/',
+                childIds: ['missing'],
+              ),
+            ],
+          ),
+          throwsA(
+            isA<RouteManifestValidationException>().having(
+              (error) => error.message,
+              'message',
+              contains('is unknown'),
+            ),
+          ),
+        );
+
+        expect(
+          () => RouteManifest(
+            name: 'app',
+            layouts: [
+              RouteManifestLayout.branched(
+                id: 'shell',
+                path: '/',
+                childIds: ['home-branch'],
+              ),
+              RouteManifestLayout.stack(id: 'home-branch', path: '/home'),
+            ],
+          ),
+          throwsA(
+            isA<RouteManifestValidationException>().having(
+              (error) => error.message,
+              'message',
+              contains('must be a direct child'),
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
+      'composed codecs reject duplicate names, unknown IDs, and empty wires',
+      () {
+        final first = RouteManifestFragment<_TypedRouteId>(
+          name: 'typed',
+          idCodec: RouteIdCodec.enumValues(_TypedRouteId.values),
+          routes: [RouteManifestRoute(id: _TypedRouteId.root, path: '/')],
+        );
+        final duplicateName = RouteManifestFragment<_AccountRouteId>(
+          name: 'typed',
+          idCodec: RouteIdCodec.enumValues(_AccountRouteId.values),
+          routes: [
+            RouteManifestRoute(id: _AccountRouteId.profile, path: '/profile'),
+          ],
+        );
+
+        expect(
+          () => RouteManifest<Object>.fromFragments(
+            name: 'app',
+            fragments: [first, duplicateName],
+          ),
+          throwsA(isA<RouteManifestValidationException>()),
+        );
+
+        expect(
+          () => RouteManifest<Object>.fromFragments(
+            name: 'app',
+            fragments: [
+              first,
+              RouteManifestFragment<_TypedRouteId>(
+                name: 'typed-again',
+                idCodec: RouteIdCodec.enumValues(_TypedRouteId.values),
+                routes: [
+                  RouteManifestRoute(id: _TypedRouteId.root, path: '/again'),
+                ],
+              ),
+            ],
+          ),
+          throwsA(isA<RouteManifestValidationException>()),
+        );
+
+        final composed = RouteManifest<Object>.fromFragments(
+          name: 'app',
+          fragments: [
+            first,
+            RouteManifestFragment<_AccountRouteId>(
+              name: 'account',
+              idCodec: RouteIdCodec.enumValues(_AccountRouteId.values),
+              routes: [
+                RouteManifestRoute(
+                  id: _AccountRouteId.profile,
+                  path: '/account/profile',
+                ),
+              ],
+            ),
+          ],
+        );
+
+        expect(() => composed.idCodec!.encode(Object()), throwsStateError);
+        expect(
+          () => composed.idCodec!.decode('noscope'),
+          throwsFormatException,
+        );
+        expect(
+          () => composed.idCodec!.decode('unknown/root'),
+          throwsFormatException,
+        );
+        expect(
+          () => composed.idCodec!.decode('typed/missing'),
+          throwsFormatException,
+        );
+
+        final permissive = RouteIdCodec<_TypedRouteId>(
+          encode: (id) => id.name,
+          decode: (wireId) => switch (wireId) {
+            'root' => _TypedRouteId.root,
+            _ => _TypedRouteId.profile,
+          },
+        );
+        final scoped = RouteManifest<Object>.fromFragments(
+          name: 'permissive',
+          fragments: [
+            RouteManifestFragment<_TypedRouteId>(
+              name: 'typed',
+              idCodec: permissive,
+              routes: [RouteManifestRoute(id: _TypedRouteId.root, path: '/')],
+            ),
+          ],
+        );
+        expect(
+          () => scoped.idCodec!.decode('typed/profile'),
+          throwsFormatException,
+        );
+
+        final emptyWire = RouteIdCodec<String>(
+          encode: (_) => '  ',
+          decode: (id) => id,
+        );
+        expect(
+          () => RouteManifest<String>(
+            name: 'empty-wire',
+            routes: [RouteManifestRoute(id: 'home', path: '/')],
+          ).toJson(idCodec: emptyWire),
+          throwsStateError,
+        );
+      },
+    );
+  });
 }

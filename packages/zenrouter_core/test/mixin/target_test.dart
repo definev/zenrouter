@@ -3,6 +3,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zenrouter_core/zenrouter_core.dart';
 
+import '../support/harness.dart';
+
 class TestRoute extends RouteTarget {
   TestRoute(this.id);
   final String id;
@@ -99,6 +101,23 @@ void main() {
       );
     });
 
+    test('default props are empty', () {
+      expect(_BareRoute().props, isEmpty);
+    });
+
+    test('system onDidPop removes the route from a mutatable path', () async {
+      final path = AppStackPath();
+      final route = AppRoute('1');
+      path.seed([route]);
+      route.isPopByPath = false;
+
+      route.onDidPop('done', null);
+
+      expect(path.stack, isEmpty);
+      expect(route.stackPath, isNull);
+      expect(route.onResult.isCompleted, isTrue);
+    });
+
     test('onUpdate is callable', () {
       final route1 = TestRoute('1');
       final route2 = TestRoute('2');
@@ -153,3 +172,5 @@ class _MockStackPath implements StackPath<TestRoute> {
 }
 
 typedef VoidCallback = void Function();
+
+class _BareRoute extends RouteTarget {}

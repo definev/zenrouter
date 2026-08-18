@@ -311,6 +311,28 @@ void main() {
       );
     });
 
+    test('bind rejects a match that does not belong to the registry', () {
+      final registry = RouteBindingRegistry(
+        manifest: manifest,
+        bindings: [binding('home'), binding('profile')],
+      );
+      final foreign = RouteManifest<String>(
+        name: 'foreign',
+        routes: [RouteManifestRoute(id: 'other', path: '/other')],
+      ).match(Uri.parse('/other'))!;
+
+      expect(() => registry.bind(foreign), throwsStateError);
+    });
+
+    test('validation exceptions stringify their message', () {
+      final error = RouteBindingValidationException<String>(
+        'incomplete',
+        routeIds: const ['profile'],
+      );
+      expect(error.toString(), 'RouteBindingValidationException: incomplete');
+      expect(error.routeIds, ['profile']);
+    });
+
     test('rejects incomplete registries', () {
       expect(
         () => RouteBindingRegistry(

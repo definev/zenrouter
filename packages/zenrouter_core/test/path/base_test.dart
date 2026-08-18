@@ -3,6 +3,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zenrouter_core/zenrouter_core.dart';
 
+import '../support/harness.dart';
+
 typedef VoidCallback = void Function();
 
 class TestRoute extends RouteUri {
@@ -138,6 +140,29 @@ void main() {
       expect(path.toString(), contains('test-path'));
     });
 
+    test('PathKey exposes its wire key', () {
+      const key = PathKey('stack');
+      expect(key.key, 'stack');
+      expect(key.toString(), 'stack');
+    });
+
+    test(
+      'binds a module coordinator as the proxy and its parent as coordinator',
+      () {
+        late NestedCoordinator nested;
+        final root = ModularAppCoordinator(
+          modules: (c) {
+            nested = NestedCoordinator(c);
+            return [nested];
+          },
+        );
+
+        expect(nested.extra.proxyCoordinator, same(nested));
+        expect(nested.extra.coordinator, same(root));
+        expect(nested.extra.toString(), contains('nested-extra'));
+      },
+    );
+
     test('activateRoute adds route if not in stack', () async {
       final path = TestStackPath();
       final route = TestRoute('1');
@@ -164,8 +189,16 @@ void main() {
 
   group('StackMutatable', () {
     test('push adds route to top of stack', () async {
-      // Skipped - push returns future that never completes without proper test setup
-    }, skip: true);
+      final path = TestStackMutatablePath();
+      final route = TestRoute('1');
+
+      final result = path.push<String>(route);
+      await pumpEventQueue();
+
+      expect(path.stack, [route]);
+      await path.pop('ok');
+      expect(await result, 'ok');
+    });
 
     test('pop removes top route from stack', () async {
       final path = TestStackMutatablePath();
@@ -236,20 +269,48 @@ void main() {
     });
 
     test('pushOrMoveToTop moves existing route to top', () async {
-      // Skipped - pushOrMoveToTop calls push internally
-    }, skip: true);
+      final path = TestStackMutatablePath();
+      final first = TestRoute('1');
+      final second = TestRoute('2');
+      path.pushDirect(first);
+      path.pushDirect(second);
+
+      await path.pushOrMoveToTop(first);
+
+      expect(path.stack, [second, first]);
+    });
 
     test('pushOrMoveToTop pushes new route if not in stack', () async {
-      // Skipped - pushOrMoveToTop calls push internally
-    }, skip: true);
+      final path = TestStackMutatablePath();
+      final first = TestRoute('1');
+      path.pushDirect(first);
+
+      await path.pushOrMoveToTop(TestRoute('2'));
+
+      expect(path.stack.map((route) => route.id), ['1', '2']);
+    });
 
     test('navigate pops to existing route', () async {
-      // Skipped - navigate calls pop which may hang in test
-    }, skip: true);
+      final path = TestStackMutatablePath();
+      final first = TestRoute('1');
+      path.pushDirect(first);
+      path.pushDirect(TestRoute('2'));
+
+      await path.navigate(first);
+
+      expect(path.stack, [first]);
+    });
 
     test('navigate stops when guard blocks pop', () async {
-      // Skipped - navigate calls pop which may hang in test
-    }, skip: true);
+      final path = TestStackMutatablePath();
+      final first = TestRoute('1');
+      path.pushDirect(first);
+      path.pushDirect(_GuardedRoute('guarded', allowPop: false));
+
+      await path.navigate(first);
+
+      expect(path.stack.map((route) => route.id), ['1', 'guarded']);
+    });
   });
 }
 

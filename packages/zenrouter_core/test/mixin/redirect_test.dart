@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zenrouter_core/zenrouter_core.dart';
 
@@ -62,6 +64,16 @@ void main() {
       expect(route.discarded, isTrue);
     });
 
+    test('returns null and discards the route when redirect cancels', () async {
+      final route = _CancelRedirectRoute('blocked');
+
+      expect(
+        await RouteRedirect.resolve<BaseRoute>(route, _UnusedCoordinator()),
+        isNull,
+      );
+      expect(route.discarded, isTrue);
+    });
+
     test('throws StateError on a cyclic redirect chain', () async {
       final a = _CyclicRedirectRoute('a');
       final b = _CyclicRedirectRoute('b');
@@ -80,6 +92,27 @@ void main() {
       );
     });
   });
+}
+
+class _UnusedCoordinator implements CoordinatorCore<RouteUri> {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _CancelRedirectRoute extends BaseRoute with RouteRedirect<BaseRoute> {
+  _CancelRedirectRoute(super.id);
+
+  bool discarded = false;
+
+  @override
+  FutureOr<BaseRoute?> redirectWith(covariant CoordinatorCore coordinator) =>
+      null;
+
+  @override
+  void onDiscard() {
+    discarded = true;
+    super.onDiscard();
+  }
 }
 
 class _CyclicRedirectRoute extends BaseRoute with RouteRedirect<BaseRoute> {
