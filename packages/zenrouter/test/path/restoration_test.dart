@@ -1,4 +1,4 @@
-// ignore_for_file: invalid_use_of_protected_member, deprecated_member_use
+// ignore_for_file: invalid_use_of_protected_member
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -95,9 +95,6 @@ class UnimplementedRoute extends BaseTestRoute {
 }
 
 class DummyCoordinator extends Coordinator<RouteUnique> {
-  @override
-  void defineConverter() {}
-
   @override
   RouteUnique parseRouteFromUri(Uri uri) => TestRoute(uri.path);
 

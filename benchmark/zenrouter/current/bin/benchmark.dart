@@ -1,5 +1,3 @@
-// ignore_for_file: deprecated_member_use
-
 import 'dart:async';
 
 import 'package:zenrouter_core/zenrouter_core.dart';
@@ -32,7 +30,8 @@ class CurrentBenchmarkCoordinator extends CoordinatorCore<BenchRoute>
   List<StackPath> get paths => <StackPath>[...super.paths, nestedPath];
 
   @override
-  void defineLayout() {
+  void init() {
+    super.init();
     defineLayoutParentConstructor(shellLayoutKey, (_) => BenchLayout());
   }
 

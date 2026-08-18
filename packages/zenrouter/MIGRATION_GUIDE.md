@@ -12,9 +12,16 @@ Requires `zenrouter_core` 3.0.0. Apps that only `extend Coordinator` keep compil
 
 ### Typical Flutter app (`extends Coordinator`)
 
-No required code changes. `Coordinator` still mixes `CoordinatorLayoutCore`, `CoordinatorNavigatable`, `CoordinatorMutatable`, `CoordinatorRecoverable`, plus Flutter layout / restoration / transitions.
+`Coordinator` still mixes `CoordinatorLayoutCore`, `CoordinatorNavigatable`, `CoordinatorMutatable`, `CoordinatorRecoverable`, plus Flutter layout / restoration / transitions.
 
 Prefer `await coordinator.pushOrMoveToTop(...)` when sequencing. The method was already `async`; the return type is now `Future<void>`.
+
+`defineLayout` and `defineConverter` are **deprecated** but still invoked from `init()` for compatibility:
+
+| Deprecated | Replacement |
+| :--- | :--- |
+| `defineLayout()` + `defineLayoutParent(...)` | `NavigationPath.createWith(...)..bindLayout(Layout.new)` |
+| `defineConverter()` + `defineRestorableConverter(...)` | Same call inside `init()` (`super.init()` first) |
 
 ### Custom `CoordinatorCore` subclasses
 

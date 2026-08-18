@@ -120,27 +120,25 @@ class AppCoordinator extends Coordinator<AppRoute> {
 
   @override
   List<StackPath> get paths => [...super.paths, shellPath];
-
-  // No need to override defineLayout() when using bindLayout
 }
 ```
 
 **Benefits of `bindLayout`:**
-- ✅ More concise (no separate `defineLayout()` method)
+- ✅ More concise (no separate coordinator hook)
 - ✅ Collocates path and layout registration
 - ✅ Reduces boilerplate
 
 **When to use each approach:**
 | Approach | When to Use |
 |----------|-------------|
-| `bindLayout` | Modern code, single layout per path |
-| `defineLayout()` | Multiple layouts, legacy code migration |
+| `bindLayout` | Default — bind a layout constructor to a path |
+| `init()` + `defineLayoutBuilder` | Custom `StackPath` builders |
 
 ---
 
-## Using definePath for Custom StackPaths
+## Using defineLayoutBuilder for Custom StackPaths
 
-If you extend `StackPath` to create custom navigation behavior (e.g., modal sheets, custom transitions), you must register a builder using `definePath`.
+If you extend `StackPath` to create custom navigation behavior (e.g., modal sheets, custom transitions), you must register a builder using `defineLayoutBuilder`.
 
 ### Creating a Custom StackPath
 
@@ -182,7 +180,7 @@ class ModalPath<T extends RouteTarget> extends StackPath<T>
 
 ### Registering the Custom Path Builder
 
-Use `definePath` to tell ZenRouter how to render your custom path:
+Use `defineLayoutBuilder` to tell ZenRouter how to render your custom path:
 
 ```dart
 class AppCoordinator extends Coordinator<AppRoute> {
@@ -192,9 +190,9 @@ class AppCoordinator extends Coordinator<AppRoute> {
   );
 
   @override
-  void defineLayout() {
-    // Register custom path builder
-    RouteLayout.definePath(
+  void init() {
+    super.init();
+    defineLayoutBuilder(
       ModalPath.key,
       (coordinator, path, layout) {
         return ModalStack(
@@ -397,9 +395,8 @@ When you push `DetailRoute`:
 
 | Function | Purpose | When to Use |
 |----------|---------|-------------|
-| `bindLayout()` | Register layout constructor inline | Modern code, recommended |
-| `defineLayout()` | Register layout in coordinator | Multiple layouts, legacy code |
-| `definePath()` | Register custom StackPath builder | Custom navigation containers |
+| `bindLayout()` | Register layout constructor inline | Default |
+| `defineLayoutBuilder()` | Register a custom `StackPath` builder | Custom navigation containers |
 
 ### Best Practices
 
@@ -411,7 +408,7 @@ When you push `DetailRoute`:
 
 ❌ **Don't:**
 - Create paths without binding to a coordinator
-- Forget to register layouts with `bindLayout` or `defineLayout`
+- Forget to register layouts with `bindLayout`
 - Create circular layout dependencies
 - Use the same label for multiple paths
 
@@ -437,7 +434,8 @@ The default layout builder for "NavigationPath" requires a zenrouter Coordinator
 
 ```dart
 @override
-void defineLayout() {
+void init() {
+  super.init();
   defineLayoutBuilder(
     NavigationPath.key,
     (coordinatorCore, path, layout) {
@@ -456,21 +454,14 @@ See also [Migration Guide — `RouteLayoutBuilder`](../MIGRATION_GUIDE.md#routel
 ### Error: "Missing RouteLayout constructor"
 
 ```
-Missing RouteLayout constructor for [MyLayout] must define by calling 
-[defineLayoutParent] in [defineLayout] function
+Missing constructor for the [MyLayout] layout.
+You can define a constructor by calling `bindLayout` in the corresponding [StackPath].
 ```
 
-**Solution:** Register the layout constructor:
+**Solution:** Bind the layout on the path:
 ```dart
-// Option 1: Using bindLayout (recommended)
 late final path = NavigationPath.createWith(...)
   ..bindLayout(MyLayout.new);
-
-// Option 2: Using defineLayout
-@override
-void defineLayout() {
-  RouteLayout.defineLayout(MyLayout, MyLayout.new);
-}
 ```
 
 ### Error: "No layout builder provided"
@@ -483,8 +474,9 @@ class, you must register it via [RouteLayout.definePath]
 **Solution:** Register your custom path's builder:
 ```dart
 @override
-void defineLayout() {
-  RouteLayout.definePath(
+void init() {
+  super.init();
+  defineLayoutBuilder(
     CustomPath.key,
     (coordinator, path, layout) => CustomPathWidget(path: path),
   );
@@ -495,7 +487,7 @@ void defineLayout() {
 
 **Check:**
 1. Path is added to `coordinator.paths` list
-2. Layout is registered with `bindLayout` or `defineLayout`
+2. Layout is registered with `bindLayout`
 3. Route's `layout` getter returns the correct Type
 4. Path is bound to coordinator with `.createWith()`
 

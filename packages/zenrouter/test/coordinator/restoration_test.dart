@@ -1,5 +1,3 @@
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zenrouter/zenrouter.dart';
@@ -247,7 +245,8 @@ class TestCoordinator extends Coordinator<AppRoute> {
   List<StackPath> get paths => [...super.paths, tabStack, undefinedTabStack];
 
   @override
-  void defineConverter() {
+  void init() {
+    super.init();
     defineRestorableConverter('test_bookmark', () => const BookmarkConverter());
   }
 

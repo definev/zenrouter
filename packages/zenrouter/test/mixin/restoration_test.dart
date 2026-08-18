@@ -1,5 +1,3 @@
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zenrouter/zenrouter.dart';
@@ -112,7 +110,8 @@ class UniqueRestorableRoute extends TestRoute
 // Coordinator for testing
 class TestCoordinator extends Coordinator<TestRoute> {
   @override
-  void defineConverter() {
+  void init() {
+    super.init();
     defineRestorableConverter(
       'test_complex_route',
       () => const ComplexRouteConverter(),

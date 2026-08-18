@@ -499,8 +499,7 @@ class Settings extends AppRoute {
 }
 ```
 
-Tuyệt vời, mọi route đã được thiết lập. Bây giờ hãy kết nối nó trong tệp `lib/routes/coordinator.dart`. Mã boilerplate cuối cùng khi định nghĩa một layout là bạn phải định nghĩa một hàm factory trong phương thức `defineLayout`.
-Hàm `defineLayout` nhận 2 tham số: `Type` của `RouteLayout` và một factory `Function` tạo ra `RouteLayout`.
+Tuyệt vời, mọi route đã được thiết lập. Bây giờ hãy kết nối nó trong tệp `lib/routes/coordinator.dart`. Gắn layout vào path bằng `bindLayout`:
 
 ```dart
 /// file: lib/routes/coordinator.dart
@@ -713,10 +712,10 @@ class DetailRoute extends AppRoute {
 
 // Đăng ký trong Coordinator
 class AppCoordinator extends Coordinator<AppRoute> {
-  @override
-  void defineLayout() {
-    defineLayoutParent(HomeLayout.new);
-  }
+  late final homeStack = NavigationPath<AppRoute>.createWith(
+    label: 'home',
+    coordinator: this,
+  )..bindLayout(HomeLayout.new);
 }
 ```
 

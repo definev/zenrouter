@@ -500,8 +500,7 @@ class Settings extends AppRoute {
 }
 ```
 
-Great, every route is set up. Now let's wire it up in the `lib/routes/coordinator.dart` file. The final boilerplate code when defining a layout is that you have to define a factory function in the `defineLayout` method.
-The `defineLayout` function takes 2 parameters: the `Type` of `RouteLayout` and a factory `Function` that creates the `RouteLayout`.
+Great, every route is set up. Now let's wire it up in the `lib/routes/coordinator.dart` file. Bind each layout on its path with `bindLayout`:
 
 ```dart
 /// file: lib/routes/coordinator.dart

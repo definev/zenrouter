@@ -440,7 +440,8 @@ class BookDetailConverter extends RestorableConverter<BookDetailRoute> {
 
 // Register in coordinator:
 @override
-void defineConverter() {
+void init() {
+  super.init();
   defineRestorableConverter('book_detail', BookDetailConverter.new);
 }
 ```

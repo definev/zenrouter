@@ -126,7 +126,8 @@ enum RestorationStrategy { unique, converter }
 /// // 3. Register in your coordinator
 /// class AppCoordinator extends Coordinator<AppRoute> {
 ///   @override
-///   void defineConverter() {
+///   void init() {
+///     super.init();
 ///     defineRestorableConverter('book_detail', BookDetailConverter.new);
 ///   }
 /// }
@@ -238,18 +239,19 @@ mixin RouteRestorable<T extends RouteTarget> on RouteTarget {
 ///
 /// ## Where It Fits in the Architecture
 ///
-/// Converters are registered globally in your [Coordinator] via [Coordinator.defineConverter] during
-/// initialization. When the restoration system needs to serialize or deserialize a route,
-/// it looks up the converter by its unique key and delegates the work to it. This architecture
-/// allows converters to be reused across different parts of your application and provides
-/// a centralized registry for all custom serialization logic.
+/// Converters are registered in your [Coordinator.init] via
+/// [CoordinatorRestoration.defineRestorableConverter]. When the restoration
+/// system needs to serialize or deserialize a route, it looks up the converter
+/// by its unique key and delegates the work to it. This architecture allows
+/// converters to be reused across different parts of your application and
+/// provides a centralized registry for all custom serialization logic.
 ///
 /// The registration and usage flow:
 /// ```
 /// App startup:
-///   Coordinator.defineConverter() registers converters
+///   Coordinator.init() registers converters
 ///     └─ defineRestorableConverter('key', constructor)
-///         └─ Stored in _converterTable coordinator's table
+///         └─ Stored in the coordinator's converter table
 ///
 /// During restoration:
 ///   RouteRestorable.deserialize(data)
@@ -315,7 +317,8 @@ mixin RouteRestorable<T extends RouteTarget> on RouteTarget {
 /// ```dart
 /// class AppCoordinator extends Coordinator<AppRoute> {
 ///   @override
-///   void defineConverter() {
+///   void init() {
+///     super.init();
 ///     defineRestorableConverter(
 ///       'myapp_user_profile',
 ///       () => const UserProfileConverter(),
@@ -376,14 +379,16 @@ abstract class RestorableConverter<T extends Object> {
 
   /// The global registry mapping converter keys to their constructor functions.
   ///
-  /// This table is populated during app initialization via [Coordinator.defineConverter] and queried
-  /// during restoration via [buildConverter]. It persists for the entire application lifetime.
+  /// This table is populated during app initialization via
+  /// [CoordinatorRestoration.defineRestorableConverter] and queried during
+  /// restoration via [buildConverter]. It persists for the entire application
+  /// lifetime.
   static final Map<String, RestoratableConverterConstructor> _converterTable =
       {};
 
   /// Registers a converter in the global registry.
   ///
-  /// Call this method during coordinator initialization ([Coordinator.defineConverter]) to
+  /// Call this method during coordinator initialization ([Coordinator.init]) to
   /// make your custom converter available to the restoration system. The [key] must match
   /// the key returned by your converter's [key] getter, and the [constructor] should be a
   /// function that creates a new instance of your converter (typically a const constructor).

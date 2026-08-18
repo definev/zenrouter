@@ -224,42 +224,44 @@ abstract class RouteModule<T extends RouteUri> {
   RouteManifestFragment<Object> get routeManifestFragment; // default: routeManifest.fragment
 
   FutureOr<T?> parseRouteFromUri(Uri uri);
-
-  void defineLayout() {}
-  void defineConverter() {}
 }
 ```
 
 `RouteModuleBinding` overrides `routeManifest` and `parseRouteFromUri` from
 `routeBindings`.
 
-### defineLayout
+### Layouts
 
-Override to register layout constructors via `defineLayoutParentConstructor`.
-Called automatically during coordinator construction — do **not** call manually:
+Bind the layout on the path with `bindLayout`. Do **not** override the
+deprecated `defineLayout` hook:
+
+```dart
+late final settingsPath = NavigationPath<AppRoute>.createWith(
+  label: 'settings',
+  coordinator: coordinator,
+)..bindLayout(SettingsLayout.new);
+```
+
+Headless `CoordinatorCore` code without Flutter `bindLayout` can still
+register a constructor in `init()`:
 
 ```dart
 @override
-void defineLayout() {
-  coordinator.defineLayoutParentConstructor(
-    SettingsLayout,
-    () => SettingsLayout(),
-  );
+void init() {
+  super.init();
+  defineLayoutParentConstructor(SettingsLayout, (_) => SettingsLayout());
 }
 ```
 
-`bindLayout(LayoutClass.new)` on a `NavigationPath` is the preferred shorthand.
-Override `defineLayout` only for layouts not tied to a specific path.
+### Converters
 
-### defineConverter
+Register restorable converters in `init()`:
 
 ```dart
 @override
-void defineConverter() {
-  RestorableConverter.defineConverter(
-    'book_detail',
-    BookDetailConverter.new,
-  );
+void init() {
+  super.init();
+  defineRestorableConverter('book_detail', BookDetailConverter.new);
 }
 ```
 
@@ -267,7 +269,8 @@ void defineConverter() {
 
 | Rule | Why |
 |:-----|:----|
-| `defineLayout` / `defineConverter` run once | During coordinator construction — do not call them |
+| Register layouts with `bindLayout` | `defineLayout` is deprecated |
+| Register converters in `init()` | `defineConverter` is deprecated |
 | `getModule<T>()` throws `TypeError` if `T` is missing | Register the module in `defineModules()` first |
 | Cross-module `parentId` uses a fragment | A complete `RouteManifest` cannot see foreign IDs |
 

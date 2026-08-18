@@ -565,9 +565,8 @@ class AppCoordinator extends CoordinatorModular<AppRoute> {
 
 **RouteModule** responsibilities:
 - `parseRouteFromUri` - Handle subset of URIs
-- `paths` - Nested navigation paths
-- `defineLayout` - Layout constructors
-- `defineConverter` - State restoration
+- `paths` - Nested navigation paths (bind layouts with `bindLayout`)
+- `init` - Register restorable converters via `defineRestorableConverter`
 - `routeManifest` - Complete module-local topology
 - `routeManifestFragment` - Topology with references resolved after composition
 

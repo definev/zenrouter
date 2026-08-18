@@ -43,9 +43,9 @@ library;
  * the `name` parameter that wouldn't normally be in the URL. The converter serializes both
  * the id and name, allowing the route to be perfectly reconstructed with all its state.
  *
- * **Coordinator registration (AppCoordinator.defineConverter - line 75-79):**
- * The converter must be registered globally during coordinator initialization. This makes
- * it available to the restoration system when deserializing saved state.
+ * **Coordinator registration (AppCoordinator.init):**
+ * Register the converter in [Coordinator.init] via [defineRestorableConverter]
+ * so the restoration system can deserialize saved state.
  *
  * **Widget state (HomeView with RestorableInt):**
  * The counter in HomeView demonstrates that widget-level state (the count) is separate

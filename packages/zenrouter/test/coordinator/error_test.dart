@@ -52,7 +52,7 @@ class MockUnregisteredPathLayout extends ErrorTestRoute
   List<Object?> get props => [];
 }
 
-/// Layout type that is NOT defined in defineLayout (for testing constructor error)
+/// Layout type that is not registered with bindLayout (for testing constructor error)
 class UndefinedLayout extends ErrorTestRoute with RouteLayout<ErrorTestRoute> {
   @override
   UnregisteredCustomPath<ErrorTestRoute> resolvePath(

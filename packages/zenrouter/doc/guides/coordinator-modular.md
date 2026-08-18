@@ -389,14 +389,15 @@ List<StackPath> get paths => [myPath];
 
 ### 3. Converter Registration
 
-Override `defineConverter` to register restorable converters:
+Register restorable converters in `init()`:
 
 ```dart
 @override
-void defineConverter() {
+void init() {
+  super.init();
   defineRestorableConverter(
     'my_route',
-    () => MyRoute(),
+    () => const MyRouteConverter(),
   );
 }
 ```
@@ -583,13 +584,13 @@ FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
 
 **Problem:** Layout constructor not found.
 
-**Solution:** Register layout in module's `defineLayout`:
+**Solution:** Bind the layout on the path with `bindLayout`:
 
 ```dart
-@override
-void defineLayout() {
-  defineLayoutParent(MyLayout.new); // ✅ Required
-}
+late final myPath = NavigationPath.createWith(
+  label: 'my-module',
+  coordinator: coordinator,
+)..bindLayout(MyLayout.new); // ✅ Required
 ```
 
 ---

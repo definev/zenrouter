@@ -130,11 +130,6 @@ class AuthModule extends RouteModule<AppRoute> {
       _ => null,
     };
   }
-
-  @override
-  void defineLayout() {
-    // Auth module doesn't define layouts
-  }
 }
 
 class ShopModule extends RouteModule<AppRoute> {
@@ -202,11 +197,6 @@ class SettingsModule extends RouteModule<AppRoute> {
       _ => null,
     };
   }
-
-  @override
-  void defineLayout() {
-    // Settings module doesn't define layouts
-  }
 }
 
 // Module that returns null for all routes (should be skipped)
@@ -218,9 +208,6 @@ class EmptyModule extends RouteModule<AppRoute> {
 
   @override
   FutureOr<AppRoute?> parseRouteFromUri(Uri uri) => null;
-
-  @override
-  void defineLayout() {}
 }
 
 // Module with async parsing
@@ -240,9 +227,6 @@ class AsyncModule extends RouteModule<AppRoute> {
       _ => null,
     };
   }
-
-  @override
-  void defineLayout() {}
 }
 
 // Module that throws an error
@@ -256,9 +240,6 @@ class ErrorModule extends RouteModule<AppRoute> {
   FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
     throw Exception('Module error');
   }
-
-  @override
-  void defineLayout() {}
 }
 
 class ShellFragmentModule extends RouteModule<AppRoute> {

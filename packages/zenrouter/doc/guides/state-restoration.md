@@ -142,13 +142,14 @@ Finally, register your converter in your Coordinator. This is required so ZenRou
 ```dart
 class AppCoordinator extends Coordinator<AppRoute> {
   @override
-  void defineConverter() {
-    RestorableConverter.defineConverter(
-      'filter_converter', 
+  void init() {
+    super.init();
+    defineRestorableConverter(
+      'filter_converter',
       () => const FilterConverter(),
     );
   }
-  
+
   // ... rest of coordinator
 }
 ```
