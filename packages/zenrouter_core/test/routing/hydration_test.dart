@@ -117,34 +117,7 @@ void main() {
       );
 
       expect(resolution.hydration, same(payload));
-      expect(resolution.data, const {'id': 42});
-    });
-
-    test('wraps legacy data in a versioned payload', () {
-      final request = RouteRequest.navigation(Uri.parse('/legacy'));
-      final resolution = MatchedRouteResolution<HydrationRoute>(
-        request: request,
-        route: HydrationRoute(request.uri),
-        data: const {'legacy': true},
-      );
-
-      expect(resolution.hydration?.routeUri, request.uri);
-      expect(resolution.hydration?.version, 1);
-      expect(resolution.data, const {'legacy': true});
-    });
-
-    test('rejects explicit hydration combined with legacy data', () {
-      final request = RouteRequest.navigation(Uri.parse('/conflict'));
-
-      expect(
-        () => MatchedRouteResolution<HydrationRoute>(
-          request: request,
-          route: HydrationRoute(request.uri),
-          hydration: RouteHydrationPayload(routeUri: request.uri),
-          data: const {'duplicate': true},
-        ),
-        throwsArgumentError,
-      );
+      expect(resolution.hydration!.data, const {'id': 42});
     });
   });
 }

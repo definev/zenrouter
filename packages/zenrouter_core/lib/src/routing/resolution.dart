@@ -2,12 +2,6 @@ import 'package:zenrouter_core/src/mixin/uri.dart';
 import 'package:zenrouter_core/src/routing/cancellation.dart';
 import 'package:zenrouter_core/src/routing/hydration.dart';
 
-const _noHydrationData = _NoHydrationData();
-
-final class _NoHydrationData {
-  const _NoHydrationData();
-}
-
 Map<String, List<String>> _freezeHeaders(Map<String, List<String>> headers) =>
     Map<String, List<String>>.unmodifiable({
       for (final entry in headers.entries)
@@ -78,18 +72,9 @@ sealed class RouteResolution<T extends RouteUri> {
     required this.statusCode,
     Map<String, List<String>> headers = const {},
     RouteHydrationPayload? hydration,
-    @Deprecated('Use hydration') Object? data = _noHydrationData,
   }) : assert(statusCode >= 100 && statusCode <= 599),
        headers = _freezeHeaders(headers),
-       hydration =
-           hydration ??
-           (identical(data, _noHydrationData)
-               ? null
-               : RouteHydrationPayload(routeUri: request.uri, data: data)) {
-    if (hydration != null && !identical(data, _noHydrationData)) {
-      throw ArgumentError('Provide either hydration or legacy data, not both');
-    }
-  }
+       hydration = hydration ?? RouteHydrationPayload(routeUri: request.uri);
 
   final RouteRequest request;
   final int statusCode;
@@ -97,10 +82,6 @@ sealed class RouteResolution<T extends RouteUri> {
 
   /// Versioned, serializable loader data associated with this resolution.
   final RouteHydrationPayload? hydration;
-
-  /// Compatibility view of [RouteHydrationPayload.data].
-  @Deprecated('Use hydration?.data')
-  Object? get data => hydration?.data;
 }
 
 /// A successfully matched route.
@@ -112,7 +93,6 @@ final class MatchedRouteResolution<T extends RouteUri>
     super.statusCode = 200,
     super.headers,
     super.hydration,
-    super.data,
   });
 
   final T route;
@@ -127,7 +107,6 @@ final class NotFoundRouteResolution<T extends RouteUri>
     super.statusCode = 404,
     super.headers,
     super.hydration,
-    super.data,
   });
 
   final T? route;
@@ -144,7 +123,6 @@ final class RedirectRouteResolution<T extends RouteUri>
     super.statusCode = 302,
     super.headers,
     super.hydration,
-    super.data,
   }) {
     if (!supportedStatusCodes.contains(statusCode)) {
       throw ArgumentError.value(
@@ -197,7 +175,6 @@ final class ErrorRouteResolution<T extends RouteUri>
     super.statusCode = 500,
     super.headers,
     super.hydration,
-    super.data,
   });
 
   final Object error;
