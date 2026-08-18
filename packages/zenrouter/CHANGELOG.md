@@ -22,6 +22,13 @@
 - **`Equatable.internalProps` is removed.** Equality and hashing use
   `runtimeType` + `props` only. Delete leftover overrides.
 
+### ⚠️ Deprecated
+
+- **`defineLayout` / `defineConverter`** on `Coordinator` / `RouteModule`.
+  Bind layouts with `bindLayout` on the path
+  (`NavigationPath.createWith(...)..bindLayout(ShopLayout.new)`).
+  Register restorable converters in `init()` via `defineRestorableConverter`.
+
 ### 🚀 New Features
 
 - **`pushReplacement` on indexed/branched parents** now activates the

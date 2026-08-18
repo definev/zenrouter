@@ -44,9 +44,7 @@ mixin RouteUnique on RouteTarget implements RouteUri {
     if (constructor == null) {
       throw UnimplementedError(
         'Missing constructor for the [$parentLayoutKey] layout. '
-        'You can define a constructor by calling `bindLayout` in the corresponding [StackPath].\n'
-        'Alternatively, you can define a constructor for this layout by calling [defineLayoutParent] '
-        'in the [defineLayout] function of [${coordinator.runtimeType}].',
+        'You can define a constructor by calling `bindLayout` in the corresponding [StackPath].',
       );
     }
 

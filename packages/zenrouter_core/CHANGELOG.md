@@ -30,6 +30,10 @@
 - **`RouteResolution.data` is deprecated** in favor of the versioned
   `RouteResolution.hydration` payload. Legacy JSON-compatible data is wrapped
   automatically for migration.
+- **`defineLayout` and `defineConverter` are deprecated.** Bind layouts on
+  the path with `bindLayout` (`NavigationPath.createWith(...)..bindLayout(...)`).
+  Register restorable converters in `init()` via `defineRestorableConverter`.
+  `init()` still invokes both hooks for compatibility.
 - **`StackMutatable.pop` completes `onResult` and calls `onDidPop`.** Callers
   of `push` no longer depend on a later Flutter page callback. A second
   `completeOnResult` after `pop` throws. `onDidPop` is idempotent.

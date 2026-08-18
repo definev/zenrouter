@@ -163,8 +163,7 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
   /// [RouteLayoutChild.parentLayoutKey] and create new instance of layout parent.
   ///
   /// ## When to Override
-  /// Override [defineLayout] in your coordinator subclass instead of calling
-  /// this directly.
+  /// Prefer [bindLayout] on the [StackPath] instead of calling this directly.
   ///
   /// ## Relationship
   /// - Registers constructor with [CoordinatorLayoutCore.defineLayoutParentConstructor]

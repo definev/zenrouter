@@ -116,21 +116,31 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
 
   /// Defines the layout structure for this coordinator.
   ///
-  /// This method is called during initialization. Override this to register
-  /// custom layouts using [Coordinator.defineRouteLayout].
+  /// Deprecated: bind the layout on the path with `bindLayout` instead.
   @override
+  @Deprecated(
+    'Bind the layout on the path with bindLayout instead:\n'
+    '  NavigationPath.createWith(label: \'shop\', coordinator: this)\n'
+    '    ..bindLayout(ShopLayout.new);\n'
+    'defineLayout will be removed in a future release.',
+  )
   void defineLayout() {}
 
   /// Defines the restorable converters for this coordinator.
   ///
-  /// Override this method to register custom restorable converters using
-  /// [defineRestorableConverter].
+  /// Deprecated: register converters in [init] with `defineRestorableConverter`.
   @override
+  @Deprecated(
+    'Register converters in init() with defineRestorableConverter. '
+    'defineConverter will be removed in a future release.',
+  )
   void defineConverter() {}
 
   @mustCallSuper
   void init() {
+    // ignore: deprecated_member_use_from_same_package
     defineLayout();
+    // ignore: deprecated_member_use_from_same_package
     defineConverter();
   }
 

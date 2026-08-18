@@ -25,8 +25,8 @@ import 'package:zenrouter_core/src/routing/manifest.dart';
 ///
 /// - Parse routes: Implement [parseRouteFromUri] for URI patterns
 /// - Define paths: Override [paths] for nested navigation
-/// - Register layouts: Override [defineLayout] for layout constructors
-/// - Register converters: Override [defineConverter] for restorable converters
+/// - Register layouts: Call `bindLayout` on the path
+/// - Register converters: Override `init()` and call `defineRestorableConverter`
 /// - Contribute topology: Override [routeManifest] or [routeManifestFragment]
 abstract class RouteModule<T extends RouteUri> {
   RouteModule._(this.coordinator);
@@ -67,12 +67,22 @@ abstract class RouteModule<T extends RouteUri> {
 
   /// Defines layouts for this module.
   ///
-  /// Override to register layout constructors using [defineLayoutParent].
+  /// Deprecated: bind the layout on the path with `bindLayout` instead.
+  @Deprecated(
+    'Bind the layout on the path with bindLayout instead:\n'
+    '  NavigationPath.createWith(label: \'shop\', coordinator: this)\n'
+    '    ..bindLayout(ShopLayout.new);\n'
+    'defineLayout will be removed in a future release.',
+  )
   void defineLayout() {}
 
   /// Defines restorable converters for this module.
   ///
-  /// Override to register converters using [defineConverter].
+  /// Deprecated: register converters in `init()` with `defineRestorableConverter`.
+  @Deprecated(
+    'Register converters in init() with defineRestorableConverter. '
+    'defineConverter will be removed in a future release.',
+  )
   void defineConverter() {}
 }
 
@@ -184,20 +194,34 @@ mixin CoordinatorModular<T extends RouteUri> on CoordinatorCore<T> {
   T notFoundRoute(Uri uri);
 
   @override
+  @Deprecated(
+    'Bind the layout on the path with bindLayout instead:\n'
+    '  NavigationPath.createWith(label: \'shop\', coordinator: this)\n'
+    '    ..bindLayout(ShopLayout.new);\n'
+    'defineLayout will be removed in a future release.',
+  )
   void defineLayout() {
+    // ignore: deprecated_member_use_from_same_package
     super.defineLayout();
     for (final module in _modules.values) {
       if (module is! CoordinatorCore) {
+        // ignore: deprecated_member_use_from_same_package
         module.defineLayout();
       }
     }
   }
 
   @override
+  @Deprecated(
+    'Register converters in init() with defineRestorableConverter. '
+    'defineConverter will be removed in a future release.',
+  )
   void defineConverter() {
+    // ignore: deprecated_member_use_from_same_package
     super.defineConverter();
     for (final module in _modules.values) {
       if (module is! CoordinatorCore) {
+        // ignore: deprecated_member_use_from_same_package
         module.defineConverter();
       }
     }
