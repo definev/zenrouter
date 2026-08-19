@@ -35,10 +35,9 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
 
   _DebugTab _selectedTab = _DebugTab.problems;
   bool _panelMaximized = false;
-  Offset? _launcherPosition;
-  Offset? _launcherDragStartPosition;
+  Alignment _launcherAlignment = Alignment.bottomRight;
+  Alignment? _launcherDragStartAlignment;
   Offset? _launcherDragStartPointer;
-  Rect _launcherBounds = Rect.zero;
 
   List<_DebugTab> get _availableTabs => [
     _DebugTab.problems,
@@ -89,70 +88,25 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
   // ===========================================================================
 
   Widget _buildCollapsedView() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final mediaSize = MediaQuery.sizeOf(context);
-        final viewportSize = Size(
-          constraints.hasBoundedWidth ? constraints.maxWidth : mediaSize.width,
-          constraints.hasBoundedHeight
-              ? constraints.maxHeight
-              : mediaSize.height,
-        );
-        final safePadding = MediaQuery.paddingOf(context);
-        _launcherBounds = Rect.fromLTRB(
-          safePadding.left + _launcherMargin,
-          safePadding.top + _launcherMargin,
-          math.max(
-            safePadding.left + _launcherMargin,
-            viewportSize.width - safePadding.right - _launcherMargin,
-          ),
-          math.max(
-            safePadding.top + _launcherMargin,
-            viewportSize.height - safePadding.bottom - _launcherMargin,
-          ),
-        );
-
-        final launcher = _buildDraggableLauncher(
-          math.max(40.0, _launcherBounds.width),
-        );
-        final launcherSize = _launcherSize;
-        final resolvedPosition = _launcherPosition == null
-            ? null
-            : _clampLauncherPosition(
-                _launcherPosition!,
-                launcherSize,
-                _launcherBounds,
-              );
-
-        return SizedBox.expand(
-          key: _collapsedViewportKey,
-          child: Stack(
-            children: [
-              if (resolvedPosition == null)
-                Positioned(
-                  right: safePadding.right + _launcherMargin,
-                  bottom: safePadding.bottom + _launcherMargin,
-                  child: launcher,
-                )
-              else
-                Positioned(
-                  left: resolvedPosition.dx,
-                  top: resolvedPosition.dy,
-                  child: launcher,
-                ),
-            ],
-          ),
-        );
-      },
+    final safePadding = MediaQuery.paddingOf(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        safePadding.left + _launcherMargin,
+        safePadding.top + _launcherMargin,
+        safePadding.right + _launcherMargin,
+        safePadding.bottom + _launcherMargin,
+      ),
+      child: SizedBox.expand(
+        key: _collapsedViewportKey,
+        child: Align(
+          alignment: _launcherAlignment,
+          child: _buildDraggableLauncher(),
+        ),
+      ),
     );
   }
 
-  Size get _launcherSize {
-    final renderObject = _launcherKey.currentContext?.findRenderObject();
-    return renderObject is RenderBox ? renderObject.size : const Size(40, 40);
-  }
-
-  Widget _buildDraggableLauncher(double maxWidth) {
+  Widget _buildDraggableLauncher() {
     return MouseRegion(
       key: const ValueKey('zenrouter-debug-launcher'),
       cursor: SystemMouseCursors.move,
@@ -167,110 +121,79 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
           onPanUpdate: _updateLauncherDrag,
           onPanEnd: (_) => _endLauncherDrag(),
           onPanCancel: _endLauncherDrag,
-          child: ListenableBuilder(
-            listenable: _uriController,
-            builder: (context, child) {
-              const fabFootprint = 40.0 + DebugTheme.spacingXs;
-              final maximumPillWidth = math.max(0.0, maxWidth - fabFootprint);
-              final textPainter = TextPainter(
-                text: TextSpan(
-                  text: _uriController.text,
-                  style: const TextStyle(fontSize: DebugTheme.fontSizeMd),
-                ),
-                textDirection: TextDirection.ltr,
-                maxLines: 1,
-              )..layout(maxWidth: maximumPillWidth);
-              final pillWidth = math.min(
-                maximumPillWidth,
-                math.max(80.0, textPainter.width + DebugTheme.spacingMd * 2),
-              );
-
-              return SizedBox(
-                key: _launcherKey,
-                width: pillWidth + fabFootprint,
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: pillWidth,
-                      child: Container(
-                        height: 40,
-                        margin: const EdgeInsets.only(
-                          right: DebugTheme.spacingXs,
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: DebugTheme.spacingMd,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF000000).withValues(alpha: 0.6),
-                          borderRadius: BorderRadius.circular(
-                            DebugTheme.radiusFull,
-                          ),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          _uriController.text,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Color(0xFFFFFFFF),
-                            decoration: TextDecoration.none,
-                            fontWeight: FontWeight.normal,
-                            fontSize: DebugTheme.fontSizeMd,
-                          ),
-                        ),
-                      ),
-                    ),
-                    _DebugFab(
-                      key: const ValueKey('zenrouter-debug-launcher-button'),
-                      problems: widget.coordinator.problems,
-                    ),
-                  ],
-                ),
-              );
-            },
+          child: KeyedSubtree(
+            key: _launcherKey,
+            child: _DebugFab(
+              key: const ValueKey('zenrouter-debug-launcher-button'),
+              problems: widget.coordinator.problems,
+            ),
           ),
         ),
       ),
     );
   }
 
-  Offset _clampLauncherPosition(Offset requested, Size size, Rect bounds) {
-    final maximumLeft = math.max(bounds.left, bounds.right - size.width);
-    final maximumTop = math.max(bounds.top, bounds.bottom - size.height);
+  Size get _launcherSize {
+    final renderObject = _launcherKey.currentContext?.findRenderObject();
+    return renderObject is RenderBox ? renderObject.size : const Size(40, 40);
+  }
+
+  Alignment _alignmentFromOffset(Offset offset, Size freeSize) {
+    final x = freeSize.width == 0 ? 0.0 : (offset.dx / freeSize.width) * 2 - 1;
+    final y = freeSize.height == 0
+        ? 0.0
+        : (offset.dy / freeSize.height) * 2 - 1;
+    return Alignment(x.clamp(-1.0, 1.0), y.clamp(-1.0, 1.0));
+  }
+
+  Offset _offsetFromAlignment(Alignment alignment, Size freeSize) {
     return Offset(
-      requested.dx.clamp(bounds.left, maximumLeft).toDouble(),
-      requested.dy.clamp(bounds.top, maximumTop).toDouble(),
+      (alignment.x + 1) / 2 * freeSize.width,
+      (alignment.y + 1) / 2 * freeSize.height,
+    );
+  }
+
+  Size? _collapsedViewportSize() {
+    final renderObject = _collapsedViewportKey.currentContext
+        ?.findRenderObject();
+    return renderObject is RenderBox ? renderObject.size : null;
+  }
+
+  Size _freeLauncherSize(Size viewportSize, Size launcherSize) {
+    return Size(
+      math.max(0.0, viewportSize.width - launcherSize.width),
+      math.max(0.0, viewportSize.height - launcherSize.height),
     );
   }
 
   void _startLauncherDrag(DragStartDetails details) {
-    final launcherBox = _launcherKey.currentContext?.findRenderObject();
-    final viewportBox = _collapsedViewportKey.currentContext
-        ?.findRenderObject();
-    if (launcherBox is! RenderBox || viewportBox is! RenderBox) return;
+    if (_collapsedViewportSize() == null) return;
     _launcherDragStartPointer = details.globalPosition;
-    _launcherDragStartPosition = viewportBox.globalToLocal(
-      launcherBox.localToGlobal(Offset.zero),
-    );
+    _launcherDragStartAlignment = _launcherAlignment;
   }
 
   void _updateLauncherDrag(DragUpdateDetails details) {
     final startPointer = _launcherDragStartPointer;
-    final startPosition = _launcherDragStartPosition;
-    if (startPointer == null || startPosition == null) return;
-    final requested = startPosition + details.globalPosition - startPointer;
+    final startAlignment = _launcherDragStartAlignment;
+    final viewportSize = _collapsedViewportSize();
+    if (startPointer == null ||
+        startAlignment == null ||
+        viewportSize == null) {
+      return;
+    }
+    final freeSize = _freeLauncherSize(viewportSize, _launcherSize);
+    final requested =
+        _offsetFromAlignment(startAlignment, freeSize) +
+        details.globalPosition -
+        startPointer;
     setState(() {
-      _launcherPosition = _clampLauncherPosition(
-        requested,
-        _launcherSize,
-        _launcherBounds,
-      );
+      _launcherAlignment = _alignmentFromOffset(requested, freeSize);
     });
   }
 
   void _endLauncherDrag() {
     _launcherDragStartPointer = null;
-    _launcherDragStartPosition = null;
+    _launcherDragStartAlignment = null;
   }
 
   // ===========================================================================
@@ -914,17 +837,10 @@ class _ResizableFlexDebugPanelState extends State<_ResizableFlexDebugPanel> {
 // DEBUG FAB (Custom, no Material)
 // =============================================================================
 
-class _DebugFab extends StatefulWidget {
+class _DebugFab extends StatelessWidget {
   const _DebugFab({super.key, required this.problems});
 
   final int problems;
-
-  @override
-  State<_DebugFab> createState() => _DebugFabState();
-}
-
-class _DebugFabState extends State<_DebugFab> {
-  bool _isHovered = false;
 
   @override
   Widget build(BuildContext context) {
@@ -932,8 +848,6 @@ class _DebugFabState extends State<_DebugFab> {
       alignment: Alignment.center,
       hitChild: MouseRegion(
         cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _isHovered = true),
-        onExit: (_) => setState(() => _isHovered = false),
         child: const SizedBox(width: 52, height: 52),
       ),
       paintChild: AnimatedContainer(
@@ -943,36 +857,15 @@ class _DebugFabState extends State<_DebugFab> {
         height: 40,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: _isHovered
-                ? const [Color(0xFF2E2E2E), Color(0xFF181818)]
-                : const [Color(0xFF1A1A1A), Color(0xFF0D0D0D)],
-          ),
+          color: Color(0xFF1A1A1A),
           shape: BoxShape.circle,
-          border: Border.all(
-            color: _isHovered
-                ? const Color(0x80FFFFFF)
-                : const Color(0x33FFFFFF),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: _isHovered
-                  ? const Color(0x663B82F6)
-                  : const Color(0x99000000),
-              blurRadius: _isHovered ? 14 : 10,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          border: Border.all(color: const Color(0x33FFFFFF)),
         ),
         child: CountBadge(
-          count: widget.problems,
+          count: problems,
           child: Icon(
             CupertinoIcons.ant,
-            color: _isHovered
-                ? const Color(0xFFFFFFFF)
-                : const Color(0xFFE2E8F0),
+            color: const Color(0xFFE2E8F0),
             size: 19,
           ),
         ),
