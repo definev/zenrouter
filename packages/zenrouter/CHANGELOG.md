@@ -1,8 +1,10 @@
-## 3.0.0
+## 3.0.0-beta.1
+
+Prerelease for early testers. APIs may still change before 3.0.0.
 
 ### ⚠️ Breaking Changes
 
-- **Coordinator capability mixins live in `zenrouter_core` 3.0.0.** Flutter
+- **Coordinator capability mixins live in `zenrouter_core` 3.0.0-beta.1.** Flutter
   `Coordinator` still composes the full set (`LayoutCore` + `Navigatable` +
   `Mutatable` + `Recoverable` + Flutter `CoordinatorLayout`). Apps that only
   extend `Coordinator` are unaffected.

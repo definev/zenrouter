@@ -31,7 +31,7 @@ Add `zenrouter_devtools` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  zenrouter_devtools: ^latest_version
+  zenrouter_devtools: ^3.0.0-beta.1
 ```
 
 ## Usage

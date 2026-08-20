@@ -18,8 +18,11 @@ view of how screens connect.
 
 ## Install
 
-```bash
-flutter pub add zenrouter
+3.0 is a prerelease. `flutter pub add zenrouter` still resolves 2.x.
+
+```yaml
+dependencies:
+  zenrouter: ^3.0.0-beta.1
 ```
 
 ## Which style

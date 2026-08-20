@@ -49,12 +49,12 @@ Add `zenrouter_file_generator`, `zenrouter_file_annotation` and `zenrouter` to y
 
 ```yaml
 dependencies:
-  zenrouter: ^1.0.0
-  zenrouter_file_annotation: ^1.0.1
+  zenrouter: ^3.0.0-beta.1
+  zenrouter_file_annotation: ^3.0.0-beta.1
 
 dev_dependencies:
   build_runner: ^2.10.4
-  zenrouter_file_generator: ^1.1.1
+  zenrouter_file_generator: ^3.0.0-beta.1
 ```
 
 ## Quick Start

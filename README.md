@@ -40,7 +40,15 @@ Need deep linking or a browser URL?
 
 iOS, Android, Web, macOS, Windows, Linux
 
-2.x coordinators that `extend Coordinator` still compile. See
+3.0 is a prerelease for early testers:
+
+```yaml
+dependencies:
+  zenrouter: ^3.0.0-beta.1
+```
+
+`flutter pub add zenrouter` still resolves 2.x. 2.x coordinators that
+`extend Coordinator` still compile. See
 [Migrating from 2.x](packages/zenrouter/README.md#migrating-from-2x).
 
 ## License

@@ -1,4 +1,6 @@
-## Unreleased
+## 3.0.0-beta.1
+
+Prerelease for early testers. APIs may still change before 3.0.0.
 
 - Add `LayoutType.branched` and `ZenLayout.branches` for stateful shells whose
   direct child layouts retain independent navigation stacks.

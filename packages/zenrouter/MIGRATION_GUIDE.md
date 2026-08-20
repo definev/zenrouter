@@ -2,13 +2,13 @@
 
 This guide outlines the changes and steps required to migrate to the latest version of `zenrouter`.
 
-**Latest:** [3.0.0](#300-manifests-capability-mixins-and-lifecycle) — route manifests, capability mixins, page identity, and `pop()` completing results.
+**Latest:** [3.0.0-beta.1](#300-manifests-capability-mixins-and-lifecycle) — route manifests, capability mixins, page identity, and `pop()` completing results.
 
 ---
 
 ## 3.0.0: Manifests, capability mixins, and lifecycle
 
-Requires `zenrouter_core` 3.0.0. Apps that only `extend Coordinator` keep compiling. Read this section if you subclass `CoordinatorCore`, type `PageCallback`, call `completeOnResult` after `pop`, or override `defineModules`.
+Requires `zenrouter_core` 3.0.0-beta.1. Apps that only `extend Coordinator` keep compiling. Read this section if you subclass `CoordinatorCore`, type `PageCallback`, call `completeOnResult` after `pop`, or override `defineModules`.
 
 ### Typical Flutter app (`extends Coordinator`)
 

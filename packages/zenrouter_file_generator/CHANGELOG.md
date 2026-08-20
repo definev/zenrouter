@@ -1,4 +1,7 @@
-## Unreleased
+## 3.0.0-beta.1
+
+Prerelease for early testers. Requires `zenrouter_core` and
+`zenrouter_file_annotation` `^3.0.0-beta.1`. APIs may still change before 3.0.0.
 
 - Generate `BranchedStackPath` fields, branched manifest topology, and typed
   layout base classes from `@ZenLayout(type: LayoutType.branched, branches: ...)`.

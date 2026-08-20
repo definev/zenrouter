@@ -1,6 +1,6 @@
 name: zenrouter_devtools
 description: "Deeplink, Inspection, and Debugging Devtools for ZenRouter"
-version: 3.0.0
+version: 3.0.0-beta.1
 homepage: https://github.com/definev/zenrouter/tree/main/packages/zenrouter_devtools
 
 environment:
@@ -22,7 +22,7 @@ dependencies:
     sdk: flutter
   hit: ^1.2.4
   vyuh_node_flow: ^0.31.0
-  zenrouter: ^3.0.0
+  zenrouter: ^3.0.0-beta.1
 
 dev_dependencies:
   flutter_test:

@@ -1,4 +1,6 @@
-## 3.0.0
+## 3.0.0-beta.1
+
+Prerelease for early testers. APIs may still change before 3.0.0.
 
 ### Breaking Changes
 
