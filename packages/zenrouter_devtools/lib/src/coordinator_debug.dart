@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/widgets.dart';
 import 'package:hit/hit.dart';
 import 'package:zenrouter/zenrouter.dart';
 
@@ -98,6 +98,17 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   /// or [DevToolsLayoutMode.column].
   DevToolsLayoutMode get defaultDebugLayoutMode => DevToolsLayoutMode.stack;
 
+  /// Whether the DevTools panel starts in see-through mode.
+  ///
+  /// When enabled, panel surfaces use a translucent fill and backdrop blur so
+  /// the app remains visible underneath. Text and controls stay fully opaque.
+  ///
+  /// Defaults to `false`. Narrow viewports (<600 logical px) still enable
+  /// see-through automatically until the user toggles it, unless this getter
+  /// is overridden to `true` (always on) — use [setDebugPanelSeeThrough] to
+  /// force a runtime value on any size.
+  bool get defaultDebugPanelSeeThrough => false;
+
   /// Override this to provide a list of routes that can be quickly pushed
   /// from the debug overlay.
   ///
@@ -137,6 +148,7 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
 
   bool _debugOverlayOpen = false;
   DevToolsLayoutMode? _debugLayoutMode;
+  bool? _debugPanelSeeThrough;
   NavigationFlowRecorder<Object>? _debugNavigationFlow;
   bool _debugNavigationFlowAttached = false;
   String? _debugFlowActionLabel;
@@ -154,6 +166,24 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   /// The active layout mode for the DevTools panel.
   DevToolsLayoutMode get debugLayoutMode =>
       _debugLayoutMode ?? defaultDebugLayoutMode;
+
+  /// Whether the DevTools panel uses translucent surfaces (see-through mode).
+  ///
+  /// Prefer [debugPanelSeeThroughForWidth] in UI code so narrow viewports get
+  /// the automatic mobile default when no runtime override is set.
+  bool get debugPanelSeeThrough =>
+      _debugPanelSeeThrough ?? defaultDebugPanelSeeThrough;
+
+  /// Effective see-through for [viewportWidth].
+  ///
+  /// Runtime [setDebugPanelSeeThrough] always wins. Otherwise returns
+  /// [defaultDebugPanelSeeThrough], or `true` automatically when the viewport
+  /// is narrower than 600 logical pixels.
+  bool debugPanelSeeThroughForWidth(double viewportWidth) {
+    if (_debugPanelSeeThrough != null) return _debugPanelSeeThrough!;
+    if (defaultDebugPanelSeeThrough) return true;
+    return viewportWidth < 600;
+  }
 
   /// Whether automatic Observed-flow screen previews are currently enabled.
   bool get debugScreenCaptureEnabled =>
@@ -220,6 +250,16 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   void setDebugLayoutMode(DevToolsLayoutMode mode) {
     if (_debugLayoutMode == mode) return;
     _debugLayoutMode = mode;
+    notifyListeners();
+  }
+
+  /// Enables or disables see-through panel surfaces.
+  ///
+  /// See-through mode keeps labels and controls opaque while letting the app
+  /// show through panel backgrounds via translucent fills and backdrop blur.
+  void setDebugPanelSeeThrough(bool enabled) {
+    if (_debugPanelSeeThrough == enabled) return;
+    _debugPanelSeeThrough = enabled;
     notifyListeners();
   }
 
@@ -488,27 +528,14 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
   /// ([DevToolsLayoutMode.row]), or a vertical split ([DevToolsLayoutMode.column]).
   Widget layoutBuilder(BuildContext context) {
     if (!debugEnabled) return super.layoutBuilder(context);
-    debugNavigationFlow;
 
-    final appLayer = RepaintBoundary(
-      key: _debugAppBoundaryKey,
-      child: Builder(builder: (context) => super.layoutBuilder(context)),
-    );
-
-    if (!_debugOverlayOpen) {
-      return Stack(
-        children: [
-          appLayer,
-          _buildDebugOverlayScope(
-            context,
-            child: DebugOverlay(coordinator: this),
-          ),
-        ],
+    final child = () {
+      final appLayer = RepaintBoundary(
+        key: _debugAppBoundaryKey,
+        child: Builder(builder: (context) => super.layoutBuilder(context)),
       );
-    }
 
-    switch (debugLayoutMode) {
-      case DevToolsLayoutMode.stack:
+      if (!_debugOverlayOpen) {
         return Stack(
           children: [
             appLayer,
@@ -518,22 +545,41 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
             ),
           ],
         );
-      case DevToolsLayoutMode.row:
-      case DevToolsLayoutMode.column:
-        return _buildDebugOverlayScope(
-          context,
-          child: Flex(
-            direction: debugLayoutMode == DevToolsLayoutMode.row
-                ? Axis.horizontal
-                : Axis.vertical,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+      }
+
+      switch (debugLayoutMode) {
+        case DevToolsLayoutMode.stack:
+          return Stack(
             children: [
-              Expanded(child: appLayer),
-              DebugOverlay(coordinator: this),
+              appLayer,
+              _buildDebugOverlayScope(
+                context,
+                child: DebugOverlay(coordinator: this),
+              ),
             ],
-          ),
-        );
-    }
+          );
+        case DevToolsLayoutMode.row:
+        case DevToolsLayoutMode.column:
+          return _buildDebugOverlayScope(
+            context,
+            child: Flex(
+              direction: debugLayoutMode == DevToolsLayoutMode.row
+                  ? Axis.horizontal
+                  : Axis.vertical,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: appLayer),
+                DebugOverlay(coordinator: this),
+              ],
+            ),
+          );
+      }
+    }();
+
+    return Navigator(
+      pages: [CupertinoPage(child: child)],
+      onDidRemovePage: (page) {},
+    );
   }
 
   Widget _buildDebugOverlayScope(
@@ -550,24 +596,10 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
           height: 1.4,
           decoration: TextDecoration.none,
         ),
-        child: Builder(
-          builder: (context) {
-            final viewInsets = MediaQuery.viewInsetsOf(context);
-            final viewPadding = MediaQuery.viewPaddingOf(context);
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: switch (viewInsets.bottom) {
-                  > 0 => viewInsets.bottom,
-                  _ => viewPadding.bottom,
-                },
-              ),
-              child: HitScope(
-                child: Overlay(
-                  initialEntries: [OverlayEntry(builder: (context) => child)],
-                ),
-              ),
-            );
-          },
+        child: HitScope(
+          child: Overlay(
+            initialEntries: [OverlayEntry(builder: (context) => child)],
+          ),
         ),
       ),
     );

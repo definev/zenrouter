@@ -1,3 +1,10 @@
+## Unreleased
+
+- **Feat**: Add see-through panel mode (translucent surfaces + backdrop blur) via the header tool menu and `setDebugPanelSeeThrough` / `defaultDebugPanelSeeThrough`. Narrow viewports (<600) enable see-through by default until toggled.
+- **Feat**: Compact mobile chrome — shorter header, icon-only tabs, and a collapsed “Go to…” URI bar that expands on demand.
+- **Feat**: Make the floating debug panel freely draggable from the header, with viewport clamping; resize still pins the opposite corner.
+- **Fix**: Respect top/bottom safe area (and keyboard insets) for the mobile panel and FAB without double-applying the bottom inset.
+
 ## 3.0.0-beta.1
 
 Prerelease for early testers. APIs may still change before 3.0.0.

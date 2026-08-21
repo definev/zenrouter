@@ -2,27 +2,6 @@ import 'package:flutter/cupertino.dart';
 
 import '../widgets/debug_theme.dart';
 
-/// Copy shown while a live-export replay holds the recording lease.
-const observedReplayLiveExportBanner =
-    'Recording paused for replay. Navigations will not be added to this session.';
-
-/// Copy shown while an imported document is on the canvas.
-const observedReplayImportBanner = 'Replaying imported session.';
-
-/// Copy shown when import rematch produced no transitions.
-const observedReplayUnmatchedBanner =
-    'Imported session did not match this manifest.';
-
-/// Copy shown when the playhead preview is an id fallback, not this revision.
-const observedReplayStalePreviewCaption = 'Preview from a later visit';
-
-/// Copy shown when pasted JSON cannot be decoded.
-const observedReplayImportFailedBanner = 'Could not import session.';
-
-/// Copy appended while Drive is armed.
-const observedReplayDriveBanner =
-    'Driving the live app via navigate. Redirects may re-run.';
-
 /// Floating Observed playback dock: transport, speed, export/import.
 class ObservedReplayTransport extends StatelessWidget {
   const ObservedReplayTransport({
@@ -186,36 +165,6 @@ class ObservedReplayTransport extends StatelessWidget {
   }
 }
 
-/// Banner or Drive confirm chip that overlays the canvas above the dock.
-class ObservedReplayDockMessage extends StatelessWidget {
-  const ObservedReplayDockMessage({
-    super.key,
-    this.banner,
-    this.confirmPending = false,
-    this.onConfirm,
-    this.onCancel,
-  });
-
-  final String? banner;
-  final bool confirmPending;
-  final VoidCallback? onConfirm;
-  final VoidCallback? onCancel;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: const Color(0xF21A1610),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0x663F2F12)),
-      ),
-      child: confirmPending
-          ? _DriveConfirmBar(onConfirm: onConfirm, onCancel: onCancel)
-          : _DockBanner(banner: banner ?? ''),
-    );
-  }
-}
-
 /// Paste dialog that returns session JSON, or null if cancelled.
 Future<String?> showObservedSessionImportDialog(BuildContext context) async {
   final controller = TextEditingController();
@@ -262,126 +211,57 @@ Future<String?> showObservedSessionImportDialog(BuildContext context) async {
   }
 }
 
-class _DockBanner extends StatelessWidget {
-  const _DockBanner({required this.banner});
-
-  final String banner;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Text(
-          banner,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: Color(0xFFE8C872),
-            fontSize: DebugTheme.fontSizeSm,
-            height: 1.3,
-            decoration: TextDecoration.none,
-          ),
+/// Confirms that replay should drive the live app via navigate.
+Future<bool> showObservedDriveConfirmDialog(BuildContext context) async {
+  final result = await showCupertinoDialog<bool>(
+    context: context,
+    useRootNavigator: false,
+    builder: (context) {
+      return CupertinoAlertDialog(
+        title: const Text('Drive live app?'),
+        content: const Text(
+          'Navigation will follow the replay playhead and may trigger redirects again.',
         ),
-      ),
-    );
-  }
-}
-
-class _DriveConfirmBar extends StatelessWidget {
-  const _DriveConfirmBar({this.onConfirm, this.onCancel});
-
-  final VoidCallback? onConfirm;
-  final VoidCallback? onCancel;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 8, 6),
-      child: Row(
-        children: [
-          const Expanded(
-            child: Text(
-              'Drive the live app via navigate? Redirects may re-run.',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Color(0xFFE8C872),
-                fontSize: DebugTheme.fontSizeSm,
-                height: 1.3,
-                decoration: TextDecoration.none,
-              ),
-            ),
-          ),
-          _DockTextAction(
+        actions: [
+          CupertinoDialogAction(
             key: const ValueKey('observed-replay-drive-cancel'),
-            label: 'Cancel',
-            color: DebugTheme.textSecondary,
-            onTap: onCancel,
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
           ),
-          _DockTextAction(
+          CupertinoDialogAction(
             key: const ValueKey('observed-replay-drive-confirm'),
-            label: 'Drive',
-            color: const Color(0xFFFBBF24),
-            emphasized: true,
-            onTap: onConfirm,
+            isDefaultAction: true,
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Enable drive'),
           ),
         ],
-      ),
-    );
-  }
+      );
+    },
+  );
+  return result ?? false;
 }
 
-class _DockTextAction extends StatelessWidget {
-  const _DockTextAction({
-    super.key,
-    required this.label,
-    required this.color,
-    required this.onTap,
-    this.emphasized = false,
-  });
-
-  final String label;
-  final Color color;
-  final VoidCallback? onTap;
-  final bool emphasized;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: emphasized
-                ? const Color(0x26FBBF24)
-                : const Color(0x00000000),
-            borderRadius: BorderRadius.circular(DebugTheme.radiusFull),
-            border: emphasized
-                ? Border.all(color: const Color(0x66FBBF24))
-                : null,
-          ),
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: emphasized ? 8 : 6,
-              vertical: 4,
-            ),
-            child: Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: DebugTheme.fontSizeSm,
-                fontWeight: emphasized ? FontWeight.w700 : FontWeight.w500,
-                decoration: TextDecoration.none,
-              ),
-            ),
-          ),
+/// Shows when pasted session JSON cannot be decoded.
+Future<void> showObservedImportFailedDialog(BuildContext context) {
+  return showCupertinoDialog<void>(
+    context: context,
+    useRootNavigator: false,
+    builder: (context) {
+      return CupertinoAlertDialog(
+        title: const Text('Could not import session'),
+        content: const Text(
+          'Paste a valid exported session JSON document to start replay.',
         ),
-      ),
-    );
-  }
+        actions: [
+          CupertinoDialogAction(
+            key: const ValueKey('observed-replay-import-failed-dismiss'),
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      );
+    },
+  );
 }
 
 class _DockDivider extends StatelessWidget {

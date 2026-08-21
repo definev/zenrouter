@@ -63,13 +63,10 @@ class _ObservedNavigationFlowViewState
   _ObservedNodeFlowModel? _frozenModel;
   Map<Object, NavigationFlowScreenPreview> _replayLatestPreviews = const {};
   bool _replayFromLiveExport = false;
-  bool _importedUnmatched = false;
-  bool _importFailed = false;
   double _speed = 1;
   bool _listExpanded = false;
   VoidCallback _releaseRecordingPause = _noopRelease;
   bool _driveArmed = false;
-  bool _driveConfirmPending = false;
   bool _driveOwnsLease = false;
   int? _lastDrivenRevision;
 
@@ -136,16 +133,9 @@ class _ObservedNavigationFlowViewState
   static double _observedCanvasBottomInset({
     required bool showTimeline,
     required double timelineHeight,
-    required bool showMessage,
   }) {
-    if (!showTimeline && !showMessage) return 0;
-    var inset = 8.0;
-    if (showMessage) inset += 40;
-    if (showTimeline) {
-      if (showMessage) inset += 6;
-      inset += timelineHeight;
-    }
-    return inset + 16;
+    if (!showTimeline) return 0;
+    return 8.0 + timelineHeight + 16;
   }
 
   void _resetView() => _controller.fitToView();
@@ -249,7 +239,6 @@ class _ObservedNavigationFlowViewState
     _releaseRecordingPause();
     _releaseRecordingPause = _noopRelease;
     _driveArmed = false;
-    _driveConfirmPending = false;
     _driveOwnsLease = false;
     _lastDrivenRevision = null;
 
@@ -267,11 +256,6 @@ class _ObservedNavigationFlowViewState
     _player!.addListener(_onPlayerChanged);
     _player!.setSpeed(_speed);
     _replayFromLiveExport = pauseLiveRecording;
-    _importFailed = false;
-    _importedUnmatched =
-        !pauseLiveRecording &&
-        session.transitions.isNotEmpty &&
-        _hydrated!.transitions.isEmpty;
     _mode = play
         ? _ObservedReplayMode.replayPlaying
         : _ObservedReplayMode.replayPaused;
@@ -318,8 +302,6 @@ class _ObservedNavigationFlowViewState
     _releaseRecordingPause = _noopRelease;
     _mode = _ObservedReplayMode.live;
     _replayFromLiveExport = false;
-    _importedUnmatched = false;
-    _importFailed = false;
     _listExpanded = false;
     if (!mounted) return;
     if (restoreLiveGraph) {
@@ -365,15 +347,10 @@ class _ObservedNavigationFlowViewState
     setState(() {});
   }
 
-  void _toggleDrive() {
+  Future<void> _toggleDrive() async {
     if (widget.onDrive == null) return;
     if (_driveArmed) {
       _disarmDrive();
-      setState(() {});
-      return;
-    }
-    if (_driveConfirmPending) {
-      _driveConfirmPending = false;
       setState(() {});
       return;
     }
@@ -381,12 +358,12 @@ class _ObservedNavigationFlowViewState
       if (widget.flow.transitions.isEmpty) return;
       _enterReplayFromLive(initialIndex: 0, play: false);
     }
-    _driveConfirmPending = true;
-    setState(() {});
+    final confirmed = await showObservedDriveConfirmDialog(context);
+    if (!mounted || !confirmed) return;
+    _confirmDrive();
   }
 
   void _confirmDrive() {
-    _driveConfirmPending = false;
     _driveArmed = true;
     if (_releaseRecordingPause == _noopRelease) {
       _releaseRecordingPause = widget.acquireRecordingPause();
@@ -398,7 +375,6 @@ class _ObservedNavigationFlowViewState
 
   void _disarmDrive({bool releaseLease = true}) {
     _driveArmed = false;
-    _driveConfirmPending = false;
     _lastDrivenRevision = null;
     if (releaseLease && _driveOwnsLease) {
       _releaseRecordingPause();
@@ -481,6 +457,9 @@ class _ObservedNavigationFlowViewState
     if (player.isPlaying) {
       player.pause();
     } else {
+      if (player.length > 0 && player.index >= player.length - 1) {
+        player.seek(0);
+      }
       player.play();
     }
   }
@@ -587,9 +566,8 @@ class _ObservedNavigationFlowViewState
         pauseLiveRecording: false,
       );
     } on FormatException {
-      setState(() {
-        _importFailed = true;
-      });
+      if (!mounted) return;
+      await showObservedImportFailedDialog(context);
     }
   }
 
@@ -619,23 +597,6 @@ class _ObservedNavigationFlowViewState
       return _replayLatestPreviews[id];
     }
     return _canvasFlow.nodes[id]?.screenPreview;
-  }
-
-  String? get _replayBanner {
-    if (_importFailed) return observedReplayImportFailedBanner;
-    if (_isLive) return null;
-    var base = _importedUnmatched
-        ? observedReplayUnmatchedBanner
-        : _replayFromLiveExport
-        ? observedReplayLiveExportBanner
-        : observedReplayImportBanner;
-    if (_player?.currentPreviewIsStale == true) {
-      base = '$base $observedReplayStalePreviewCaption';
-    }
-    if (_driveArmed) {
-      return '$base $observedReplayDriveBanner';
-    }
-    return base;
   }
 
   String get _transitionLabel {
@@ -687,8 +648,6 @@ class _ObservedNavigationFlowViewState
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final showTimeline = !_isLive && (_player?.length ?? 0) > 0;
-                  final showMessage =
-                      _replayBanner != null || _driveConfirmPending;
                   final timelineHeight = !showTimeline
                       ? 0.0
                       : _listExpanded
@@ -697,7 +656,9 @@ class _ObservedNavigationFlowViewState
                   final canvasBottomInset = _observedCanvasBottomInset(
                     showTimeline: showTimeline,
                     timelineHeight: timelineHeight,
-                    showMessage: showMessage,
+                  );
+                  final canvasBackground = navigationNodeFlowBackgroundColor(
+                    context,
                   );
                   return Stack(
                     children: [
@@ -719,7 +680,14 @@ class _ObservedNavigationFlowViewState
                                           'observed-node-flow',
                                         ),
                                         controller: _controller,
-                                        theme: _observedNodeFlowTheme,
+                                        theme: _observedNodeFlowTheme.copyWith(
+                                          backgroundColor: canvasBackground,
+                                          portTheme: _observedNodeFlowTheme
+                                              .portTheme
+                                              .copyWith(
+                                                borderColor: canvasBackground,
+                                              ),
+                                        ),
                                         behavior: _isReadOnly
                                             ? NodeFlowBehavior.inspect
                                             : NodeFlowBehavior.preview,
@@ -795,42 +763,20 @@ class _ObservedNavigationFlowViewState
                                 ),
                               ),
                       ),
-                      if (showTimeline ||
-                          _replayBanner != null ||
-                          _driveConfirmPending)
+                      if (showTimeline)
                         Positioned(
                           left: 10,
                           right: 10,
                           bottom: 8,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (_driveConfirmPending || _replayBanner != null)
-                                ObservedReplayDockMessage(
-                                  banner: _replayBanner,
-                                  confirmPending: _driveConfirmPending,
-                                  onConfirm: _confirmDrive,
-                                  onCancel: () {
-                                    _driveConfirmPending = false;
-                                    setState(() {});
-                                  },
-                                ),
-                              if (showTimeline) ...[
-                                if (_driveConfirmPending ||
-                                    _replayBanner != null)
-                                  const SizedBox(height: 6),
-                                SizedBox(
-                                  height: timelineHeight,
-                                  child: ObservedReplayTimeline(
-                                    transitions: _hydrated!.transitions,
-                                    index: _player!.index,
-                                    listExpanded: _listExpanded,
-                                    onSeek: _seekTimeline,
-                                    onToggleList: _toggleTimeline,
-                                  ),
-                                ),
-                              ],
-                            ],
+                          child: SizedBox(
+                            height: timelineHeight,
+                            child: ObservedReplayTimeline(
+                              transitions: _hydrated!.transitions,
+                              index: _player!.index,
+                              listExpanded: _listExpanded,
+                              onSeek: _seekTimeline,
+                              onToggleList: _toggleTimeline,
+                            ),
                           ),
                         ),
                     ],
@@ -926,6 +872,7 @@ class _FlowHeader extends StatelessWidget {
     final previewCount = flow.nodes.values
         .where((flowNode) => flowNode.screenPreview != null)
         .length;
+    final seeThrough = DebugPanelAppearance.seeThroughOf(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(
         DebugTheme.spacingMd,
@@ -933,9 +880,12 @@ class _FlowHeader extends StatelessWidget {
         DebugTheme.spacingXs,
         DebugTheme.spacingSm,
       ),
-      decoration: const BoxDecoration(
-        color: DebugTheme.backgroundDark,
-        border: Border(bottom: BorderSide(color: DebugTheme.borderDark)),
+      decoration: BoxDecoration(
+        color: DebugTheme.surface(
+          DebugTheme.backgroundDark,
+          seeThrough: seeThrough,
+        ),
+        border: const Border(bottom: BorderSide(color: DebugTheme.borderDark)),
       ),
       child: Row(
         children: [
@@ -1869,11 +1819,15 @@ class _ObservedZoomFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final seeThrough = DebugPanelAppearance.seeThroughOf(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-      decoration: const BoxDecoration(
-        color: DebugTheme.backgroundLight,
-        border: Border(top: BorderSide(color: DebugTheme.borderDark)),
+      decoration: BoxDecoration(
+        color: DebugTheme.surface(
+          DebugTheme.backgroundLight,
+          seeThrough: seeThrough,
+        ),
+        border: const Border(top: BorderSide(color: DebugTheme.borderDark)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

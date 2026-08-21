@@ -158,6 +158,58 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('floating panel can be dragged freely and clamps to viewport', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1000, 800);
+    addTearDown(() {
+      tester.view.resetDevicePixelRatio();
+      tester.view.resetPhysicalSize();
+    });
+
+    final coordinator = _TestCoordinator()..toggleDebugOverlay();
+    addTearDown(coordinator.dispose);
+    await tester.pumpWidget(
+      CupertinoApp(home: DebugOverlay<_TestRoute>(coordinator: coordinator)),
+    );
+    await tester.pumpAndSettle();
+
+    final panel = find.byKey(const ValueKey('zenrouter-debug-panel'));
+    final dragHandle = find.byKey(
+      const ValueKey('zenrouter-debug-panel-drag-handle'),
+    );
+    expect(dragHandle, findsOneWidget);
+
+    // Desktop floating margin is 16 on each side; default bottom-right.
+    final initialRect = tester.getRect(panel);
+    expect(initialRect.right, closeTo(1000 - 16, 1));
+    expect(initialRect.bottom, closeTo(800 - 16, 1));
+
+    await tester.drag(dragHandle, const Offset(-180, -120));
+    await tester.pumpAndSettle();
+
+    final movedRect = tester.getRect(panel);
+    expect(movedRect.left, closeTo(initialRect.left - 180, 1));
+    expect(movedRect.top, closeTo(initialRect.top - 120, 1));
+    expect(tester.getSize(panel), initialRect.size);
+
+    // Drag past the top-left corner — must clamp inside the padded viewport.
+    await tester.drag(dragHandle, const Offset(-2000, -2000));
+    await tester.pumpAndSettle();
+    final clampedRect = tester.getRect(panel);
+    expect(clampedRect.left, closeTo(16, 1));
+    expect(clampedRect.top, closeTo(16, 1));
+
+    // Drag handle is hidden while maximized.
+    await tester.tap(
+      find.byKey(const ValueKey('zenrouter-debug-panel-maximize')),
+    );
+    await tester.pumpAndSettle();
+    expect(dragHandle, findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('graph tab appears and exposes interactive node details', (
     tester,
   ) async {
@@ -569,7 +621,6 @@ void main() {
     await tester.pump();
 
     expect(find.textContaining('REPLAY 1 / 2'), findsOneWidget);
-    expect(find.text('Replaying imported session.'), findsOneWidget);
     expect(coordinator.debugNavigationFlowRecording, isTrue);
 
     await coordinator.pushSilently(_ProfileRoute());
@@ -581,9 +632,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('import of unmatched URIs shows banner and disables transport', (
-    tester,
-  ) async {
+  testWidgets('import of unmatched URIs disables transport', (tester) async {
     await _pumpObservedWithTransitions(tester);
     const unmatchedJson = '''
 {
@@ -613,10 +662,6 @@ void main() {
     );
     await tester.pump();
 
-    expect(
-      find.text('Imported session did not match this manifest.'),
-      findsOneWidget,
-    );
     expect(find.textContaining('REPLAY 0 / 0'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('observed-replay-play')));
     await tester.pump();
@@ -624,7 +669,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('import of invalid JSON shows could-not-import banner', (
+  testWidgets('import of invalid JSON shows could-not-import dialog', (
     tester,
   ) async {
     await _pumpObservedWithTransitions(tester);
@@ -638,26 +683,12 @@ void main() {
       find.byKey(const ValueKey('observed-replay-import-confirm')),
     );
     await tester.pump();
-    expect(find.text('Could not import session.'), findsOneWidget);
-    expect(find.textContaining('REPLAY'), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('stale playhead preview shows later-visit caption', (
-    tester,
-  ) async {
-    final coordinator = await _pumpObservedWithTransitions(tester);
-    const png =
-        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4'
-        '2mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
-    coordinator.debugNavigationFlow.attachScreenPreview(
-      'profile',
-      base64Decode(png),
-      revision: coordinator.lastNavigationCommit!.revision,
+    expect(find.text('Could not import session'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey('observed-replay-import-failed-dismiss')),
     );
-    await tester.tap(find.byKey(const ValueKey('observed-replay-next')));
     await tester.pump();
-    expect(find.textContaining('Preview from a later visit'), findsOneWidget);
+    expect(find.textContaining('REPLAY'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -984,7 +1015,21 @@ void main() {
     await tester.pump();
     await tester.pumpAndSettle();
     expect(coordinator.currentUri.path, '/profile');
-    expect(find.textContaining('Driving the live app'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('play from finished replay restarts at the first event', (
+    tester,
+  ) async {
+    await _pumpObservedWithTransitions(tester);
+    await tester.tap(find.byKey(const ValueKey('observed-replay-end')));
+    await tester.pump();
+    expect(find.textContaining('REPLAY 2 / 2'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('observed-replay-play')));
+    await tester.pump();
+    expect(find.textContaining('REPLAY 1 / 2'), findsOneWidget);
+    expect(find.byIcon(CupertinoIcons.pause_fill), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

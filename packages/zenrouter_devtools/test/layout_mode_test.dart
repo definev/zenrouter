@@ -282,6 +282,262 @@ void main() {
         expect(tester.takeException(), isNull);
       },
     );
+
+    testWidgets('defaults opaque and can toggle see-through via setter', (
+      tester,
+    ) async {
+      final coordinator = _LayoutTestCoordinator();
+      addTearDown(coordinator.dispose);
+
+      expect(coordinator.debugPanelSeeThrough, isFalse);
+
+      coordinator.setDebugPanelSeeThrough(true);
+      expect(coordinator.debugPanelSeeThrough, isTrue);
+
+      coordinator.setDebugPanelSeeThrough(false);
+      expect(coordinator.debugPanelSeeThrough, isFalse);
+    });
+
+    testWidgets('Tool menu see-through toggles translucent panel surfaces', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1000, 800);
+      addTearDown(() {
+        tester.view.resetDevicePixelRatio();
+        tester.view.resetPhysicalSize();
+      });
+
+      final coordinator = _LayoutTestCoordinator()..toggleDebugOverlay();
+      addTearDown(coordinator.dispose);
+
+      await tester.pumpWidget(
+        CupertinoApp(
+          home: CoordinatorView<_LayoutTestRoute>(
+            coordinator: coordinator,
+            initialUri: Uri.parse('/'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(coordinator.debugPanelSeeThrough, isFalse);
+      expect(
+        find.byKey(const ValueKey('zenrouter-debug-panel-surface-false')),
+        findsOneWidget,
+      );
+
+      final toolMenuButton = find.byKey(
+        const ValueKey('zenrouter-debug-tool-menu-button'),
+      );
+      await tester.tap(toolMenuButton);
+      await tester.pumpAndSettle();
+
+      final seeThroughItem = find.byKey(
+        const ValueKey('zenrouter-debug-see-through'),
+      );
+      expect(seeThroughItem, findsOneWidget);
+      await tester.tap(seeThroughItem);
+      await tester.pumpAndSettle();
+
+      expect(coordinator.debugPanelSeeThrough, isTrue);
+      expect(
+        find.byKey(const ValueKey('zenrouter-debug-panel-surface-true')),
+        findsOneWidget,
+      );
+      expect(find.byType(BackdropFilter), findsWidgets);
+
+      final surface = tester.widget<Container>(
+        find.byKey(const ValueKey('zenrouter-debug-panel-surface-true')),
+      );
+      final decoration = surface.decoration! as BoxDecoration;
+      expect(decoration.color!.a, closeTo(0.47, 0.001));
+
+      // Toggle back to opaque via menu
+      await tester.tap(toolMenuButton);
+      await tester.pumpAndSettle();
+      await tester.tap(seeThroughItem);
+      await tester.pumpAndSettle();
+
+      expect(coordinator.debugPanelSeeThrough, isFalse);
+      expect(
+        find.byKey(const ValueKey('zenrouter-debug-panel-surface-false')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('mobile FAB respects safe area once (no double bottom inset)', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.padding = const FakeViewPadding(
+        left: 0,
+        top: 59,
+        right: 0,
+        bottom: 34,
+      );
+      tester.view.viewPadding = const FakeViewPadding(
+        left: 0,
+        top: 59,
+        right: 0,
+        bottom: 34,
+      );
+      addTearDown(() {
+        tester.view.resetDevicePixelRatio();
+        tester.view.resetPhysicalSize();
+        tester.view.resetPadding();
+        tester.view.resetViewPadding();
+      });
+
+      final coordinator = _LayoutTestCoordinator();
+      addTearDown(coordinator.dispose);
+
+      await tester.pumpWidget(
+        CupertinoApp(
+          home: CoordinatorView<_LayoutTestRoute>(
+            coordinator: coordinator,
+            initialUri: Uri.parse('/'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final launcher = find.byKey(const ValueKey('zenrouter-debug-launcher'));
+      final rect = tester.getRect(launcher);
+      // bottom inset (34) + launcher margin (16) = 50 from screen bottom
+      expect(rect.bottom, closeTo(844 - 34 - 16, 1));
+      expect(rect.right, closeTo(390 - 16, 1));
+      // Must not double-apply bottom (34*2 + 16 = 84)
+      expect(rect.bottom, greaterThan(844 - 84));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('mobile maximized panel respects top and bottom safe area', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.padding = const FakeViewPadding(
+        left: 0,
+        top: 59,
+        right: 0,
+        bottom: 34,
+      );
+      tester.view.viewPadding = const FakeViewPadding(
+        left: 0,
+        top: 59,
+        right: 0,
+        bottom: 34,
+      );
+      addTearDown(() {
+        tester.view.resetDevicePixelRatio();
+        tester.view.resetPhysicalSize();
+        tester.view.resetPadding();
+        tester.view.resetViewPadding();
+      });
+
+      final coordinator = _LayoutTestCoordinator()..toggleDebugOverlay();
+      addTearDown(coordinator.dispose);
+
+      await tester.pumpWidget(
+        CupertinoApp(
+          home: CoordinatorView<_LayoutTestRoute>(
+            coordinator: coordinator,
+            initialUri: Uri.parse('/'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final maximizeButton = find.byKey(
+        const ValueKey('zenrouter-debug-panel-maximize'),
+      );
+      await tester.tap(maximizeButton);
+      await tester.pumpAndSettle();
+
+      final panel = find.byKey(const ValueKey('zenrouter-debug-panel'));
+      final rect = tester.getRect(panel);
+      expect(rect.top, closeTo(59, 1));
+      expect(rect.bottom, closeTo(844 - 34, 1));
+      expect(rect.left, closeTo(0, 1));
+      expect(rect.right, closeTo(390, 1));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('mobile defaults to see-through and compact chrome', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(390, 844);
+      addTearDown(() {
+        tester.view.resetDevicePixelRatio();
+        tester.view.resetPhysicalSize();
+      });
+
+      final coordinator = _LayoutTestCoordinator()..toggleDebugOverlay();
+      addTearDown(coordinator.dispose);
+
+      expect(coordinator.debugPanelSeeThrough, isFalse);
+      expect(coordinator.debugPanelSeeThroughForWidth(390), isTrue);
+      expect(coordinator.debugPanelSeeThroughForWidth(1000), isFalse);
+
+      await tester.pumpWidget(
+        CupertinoApp(
+          home: CoordinatorView<_LayoutTestRoute>(
+            coordinator: coordinator,
+            initialUri: Uri.parse('/'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('zenrouter-debug-panel-surface-true')),
+        findsOneWidget,
+      );
+      expect(find.text('DevTools'), findsOneWidget);
+      expect(find.text('ZenRouter DevTools'), findsNothing);
+      expect(
+        find.byKey(const ValueKey('zenrouter-debug-tab-bar-true')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('zenrouter-debug-uri-collapsed')),
+        findsOneWidget,
+      );
+      expect(find.text('Go to…'), findsOneWidget);
+
+      await tester.tap(
+        find.byKey(const ValueKey('zenrouter-debug-uri-expand')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('zenrouter-debug-uri-expanded-true')),
+        findsOneWidget,
+      );
+      expect(find.text('Go to URI'), findsOneWidget);
+
+      await tester.tap(
+        find.byKey(const ValueKey('zenrouter-debug-uri-collapse')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('zenrouter-debug-uri-collapsed')),
+        findsOneWidget,
+      );
+
+      // Explicit toggle off sticks even on mobile.
+      coordinator.setDebugPanelSeeThrough(false);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('zenrouter-debug-panel-surface-false')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
   });
 }
 

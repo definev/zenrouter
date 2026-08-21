@@ -147,10 +147,11 @@ class _GraphModeBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final seeThrough = DebugPanelAppearance.seeThroughOf(context);
     return Container(
       height: 32,
       padding: const EdgeInsets.all(3),
-      color: DebugTheme.background,
+      color: DebugTheme.surface(DebugTheme.background, seeThrough: seeThrough),
       child: Row(
         children: [
           Expanded(
@@ -189,14 +190,21 @@ class _GraphModeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final seeThrough = DebugPanelAppearance.seeThroughOf(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: isSelected
-              ? DebugTheme.backgroundLight
-              : DebugTheme.background,
+              ? DebugTheme.surface(
+                  DebugTheme.backgroundLight,
+                  seeThrough: seeThrough,
+                )
+              : DebugTheme.surface(
+                  DebugTheme.background,
+                  seeThrough: seeThrough,
+                ),
           borderRadius: BorderRadius.circular(DebugTheme.radiusSm),
         ),
         child: Row(
@@ -265,6 +273,7 @@ class _GraphHeader extends StatelessWidget {
         ? null
         : graph.nodes[graph.activeRouteId];
     final inspectedNode = selectedNode ?? activeNode;
+    final seeThrough = DebugPanelAppearance.seeThroughOf(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(
         DebugTheme.spacingMd,
@@ -272,9 +281,12 @@ class _GraphHeader extends StatelessWidget {
         DebugTheme.spacingXs,
         DebugTheme.spacingSm,
       ),
-      decoration: const BoxDecoration(
-        color: DebugTheme.backgroundDark,
-        border: Border(bottom: BorderSide(color: DebugTheme.borderDark)),
+      decoration: BoxDecoration(
+        color: DebugTheme.surface(
+          DebugTheme.backgroundDark,
+          seeThrough: seeThrough,
+        ),
+        border: const Border(bottom: BorderSide(color: DebugTheme.borderDark)),
       ),
       child: Row(
         children: [
@@ -836,12 +848,18 @@ class _TopologyNodeFlowCanvasState extends State<_TopologyNodeFlowCanvas> {
 
   @override
   Widget build(BuildContext context) {
+    final canvasBackground = navigationNodeFlowBackgroundColor(context);
     return NavigationNodeFlowAutoFit(
       onFit: _controller.fitToView,
       child: NodeFlowEditor<_TopologyNodeData, Object?>(
         key: const ValueKey('topology-node-flow'),
         controller: _controller,
-        theme: _topologyNodeFlowTheme,
+        theme: _topologyNodeFlowTheme.copyWith(
+          backgroundColor: canvasBackground,
+          portTheme: _topologyNodeFlowTheme.portTheme.copyWith(
+            borderColor: canvasBackground,
+          ),
+        ),
         behavior: widget.isReadOnly
             ? NodeFlowBehavior.inspect
             : NodeFlowBehavior.preview,

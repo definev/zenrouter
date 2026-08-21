@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
@@ -27,6 +28,7 @@ class DebugOverlay<T extends RouteUnique> extends StatefulWidget {
 class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
   static const _desktopPanelSize = Size(420, 500);
   static const _mobilePanelHeight = 400.0;
+  static const _mobileBreakpoint = 600.0;
   static const _launcherMargin = DebugTheme.spacingLg;
 
   final TextEditingController _uriController = TextEditingController();
@@ -35,6 +37,7 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
 
   _DebugTab _selectedTab = _DebugTab.problems;
   bool _panelMaximized = false;
+  bool _uriExpanded = false;
   Alignment _launcherAlignment = Alignment.bottomRight;
   Alignment? _launcherDragStartAlignment;
   Offset? _launcherDragStartPointer;
@@ -46,6 +49,9 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
     if (widget.coordinator.routeManifest.nodes.isNotEmpty) _DebugTab.graph,
     if (widget.coordinator.debugRoutes.isNotEmpty) _DebugTab.routes,
   ];
+
+  bool _effectiveSeeThrough(BuildContext context) => widget.coordinator
+      .debugPanelSeeThroughForWidth(MediaQuery.sizeOf(context).width);
 
   void _handleUriChanged() {
     final newPath = widget.coordinator.currentUri.toString();
@@ -88,13 +94,13 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
   // ===========================================================================
 
   Widget _buildCollapsedView() {
-    final safePadding = MediaQuery.paddingOf(context);
+    final safeInsets = _overlaySafeInsets(context);
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        safePadding.left + _launcherMargin,
-        safePadding.top + _launcherMargin,
-        safePadding.right + _launcherMargin,
-        safePadding.bottom + _launcherMargin,
+        safeInsets.left + _launcherMargin,
+        safeInsets.top + _launcherMargin,
+        safeInsets.right + _launcherMargin,
+        safeInsets.bottom + _launcherMargin,
       ),
       child: SizedBox.expand(
         key: _collapsedViewportKey,
@@ -218,10 +224,11 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
               ? constraints.maxHeight
               : mediaSize.height,
         );
-        final isMobile = viewportSize.width < 600;
+        final isMobile = viewportSize.width < _mobileBreakpoint;
+        final safeInsets = _overlaySafeInsets(context);
         final panelMargin = switch ((isMobile, _panelMaximized)) {
-          (_, true) => EdgeInsets.zero,
-          (true, false) => EdgeInsets.zero,
+          (_, true) => safeInsets,
+          (true, false) => safeInsets,
           (false, false) => const EdgeInsets.all(DebugTheme.spacingLg),
         };
         final availableSize = Size(
@@ -254,23 +261,39 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
               ? constraints.maxHeight
               : mediaSize.height,
         );
-        final isMobile = viewportSize.width < 600;
+        final isMobile = viewportSize.width < _mobileBreakpoint;
         final isHorizontal = direction == Axis.horizontal;
+        final safeInsets = _overlaySafeInsets(context);
+        // Flex layouts already share space with the app; only inset the panel
+        // edges that can collide with the notch / home indicator / keyboard.
+        final panelInsets = EdgeInsets.only(
+          top: isHorizontal || _panelMaximized ? safeInsets.top : 0,
+          left: isHorizontal ? 0 : safeInsets.left,
+          right: safeInsets.right,
+          bottom: safeInsets.bottom,
+        );
+        final availableSize = Size(
+          math.max(0, viewportSize.width - panelInsets.horizontal),
+          math.max(0, viewportSize.height - panelInsets.vertical),
+        );
 
         final defaultDimension = isHorizontal
             ? (isMobile
-                  ? viewportSize.width
-                  : math.min(460.0, math.max(340.0, viewportSize.width * 0.45)))
+                  ? availableSize.width
+                  : math.min(
+                      460.0,
+                      math.max(340.0, availableSize.width * 0.45),
+                    ))
             : (isMobile
                   ? _mobilePanelHeight
                   : math.min(
                       380.0,
-                      math.max(240.0, viewportSize.height * 0.45),
+                      math.max(240.0, availableSize.height * 0.45),
                     ));
 
         final panel = _ResizableFlexDebugPanel(
           direction: direction,
-          availableSize: viewportSize,
+          availableSize: availableSize,
           defaultDimension: defaultDimension,
           maximized: _panelMaximized,
           child: _buildPanelContainer(
@@ -282,13 +305,31 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
           ),
         );
 
+        Widget positioned = panel;
         if (isHorizontal && constraints.hasBoundedWidth) {
-          return Align(alignment: Alignment.centerRight, child: panel);
+          positioned = Align(alignment: Alignment.centerRight, child: panel);
         } else if (!isHorizontal && constraints.hasBoundedHeight) {
-          return Align(alignment: Alignment.bottomCenter, child: panel);
+          positioned = Align(alignment: Alignment.bottomCenter, child: panel);
         }
-        return panel;
+
+        if (panelInsets == EdgeInsets.zero) return positioned;
+        return Padding(padding: panelInsets, child: positioned);
       },
+    );
+  }
+
+  /// Notch / home-indicator / keyboard insets for the overlay chrome.
+  ///
+  /// Prefer [MediaQuery.viewPadding] so the home indicator is still respected
+  /// while the keyboard is open ([MediaQuery.padding] bottom collapses to 0).
+  EdgeInsets _overlaySafeInsets(BuildContext context) {
+    final viewPadding = MediaQuery.viewPaddingOf(context);
+    final viewInsets = MediaQuery.viewInsetsOf(context);
+    return EdgeInsets.only(
+      top: viewPadding.top,
+      left: viewPadding.left,
+      right: viewPadding.right,
+      bottom: viewInsets.bottom > 0 ? viewInsets.bottom : viewPadding.bottom,
     );
   }
 
@@ -297,52 +338,83 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
     required bool isMobile,
     BoxBorder? border,
   }) {
-    return Container(
+    final seeThrough = _effectiveSeeThrough(context);
+    final compact = isMobile;
+    final radius = BorderRadius.circular(
+      isFloating && !isMobile && !_panelMaximized ? DebugTheme.radiusLg : 0,
+    );
+    final panel = Container(
+      key: ValueKey('zenrouter-debug-panel-surface-$seeThrough'),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: DebugTheme.background,
-        borderRadius: BorderRadius.circular(
-          isFloating && !isMobile && !_panelMaximized ? DebugTheme.radiusLg : 0,
+        color: DebugTheme.surface(
+          DebugTheme.background,
+          seeThrough: seeThrough,
         ),
+        borderRadius: radius,
         border: border ?? Border.all(color: DebugTheme.border),
         boxShadow: isFloating
             ? [
                 BoxShadow(
-                  color: const Color(0xFF000000).withAlpha(50),
+                  color: const Color(
+                    0xFF000000,
+                  ).withAlpha(seeThrough ? 28 : 50),
                   blurRadius: 24,
                   offset: const Offset(0, 8),
                 ),
               ]
             : null,
       ),
-      child: Column(
-        children: [
-          _buildHeader(),
-          const _Divider(),
-          _buildTabBar(),
-          const _Divider(),
-          Expanded(
-            child: switch (_selectedTab) {
-              _DebugTab.problems => ProblemsTab<T>(
-                coordinator: widget.coordinator,
+      child: DebugPanelAppearance(
+        seeThrough: seeThrough,
+        child: Column(
+          children: [
+            _buildHeader(compact: compact),
+            const _Divider(),
+            _buildTabBar(compact: compact),
+            const _Divider(),
+            Expanded(
+              child: ColoredBox(
+                color: DebugTheme.surface(
+                  DebugTheme.background,
+                  seeThrough: seeThrough,
+                ),
+                child: switch (_selectedTab) {
+                  _DebugTab.problems => ProblemsTab<T>(
+                    coordinator: widget.coordinator,
+                  ),
+                  _DebugTab.inspect => PathListView<T>(
+                    coordinator: widget.coordinator,
+                  ),
+                  _DebugTab.active => ActiveLayoutsListView<T>(
+                    coordinator: widget.coordinator,
+                  ),
+                  _DebugTab.graph => NavigationGraphTab<T>(
+                    coordinator: widget.coordinator,
+                  ),
+                  _DebugTab.routes => DebugRoutesListView<T>(
+                    coordinator: widget.coordinator,
+                  ),
+                },
               ),
-              _DebugTab.inspect => PathListView<T>(
-                coordinator: widget.coordinator,
-              ),
-              _DebugTab.active => ActiveLayoutsListView<T>(
-                coordinator: widget.coordinator,
-              ),
-              _DebugTab.graph => NavigationGraphTab<T>(
-                coordinator: widget.coordinator,
-              ),
-              _DebugTab.routes => DebugRoutesListView<T>(
-                coordinator: widget.coordinator,
-              ),
-            },
-          ),
-          const _Divider(),
-          _buildInputArea(),
-        ],
+            ),
+            const _Divider(),
+            _buildInputArea(compact: compact),
+          ],
+        ),
+      ),
+    );
+
+    if (!seeThrough) return panel;
+
+    return ClipRRect(
+      borderRadius: radius,
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(
+          sigmaX: DebugTheme.seeThroughBlurSigma,
+          sigmaY: DebugTheme.seeThroughBlurSigma,
+        ),
+        child: panel,
       ),
     );
   }
@@ -351,16 +423,20 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
   // HEADER
   // ===========================================================================
 
-  Widget _buildHeader() {
+  Widget _buildHeader({required bool compact}) {
+    final seeThrough = _effectiveSeeThrough(context);
     return Container(
-      height: 40,
-      color: DebugTheme.backgroundDark,
+      height: compact ? 36 : 40,
+      color: DebugTheme.surface(
+        DebugTheme.backgroundDark,
+        seeThrough: seeThrough,
+      ),
       child: Row(
         children: [
-          const SizedBox(width: DebugTheme.spacingMd),
+          SizedBox(width: compact ? DebugTheme.spacing : DebugTheme.spacingMd),
           Container(
-            width: 7,
-            height: 7,
+            width: compact ? 6 : 7,
+            height: compact ? 6 : 7,
             decoration: const BoxDecoration(
               color: Color(0xFF10B981),
               shape: BoxShape.circle,
@@ -373,15 +449,15 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          const Expanded(
+          SizedBox(width: compact ? 6 : 8),
+          Expanded(
             child: Text(
-              'ZenRouter DevTools',
+              compact ? 'DevTools' : 'ZenRouter DevTools',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: DebugTheme.textPrimary,
-                fontSize: 12.5,
+                fontSize: compact ? 12 : 12.5,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.2,
                 decoration: TextDecoration.none,
@@ -416,10 +492,12 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
   // TAB BAR
   // ===========================================================================
 
-  Widget _buildTabBar() {
+  Widget _buildTabBar({required bool compact}) {
+    final seeThrough = _effectiveSeeThrough(context);
     return Container(
-      height: 36,
-      color: DebugTheme.background,
+      key: ValueKey('zenrouter-debug-tab-bar-$compact'),
+      height: compact ? 40 : 36,
+      color: DebugTheme.surface(DebugTheme.background, seeThrough: seeThrough),
       child: Row(
         children: [
           for (var index = 0; index < _availableTabs.length; index++) ...[
@@ -427,6 +505,8 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
             Expanded(
               child: TabButton(
                 label: _availableTabs[index].label,
+                icon: compact ? _availableTabs[index].icon : null,
+                iconOnly: compact,
                 count: _availableTabs[index] == _DebugTab.problems
                     ? widget.coordinator.problems
                     : 0,
@@ -446,17 +526,103 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
   // INPUT AREA
   // ===========================================================================
 
-  Widget _buildInputArea() {
+  Widget _buildInputArea({required bool compact}) {
+    final seeThrough = _effectiveSeeThrough(context);
+    final showExpanded = !compact || _uriExpanded;
+
+    if (compact && !showExpanded) {
+      return Container(
+        key: const ValueKey('zenrouter-debug-uri-collapsed'),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DebugTheme.spacing,
+          vertical: DebugTheme.spacingSm,
+        ),
+        color: DebugTheme.surface(
+          DebugTheme.background,
+          seeThrough: seeThrough,
+        ),
+        child: Row(
+          children: [
+            Icon(CupertinoIcons.link, size: 13, color: DebugTheme.textMuted),
+            const SizedBox(width: DebugTheme.spacingSm),
+            Expanded(
+              child: Text(
+                _uriController.text.isEmpty ? '/' : _uriController.text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: DebugTheme.textSecondary,
+                  fontSize: DebugTheme.fontSizeMd,
+                  fontFamily: 'monospace',
+                  decoration: TextDecoration.none,
+                ),
+              ),
+            ),
+            const SizedBox(width: DebugTheme.spacingSm),
+            SizedBox(
+              width: 82,
+              child: ActionButton(
+                key: const ValueKey('zenrouter-debug-uri-expand'),
+                label: 'Go to…',
+                icon: CupertinoIcons.chevron_up,
+                color: DebugTheme.textPrimary,
+                backgroundColor: const Color(0xFF222222),
+                onTap: () => setState(() => _uriExpanded = true),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
-      padding: const EdgeInsets.all(DebugTheme.spacingMd),
-      color: DebugTheme.background,
+      key: ValueKey('zenrouter-debug-uri-expanded-$compact'),
+      padding: EdgeInsets.all(
+        compact ? DebugTheme.spacing : DebugTheme.spacingMd,
+      ),
+      color: DebugTheme.surface(DebugTheme.background, seeThrough: seeThrough),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (compact)
+            Padding(
+              padding: const EdgeInsets.only(bottom: DebugTheme.spacingSm),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Go to URI',
+                      style: TextStyle(
+                        color: DebugTheme.textMuted,
+                        fontSize: DebugTheme.fontSizeSm,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.4,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    key: const ValueKey('zenrouter-debug-uri-collapse'),
+                    onTap: () => setState(() => _uriExpanded = false),
+                    child: const Padding(
+                      padding: EdgeInsets.all(4),
+                      child: Icon(
+                        CupertinoIcons.chevron_down,
+                        size: 14,
+                        color: DebugTheme.textMuted,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Container(
             height: 36,
             decoration: BoxDecoration(
-              color: DebugTheme.backgroundDark,
+              color: DebugTheme.surface(
+                DebugTheme.backgroundDark,
+                seeThrough: seeThrough,
+              ),
               borderRadius: BorderRadius.circular(DebugTheme.radius),
               border: Border.all(color: DebugTheme.border),
             ),
@@ -490,7 +656,7 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
             children: [
               Expanded(
                 child: ActionButton(
-                  label: 'Navigate',
+                  label: compact ? 'Go' : 'Navigate',
                   icon: CupertinoIcons.arrow_right,
                   color: DebugTheme.textPrimary,
                   backgroundColor: const Color(0xFF222222),
@@ -510,7 +676,7 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
               const SizedBox(width: DebugTheme.spacing),
               Expanded(
                 child: ActionButton(
-                  label: 'Replace',
+                  label: compact ? 'Rep' : 'Replace',
                   icon: CupertinoIcons.arrow_swap,
                   color: DebugTheme.textPrimary,
                   backgroundColor: const Color(0xFF222222),
@@ -520,7 +686,7 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
               const SizedBox(width: DebugTheme.spacing),
               Expanded(
                 child: ActionButton(
-                  label: 'Recover',
+                  label: compact ? 'Rec' : 'Recover',
                   icon: CupertinoIcons.link,
                   color: DebugTheme.textPrimary,
                   backgroundColor: const Color(0xFF222222),
@@ -568,15 +734,16 @@ class _DebugOverlayState<T extends RouteUnique> extends State<DebugOverlay<T>> {
 }
 
 enum _DebugTab {
-  problems('Problems'),
-  inspect('Inspect'),
-  active('Active'),
-  graph('Graph'),
-  routes('Routes');
+  problems('Problems', CupertinoIcons.exclamationmark_triangle),
+  inspect('Inspect', CupertinoIcons.list_bullet),
+  active('Active', CupertinoIcons.square_stack_3d_up),
+  graph('Graph', CupertinoIcons.share_up),
+  routes('Routes', CupertinoIcons.map);
 
-  const _DebugTab(this.label);
+  const _DebugTab(this.label, this.icon);
 
   final String label;
+  final IconData icon;
 }
 
 class _ResizableDebugPanel extends StatefulWidget {
@@ -589,6 +756,8 @@ class _ResizableDebugPanel extends StatefulWidget {
   });
 
   static const _minimumPanelSize = Size(340, 320);
+  static const _headerDragHeight = 40.0;
+  static const _headerActionsReserve = 120.0;
 
   final Size availableSize;
   final Size defaultSize;
@@ -602,17 +771,29 @@ class _ResizableDebugPanel extends StatefulWidget {
 
 class _ResizableDebugPanelState extends State<_ResizableDebugPanel> {
   Size? _customPanelSize;
+  Offset? _customTopLeft;
   bool _resizingPanel = false;
+  bool _draggingPanel = false;
   Offset? _resizeStartPosition;
   Size? _resizeStartSize;
+  Offset? _resizeStartTopLeft;
+  Offset? _dragStartPointer;
+  Offset? _dragStartTopLeft;
 
   @override
   void didUpdateWidget(_ResizableDebugPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.maximized) {
       _resizingPanel = false;
+      _draggingPanel = false;
       _resizeStartPosition = null;
       _resizeStartSize = null;
+      _resizeStartTopLeft = null;
+      _dragStartPointer = null;
+      _dragStartTopLeft = null;
+    }
+    if (_customTopLeft != null) {
+      _customTopLeft = _clampTopLeft(_customTopLeft!);
     }
   }
 
@@ -621,6 +802,28 @@ class _ResizableDebugPanelState extends State<_ResizableDebugPanel> {
     return _clampPanelSize(
       _customPanelSize ?? widget.defaultSize,
       widget.availableSize,
+    );
+  }
+
+  Size get _freeSize {
+    final panelSize = _panelSize;
+    return Size(
+      math.max(0.0, widget.availableSize.width - panelSize.width),
+      math.max(0.0, widget.availableSize.height - panelSize.height),
+    );
+  }
+
+  Offset get _topLeft {
+    final free = _freeSize;
+    // Default to bottom-right when the user has not dragged yet.
+    return _clampTopLeft(_customTopLeft ?? Offset(free.width, free.height));
+  }
+
+  Offset _clampTopLeft(Offset requested) {
+    final free = _freeSize;
+    return Offset(
+      requested.dx.clamp(0.0, free.width),
+      requested.dy.clamp(0.0, free.height),
     );
   }
 
@@ -640,21 +843,35 @@ class _ResizableDebugPanelState extends State<_ResizableDebugPanel> {
   }
 
   void _startPanelResize(DragStartDetails details) {
+    // Pin the current origin so size changes keep the opposite corner fixed
+    // instead of re-anchoring to bottom-right on every frame.
+    _customTopLeft = _topLeft;
     _resizeStartPosition = details.globalPosition;
     _resizeStartSize = _panelSize;
+    _resizeStartTopLeft = _customTopLeft;
     setState(() => _resizingPanel = true);
   }
 
   void _updatePanelResize(DragUpdateDetails details) {
     final startPosition = _resizeStartPosition;
     final startSize = _resizeStartSize;
-    if (startPosition == null || startSize == null) return;
+    final startTopLeft = _resizeStartTopLeft;
+    if (startPosition == null || startSize == null || startTopLeft == null) {
+      return;
+    }
     final delta = details.globalPosition - startPosition;
+    final newSize = _clampPanelSize(
+      Size(startSize.width - delta.dx, startSize.height - delta.dy),
+      widget.availableSize,
+    );
+    // Top-left handle: keep the bottom-right corner fixed.
+    final newTopLeft = Offset(
+      startTopLeft.dx + startSize.width - newSize.width,
+      startTopLeft.dy + startSize.height - newSize.height,
+    );
     setState(() {
-      _customPanelSize = _clampPanelSize(
-        Size(startSize.width - delta.dx, startSize.height - delta.dy),
-        widget.availableSize,
-      );
+      _customPanelSize = newSize;
+      _customTopLeft = _clampTopLeft(newTopLeft);
     });
   }
 
@@ -664,40 +881,131 @@ class _ResizableDebugPanelState extends State<_ResizableDebugPanel> {
       _resizingPanel = false;
       _resizeStartPosition = null;
       _resizeStartSize = null;
+      _resizeStartTopLeft = null;
+    });
+  }
+
+  void _startPanelDrag(DragStartDetails details) {
+    if (widget.maximized) return;
+    _dragStartPointer = details.globalPosition;
+    _dragStartTopLeft = _topLeft;
+    setState(() => _draggingPanel = true);
+  }
+
+  void _updatePanelDrag(DragUpdateDetails details) {
+    final startPointer = _dragStartPointer;
+    final startTopLeft = _dragStartTopLeft;
+    if (startPointer == null || startTopLeft == null) return;
+    setState(() {
+      _customTopLeft = _clampTopLeft(
+        startTopLeft + (details.globalPosition - startPointer),
+      );
+    });
+  }
+
+  void _endPanelDrag() {
+    if (!_draggingPanel) return;
+    setState(() {
+      _draggingPanel = false;
+      _dragStartPointer = null;
+      _dragStartTopLeft = null;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final panelSize = _panelSize;
-    return Align(
-      alignment: Alignment.bottomRight,
-      child: Padding(
-        padding: widget.margin,
-        child: AnimatedContainer(
-          key: const ValueKey('zenrouter-debug-panel'),
-          duration: _resizingPanel
-              ? Duration.zero
-              : const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          width: panelSize.width,
-          height: panelSize.height,
-          child: Stack(
-            children: [
-              Positioned.fill(child: widget.child),
-              if (!widget.maximized)
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  child: _PanelResizeHandle(
-                    onPanStart: _startPanelResize,
-                    onPanUpdate: _updatePanelResize,
-                    onPanEnd: (_) => _endPanelResize(),
-                    onPanCancel: _endPanelResize,
-                  ),
+    final topLeft = _topLeft;
+    final animating = !_resizingPanel && !_draggingPanel;
+
+    return Padding(
+      padding: widget.margin,
+      child: SizedBox(
+        width: widget.availableSize.width,
+        height: widget.availableSize.height,
+        child: Stack(
+          clipBehavior: Clip.hardEdge,
+          children: [
+            Positioned(
+              left: topLeft.dx,
+              top: topLeft.dy,
+              width: panelSize.width,
+              height: panelSize.height,
+              child: AnimatedContainer(
+                key: const ValueKey('zenrouter-debug-panel'),
+                duration: animating
+                    ? const Duration(milliseconds: 180)
+                    : Duration.zero,
+                curve: Curves.easeOutCubic,
+                width: panelSize.width,
+                height: panelSize.height,
+                child: Stack(
+                  children: [
+                    Positioned.fill(child: widget.child),
+                    if (!widget.maximized) ...[
+                      Positioned(
+                        // Leave the top-left resize grip exclusive hit target.
+                        left: 32,
+                        top: 0,
+                        right: _ResizableDebugPanel._headerActionsReserve,
+                        height: _ResizableDebugPanel._headerDragHeight,
+                        child: _PanelDragHandle(
+                          onPanStart: _startPanelDrag,
+                          onPanUpdate: _updatePanelDrag,
+                          onPanEnd: (_) => _endPanelDrag(),
+                          onPanCancel: _endPanelDrag,
+                        ),
+                      ),
+                      Positioned(
+                        left: 0,
+                        top: 0,
+                        child: _PanelResizeHandle(
+                          onPanStart: _startPanelResize,
+                          onPanUpdate: _updatePanelResize,
+                          onPanEnd: (_) => _endPanelResize(),
+                          onPanCancel: _endPanelResize,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-            ],
-          ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PanelDragHandle extends StatelessWidget {
+  const _PanelDragHandle({
+    required this.onPanStart,
+    required this.onPanUpdate,
+    required this.onPanEnd,
+    required this.onPanCancel,
+  });
+
+  final GestureDragStartCallback onPanStart;
+  final GestureDragUpdateCallback onPanUpdate;
+  final GestureDragEndCallback onPanEnd;
+  final VoidCallback onPanCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Move debug panel',
+      child: MouseRegion(
+        cursor: SystemMouseCursors.move,
+        child: GestureDetector(
+          key: const ValueKey('zenrouter-debug-panel-drag-handle'),
+          dragStartBehavior: DragStartBehavior.down,
+          behavior: HitTestBehavior.translucent,
+          onPanStart: onPanStart,
+          onPanUpdate: onPanUpdate,
+          onPanEnd: onPanEnd,
+          onPanCancel: onPanCancel,
+          child: const SizedBox.expand(),
         ),
       ),
     );
@@ -1252,10 +1560,18 @@ class _ToolMenuButtonState extends State<_ToolMenuButton> {
               child: _ToolMenuPopup(
                 key: const ValueKey('zenrouter-debug-tool-menu-popup'),
                 currentMode: widget.coordinator.debugLayoutMode,
+                seeThrough: widget.coordinator.debugPanelSeeThroughForWidth(
+                  MediaQuery.sizeOf(context).width,
+                ),
                 onSelectMode: (mode) {
                   _closeMenu();
                   if (mounted) setState(() {});
                   widget.coordinator.setDebugLayoutMode(mode);
+                },
+                onToggleSeeThrough: (enabled) {
+                  _closeMenu();
+                  if (mounted) setState(() {});
+                  widget.coordinator.setDebugPanelSeeThrough(enabled);
                 },
               ),
             ),
@@ -1324,11 +1640,15 @@ class _ToolMenuPopup extends StatelessWidget {
   const _ToolMenuPopup({
     super.key,
     required this.currentMode,
+    required this.seeThrough,
     required this.onSelectMode,
+    required this.onToggleSeeThrough,
   });
 
   final DevToolsLayoutMode currentMode;
+  final bool seeThrough;
   final ValueChanged<DevToolsLayoutMode> onSelectMode;
+  final ValueChanged<bool> onToggleSeeThrough;
 
   @override
   Widget build(BuildContext context) {
@@ -1393,6 +1713,25 @@ class _ToolMenuPopup extends StatelessWidget {
               label: 'Dock to Bottom',
               isSelected: currentMode == DevToolsLayoutMode.column,
               onTap: () => onSelectMode(DevToolsLayoutMode.column),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(10, 10, 10, 6),
+              child: Text(
+                'APPEARANCE',
+                style: TextStyle(
+                  color: Color(0xFF737373),
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ),
+            _ToolMenuItem(
+              key: const ValueKey('zenrouter-debug-see-through'),
+              icon: CupertinoIcons.circle_lefthalf_fill,
+              label: 'See-through',
+              isSelected: seeThrough,
+              onTap: () => onToggleSeeThrough(!seeThrough),
             ),
           ],
         ),

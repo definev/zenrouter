@@ -304,7 +304,7 @@ class _PathItemView<T extends RouteUnique> extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildPathHeader(),
+          _buildPathHeader(context),
           if (path.stack.isEmpty)
             Container(
               height: 52,
@@ -327,7 +327,7 @@ class _PathItemView<T extends RouteUnique> extends StatelessWidget {
     );
   }
 
-  Widget _buildPathHeader() {
+  Widget _buildPathHeader(BuildContext context) {
     return Container(
       padding: const EdgeInsets.only(
         left: DebugTheme.spacing,
@@ -335,7 +335,12 @@ class _PathItemView<T extends RouteUnique> extends StatelessWidget {
         top: DebugTheme.spacing,
         bottom: DebugTheme.spacing,
       ),
-      color: isActive ? DebugTheme.backgroundLight : const Color(0x00000000),
+      color: isActive
+          ? DebugTheme.surface(
+              DebugTheme.backgroundLight,
+              seeThrough: DebugPanelAppearance.seeThroughOf(context),
+            )
+          : const Color(0x00000000),
       child: Row(
         children: [
           Expanded(
@@ -467,7 +472,10 @@ class _ReadOnlyRouteItemState extends State<_ReadOnlyRouteItem> {
             bottom: DebugTheme.spacingSm,
           ),
           color: widget.isRouteActive || _isHovered
-              ? DebugTheme.backgroundDark
+              ? DebugTheme.surface(
+                  DebugTheme.backgroundDark,
+                  seeThrough: DebugPanelAppearance.seeThroughOf(context),
+                )
               : const Color(0x00000000),
           child: Row(
             children: [
@@ -544,7 +552,12 @@ class _NavigationRouteItem extends StatelessWidget {
         top: DebugTheme.spacingSm,
         bottom: DebugTheme.spacingSm,
       ),
-      color: isTop ? DebugTheme.backgroundDark : const Color(0x00000000),
+      color: isTop
+          ? DebugTheme.surface(
+              DebugTheme.backgroundDark,
+              seeThrough: DebugPanelAppearance.seeThroughOf(context),
+            )
+          : const Color(0x00000000),
       child: Row(
         children: [
           Expanded(

@@ -142,10 +142,14 @@ class TabButton extends StatefulWidget {
     required this.label,
     required this.isSelected,
     required this.onTap,
+    this.icon,
+    this.iconOnly = false,
     this.count = 0,
   });
 
   final String label;
+  final IconData? icon;
+  final bool iconOnly;
   final bool isSelected;
   final VoidCallback onTap;
   final int count;
@@ -159,62 +163,87 @@ class _TabButtonState extends State<TabButton> {
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: Container(
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: widget.isSelected || _isHovered
-                ? DebugTheme.backgroundLight
-                : const Color(0x00000000),
-            border: widget.isSelected
-                ? const Border(
-                    bottom: BorderSide(color: Color(0xFFFFFFFF), width: 2),
-                  )
-                : null,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                widget.label,
-                style: TextStyle(
-                  color: widget.isSelected
-                      ? DebugTheme.textPrimary
-                      : DebugTheme.textDisabled,
-                  fontSize: DebugTheme.fontSizeMd,
-                  fontWeight: widget.isSelected
-                      ? FontWeight.w600
-                      : FontWeight.w500,
-                  decoration: TextDecoration.none,
-                ),
-              ),
-              if (widget.count > 0) ...[
-                const SizedBox(width: DebugTheme.spacingSm),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: DebugTheme.spacingXs,
-                    vertical: 1,
+    final seeThrough = DebugPanelAppearance.seeThroughOf(context);
+    return Semantics(
+      button: true,
+      selected: widget.isSelected,
+      label: widget.label,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: Container(
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: widget.isSelected || _isHovered
+                  ? DebugTheme.surface(
+                      DebugTheme.backgroundLight,
+                      seeThrough: seeThrough,
+                    )
+                  : const Color(0x00000000),
+              border: widget.isSelected
+                  ? const Border(
+                      bottom: BorderSide(color: Color(0xFFFFFFFF), width: 2),
+                    )
+                  : null,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (widget.icon != null) ...[
+                  Icon(
+                    widget.icon,
+                    size: widget.iconOnly ? 16 : 13,
+                    color: widget.isSelected
+                        ? DebugTheme.textPrimary
+                        : DebugTheme.textDisabled,
                   ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFB71C1C).withAlpha(150),
-                    borderRadius: BorderRadius.circular(DebugTheme.radiusSm),
-                  ),
-                  child: Text(
-                    widget.count.toString(),
-                    style: const TextStyle(
-                      color: Color(0xFFFFCDD2),
-                      fontSize: DebugTheme.fontSizeSm,
-                      fontWeight: FontWeight.bold,
+                  if (!widget.iconOnly)
+                    const SizedBox(width: DebugTheme.spacingXs),
+                ],
+                if (!widget.iconOnly)
+                  Text(
+                    widget.label,
+                    style: TextStyle(
+                      color: widget.isSelected
+                          ? DebugTheme.textPrimary
+                          : DebugTheme.textDisabled,
+                      fontSize: DebugTheme.fontSizeMd,
+                      fontWeight: widget.isSelected
+                          ? FontWeight.w600
+                          : FontWeight.w500,
                       decoration: TextDecoration.none,
                     ),
                   ),
-                ),
+                if (widget.count > 0) ...[
+                  SizedBox(
+                    width: widget.iconOnly
+                        ? DebugTheme.spacingXs
+                        : DebugTheme.spacingSm,
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DebugTheme.spacingXs,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFB71C1C).withAlpha(150),
+                      borderRadius: BorderRadius.circular(DebugTheme.radiusSm),
+                    ),
+                    child: Text(
+                      widget.count.toString(),
+                      style: const TextStyle(
+                        color: Color(0xFFFFCDD2),
+                        fontSize: DebugTheme.fontSizeSm,
+                        fontWeight: FontWeight.bold,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

@@ -142,8 +142,9 @@ NodeFlowTheme createNavigationNodeFlowTheme({
   required Color connectionColor,
   required Color selectedColor,
   required ConnectionEndPoint endPoint,
+  Color? backgroundColor,
 }) => NodeFlowTheme.dark.copyWith(
-  backgroundColor: DebugTheme.background,
+  backgroundColor: backgroundColor ?? DebugTheme.background,
   nodeTheme: NodeTheme.dark.copyWith(
     backgroundColor: DebugTheme.backgroundLight,
     selectedBackgroundColor: const Color(0xFF112A46),
@@ -177,7 +178,7 @@ NodeFlowTheme createNavigationNodeFlowTheme({
     connectedColor: connectionColor,
     highlightColor: selectedColor,
     highlightBorderColor: selectedColor,
-    borderColor: DebugTheme.background,
+    borderColor: backgroundColor ?? DebugTheme.background,
     borderWidth: 1,
   ),
   labelTheme: LabelTheme.dark.copyWith(
@@ -201,6 +202,13 @@ NodeFlowTheme createNavigationNodeFlowTheme({
     thickness: 0.8,
   ),
 );
+
+/// Canvas fill that stays opaque normally, or clears in see-through mode.
+Color navigationNodeFlowBackgroundColor(BuildContext context) {
+  return DebugPanelAppearance.seeThroughOf(context)
+      ? const Color(0x00000000)
+      : DebugTheme.background;
+}
 
 List<Port> createNavigationNodeFlowPorts(
   Size nodeSize, {
