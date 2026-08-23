@@ -86,6 +86,30 @@ class AllowPopLayoutChildRoute extends LayoutTestRoute {
   List<Object?> get props => [id];
 }
 
+class BlockingPopScopeLayoutChildRoute extends LayoutTestRoute {
+  BlockingPopScopeLayoutChildRoute({required this.onPopInvoked});
+
+  final ValueChanged<bool> onPopInvoked;
+
+  @override
+  Type get layout => AllowPopLayout;
+
+  @override
+  Uri toUri() => Uri.parse('/allow-pop/blocking');
+
+  @override
+  Widget build(covariant Coordinator coordinator, BuildContext context) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) => onPopInvoked(didPop),
+      child: const Scaffold(key: ValueKey('blocking-pop-scope-child')),
+    );
+  }
+
+  @override
+  List<Object?> get props => [onPopInvoked];
+}
+
 class NotAllowPopLayoutChildRoute extends LayoutTestRoute {
   NotAllowPopLayoutChildRoute({this.id = '1'});
   final String id;
@@ -373,6 +397,68 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const ValueKey('child-1')), findsOneWidget);
+    });
+
+    testWidgets('system back pops the deepest nested navigator first', (
+      tester,
+    ) async {
+      final coordinator = LayoutTestCoordinator();
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      coordinator.push(AllowPopLayoutChildRoute(id: '1'));
+      await tester.pumpAndSettle();
+      coordinator.push(AllowPopLayoutChildRoute(id: '2'));
+      await tester.pumpAndSettle();
+
+      final rootLength = coordinator.root.stack.length;
+      final handled = await coordinator.routerDelegate.popRoute();
+      await tester.pumpAndSettle();
+
+      expect(handled, isTrue);
+      expect(coordinator.root.stack, hasLength(rootLength));
+      expect(coordinator.allowPopPath.stack, hasLength(1));
+      expect(find.byKey(const ValueKey('child-1')), findsOneWidget);
+    });
+
+    testWidgets('nested PopScope can consume system back', (tester) async {
+      final coordinator = LayoutTestCoordinator();
+      final popResults = <bool>[];
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      coordinator.push(AllowPopLayoutChildRoute(id: '1'));
+      await tester.pumpAndSettle();
+      coordinator.push(
+        BlockingPopScopeLayoutChildRoute(
+          onPopInvoked: (didPop) => popResults.add(didPop),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final rootLength = coordinator.root.stack.length;
+      final nestedLength = coordinator.allowPopPath.stack.length;
+      final handled = await coordinator.routerDelegate.popRoute();
+      await tester.pumpAndSettle();
+
+      expect(handled, isTrue);
+      expect(popResults, [isFalse]);
+      expect(coordinator.root.stack, hasLength(rootLength));
+      expect(coordinator.allowPopPath.stack, hasLength(nestedLength));
+      expect(
+        find.byKey(const ValueKey('blocking-pop-scope-child')),
+        findsOneWidget,
+      );
     });
 
     test('CoordinatorLayout table sharing with RouteModule', () {

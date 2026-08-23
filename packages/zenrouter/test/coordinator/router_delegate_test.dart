@@ -76,6 +76,27 @@ class GuardedRoute extends AppRoute with RouteGuard {
   List<Object?> get props => [allowPop];
 }
 
+class PopScopeRoute extends AppRoute {
+  PopScopeRoute({required this.onPopInvoked});
+
+  final ValueChanged<bool> onPopInvoked;
+
+  @override
+  Uri toUri() => Uri.parse('/pop-scope');
+
+  @override
+  Widget build(covariant TestCoordinator coordinator, BuildContext context) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) => onPopInvoked(didPop),
+      child: const Scaffold(body: Text('Pop scope')),
+    );
+  }
+
+  @override
+  List<Object?> get props => [onPopInvoked];
+}
+
 class DeepLinkRoute extends AppRoute with RouteDeepLink {
   DeepLinkRoute(this.path);
   final String path;
@@ -287,6 +308,32 @@ void main() {
       expect(coordinator.root.stack.length, 2);
       expect(coordinator.root.stack.last, isA<SettingsRoute>());
       expect(find.text('Settings'), findsOneWidget);
+    });
+
+    testWidgets('popRoute lets the current PopScope consume back', (
+      tester,
+    ) async {
+      final popResults = <bool>[];
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+
+      coordinator.replace(HomeRoute());
+      coordinator.push(
+        PopScopeRoute(onPopInvoked: (didPop) => popResults.add(didPop)),
+      );
+      await tester.pumpAndSettle();
+
+      final handled = await coordinator.routerDelegate.popRoute();
+      await tester.pumpAndSettle();
+
+      expect(handled, isTrue);
+      expect(popResults, [isFalse]);
+      expect(coordinator.root.stack, hasLength(2));
+      expect(find.text('Pop scope'), findsOneWidget);
     });
 
     testWidgets('Guard prevents browser back and restores URL', (tester) async {

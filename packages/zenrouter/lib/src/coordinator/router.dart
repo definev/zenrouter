@@ -64,6 +64,17 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
   @override
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
+  final Map<StackPath, GlobalKey<NavigatorState>> _pathNavigatorKeys = {};
+
+  /// Returns the stable Navigator key owned by [path].
+  ///
+  /// System back is dispatched to the deepest active path first, so nested
+  /// navigators get the same `maybePop`/`PopScope` behavior as the root path.
+  GlobalKey<NavigatorState> navigatorKeyFor(StackPath path) {
+    if (identical(path, coordinator.root)) return navigatorKey;
+    return _pathNavigatorKeys.putIfAbsent(path, GlobalKey<NavigatorState>.new);
+  }
+
   @override
   Uri? get currentConfiguration => coordinator.currentUri;
 
@@ -223,6 +234,18 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
 
   @override
   Future<bool> popRoute() async {
+    // Let the Navigator evaluate the current route's PopScope entries first.
+    // This is required for Android predictive back: WebView pages may consume
+    // the back action without changing the app route, and bypassing
+    // Navigator.maybePop() sends the request straight to the coordinator.
+    for (final path in coordinator.activePaths.reversed) {
+      final pathNavigatorKey = identical(path, coordinator.root)
+          ? navigatorKey
+          : _pathNavigatorKeys[path];
+      final navigatorResult = await pathNavigatorKey?.currentState?.maybePop();
+      if (navigatorResult == true) return true;
+    }
+
     final result = await coordinator.tryPop();
     return result ?? false;
   }
@@ -231,6 +254,7 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
   void dispose() {
     _pendingResolution?.cancel('Router delegate disposed');
     _pendingResolution = null;
+    _pathNavigatorKeys.clear();
     coordinator.removeListener(notifyListeners);
     super.dispose();
   }

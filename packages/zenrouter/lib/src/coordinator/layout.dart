@@ -49,9 +49,7 @@ kDefaultLayoutBuilderTable = Map.unmodifiable(<PathKey, RouteLayoutBuilder>{
 
     return NavigationStack(
       path: path as NavigationPath<RouteUnique>,
-      navigatorKey: layout == null
-          ? coordinator.routerDelegate.navigatorKey
-          : null,
+      navigatorKey: coordinator.routerDelegate.navigatorKeyFor(path),
       coordinator: coordinator,
       restorationId: restorationId,
       resolver: (route) {

@@ -1,3 +1,12 @@
+## Unreleased
+
+### 🐛 Fixes
+
+- **System back handling**: `CoordinatorRouterDelegate.popRoute()` now dispatches
+  back through the deepest active `Navigator` via `maybePop()` before falling back
+  to the coordinator stack, ensuring that nested navigators and `PopScope` can
+  handle back requests before the application route is popped.
+
 ## 3.0.0-beta.1
 
 Prerelease for early testers. APIs may still change before 3.0.0.
