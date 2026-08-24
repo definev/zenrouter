@@ -64,36 +64,45 @@ class RootLayoutBuilder extends StatelessWidget {
                 onGithub: _openGithub,
               ),
               Expanded(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      maxWidth: _docsShellMaxWidth,
-                    ),
-                    child: DecoratedBox(
-                      decoration: const BoxDecoration(
-                        color: AppTheme.paper,
-                        border: Border(
-                          left: BorderSide(color: AppTheme.divider),
-                          right: BorderSide(color: AppTheme.divider),
+                child: ListenableBuilder(
+                  listenable: coordinator,
+                  child: child,
+                  builder: (context, child) {
+                    final currentPath = coordinator.currentUri.path;
+                    final showSidebar =
+                        width >= 960 &&
+                        (currentPath == '/docs' ||
+                            currentPath.startsWith('/docs/'));
+
+                    return Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          maxWidth: _docsShellMaxWidth,
+                        ),
+                        child: DecoratedBox(
+                          decoration: const BoxDecoration(
+                            color: AppTheme.paper,
+                            border: Border(
+                              left: BorderSide(color: AppTheme.divider),
+                              right: BorderSide(color: AppTheme.divider),
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (showSidebar)
+                                _DocsSidebar(
+                                  currentPath: currentPath,
+                                  onOpen: (chapter) =>
+                                      _openChapter(coordinator, chapter),
+                                ),
+                              Expanded(child: child!),
+                            ],
+                          ),
                         ),
                       ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (width >= 960)
-                            ListenableBuilder(
-                              listenable: coordinator,
-                              builder: (context, child) => _DocsSidebar(
-                                currentPath: coordinator.currentUri.path,
-                                onOpen: (chapter) =>
-                                    _openChapter(coordinator, chapter),
-                              ),
-                            ),
-                          Expanded(child: child),
-                        ],
-                      ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
               ),
             ],
@@ -198,41 +207,6 @@ class _DocsHeader extends StatelessWidget {
                     ),
                   ],
                   const Spacer(),
-                  if (!compact)
-                    _HeaderLink(
-                      label: 'Browse all documentation chapters',
-                      onPress: onContents,
-                      child: Container(
-                        height: 36,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: AppTheme.codeBackground,
-                          border: Border.all(color: AppTheme.divider),
-                          borderRadius: BorderRadius.circular(7),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              FLucideIcons.listTree,
-                              size: 15,
-                              color: AppTheme.mutedInk,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Browse 20 chapters',
-                              style: AppTypography.sans(
-                                fontSize: 12,
-                                color: AppTheme.mutedInk,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  const SizedBox(width: 16),
-                  _EditionBadge(compact: compact),
-                  const SizedBox(width: 12),
                   _HeaderLink(
                     label: 'GitHub repository',
                     onPress: onGithub,
@@ -264,94 +238,36 @@ class _DocsHeader extends StatelessWidget {
   }
 }
 
-class _DocsSidebar extends StatefulWidget {
+class _DocsSidebar extends StatelessWidget {
   const _DocsSidebar({required this.currentPath, required this.onOpen});
 
   final String currentPath;
   final ValueChanged<BookChapter> onOpen;
 
   @override
-  State<_DocsSidebar> createState() => _DocsSidebarState();
-}
-
-class _DocsSidebarState extends State<_DocsSidebar> {
-  String _query = '';
-
-  List<BookChapter> get _matches {
-    if (_query.isEmpty) return bookChapters;
-    return bookChapters.where((chapter) {
-      final searchable =
-          '${chapter.number} ${chapter.part} ${chapter.title} '
-                  '${chapter.outcome}'
-              .toLowerCase();
-      return searchable.contains(_query);
-    }).toList();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final matches = _matches;
-
     return Container(
       width: 272,
       decoration: const BoxDecoration(
         color: AppTheme.sidebar,
         border: Border(right: BorderSide(color: AppTheme.divider)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 20, 18, 14),
-            child: FTextField(
-              size: FTextFieldSizeVariant.sm,
-              hint: 'Filter chapters',
-              prefixBuilder: (context, style, variants) =>
-                  FTextField.prefixIconBuilder(
-                    context,
-                    style,
-                    variants,
-                    const Icon(FLucideIcons.search, size: 15),
-                  ),
-              clearable: (value) => value.text.isNotEmpty,
-              control: FTextFieldControl.managed(
-                onChange: (value) =>
-                    setState(() => _query = value.text.trim().toLowerCase()),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(12, 14, 12, 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final part in bookParts)
+              _SidebarPart(
+                part: part,
+                chapters: bookChapters
+                    .where((chapter) => chapter.part == part)
+                    .toList(),
+                currentPath: currentPath,
+                onOpen: onOpen,
               ),
-            ),
-          ),
-          Expanded(
-            child: matches.isEmpty
-                ? Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Text(
-                      'No chapters match “$_query”.',
-                      style: AppTypography.sans(
-                        fontSize: 13,
-                        color: AppTheme.mutedInk,
-                      ),
-                    ),
-                  )
-                : SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(12, 4, 12, 32),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        for (final part in bookParts)
-                          if (matches.any((chapter) => chapter.part == part))
-                            _SidebarPart(
-                              part: part,
-                              chapters: matches
-                                  .where((chapter) => chapter.part == part)
-                                  .toList(),
-                              currentPath: widget.currentPath,
-                              onOpen: widget.onOpen,
-                            ),
-                      ],
-                    ),
-                  ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -442,32 +358,6 @@ class _SidebarChapter extends StatelessWidget {
             fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
             color: selected ? AppTheme.primary : AppTheme.ink,
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _EditionBadge extends StatelessWidget {
-  const _EditionBadge({required this.compact});
-
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(
-        color: AppTheme.gold.withValues(alpha: 0.16),
-        border: Border.all(color: AppTheme.gold.withValues(alpha: 0.5)),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        compact ? '3.0' : 'v3.0 beta',
-        style: AppTypography.sans(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: const Color(0xFF8A5A00),
         ),
       ),
     );

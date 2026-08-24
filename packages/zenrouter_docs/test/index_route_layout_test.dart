@@ -19,7 +19,8 @@ void main() {
   ) async {
     await _pumpIndex(tester, const Size(600, 800));
 
-    expect(find.text('Navigation that\nstays in sync.'), findsOneWidget);
+    expect(find.text('Navigation as\na typed graph.'), findsOneWidget);
+    expect(find.textContaining('3.0 BETA'), findsNothing);
     expect(find.text('Orient'), findsOneWidget);
     expect(
       find.text('Get a URL-aware route on screen in 20 minutes.'),

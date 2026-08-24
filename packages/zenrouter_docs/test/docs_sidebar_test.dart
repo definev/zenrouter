@@ -13,6 +13,23 @@ void main() {
     registerLoadedContent(content);
   });
 
+  testWidgets('landing page does not render documentation navigation', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1200, 800);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final coordinator = _TestDocsCoordinator()..updateCurrentPath('/');
+    addTearDown(coordinator.dispose);
+
+    await tester.pumpWidget(_testApp(coordinator));
+
+    expect(find.text('1. Start here'), findsNothing);
+    expect(find.text('Filter chapters'), findsNothing);
+  });
+
   testWidgets('sidebar selection follows coordinator navigation', (
     tester,
   ) async {
@@ -24,26 +41,14 @@ void main() {
     final coordinator = _TestDocsCoordinator();
     addTearDown(coordinator.dispose);
 
-    await tester.pumpWidget(
-      WidgetsApp(
-        color: AppTheme.canvas,
-        supportedLocales: FLocalizations.supportedLocales,
-        localizationsDelegates: FLocalizations.localizationsDelegates,
-        builder: (context, _) => FTheme(
-          data: AppTheme.light,
-          child: DocsTheme(
-            child: DocsCoordinatorProvider(
-              coordinator: coordinator,
-              child: const RootLayoutBuilder(child: SizedBox.expand()),
-            ),
-          ),
-        ),
-      ),
-    );
+    await tester.pumpWidget(_testApp(coordinator));
 
     coordinator.updateCurrentPath('/docs/chapter/chapter-1');
     await tester.pump();
 
+    expect(find.text('Filter chapters'), findsNothing);
+    expect(find.text('Browse 20 chapters'), findsNothing);
+    expect(find.text('v3.0 beta'), findsNothing);
     expect(_selectedChapter(tester, '1. Start here'), isTrue);
     expect(_selectedChapter(tester, '2. Choose a navigation model'), isFalse);
 
@@ -54,6 +59,21 @@ void main() {
     expect(_selectedChapter(tester, '2. Choose a navigation model'), isTrue);
   });
 }
+
+Widget _testApp(DocsCoordinator coordinator) => WidgetsApp(
+  color: AppTheme.canvas,
+  supportedLocales: FLocalizations.supportedLocales,
+  localizationsDelegates: FLocalizations.localizationsDelegates,
+  builder: (context, _) => FTheme(
+    data: AppTheme.light,
+    child: DocsTheme(
+      child: DocsCoordinatorProvider(
+        coordinator: coordinator,
+        child: const RootLayoutBuilder(child: SizedBox.expand()),
+      ),
+    ),
+  ),
+);
 
 bool _selectedChapter(WidgetTester tester, String label) {
   final selectedDecoration = find.ancestor(

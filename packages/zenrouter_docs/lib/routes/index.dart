@@ -32,7 +32,7 @@ class IndexRoute extends _$IndexRoute {
               const SizedBox(height: 56),
               const _SectionHeading(
                 eyebrow: 'LEARN THE MODEL',
-                title: 'A direct path from first route to production graph',
+                title: 'One path from first route to production graph',
                 description:
                     'Each chapter answers one decision you will make while building a real Flutter app. Start at the beginning or jump to the seam you need today.',
               ),
@@ -117,7 +117,7 @@ class _Hero extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 Text(
-                  'ZENROUTER  ·  3.0 BETA',
+                  'ZENROUTER  ·  FLUTTER NAVIGATION',
                   style: AppTypography.sans(
                     color: const Color(0xFF8ED9F5),
                     fontSize: 11,
@@ -129,7 +129,7 @@ class _Hero extends StatelessWidget {
             ),
             const SizedBox(height: 28),
             Text(
-              'Navigation that\nstays in sync.',
+              'Navigation as\na typed graph.',
               style: AppTypography.sans(
                 color: AppTheme.primaryForeground,
                 fontSize: compact ? 38 : 58,
@@ -141,7 +141,7 @@ class _Hero extends StatelessWidget {
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 630),
               child: Text(
-                'ZenRouter is a Flutter navigation library for apps whose screens, layouts, URLs, and history need to agree. Learn the typed graph, then grow it without string drift.',
+                'Keep screens, layouts, URLs, and browser history aligned through one typed graph. Start small, then grow the graph without string drift.',
                 style: AppTypography.serif(
                   color: AppTheme.primaryForeground.withValues(alpha: 0.78),
                   fontSize: compact ? 14 : 16,
@@ -156,12 +156,12 @@ class _Hero extends StatelessWidget {
               children: [
                 FButton(
                   onPress: () => coordinator.pushChapterSlug(slug: 'chapter-1'),
-                  child: const Text('Start with the graph'),
+                  child: const Text('Start reading'),
                 ),
                 FButton(
                   variant: FButtonVariant.outline,
                   onPress: coordinator.pushDocsIndex,
-                  child: const Text('Browse contents'),
+                  child: const Text('View contents'),
                 ),
               ],
             ),
@@ -436,7 +436,7 @@ class _QuickStartCard extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                'Install the beta, define a manifest, bind a typed target, then open `/articles/42` directly in your browser.',
+                'Add ZenRouter, define a manifest, bind a typed target, then open `/articles/42` directly in your browser.',
                 style: AppTypography.serif(
                   fontSize: 13,
                   height: 1.7,
