@@ -1,8 +1,5 @@
 name: zenrouter_docs
-description: >
-  An interactive documentation application for ZenRouter - teaching the Coordinator 
-  pattern and file-based routing by embodying these patterns in its own architecture.
-  Written in the thoughtful prose style of Trollope and Knuth.
+description: A guided technical book for learning ZenRouter 3.
 publish_to: 'none'
 version: 0.1.0+1
 
@@ -14,6 +11,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
+  # Platform-agnostic UI foundation
+  forui: ^0.25.0
   
   # ZenRouter ecosystem
   zenrouter:
@@ -25,9 +25,6 @@ dependencies:
   # URL launcher for external links
   url_launcher: ^6.2.0
   
-  # Google Fonts for literary aesthetic
-  google_fonts: ^6.2.1
-  
   # Markdown rendering for documentation
   flutter_markdown_plus: ^1.0.7
   markdown: ^7.3.0
@@ -35,9 +32,6 @@ dependencies:
   # SEO for web
   meta_seo: ^3.0.9
   dynamic_path_url_strategy: ^1.0.0
-
-  # Sliver tools for multi-sliver support
-  sliver_tools: ^0.2.12
 
 dev_dependencies:
   flutter_test:
@@ -52,11 +46,10 @@ dev_dependencies:
   icons_launcher: ^3.0.3
 
 flutter:
-  uses-material-design: true
-  
   assets:
     - assets/logo_dark.png
     - assets/logo_light.png
+    - assets/content/
 
 icons_launcher:
   image_path: "assets/logo_light.png"

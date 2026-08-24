@@ -1,81 +1,73 @@
-/// # Welcome to ZenRouter
-///
-/// This is the landing page - the first thing our reader encounters.
-/// Like the opening chapter of a well-crafted novel, it must accomplish
-/// several things at once: orient the reader, establish tone, and
-/// promise the value to come.
 library;
 
-import 'package:flutter/material.dart';
-import 'package:zenrouter_docs/widgets/mardown_section.dart';
-import 'package:zenrouter_file_annotation/zenrouter_file_annotation.dart';
-
+import 'package:flutter/widgets.dart';
+import 'package:forui/forui.dart';
+import 'package:zenrouter_docs/content/book_outline.dart';
 import 'package:zenrouter_docs/routes/routes.zen.dart';
 import 'package:zenrouter_docs/theme/app_theme.dart';
+import 'package:zenrouter_file_annotation/zenrouter_file_annotation.dart';
 
 part 'index.g.dart';
 
-/// The home route, answering to `/`
-///
-/// Here we welcome the reader and present the paths available to them.
-/// Each section of our documentation is a destination they may choose.
 @ZenRoute()
 class IndexRoute extends _$IndexRoute {
   @override
   Widget build(covariant DocsCoordinator coordinator, BuildContext context) {
-    final theme = Theme.of(context);
-    final docs = theme.docs;
+    final compact = MediaQuery.sizeOf(context).width < 720;
 
-    return Scaffold(
-      body: SingleChildScrollView(
-        padding: docs.contentPadding,
-        child: Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: docs.proseMaxWidth),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 48),
-
-                // ─────────────────────────────────────────────────────────────
-                // Title and Introduction
-                // ─────────────────────────────────────────────────────────────
-                Text('ZenRouter', style: theme.textTheme.displayLarge),
-                const SizedBox(height: 8),
-                Text(
-                  'The Art of Navigation in Flutter',
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    color: theme.colorScheme.primary,
-                    fontStyle: FontStyle.italic,
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+        compact ? 24 : 52,
+        56,
+        compact ? 24 : 52,
+        96,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 980),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _Hero(compact: compact, coordinator: coordinator),
+              const SizedBox(height: 56),
+              const _SectionHeading(
+                eyebrow: 'LEARN THE MODEL',
+                title: 'A direct path from first route to production graph',
+                description:
+                    'Each chapter answers one decision you will make while building a real Flutter app. Start at the beginning or jump to the seam you need today.',
+              ),
+              const SizedBox(height: 24),
+              _LearningGrid(coordinator: coordinator),
+              const SizedBox(height: 56),
+              _QuickStartCard(coordinator: coordinator),
+              const SizedBox(height: 56),
+              const _SectionHeading(
+                eyebrow: 'REFERENCE',
+                title: 'Keep the contracts close',
+                description:
+                    'The same site also gives you the generated route graph, package boundaries, and runnable examples to verify a detail when the tutorial is not enough.',
+              ),
+              const SizedBox(height: 22),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  _ReferenceChip(
+                    icon: FLucideIcons.bookOpen,
+                    label: 'Browse all chapters',
+                    onPress: coordinator.pushDocsIndex,
                   ),
-                ),
-                const SizedBox(height: 32),
-
-                const MarkdownSection(
-                  markdown: '''
-Hello there!,
-
-You have arrived at the documentation for `ZenRouter`, a navigation library that solves every navigation problem in Flutter.
-
-This documentation is itself built with ZenRouter's Coordinator pattern and file-based routing. As you navigate these pages, you are experiencing the very system we document. The routes you traverse, the layouts that wrap them, the URIs in your address bar - all are demonstrations of the principles explained herein.
-
-We shall begin with the Three Paradigms, for one cannot appreciate a solution without understanding the problem it solves.
-''',
-                ),
-
-                const SizedBox(height: 48),
-
-                // ─────────────────────────────────────────────────────────────
-                // Navigation Links
-                // ─────────────────────────────────────────────────────────────
-                const Divider(),
-                const SizedBox(height: 24),
-
-                buildNavigationList(context, coordinator),
-
-                const SizedBox(height: 64),
-              ],
-            ),
+                  const _ReferenceChip(
+                    icon: FLucideIcons.box,
+                    label: 'Packages: zenrouter · core · devtools',
+                  ),
+                  const _ReferenceChip(
+                    icon: FLucideIcons.flaskConical,
+                    label: 'Examples and tested contracts',
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
@@ -83,151 +75,460 @@ We shall begin with the Three Paradigms, for one cannot appreciate a solution wi
   }
 }
 
-Widget buildNavigationList(BuildContext context, DocsCoordinator coordinator) {
-  final items = [
-    NavigationItem(
-      icon: Icons.route,
-      title: 'The Three Paradigms',
-      description:
-          'Imperative, Declarative, and Coordinator - understand when to use each approach.',
-      onTap: () => coordinator.pushImperative(),
-      color: const Color(0xFF1A5F7A),
-    ),
-    NavigationItem(
-      icon: Icons.account_tree,
-      title: 'Core Concepts',
-      description:
-          'Routes, Paths, and the Stack - the fundamental building blocks.',
-      onTap: () => coordinator.pushRoutesAndPaths(),
-      color: const Color(0xFF9B6B3D),
-    ),
-    NavigationItem(
-      icon: Icons.pattern,
-      title: 'Patterns',
-      description:
-          'Layouts, Guards, Deep Linking - practical patterns for real applications.',
-      onTap: () => coordinator.pushLayouts(),
-      color: const Color(0xFF6B5B95),
-    ),
-    NavigationItem(
-      icon: Icons.folder_special,
-      title: 'File-Based Routing',
-      description:
-          'Let your file structure define your routes - zero boilerplate.',
-      onTap: () => coordinator.pushGettingStarted(),
-      color: const Color(0xFF88B04B),
-    ),
-    NavigationItem(
-      icon: Icons.play_circle_outline,
-      title: 'Live Examples',
-      description: 'Interactive demonstrations you can explore and modify.',
-      onTap: () => coordinator.pushExamplesSlug(slug: 'basic-navigation'),
-      color: const Color(0xFFDD4124),
-    ),
-  ];
+class _Hero extends StatelessWidget {
+  const _Hero({required this.compact, required this.coordinator});
 
-  return Column(
-    spacing: 8,
-    children: items.map((item) => NavigationLink(item: item)).toList(),
-  );
-}
-
-/// A navigation item definition
-class NavigationItem {
-  const NavigationItem({
-    required this.icon,
-    required this.title,
-    required this.description,
-    required this.onTap,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String title;
-  final String description;
-  final VoidCallback onTap;
-  final Color color;
-}
-
-/// A clickable navigation link without card styling
-class NavigationLink extends StatefulWidget {
-  const NavigationLink({super.key, required this.item});
-
-  final NavigationItem item;
-
-  @override
-  State<NavigationLink> createState() => _NavigationLinkState();
-}
-
-class _NavigationLinkState extends State<NavigationLink> {
-  bool _isHovered = false;
+  final bool compact;
+  final DocsCoordinator coordinator;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final item = widget.item;
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: InkWell(
-        onTap: item.onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.only(
-            left: 8,
-            right: 16,
-            top: 16,
-            bottom: 16,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.bookBlack,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.bookBlack.withValues(alpha: 0.18),
+            blurRadius: 30,
+            offset: const Offset(0, 16),
           ),
-          decoration: BoxDecoration(
-            color: _isHovered
-                ? theme.colorScheme.primary.withValues(alpha: 0.05)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: 16,
-            children: [
-              // Icon
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: item.color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          compact ? 24 : 48,
+          compact ? 28 : 42,
+          compact ? 24 : 48,
+          compact ? 26 : 42,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 9,
+                  height: 9,
+                  decoration: BoxDecoration(
+                    color: AppTheme.gold,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
                 ),
-                child: Icon(item.icon, color: item.color, size: 24),
+                const SizedBox(width: 10),
+                Text(
+                  'ZENROUTER  ·  3.0 BETA',
+                  style: AppTypography.sans(
+                    color: const Color(0xFF8ED9F5),
+                    fontSize: 11,
+                    letterSpacing: 1.6,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 28),
+            Text(
+              'Navigation that\nstays in sync.',
+              style: AppTypography.sans(
+                color: AppTheme.primaryForeground,
+                fontSize: compact ? 38 : 58,
+                height: 1.02,
+                fontWeight: FontWeight.w300,
               ),
-              // Content
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.title,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: _isHovered ? theme.colorScheme.primary : null,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      item.description,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.7,
-                        ),
-                      ),
-                    ),
-                  ],
+            ),
+            const SizedBox(height: 18),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 630),
+              child: Text(
+                'ZenRouter is a Flutter navigation library for apps whose screens, layouts, URLs, and history need to agree. Learn the typed graph, then grow it without string drift.',
+                style: AppTypography.serif(
+                  color: AppTheme.primaryForeground.withValues(alpha: 0.78),
+                  fontSize: compact ? 14 : 16,
+                  height: 1.75,
+                ),
+              ),
+            ),
+            const SizedBox(height: 28),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                FButton(
+                  onPress: () => coordinator.pushChapterSlug(slug: 'chapter-1'),
+                  child: const Text('Start with the graph'),
+                ),
+                FButton(
+                  variant: FButtonVariant.outline,
+                  onPress: coordinator.pushDocsIndex,
+                  child: const Text('Browse contents'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 30),
+            Text(
+              'RouteManifest  →  match  →  RouteBinding  →  StackPath  →  commit',
+              style: AppTypography.mono(
+                color: const Color(0xFF8ED9F5).withValues(alpha: 0.82),
+                fontSize: compact ? 10 : 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionHeading extends StatelessWidget {
+  const _SectionHeading({
+    required this.eyebrow,
+    required this.title,
+    required this.description,
+  });
+
+  final String eyebrow;
+  final String title;
+  final String description;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          eyebrow,
+          style: AppTypography.sans(
+            color: AppTheme.primary,
+            fontSize: 11,
+            letterSpacing: 1.4,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          title,
+          style: AppTypography.sans(
+            color: AppTheme.ink,
+            fontSize: 28,
+            height: 1.2,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 10),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Text(
+            description,
+            style: AppTypography.serif(
+              color: AppTheme.mutedInk,
+              fontSize: 14,
+              height: 1.75,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LearningGrid extends StatelessWidget {
+  const _LearningGrid({required this.coordinator});
+
+  final DocsCoordinator coordinator;
+
+  @override
+  Widget build(BuildContext context) {
+    final cards = [
+      _LearningCardData(
+        number: '01',
+        title: 'Orient',
+        body: 'Choose a model and understand the route graph in one screen.',
+        chapter: bookChapters[0],
+        icon: FLucideIcons.compass,
+      ),
+      _LearningCardData(
+        number: '02',
+        title: 'Build',
+        body:
+            'Create a typed home route, a parameterized detail route, and a URL contract.',
+        chapter: bookChapters[3],
+        icon: FLucideIcons.hammer,
+      ),
+      _LearningCardData(
+        number: '03',
+        title: 'Scale',
+        body: 'Model tabs, policies, restoration, modules, and testable seams.',
+        chapter: bookChapters[6],
+        icon: FLucideIcons.network,
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final stacked = constraints.maxWidth < 700;
+        Widget cardAt(int index) => _LearningCard(
+          data: cards[index],
+          onPress: () => coordinator.pushChapterSlug(
+            slug: cards[index].chapter.routePath.split('/').last,
+          ),
+        );
+
+        if (stacked) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var index = 0; index < cards.length; index++) ...[
+                if (index > 0) const SizedBox(height: 12),
+                cardAt(index),
+              ],
+            ],
+          );
+        }
+
+        return IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var index = 0; index < cards.length; index++) ...[
+                if (index > 0) const SizedBox(width: 12),
+                Expanded(child: cardAt(index)),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _LearningCardData {
+  const _LearningCardData({
+    required this.number,
+    required this.title,
+    required this.body,
+    required this.chapter,
+    required this.icon,
+  });
+
+  final String number;
+  final String title;
+  final String body;
+  final BookChapter chapter;
+  final IconData icon;
+}
+
+class _LearningCard extends StatelessWidget {
+  const _LearningCard({required this.data, required this.onPress});
+
+  final _LearningCardData data;
+  final VoidCallback onPress;
+
+  @override
+  Widget build(BuildContext context) {
+    return FTappable.static(
+      semanticsLabel: 'Open ${data.title}: ${data.chapter.title}',
+      onPress: onPress,
+      behavior: HitTestBehavior.opaque,
+      builder: (context, states, child) => AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: states.contains(FTappableVariant.hovered)
+              ? AppTheme.paleBlue
+              : AppTheme.codeBackground,
+          border: Border.all(
+            color: states.contains(FTappableVariant.hovered)
+                ? AppTheme.primary.withValues(alpha: 0.55)
+                : AppTheme.divider,
+          ),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: child,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(data.icon, size: 20, color: AppTheme.primary),
+              const Spacer(),
+              Text(
+                data.number,
+                style: AppTypography.mono(
+                  fontSize: 11,
+                  color: AppTheme.mutedInk,
                 ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 22),
+          Text(
+            data.title,
+            style: AppTypography.sans(
+              fontSize: 19,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.ink,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            data.body,
+            style: AppTypography.sans(
+              fontSize: 14,
+              height: 1.5,
+              color: AppTheme.mutedInk,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'Read chapter  →',
+            style: AppTypography.sans(
+              fontSize: 13,
+              color: AppTheme.primary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+class _QuickStartCard extends StatelessWidget {
+  const _QuickStartCard({required this.coordinator});
+
+  final DocsCoordinator coordinator;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppTheme.paleBlue,
+        border: Border.all(color: AppTheme.divider),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final stacked = constraints.maxWidth < 650;
+          final copy = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'THE FASTEST FIRST WIN',
+                style: AppTypography.sans(
+                  fontSize: 11,
+                  letterSpacing: 1.3,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.primary,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Get a URL-aware route on screen in 20 minutes.',
+                style: AppTypography.sans(
+                  fontSize: 22,
+                  height: 1.2,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.ink,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Install the beta, define a manifest, bind a typed target, then open `/articles/42` directly in your browser.',
+                style: AppTypography.serif(
+                  fontSize: 13,
+                  height: 1.7,
+                  color: AppTheme.mutedInk,
+                ),
+              ),
+              const SizedBox(height: 18),
+              FButton(
+                mainAxisSize: MainAxisSize.min,
+                onPress: () => coordinator.pushChapterSlug(slug: 'chapter-4'),
+                child: const Text('Open the install guide'),
+              ),
+            ],
+          );
+          final code = Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: AppTheme.bookBlack,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              "dependencies:\n  zenrouter: ^3.0.0-beta.1\n\nfinal uri =\n  coordinator.location.article('42');",
+              style: AppTypography.mono(
+                fontSize: 12,
+                height: 1.55,
+                color: const Color(0xFFB6E7F8),
+              ),
+            ),
+          );
+          if (stacked) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [copy, const SizedBox(height: 24), code],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(flex: 5, child: copy),
+              const SizedBox(width: 24),
+              Expanded(flex: 4, child: code),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ReferenceChip extends StatelessWidget {
+  const _ReferenceChip({required this.icon, required this.label, this.onPress});
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onPress;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(
+        color: AppTheme.paper,
+        border: Border.all(color: AppTheme.divider),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: AppTheme.primary),
+          const SizedBox(width: 9),
+          Text(
+            label,
+            style: AppTypography.sans(
+              fontSize: 13,
+              color: onPress == null ? AppTheme.mutedInk : AppTheme.primary,
+              fontWeight: onPress == null ? FontWeight.w500 : FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+    if (onPress == null) return content;
+    return FTappable.static(
+      semanticsLabel: label,
+      onPress: onPress,
+      behavior: HitTestBehavior.opaque,
+      builder: (context, states, child) => Opacity(
+        opacity: states.contains(FTappableVariant.hovered) ? 0.75 : 1,
+        child: child!,
+      ),
+      child: content,
     );
   }
 }
