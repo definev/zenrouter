@@ -83,8 +83,6 @@ class PathParser {
 
   /// Parse layout path segments (excludes dynamic parameters).
   static List<String> parseLayoutPath(String relativePath) {
-    final segments = <String>[];
-
     // Remove .dart extension and _layout, then normalize dot-notation
     var path = relativePath;
     if (path.endsWith('.dart')) {
@@ -95,14 +93,7 @@ class PathParser {
       path = path.substring(0, path.length - 8);
     }
 
-    final parts = path.split('/').where((p) => p.isNotEmpty).toList();
-
-    for (final part in parts) {
-      if (part.startsWith('_')) continue;
-      if (part.startsWith('(') && part.endsWith(')')) continue;
-      segments.add(part);
-    }
-
+    final (segments, _, _, _) = parsePath(path);
     return segments;
   }
 

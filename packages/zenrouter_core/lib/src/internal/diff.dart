@@ -238,9 +238,9 @@ List<DiffOp<T>> _backtrack<T>(
 /// to efficiently update the navigation path from the old state to the new state.
 ///
 /// The operations are processed carefully to maintain correct indices:
-/// - If both deletes and inserts exist, we rebuild the stack once
+/// - If both deletes and inserts exist, we replace the stack atomically
 /// - Deletes alone are processed from highest to lowest index
-/// - Inserts alone are processed by building a new stack
+/// - Inserts alone are applied as one atomic replacement
 /// - Keeps are no-ops
 void applyDiff<T extends RouteTarget>(
   StackMutatable<T> path,
@@ -289,11 +289,7 @@ void applyDiff<T extends RouteTarget>(
       }
     }
 
-    // Rebuild the path once
-    path.reset();
-    for (final route in stackList) {
-      path.push(route);
-    }
+    path.replaceAll(stackList);
   } else if (deletes.isNotEmpty) {
     // Only deletes: process in reverse order to avoid index shifting
     deletes.sort((a, b) => b.oldIndex.compareTo(a.oldIndex));
@@ -314,10 +310,6 @@ void applyDiff<T extends RouteTarget>(
       }
     }
 
-    // Rebuild the path once
-    path.reset();
-    for (final route in stackList) {
-      path.push(route);
-    }
+    path.replaceAll(stackList);
   }
 }

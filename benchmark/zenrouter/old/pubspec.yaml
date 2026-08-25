@@ -1,0 +1,13 @@
+name: zenrouter_benchmark_old
+publish_to: none
+
+environment:
+  sdk: ^3.8.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # zenrouter 2.2.0 resolves zenrouter_core 2.1.0. Both are pinned so a future
+  # pub solve cannot silently change the implementation under test.
+  zenrouter: 2.2.0
+  zenrouter_core: 2.1.0

@@ -37,6 +37,10 @@ enum LayoutType {
   /// Index-based navigation for tabs/drawers.
   /// Uses IndexedStackPath internally.
   indexed,
+
+  /// Fixed layout branches with an independent navigation stack per branch.
+  /// Uses BranchedStackPath internally.
+  branched,
 }
 
 /// Marks a class as a route in the file-based routing system.
@@ -207,6 +211,32 @@ class ZenRoute {
 ///   }
 /// }
 /// ```
+///
+/// ## Branched Layout (BranchedStackPath)
+///
+/// For stateful shells where every branch preserves its own navigation stack:
+///
+/// ```dart
+/// // lib/routes/tabs/_layout.dart
+/// @ZenLayout(
+///   type: LayoutType.branched,
+///   branches: [FeedLayout, ProfileLayout, SettingsLayout],
+/// )
+/// class TabsLayout extends _$TabsLayout {
+///   @override
+///   Widget build(AppCoordinator coordinator, BuildContext context) {
+///     final path = resolvePath(coordinator);
+///     return Scaffold(
+///       body: buildPath(coordinator),
+///       bottomNavigationBar: NavigationBar(
+///         selectedIndex: path.activeBranchIndex,
+///         onDestinationSelected: path.goToBranch,
+///         destinations: [...],
+///       ),
+///     );
+///   }
+/// }
+/// ```
 class ZenLayout {
   /// The type of navigation path this layout manages.
   final LayoutType type;
@@ -217,8 +247,16 @@ class ZenLayout {
   /// Only used when [type] is [LayoutType.indexed].
   final List<Type>? routes;
 
+  /// For branched layouts, the branch layout types in display order.
+  ///
+  /// Every entry must be a direct child layout of this layout. Each branch
+  /// layout resolves its own StackPath, so switching branches preserves the
+  /// navigation depth of every branch.
+  /// Only used when [type] is [LayoutType.branched].
+  final List<Type>? branches;
+
   /// Creates a layout annotation.
-  const ZenLayout({required this.type, this.routes});
+  const ZenLayout({required this.type, this.routes, this.branches});
 }
 
 /// Configuration for the generated Coordinator.

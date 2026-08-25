@@ -1056,8 +1056,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // Trigger deep link with replace
-      await coordinator.recoverRouteFromUri(
-        Uri.parse('/deeplink/789?strategy=replace'),
+      await coordinator.recover(
+        coordinator.parseRouteFromUri(
+          Uri.parse('/deeplink/789?strategy=replace'),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -1237,9 +1239,7 @@ void main() {
       );
     });
 
-    testWidgets('recoverRouteFromUri navigates to parsed route', (
-      tester,
-    ) async {
+    testWidgets('recoverUri navigates to parsed route', (tester) async {
       final coordinator = TestCoordinator();
 
       await tester.pumpWidget(
@@ -1250,7 +1250,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await coordinator.recoverRouteFromUri(Uri.parse('/profile/999'));
+      await coordinator.recover(
+        coordinator.parseRouteFromUri(Uri.parse('/profile/999')),
+      );
       await tester.pumpAndSettle();
 
       expect(find.byKey(const ValueKey('profile-999')), findsOneWidget);

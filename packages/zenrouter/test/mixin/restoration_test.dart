@@ -110,7 +110,8 @@ class UniqueRestorableRoute extends TestRoute
 // Coordinator for testing
 class TestCoordinator extends Coordinator<TestRoute> {
   @override
-  void defineConverter() {
+  void init() {
+    super.init();
     defineRestorableConverter(
       'test_complex_route',
       () => const ComplexRouteConverter(),

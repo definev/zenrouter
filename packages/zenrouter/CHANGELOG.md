@@ -1,3 +1,103 @@
+## Unreleased
+
+### 🐛 Fixes
+
+- **System back handling**: `CoordinatorRouterDelegate.popRoute()` now dispatches
+  back through the deepest active `Navigator` via `maybePop()` before falling back
+  to the coordinator stack, ensuring that nested navigators and `PopScope` can
+  handle back requests before the application route is popped.
+
+## 3.0.0-beta.1
+
+Prerelease for early testers. APIs may still change before 3.0.0.
+
+### ⚠️ Breaking Changes
+
+- **Coordinator capability mixins live in `zenrouter_core` 3.0.0-beta.1.** Flutter
+  `Coordinator` still composes the full set (`LayoutCore` + `Navigatable` +
+  `Mutatable` + `Recoverable` + Flutter `CoordinatorLayout`). Apps that only
+  extend `Coordinator` are unaffected.
+
+- **`Coordinator.pushOrMoveToTop` returns `Future<void>`** (was incorrectly
+  typed as `void` while being `async`). Call sites that ignored the return
+  value keep working; prefer `await` when sequencing.
+
+- **`PageCallback` receives `LocalKey`** instead of `ValueKey<RouteTarget>`.
+  Custom page builders normally require no change unless they explicitly typed
+  the callback parameter.
+
+- **`pop()` completes `onResult` and runs `onDidPop` immediately.** Do not call
+  `completeOnResult` again after `pop` / `tryPop`; the completer is already
+  done. `onDidPop` is idempotent if Flutter's page callback also fires.
+
+- **`Equatable.internalProps` is removed.** Equality and hashing use
+  `runtimeType` + `props` only. Delete leftover overrides.
+
+### ⚠️ Deprecated
+
+- **`defineLayout` / `defineConverter`** on `Coordinator` / `RouteModule`.
+  Bind layouts with `bindLayout` on the path
+  (`NavigationPath.createWith(...)..bindLayout(ShopLayout.new)`).
+  Register restorable converters in `init()` via `defineRestorableConverter`.
+
+### 🚀 New Features
+
+- **`pushReplacement` on indexed/branched parents** now activates the
+  destination instead of no-oping after a possible pop of the current path.
+- **Stateful branch navigation** via `BranchedStackPath`: fixed branch layout
+  roots retain an independent child stack while branch selection and
+  restoration reuse indexed-path semantics.
+- **Flutter route-manifest adapter**: coordinators expose the core
+  `RouteManifest` seam; generated coordinators bind matched IDs to concrete
+  `RouteTarget` instances without putting Flutter types in the manifest.
+- **Typed handwritten manifests**: coordinators may narrow the manifest ID to
+  an enum or domain type and bind routes with Dart object patterns.
+- **Modular manifest composition**: `CoordinatorModular` now exposes one root
+  graph assembled from local and nested `RouteModule` manifests. Cross-module
+  layout relationships and URI conflicts are validated after composition.
+- **Codegen-free Coordinator bindings**: `RouteModuleBinding` connects a
+  validated `RouteBindingRegistry` to `routeManifest`, URI parsing, Flutter
+  Router resolution, and typed not-found handling. A coordinator implements
+  `RouteModule`, so the same mixin covers standalone coordinators and child
+  modules.
+- **Reverse routing as `coordinator.location.home`**: generated and handwritten
+  coordinators expose a `location` namespace (`location.home`,
+  `location.profile(...)`) instead of reversed `{route}Location()` helpers.
+- **Compose-your-own coordinator** (via `zenrouter_core`): mix only the
+  capabilities you need. `CoordinatorView.initialUri` asserts in debug when
+  the host lacks `CoordinatorNavigatable`.
+- **`defineDeeplinkHandler`**: pluggable deep-link strategy handlers on
+  `CoordinatorRecoverable`.
+- **`recoverUri`**: parses a URI and recovers it on `CoordinatorRecoverable`
+  (`parseRouteFromUri` → `recover`).
+- **Correct browser history intent**: push → navigate, replace → neglect.
+  Traversal reports `none` when the app URI already matches the engine, and
+  `neglect` when a guard (or other failed apply) must restore the current
+  entry. Unconditional `none` would push a new history entry on Flutter
+  stable/master.
+- **Superseding Router resolution**: newer route information cooperatively
+  cancels unresolved older work. Commits remain serialized and atomic once
+  started; cancelled Router futures complete normally.
+- **Atomic coordinator commits**: nested layout/path mutations publish one
+  final URI/history update with a monotonic `NavigationCommit` revision.
+- **Typed route resolution**: Flutter Router consumes core match, redirect,
+  not-found, and error outcomes; redirects replace the current history entry.
+- **Stable page-entry identity**: equal semantic routes can coexist in a stack
+  without duplicate Navigator page keys. Imperative `NavigationStack` diffs
+  pages by identity; `DeclarativeNavigationStack` still diffs by `==`.
+- **Reset cleanup**: `NavigationPath.reset` discards route-owned resources.
+  Inside a navigation transaction it notifies synchronously so multi-path
+  `replace` publishes one commit; outside a transaction it still publishes in
+  a microtask (safe during Flutter builds and in headless use).
+- **Atomic declarative diffs**: inserting/replacing routes no longer exposes an
+  intermediate empty stack or rebuilds retained pages.
+
+### 📖 Documentation
+
+- Architecture docs updated for the capability-mixin split.
+- [Migration guide](MIGRATION_GUIDE.md#300-manifests-capability-mixins-and-lifecycle)
+  covers 3.0 capability mixins, `PageCallback`, `pop()` results, and equality.
+
 ## 2.3.0
 
 ### ⚠️ Breaking Changes

@@ -43,4 +43,37 @@ abstract final class DebugTheme {
   static const double radiusMd = 8.0;
   static const double radiusLg = 12.0;
   static const double radiusFull = 100.0;
+
+  // See-through panel surfaces (background alpha only; text stays opaque)
+  static const double seeThroughAlpha = 0.47;
+  static const double seeThroughBlurSigma = 14.0;
+
+  /// Returns [color] unchanged, or with [seeThroughAlpha] when [seeThrough].
+  static Color surface(Color color, {required bool seeThrough}) {
+    if (!seeThrough) return color;
+    return color.withValues(alpha: seeThroughAlpha);
+  }
+}
+
+/// Propagates DevTools panel appearance (e.g. see-through) to tab content.
+class DebugPanelAppearance extends InheritedWidget {
+  const DebugPanelAppearance({
+    super.key,
+    required this.seeThrough,
+    required super.child,
+  });
+
+  final bool seeThrough;
+
+  static bool seeThroughOf(BuildContext context) {
+    return context
+            .dependOnInheritedWidgetOfExactType<DebugPanelAppearance>()
+            ?.seeThrough ??
+        false;
+  }
+
+  @override
+  bool updateShouldNotify(DebugPanelAppearance oldWidget) {
+    return seeThrough != oldWidget.seeThrough;
+  }
 }

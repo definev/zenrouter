@@ -1,0 +1,9 @@
+.git/
+.vercel/
+.env*
+.flutter-sdk/
+**/.dart_tool/
+**/build/
+**/coverage/
+**/dist/
+**/.flutter-plugins-dependencies

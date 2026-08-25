@@ -13,7 +13,7 @@ abstract class _$SettingsAccountIndexRoute extends AppRoute {
   _$SettingsAccountIndexRoute();
 
   @override
-  Uri toUri() => Uri.parse('/settings/account');
+  Uri toUri() => Uri(pathSegments: ['', 'settings', 'account']);
 
   @override
   List<Object?> get props => [];

@@ -1,6 +1,7 @@
-# Navigator Observers Guide
+# Navigator observers
 
-Learn how to monitor navigation events in `zenrouter` using `NavigatorObserver`s at both the global (Coordinator) and local (NavigationStack) levels.
+`NavigatorObserver` works with `Coordinator` and `NavigationStack`,
+regardless of `RouteModuleBinding` vs `parseRouteFromUri`.
 
 ## Background
 

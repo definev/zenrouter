@@ -1,26 +1,14 @@
-/// # The Road Not Found
-///
-/// When a traveler ventures to an unknown destination, we must guide
-/// them gracefully back to familiar ground. This route handles all
-/// URIs that do not match our defined paths.
 library;
 
-import 'package:flutter/material.dart';
-
+import 'package:flutter/widgets.dart';
+import 'package:forui/forui.dart';
 import 'package:zenrouter_docs/routes/routes.zen.dart';
+import 'package:zenrouter_docs/theme/app_theme.dart';
 
-/// A route for paths that lead nowhere - yet.
-///
-/// Every good application must handle the unexpected with grace.
-/// When a user types an invalid URL or follows a broken link,
-/// they should not be met with confusion, but with helpful guidance.
 class NotFoundRoute extends DocsRoute {
   NotFoundRoute({required this.uri, this.queries = const {}});
 
-  /// The URI that was attempted
   final Uri uri;
-
-  /// Any query parameters that accompanied the request
   final Map<String, String> queries;
 
   @override
@@ -31,44 +19,44 @@ class NotFoundRoute extends DocsRoute {
 
   @override
   Widget build(covariant DocsCoordinator coordinator, BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      body: Center(
+    return FScaffold(
+      childPad: false,
+      child: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.explore_off,
-                size: 80,
-                color: theme.colorScheme.primary.withValues(alpha: 0.5),
+              const Icon(
+                FLucideIcons.signpost,
+                size: 64,
+                color: AppTheme.primary,
               ),
               const SizedBox(height: 24),
-              Text('Page Not Found', style: theme.textTheme.displaySmall),
+              Text(
+                'Page not found',
+                style: AppTypography.sans(
+                  fontSize: 42,
+                  fontWeight: FontWeight.w300,
+                  color: AppTheme.ink,
+                ),
+              ),
               const SizedBox(height: 16),
               Text(
-                'The path "${uri.path}" does not lead anywhere we know.',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                'The path “${uri.path}” does not lead anywhere we know.',
+                style: AppTypography.serif(
+                  fontSize: 16,
+                  height: 1.7,
+                  color: AppTheme.mutedInk,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Perhaps it once did, or perhaps it shall in the future.\nFor now, let us return to familiar ground.',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontStyle: FontStyle.italic,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 32),
-              FilledButton.icon(
-                onPressed: () => coordinator.replaceIndex(),
-                icon: const Icon(Icons.home),
-                label: const Text('Return Home'),
+              const SizedBox(height: 28),
+              FButton(
+                mainAxisSize: MainAxisSize.min,
+                prefix: const Icon(FLucideIcons.house),
+                onPress: coordinator.replaceIndex,
+                child: const Text('Return home'),
               ),
             ],
           ),

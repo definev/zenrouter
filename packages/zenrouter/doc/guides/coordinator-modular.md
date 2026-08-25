@@ -1,226 +1,33 @@
-# Modular Coordinator Guide
+# Modular coordinator
 
-> **Split your coordinator into independent, reusable modules**
+Split URI parsing and paths across `RouteModule`s. A single coordinator
+is enough for a small app. See [Getting Started](getting-started.md).
 
-The Modular Coordinator pattern enables you to organize routes by domain or feature, making large applications more maintainable and allowing teams to work independently on different parts of your app.
+```
+AppCoordinator          notFoundRoute
+  ├─ AuthModule         /login, /register
+  └─ ShopModule         /shop, /shop/products/:id
+```
 
-## What is Modular Coordinator?
+The root mixes `CoordinatorModular` only. `defineModules` order is match
+order; first non-null wins.
 
-`CoordinatorModular` is a mixin that extends `Coordinator` with the ability to delegate route management to multiple `RouteModule` instances. Each module handles a specific subset of routes, paths, layouts, and converters.
+## Module
 
-**Key concepts:**
-- **RouteModule**: A self-contained unit that handles routes for a specific domain
-- **CoordinatorModular**: Aggregates modules and delegates route parsing
-- **Module Isolation**: Each module manages its own paths and layouts independently
-
-### When to Use Modular Coordinator
-
-✅ **Use when:**
-- Building large applications with many routes
-- Working with multiple teams on different features
-- You want to organize routes by domain (auth, shop, settings, etc.)
-- You need to reuse route modules across applications
-- Your `parseRouteFromUri` method is becoming too large
-
-❌ **Don't use when:**
-- Your app has fewer than ~10 routes
-- All routes belong to a single domain
-- You prefer a single, centralized route parser
-
----
-
-## Quick Start
-
-### Step 1: Create Your Route Modules
-
-Each module extends `RouteModule` and handles routes for a specific domain:
+Each module implements `parseRouteFromUri` and returns `null` for URLs
+it does not own.
 
 ```dart
-// lib/modules/auth_module.dart
-class AuthModule extends RouteModule<AppRoute> {
-  AuthModule(super.coordinator);
-
-  late final authPath = NavigationPath.createWith(
-    label: 'auth',
-    coordinator: coordinator,
-  )..bindLayout(AuthLayout.new);
-
-  @override
-  List<StackPath> get paths => [authPath];
-
-  @override
-  FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
-    return switch (uri.pathSegments) {
-      ['auth', 'login'] => LoginRoute(),
-      ['auth', 'register'] => RegisterRoute(),
-      _ => null, // Not handled by this module
-    };
-  }
-}
-
-// lib/modules/shop_module.dart
 class ShopModule extends RouteModule<AppRoute> {
   ShopModule(super.coordinator);
 
-  // Module can define its own navigation paths
-  late final NavigationPath<AppRoute> shopPath = NavigationPath.createWith(
+  late final shopStack = NavigationPath<AppRoute>.createWith(
     label: 'shop',
     coordinator: coordinator,
   )..bindLayout(ShopLayout.new);
 
   @override
-  List<StackPath> get paths => [shopPath];
-
-  @override
-  FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
-    return switch (uri.pathSegments) {
-      ['shop'] => ShopHomeRoute(),
-      ['shop', 'products', final id] => ProductRoute(id: id),
-      ['shop', 'cart'] => CartRoute(),
-      _ => null,
-    };
-  }
-}
-```
-
-### Step 2: Create Your Modular Coordinator
-
-Use the `CoordinatorModular` mixin and implement `defineModules`:
-
-```dart
-// lib/coordinator.dart
-class AppCoordinator extends Coordinator<AppRoute>
-    with CoordinatorModular<AppRoute> {
-  
-  @override
-  Set<RouteModule<AppRoute>> defineModules() {
-    return {
-      AuthModule(this),
-      ShopModule(this),
-      SettingsModule(this),
-    };
-  }
-
-  @override
-  AppRoute notFoundRoute(Uri uri) {
-    return NotFoundRoute(uri: uri);
-  }
-}
-```
-
-### Step 3: Use in Your App
-
-The coordinator works exactly like a regular coordinator:
-
-```dart
-final coordinator = AppCoordinator();
-
-MaterialApp.router(
-  routerConfig: coordinator,
-)
-```
-
-**That's it!** Routes are now parsed by modules in order until one matches.
-
----
-
-## How Route Parsing Works
-
-When `parseRouteFromUri` is called, the coordinator:
-
-1. **Iterates through modules** in the order they appear in `defineModules`
-2. **Calls each module's `parseRouteFromUri`** until one returns a non-null route
-3. **Returns the first match** found
-4. **Calls `notFoundRoute`** if all modules return null
-
-**Example flow:**
-
-```dart
-// URI: /shop/products/123
-coordinator.parseRouteFromUri(Uri.parse('/shop/products/123'));
-
-// 1. AuthModule.parseRouteFromUri() → returns null (not handled)
-// 2. ShopModule.parseRouteFromUri() → returns ProductRoute(id: '123') ✅
-// 3. Returns ProductRoute immediately (doesn't check SettingsModule)
-```
-
-**Important:** Module order matters! The first module that returns a non-null route wins.
-
----
-
-## Complete Example
-
-Here's a full example showing multiple modules with layouts and paths:
-
-```dart
-// ============================================================================
-// Route Base
-// ============================================================================
-
-abstract class AppRoute extends RouteTarget with RouteUnique {}
-
-// ============================================================================
-// Auth Module
-// ============================================================================
-
-class AuthModule extends RouteModule<AppRoute> {
-  AuthModule(super.coordinator);
-
-  @override
-  FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
-    return switch (uri.pathSegments) {
-      ['login'] => LoginRoute(),
-      ['register'] => RegisterRoute(),
-      _ => null,
-    };
-  }
-}
-
-class LoginRoute extends AppRoute {
-  @override
-  Uri toUri() => Uri.parse('/login');
-
-  @override
-  Widget build(AppCoordinator coordinator, BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () => coordinator.replace(ShopHomeRoute()),
-          child: const Text('Login'),
-        ),
-      ),
-    );
-  }
-}
-
-class RegisterRoute extends AppRoute {
-  @override
-  Uri toUri() => Uri.parse('/register');
-
-  @override
-  Widget build(AppCoordinator coordinator, BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Register')),
-      body: const Center(child: Text('Register Page')),
-    );
-  }
-}
-
-// ============================================================================
-// Shop Module
-// ============================================================================
-
-class ShopModule extends RouteModule<AppRoute> {
-  ShopModule(super.coordinator);
-
-  late final NavigationPath<AppRoute> shopPath = NavigationPath.createWith(
-    label: 'shop',
-    coordinator: coordinator,
-  )..bindLayout(ShopLayout.new);
-
-  @override
-  List<StackPath> get paths => [shopPath];
+  List<StackPath> get paths => [shopStack];
 
   @override
   FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
@@ -231,392 +38,162 @@ class ShopModule extends RouteModule<AppRoute> {
     };
   }
 }
+```
 
+`coordinator` is the root coordinator.
+
+```dart
 class ShopLayout extends AppRoute with RouteLayout<AppRoute> {
   @override
-  NavigationPath<AppRoute> resolvePath(AppCoordinator coordinator) {
-    final shopModule = coordinator.getModule<ShopModule>();
-    return shopModule.shopPath;
-  }
+  NavigationPath<AppRoute> resolvePath(covariant AppCoordinator c) =>
+      c.getModule<ShopModule>().shopStack;
 
   @override
-  Widget build(AppCoordinator coordinator, BuildContext context) {
+  Widget build(covariant AppCoordinator coordinator, BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Shop')),
       body: buildPath(coordinator),
     );
   }
 }
-
-class ShopHomeRoute extends AppRoute {
-  @override
-  Type get layout => ShopLayout;
-
-  @override
-  Uri toUri() => Uri.parse('/shop');
-
-  @override
-  Widget build(AppCoordinator coordinator, BuildContext context) {
-    return ListView(
-      children: [
-        ListTile(
-          title: const Text('Product 1'),
-          onTap: () => coordinator.push(ProductRoute(id: '1')),
-        ),
-      ],
-    );
-  }
-}
-
-class ProductRoute extends AppRoute {
-  ProductRoute({required this.id});
-  final String id;
-
-  @override
-  Type get layout => ShopLayout;
-
-  @override
-  Uri toUri() => Uri.parse('/shop/products/$id');
-
-  @override
-  Widget build(AppCoordinator coordinator, BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Product $id')),
-      body: Center(child: Text('Product Detail: $id')),
-    );
-  }
-
-  @override
-  List<Object?> get props => [id];
-}
-
-// ============================================================================
-// Coordinator
-// ============================================================================
-
-class AppCoordinator extends Coordinator<AppRoute>
-    with CoordinatorModular<AppRoute> {
-  
-  @override
-  Set<RouteModule<AppRoute>> defineModules() {
-    return {
-      AuthModule(this),
-      ShopModule(this),
-    };
-  }
-
-  @override
-  AppRoute notFoundRoute(Uri uri) {
-    return NotFoundRoute(uri: uri);
-  }
-}
-
-class NotFoundRoute extends AppRoute {
-  NotFoundRoute({required this.uri});
-  final Uri uri;
-
-  @override
-  Uri toUri() => Uri.parse('/not-found');
-
-  @override
-  Widget build(AppCoordinator coordinator, BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Not Found')),
-      body: Center(child: Text('Route not found: ${uri.path}')),
-    );
-  }
-}
 ```
 
----
-
-## Accessing Modules
-
-Use `getModule()` to access module-specific functionality:
-
-```dart
-final coordinator = AppCoordinator();
-
-// Access a specific module
-final shopModule = coordinator.getModule<ShopModule>();
-
-// Use module-specific paths
-shopModule.shopPath.push(ProductRoute(id: '123'));
-
-// Access module properties
-final shopPath = shopModule.shopPath;
-```
-
-**Use case:** When you need to navigate within a specific module's path or access module-specific functionality.
-
----
-
-## Module Responsibilities
-
-Each module can handle:
-
-### 1. Route Parsing
-
-Override `parseRouteFromUri` to handle specific URI patterns:
-
-```dart
-@override
-FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
-  return switch (uri.pathSegments) {
-    ['my', 'route'] => MyRoute(),
-    _ => null, // Let other modules handle it
-  };
-}
-```
-
-**Best practice:** Return `null` for routes you don't handle. This allows other modules to process them.
-
-### 2. Navigation Paths & bindLayout
-
-Override `paths` to provide paths for nested navigation:
-
-```dart
-late final NavigationPath<AppRoute> myPath = NavigationPath.createWith(
-  label: 'my-module',
-  coordinator: coordinator,
-)..bindLayout(MyLayout.new);
-
-@override
-List<StackPath> get paths => [myPath];
-```
-
-**Important:** Always use `.createWith()` to bind paths to the coordinator.
-
-### 3. Converter Registration
-
-Override `defineConverter` to register restorable converters:
-
-```dart
-@override
-void defineConverter() {
-  defineRestorableConverter(
-    'my_route',
-    () => MyRoute(),
-  );
-}
-```
-
----
-
-## Module Order Matters
-
-Modules are checked in the order they appear in the `Set` returned by `defineModules`. This allows you to:
-
-- **Prioritize certain modules** (e.g., admin routes checked before public routes)
-- **Handle route conflicts** (first module wins)
-- **Create fallback chains** (specific modules before general ones)
-
-**Example: Admin routes take precedence**
-
-```dart
-@override
-Set<RouteModule<AppRoute>> defineModules() {
-  return {
-    AdminModule(this),    // Checked first
-    PublicModule(this),   // Checked second
-  };
-}
-```
-
-If both modules could handle `/users`, AdminModule wins because it's checked first.
-
----
-
-## Path Aggregation
-
-All module paths are automatically aggregated into the coordinator's `paths`:
+## Root
 
 ```dart
 class AppCoordinator extends Coordinator<AppRoute>
     with CoordinatorModular<AppRoute> {
-  // ... defineModules ...
-
-  // Paths automatically include:
-  // - coordinator.root (from super.paths)
-  // - shopModule.shopPath (from ShopModule)
-  // - settingsModule.settingsPath (from SettingsModule)
-}
-```
-
-You can access all paths through `coordinator.paths`, and they're all available for state restoration.
-
----
-
-## Best Practices
-
-### ✅ Do
-
-- **Return null** when a module doesn't handle a route
-- **Use descriptive module names** (AuthModule, ShopModule, not Module1, Module2)
-- **Keep modules focused** on a single domain or feature
-- **Use `.createWith()`** for all paths to ensure proper binding
-- **Provide unique labels** for paths (required for state restoration)
-- **Order modules logically** (specific before general, admin before public)
-
-### ❌ Don't
-
-- **Don't handle routes outside your domain** (return null instead)
-- **Don't create circular dependencies** between modules
-- **Don't access other modules directly** (use `getModule()` instead)
-- **Don't forget to return null** for unhandled routes
-- **Don't create paths without binding** to the coordinator
-
----
-
-## Advanced Patterns
-
-### Module with Multiple Paths
-
-A module can manage multiple paths:
-
-```dart
-class ShopModule extends RouteModule<AppRoute> {
-  ShopModule(super.coordinator);
-
-  late final NavigationPath<AppRoute> productsPath = NavigationPath.createWith(
-    label: 'products',
-    coordinator: coordinator,
-  );
-
-  late final NavigationPath<AppRoute> cartPath = NavigationPath.createWith(
-    label: 'cart',
-    coordinator: coordinator,
-  );
-
   @override
-  List<StackPath> get paths => [productsPath, cartPath];
-}
-```
-
-### Module with Async Parsing
-
-Modules can use async parsing for dynamic route resolution:
-
-```dart
-@override
-Future<AppRoute?> parseRouteFromUri(Uri uri) async {
-  if (uri.pathSegments.first == 'dynamic') {
-    // Fetch data from API
-    final data = await fetchRouteData(uri);
-    return DynamicRoute(data: data);
-  }
-  return null;
-}
-```
-
-### Module with Conditional Registration
-
-Register modules conditionally:
-
-```dart
-@override
-Set<RouteModule<AppRoute>> defineModules() {
-  final modules = <RouteModule<AppRoute>>{
+  Iterable<RouteModule<AppRoute>> defineModules() => [
     AuthModule(this),
     ShopModule(this),
-  };
+  ];
 
-  // Add admin module only if user is admin
-  if (userService.isAdmin) {
-    modules.add(AdminModule(coordinator));
-  }
-
-  return modules;
+  @override
+  AppRoute notFoundRoute(Uri uri) => NotFoundRoute(uri);
 }
 ```
 
----
+`defineModules` is snapshotted once. Do not return a rebuilt list on
+every access. Duplicate module runtime types throw.
 
-## Troubleshooting
+```dart
+MaterialApp.router(routerConfig: AppCoordinator())
+```
 
-### Error: "TypeError: type 'X' is not a subtype of type 'Y'"
+## getModule
 
-**Problem:** Trying to access a module that wasn't registered.
+```dart
+final shop = coordinator.getModule<ShopModule>();
+shop.shopStack.push(ProductRoute(id: '123'));
+```
 
-**Solution:** Ensure the module is included in `defineModules`:
+Throws if the type is not in `defineModules`. Prefer
+`coordinator.push` / `pushUri` so redirects still run.
+
+## Restorable converters
 
 ```dart
 @override
-Set<RouteModule<AppRoute>> defineModules() {
-  return {
-    MyModule(this), // ✅ Must be included
-  };
+void init() {
+  super.init();
+  defineRestorableConverter('book_detail', BookDetailConverter.new);
 }
 ```
 
-### Routes Not Being Parsed
+Do not use the deprecated `defineConverter` hook.
 
-**Check:**
-1. Module is included in `defineModules`
-2. Module's `parseRouteFromUri` returns non-null for the route
-3. Module appears before other modules that might handle the same route
-4. Route URI matches the pattern in the module
+## RouteModuleBinding
 
-**Debug tip:** Add logging to see which modules are checked:
+Preferred for new modules. The module owns a `RouteManifest` instead of
+a `parseRouteFromUri` switch: matching, `location()`, and the composed
+Graph tab stay in sync, and URI conflicts fail when the root joins
+fragments.
+
+Do not mix `RouteModuleBinding` onto the **root** `CoordinatorModular`
+class; both override `parseRouteFromUri`. Put bindings on child modules.
+
+Module bindings omit `notFound` so later modules can match.
 
 ```dart
-@override
-FutureOr<AppRoute?> parseRouteFromUri(Uri uri) {
-  print('AuthModule checking: ${uri.path}');
-  return switch (uri.pathSegments) {
-    ['auth', 'login'] => LoginRoute(),
-    _ => null,
-  };
+enum ShopRouteId { layout, home, product }
+
+class ShopModule extends RouteModule<AppRoute>
+    with RouteModuleBinding<AppRoute, ShopRouteId> {
+  ShopModule(super.coordinator);
+
+  static final manifest = RouteManifest<ShopRouteId>(
+    name: 'shop',
+    idCodec: RouteIdCodec.enumValues(ShopRouteId.values),
+    routes: [
+      RouteManifestRoute(
+        id: ShopRouteId.home,
+        path: '/shop',
+        parentId: ShopRouteId.layout,
+      ),
+      RouteManifestRoute(
+        id: ShopRouteId.product,
+        path: '/shop/products/:id',
+        parentId: ShopRouteId.layout,
+      ),
+    ],
+    layouts: [
+      RouteManifestLayout.stack(id: ShopRouteId.layout, path: '/shop'),
+    ],
+  );
+
+  @override
+  late final routeBindings = manifest.bind<AppRoute>(
+    bindings: [
+      RouteBinding(id: ShopRouteId.home, create: (_) => ShopHomeRoute()),
+      RouteBinding(
+        id: ShopRouteId.product,
+        create: (match) => ProductRoute(id: match.pathParameters['id']!),
+      ),
+    ],
+  );
+
+  late final shopStack = NavigationPath<AppRoute>.createWith(
+    label: 'shop',
+    coordinator: coordinator,
+  )..bindLayout(ShopLayout.new);
+
+  @override
+  List<StackPath> get paths => [shopStack];
 }
 ```
 
-### Path Not Found
+`toUri()` uses `ShopModule.manifest.location(...)`.
+`CoordinatorModular.routeManifest` is the composed graph.
 
-**Problem:** Module path not accessible or not aggregated.
-
-**Solution:**
-1. Ensure path is returned in module's `paths` getter
-2. Use `.createWith()` to bind path to coordinator
-3. Check that module is registered in `defineModules`
-
-### Layout Not Registered
-
-**Problem:** Layout constructor not found.
-
-**Solution:** Register layout in module's `defineLayout`:
+If a route's `parentId` lives in another module, do not wrap that
+fragment in `RouteManifest(...)` (parents are validated immediately).
+Expose `routeManifestFragment` instead:
 
 ```dart
-@override
-void defineLayout() {
-  defineLayoutParent(MyLayout.new); // ✅ Required
+class AccountModule extends RouteModule<AppRoute> {
+  AccountModule(super.coordinator);
+
+  @override
+  RouteManifestFragment<AccountRouteId> get routeManifestFragment =>
+      RouteManifestFragment(
+        name: 'account',
+        idCodec: RouteIdCodec.enumValues(AccountRouteId.values),
+        routes: [
+          RouteManifestRoute(
+            id: AccountRouteId.profile,
+            path: '/account/profile',
+            parentId: AuthRouteId.shell,
+          ),
+        ],
+      );
 }
 ```
 
----
+Prefer declaring the child in the module that owns the layout.
 
-## Comparison: Regular vs Modular Coordinator
+## See also
 
-| Aspect | Regular Coordinator | Modular Coordinator |
-|--------|-------------------|---------------------|
-| **Route Parsing** | Single `parseRouteFromUri` method | Delegated to modules |
-| **Code Organization** | All routes in one place | Routes organized by module |
-| **Team Collaboration** | Requires coordination | Teams work independently |
-| **Scalability** | Becomes unwieldy with many routes | Scales well with many routes |
-| **Reusability** | Routes tied to coordinator | Modules can be reused |
-| **Complexity** | Simpler for small apps | Better for large apps |
-
-**Migration:** You can migrate from regular to modular coordinator incrementally by extracting routes into modules one at a time.
-
----
-
-## Next Steps
-
-- **See [route-layout.md](./route-layout.md)** for creating nested navigation layouts
-- **See [state-restoration.md](./state-restoration.md)** for persisting navigation state
-- **See [query-parameters.md](./query-parameters.md)** for handling URL parameters
-- **Check example code** in `packages/zenrouter/example/lib/main_modular.dart`
-- **Read API docs** for [Coordinator](../api/coordinator.md) and the [Coordinator as RouteModule guide](./coordinator-as-module.md)
-
----
-
-**Need help?** File an issue at [github.com/definev/zenrouter/issues](https://github.com/definev/zenrouter/issues)
+- [Coordinator as RouteModule](coordinator-as-module.md)
+- [Layouts](route-layout.md)
+- [`main_coordinator_module.dart`](../../example/lib/main_coordinator_module.dart)

@@ -8,13 +8,14 @@
 /// the generated `routes.zen.dart` file.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:meta_seo/meta_seo.dart';
+import 'package:zenrouter_docs/content/book_outline.dart';
 import 'package:zenrouter_docs/routes/docs/_configuration/seo_title.dart';
 import 'package:zenrouter_docs/routes/routes.zen.dart';
-import 'package:zenrouter_docs/widgets/docs_layout.dart';
-import 'package:zenrouter_docs/widgets/mardown_section.dart';
 import 'package:zenrouter_file_annotation/zenrouter_file_annotation.dart';
 
 @ZenCoordinator(name: 'DocsCoordinator', routeBase: 'DocsRoute')
@@ -26,39 +27,13 @@ class CustomDocsCoordinator extends DocsCoordinator {
   @override
   DefaultTransitionStrategy get transitionStrategy =>
       DefaultTransitionStrategy.none;
-}
-
-mixin RouteToc on RouteUnique {
-  TocController? tocController;
-  ValueNotifier<List<TocItem>?> tocItems = ValueNotifier<List<TocItem>?>(null);
 
   @override
-  void onUpdate(covariant RouteTarget newRoute) {
-    super.onUpdate(newRoute);
-    if (tocItems.value != null && tocController != null) {
-      tocController!.clearItems();
-      for (var item in tocItems.value!) {
-        tocController!.addItem(item);
-      }
-    }
-  }
-
-  @override
-  void onDiscard() {
-    super.onDiscard();
-    tocItems.dispose();
-  }
-
-  @override
-  @mustCallSuper
-  Widget build(
-    covariant Coordinator<RouteUnique> coordinator,
-    BuildContext context,
-  ) {
-    tocController = DocsTocScope.of(context);
-    tocController?.clearItems();
-    tocItems.value = null;
-    return super.build(coordinator, context);
+  FutureOr<DocsRoute?> parseRouteFromUri(Uri uri) {
+    final chapter = legacyChapterForPath(uri.path);
+    return super.parseRouteFromUri(
+      chapter == null ? uri : uri.replace(path: chapter.routePath),
+    );
   }
 }
 

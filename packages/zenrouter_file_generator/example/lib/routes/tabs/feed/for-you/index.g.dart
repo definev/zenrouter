@@ -22,7 +22,7 @@ abstract class _$ForYouRoute extends AppRoute with RouteQueryParameters {
 
   @override
   Uri toUri() {
-    final uri = Uri.parse('/tabs/feed/for-you');
+    final uri = Uri(pathSegments: ['', 'tabs', 'feed', 'for-you']);
     if (queries.isEmpty) return uri;
     return uri.replace(queryParameters: queries);
   }

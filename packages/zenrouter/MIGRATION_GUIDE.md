@@ -2,7 +2,145 @@
 
 This guide outlines the changes and steps required to migrate to the latest version of `zenrouter`.
 
-**Latest:** [2.1.0](#210-coordinatorview--layout-builder-api) — `CoordinatorView`, `CoordinatorLayoutBuilder`, layout builder signature updates.
+**Latest:** [3.0.0-beta.1](#300-manifests-capability-mixins-and-lifecycle) — route manifests, capability mixins, page identity, and `pop()` completing results.
+
+---
+
+## 3.0.0: Manifests, capability mixins, and lifecycle
+
+Requires `zenrouter_core` 3.0.0-beta.1. Apps that only `extend Coordinator` keep compiling. Read this section if you subclass `CoordinatorCore`, type `PageCallback`, call `completeOnResult` after `pop`, or override `defineModules`.
+
+### Typical Flutter app (`extends Coordinator`)
+
+`Coordinator` still mixes `CoordinatorLayoutCore`, `CoordinatorNavigatable`, `CoordinatorMutatable`, `CoordinatorRecoverable`, plus Flutter layout / restoration / transitions.
+
+Prefer `await coordinator.pushOrMoveToTop(...)` when sequencing. The method was already `async`; the return type is now `Future<void>`.
+
+`defineLayout` and `defineConverter` are **deprecated** but still invoked from `init()` for compatibility:
+
+| Deprecated | Replacement |
+| :--- | :--- |
+| `defineLayout()` + `defineLayoutParent(...)` | `NavigationPath.createWith(...)..bindLayout(Layout.new)` |
+| `defineConverter()` + `defineRestorableConverter(...)` | Same call inside `init()` (`super.init()` first) |
+
+### Custom `CoordinatorCore` subclasses
+
+#### Changes
+
+Navigation operations moved off `CoordinatorCore` into capability mixins:
+
+| Mixin | Capabilities |
+|-------|--------------|
+| `CoordinatorLayoutCore` | Layout-parent registration / hierarchy activation |
+| `CoordinatorNavigatable` | `navigate` |
+| `CoordinatorMutatable` | `push`, `pushSilently`, `pop`, `replace`, `pushReplacement`, `pushOrMoveToTop`, `tryPop` |
+| `CoordinatorRecoverable` | `recover`, `recoverUri`, `defineDeeplinkHandler` |
+
+URI helpers (`navigateUri`, `pushUri`, …) are an extension on `CoordinatorRecoverable`. The same operations are also available on `Uri` (`uri.pushWith(coordinator)`, `uri.navigateWith(coordinator)`, `uri.replaceWith(coordinator)`, …).
+
+#### Migration
+
+Mix in only what you need. A push/pop coordinator:
+
+```dart
+class HeadlessCoordinator extends CoordinatorCore<AppRoute>
+    with CoordinatorLayoutCore<AppRoute>, CoordinatorMutatable<AppRoute> {
+  // parseRouteFromUri, root, ...
+}
+```
+
+A full analogue of Flutter `Coordinator`:
+
+```dart
+class AppCore extends CoordinatorCore<AppRoute>
+    with
+        CoordinatorLayoutCore<AppRoute>,
+        CoordinatorNavigatable<AppRoute>,
+        CoordinatorMutatable<AppRoute>,
+        CoordinatorRecoverable<AppRoute> {}
+```
+
+`CoordinatorView.initialUri` requires `CoordinatorNavigatable`. In debug it asserts; in release it skips navigation instead of casting.
+
+### `defineModules` returns `Iterable`
+
+#### Changes
+
+- **Before**: `List<RouteModule<T>> defineModules()`
+- **After**: `Iterable<RouteModule<T>> defineModules()` — snapshotted once at init. Duplicate module **runtime types** throw.
+
+#### Migration
+
+Existing `=> [AuthModule(this), ShopModule(this)]` bodies still work. Do not return a lazily rebuilt list on every access; the mixin snapshots the iterable once.
+
+### `PageCallback` key type
+
+#### Changes
+
+- **Before**: `PageCallback` received `ValueKey<RouteTarget>`
+- **After**: `LocalKey` (`ObjectKey` of the stack entry)
+
+Equal semantic routes can coexist in an imperative `NavigationStack` without duplicate Navigator keys. The imperative stack diffs pages by **identity**. `DeclarativeNavigationStack` still diffs by `==`.
+
+#### Migration
+
+Only custom page builders that named the key type need a change:
+
+```dart
+// Before
+PageCallback<AppRoute> callback = (context, ValueKey<RouteTarget> routeKey, child) {
+  return MaterialPage(key: routeKey, child: child);
+};
+
+// After
+PageCallback<AppRoute> callback = (context, LocalKey routeKey, child) {
+  return MaterialPage(key: routeKey, child: child);
+};
+```
+
+### `pop()` completes the route result
+
+#### Changes
+
+`StackMutatable.pop` now completes `onResult` and calls `onDidPop` immediately. Callers of `push` / `pushUri` no longer wait for a later Flutter `PopScope` callback. `onDidPop` is idempotent if the page callback also fires.
+
+#### Migration
+
+Remove a second `completeOnResult` after `pop`. It now throws `Bad state: Future already completed`:
+
+```dart
+// Before (2.x / early 3.0 headless tests)
+await coordinator.pop('done');
+route.completeOnResult(route.resultValue, coordinator);
+
+// After
+await coordinator.pop('done');
+expect(await pushFuture, 'done');
+```
+
+### Equality and `deepEquals`
+
+#### Changes
+
+- `==` / `hashCode` use `runtimeType` + `props` only. Path binding and the result completer are not hashed.
+- `RouteTarget.deepEquals` is **reference identity** (same lifecycle entry), not a deep value compare.
+- `Equatable.internalProps` is **removed**. It was unused by equality and hashing.
+
+#### Migration
+
+Do not put mutable lifecycle state in `props`. Delete any `internalProps` overrides — they no longer compile. If you compared `deepEquals` for “same screen, same params”, use `==` instead.
+
+### Optional: manifests and bindings
+
+3.0 adds `RouteManifest`, `RouteBindingRegistry`, and `RouteModuleBinding`. Hand-written `parseRouteFromUri` coordinators keep working with `RouteManifest.empty`. Adopt the manifest seam when you want validated topology, reverse routing, or codegen-free URI parsing.
+
+Indexed manifest children must be **direct** children of that layout (`parentId` matches). Branched children must be layouts declared on the parent.
+
+### Browser back and pop guards
+
+A traversal that a `RouteGuard` blocks now **replaces** the current history entry with the app URI when it differs from the engine URI. Flutter's `RouteInformationReportingType.none` still reports to the engine and would otherwise **push** a new entry, looping the back button.
+
+No app code change. Custom `RouteInformationProvider` subclasses that remapped `traverse` → `none` unconditionally should use the same URI-compare rule as `CoordinatorRouteInformationProvider.resolveReportingType`.
 
 ---
 
@@ -353,13 +491,6 @@ FutureOr<AppRoute?> parseRouteFromUri(Uri uri) { ... }
 
 ## Internal Properties (`internalProps`)
 
-A new property `internalProps` has been introduced to the `Equatable` base class (and consequently `RouteTarget`) to handling deep comparison and hashing of internal state.
+> Removed in 3.0.0. See [Equality and `deepEquals`](#equality-and-deepequals).
 
-### Changes
-
-- **`internalProps`**: A list of properties used for calculating `hashCode` and ensuring object identity, separate from the public `props`.
-- `RouteTarget` now includes `runtimeType`, `_path`, and the internal result completer in `internalProps`.
-
-### Impact
-
-This ensures that `RouteTarget` instances are correctly distinguished even if they have identical configuration `props`, especially when they belong to different paths or have different lifecycle states. This improves the reliability of deep comparisons and sets containing routes.
+`internalProps` was added in 0.4.0 as a second property list on `Equatable` / `RouteTarget`. It never participated in `==` or `hashCode` in 3.0 and has been deleted. Put route parameters in `props` only.

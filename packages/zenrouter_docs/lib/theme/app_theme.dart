@@ -1,279 +1,167 @@
-/// # The Visual Language of Our Documentation
-///
-/// A theme, like prose style, communicates before a single word is read.
-/// We have chosen a literary aesthetic: serif fonts for our explanatory
-/// prose (evoking the printed page), monospace for our code examples
-/// (evoking the terminal), and colors that speak of depth and clarity.
-///
-/// The reader should feel they are learning from a well-crafted book,
-/// not merely browsing a technical reference.
+/// The visual language for the ZenRouter book.
 library;
 
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/widgets.dart';
+import 'package:forui/forui.dart';
 
-/// The visual identity of ZenRouter Documentation.
-abstract final class AppTheme {
-  // ─────────────────────────────────────────────────────────────────────────
-  // Colors: ZenRouter brand colors
-  // ─────────────────────────────────────────────────────────────────────────
-
-  /// Primary: Brand cyan/light blue - the essence of ZenRouter
-  static const Color _primaryLight = Color(
-    0xFF2955A3,
-  ); // Navy blue for light mode
-  static const Color _secondaryLight = Color(0xFF30B5F2);
-  static const Color _primaryDark = Color(0xFF6DD0F6); // Cyan for dark mode
-  static const Color _secondaryDark = Color(0xFF30B5F2);
-
-  /// Surface colors for light mode
-  static const Color _surfaceLight = Color(0xFFFAF9F6);
-  static const Color _cardLight = Color(0xFFFFFFFF);
-  static const Color _codeBackgroundLight = Color(0xFFF5F2EB);
-
-  /// Surface colors for dark mode
-  static const Color _surfaceDark = Color(0xFF1A1A2E);
-  static const Color _cardDark = Color(0xFF16213E);
-  static const Color _codeBackgroundDark = Color(0xFF0F0F1A);
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Typography: The voice of our documentation
-  // ─────────────────────────────────────────────────────────────────────────
-
-  /// Prose font: Libre Baskerville - a refined serif for extended reading
-  static TextTheme _proseTextTheme(Brightness brightness) {
-    final baseColor = brightness == Brightness.light
-        ? Colors.black87
-        : Colors.white;
-
-    final baseTheme = TextTheme(
-      displayLarge: TextStyle(
-        fontSize: 48,
-        fontWeight: FontWeight.bold,
-        color: baseColor,
-        height: 1.2,
-        decoration: TextDecoration.none,
-      ),
-      displayMedium: TextStyle(
-        fontSize: 36,
-        fontWeight: FontWeight.bold,
-        color: baseColor,
-        height: 1.3,
-        decoration: TextDecoration.none,
-      ),
-      displaySmall: TextStyle(
-        fontSize: 28,
-        fontWeight: FontWeight.bold,
-        color: baseColor,
-        height: 1.3,
-        decoration: TextDecoration.none,
-      ),
-      headlineLarge: TextStyle(
-        fontSize: 24,
-        fontWeight: FontWeight.w600,
-        color: baseColor,
-        height: 1.4,
-        decoration: TextDecoration.none,
-      ),
-      headlineMedium: TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.w600,
-        color: baseColor,
-        height: 1.4,
-        decoration: TextDecoration.none,
-      ),
-      headlineSmall: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
-        color: baseColor,
-        height: 1.4,
-        decoration: TextDecoration.none,
-      ),
-      bodyLarge: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.normal,
-        color: baseColor.withValues(alpha: 0.87),
-        height: 1.7,
-        decoration: TextDecoration.none,
-      ),
-      bodyMedium: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.normal,
-        color: baseColor.withValues(alpha: 0.87),
-        height: 1.7,
-        decoration: TextDecoration.none,
-      ),
-      bodySmall: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.normal,
-        color: baseColor.withValues(alpha: 0.7),
-        height: 1.6,
-        decoration: TextDecoration.none,
-      ),
-      labelLarge: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-        color: baseColor,
-        letterSpacing: 0.5,
-        decoration: TextDecoration.none,
-      ),
-    );
-
-    return GoogleFonts.libreBaskervilleTextTheme(baseTheme);
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Theme Data: Light and Dark
-  // ─────────────────────────────────────────────────────────────────────────
-
-  /// Light theme: For reading in daylight, as one reads a proper book
-  static ThemeData get light => ThemeData(
-    useMaterial3: true,
-    brightness: Brightness.light,
-    colorScheme: const ColorScheme.light(
-      primary: _primaryLight,
-      onPrimary: Colors.white,
-      secondary: _secondaryLight,
-      surface: _surfaceLight,
-      onSurface: Colors.black87,
-    ),
-    drawerTheme: DrawerThemeData(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
-      endShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
-    ),
-    dividerTheme: DividerThemeData(thickness: 0.5, color: Colors.grey.shade300),
-    dividerColor: Colors.grey.shade300,
-    scaffoldBackgroundColor: _surfaceLight,
-    cardColor: _cardLight,
-    textTheme: _proseTextTheme(Brightness.light),
-    appBarTheme: AppBarTheme(
-      backgroundColor: _surfaceLight,
-      foregroundColor: Colors.black87,
-      elevation: 0,
-      titleTextStyle: GoogleFonts.libreBaskerville(
-        fontSize: 20,
-        fontWeight: FontWeight.w600,
-        color: Colors.black87,
-      ),
-    ),
-    navigationRailTheme: NavigationRailThemeData(
-      backgroundColor: _cardLight,
-      selectedIconTheme: const IconThemeData(color: _primaryLight),
-      unselectedIconTheme: IconThemeData(color: Colors.grey.shade600),
-      selectedLabelTextStyle: GoogleFonts.libreBaskerville(
-        color: _primaryLight,
-        fontWeight: FontWeight.w600,
-      ),
-      unselectedLabelTextStyle: GoogleFonts.libreBaskerville(
-        color: Colors.grey.shade600,
-      ),
-    ),
-    extensions: [
-      const DocsThemeExtension(
-        codeBackground: _codeBackgroundLight,
-        proseMaxWidth: 720,
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      ),
-    ],
+/// Font styles that never trigger a runtime network request.
+///
+/// Inter ships with Forui, while serif and monospace use platform fonts with
+/// deterministic fallbacks. Keeping this here prevents an offline docs visit
+/// from waiting on several Google Fonts downloads.
+abstract final class AppTypography {
+  static TextStyle sans({
+    double? fontSize,
+    FontWeight? fontWeight,
+    FontStyle? fontStyle,
+    Color? color,
+    double? height,
+    double? letterSpacing,
+    TextDecoration? decoration,
+    Color? decorationColor,
+  }) => TextStyle(
+    fontFamily: 'packages/forui/Inter',
+    fontSize: fontSize,
+    fontWeight: fontWeight,
+    fontStyle: fontStyle,
+    color: color,
+    height: height,
+    letterSpacing: letterSpacing,
+    decoration: decoration,
+    decorationColor: decorationColor,
   );
 
-  /// Dark theme: For late-night study, when the mind is most receptive
-  static ThemeData get dark => ThemeData(
-    useMaterial3: true,
-    brightness: Brightness.dark,
-    colorScheme: const ColorScheme.dark(
-      primary: _primaryDark,
-      onPrimary: Colors.black,
-      secondary: _secondaryDark,
-      surface: _surfaceDark,
-      onSurface: Colors.white,
-    ),
-    drawerTheme: DrawerThemeData(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
-      endShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
-    ),
-    dividerTheme: DividerThemeData(thickness: 0.5, color: Colors.grey.shade800),
-    dividerColor: Colors.grey.shade800,
-    scaffoldBackgroundColor: _surfaceDark,
-    cardColor: _cardDark,
-    textTheme: _proseTextTheme(Brightness.dark),
-    appBarTheme: AppBarTheme(
-      backgroundColor: _surfaceDark,
-      foregroundColor: Colors.white,
-      elevation: 0,
-      titleTextStyle: GoogleFonts.libreBaskerville(
-        fontSize: 20,
-        fontWeight: FontWeight.w600,
-        color: Colors.white,
-      ),
-    ),
-    navigationRailTheme: NavigationRailThemeData(
-      backgroundColor: _cardDark,
-      selectedIconTheme: const IconThemeData(color: _primaryDark),
-      unselectedIconTheme: IconThemeData(color: Colors.grey.shade400),
-      selectedLabelTextStyle: GoogleFonts.libreBaskerville(
-        color: _primaryDark,
-        fontWeight: FontWeight.w600,
-      ),
-      unselectedLabelTextStyle: GoogleFonts.libreBaskerville(
-        color: Colors.grey.shade400,
-      ),
-    ),
-    extensions: [
-      const DocsThemeExtension(
-        codeBackground: _codeBackgroundDark,
-        proseMaxWidth: 720,
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      ),
-    ],
+  static TextStyle serif({
+    double? fontSize,
+    FontWeight? fontWeight,
+    FontStyle? fontStyle,
+    Color? color,
+    double? height,
+    double? letterSpacing,
+    TextDecoration? decoration,
+    Color? decorationColor,
+  }) => TextStyle(
+    fontFamily: 'Georgia',
+    fontFamilyFallback: const ['serif'],
+    fontSize: fontSize,
+    fontWeight: fontWeight,
+    fontStyle: fontStyle,
+    color: color,
+    height: height,
+    letterSpacing: letterSpacing,
+    decoration: decoration,
+    decorationColor: decorationColor,
+  );
+
+  static TextStyle mono({
+    double? fontSize,
+    FontWeight? fontWeight,
+    FontStyle? fontStyle,
+    Color? color,
+    double? height,
+    double? letterSpacing,
+    TextDecoration? decoration,
+    Color? decorationColor,
+  }) => TextStyle(
+    fontFamily: 'monospace',
+    fontSize: fontSize,
+    fontWeight: fontWeight,
+    fontStyle: fontStyle,
+    color: color,
+    height: height,
+    letterSpacing: letterSpacing,
+    decoration: decoration,
+    decorationColor: decorationColor,
   );
 }
 
-/// Custom theme extension for documentation-specific styling.
-class DocsThemeExtension extends ThemeExtension<DocsThemeExtension> {
-  const DocsThemeExtension({
-    required this.codeBackground,
-    required this.proseMaxWidth,
-    required this.contentPadding,
+/// Forui's platform-agnostic theme, tuned for a warm printed-page interface.
+abstract final class AppTheme {
+  static const primary = Color(0xFF1976A3);
+  static const primaryForeground = Color(0xFFFFFFFF);
+  static const paper = Color(0xFFFFFFFF);
+  static const canvas = Color(0xFFF1EEE8);
+  static const ink = Color(0xFF222629);
+  static const mutedInk = Color(0xFF687177);
+  static const divider = Color(0xFFD8DDE0);
+  static const paleBlue = Color(0xFFF1F6F8);
+  static const sidebar = Color(0xFFF8FAFB);
+  static const codeBackground = Color(0xFFF5F8FA);
+  static const bookBlack = Color(0xFF111516);
+  static const gold = Color(0xFFF0B743);
+  static const success = Color(0xFF2E7D5B);
+
+  static FThemeData get light {
+    final base = FTheme.neutral.light.desktop;
+    return FThemeData(
+      debugLabel: 'ZenRouter paper',
+      touch: false,
+      colors: base.colors.copyWith(
+        background: canvas,
+        foreground: ink,
+        primary: primary,
+        primaryForeground: primaryForeground,
+        secondary: paleBlue,
+        secondaryForeground: ink,
+        muted: codeBackground,
+        mutedForeground: mutedInk,
+        card: paper,
+        border: divider,
+      ),
+      typography: base.typography,
+      icons: base.icons,
+      style: base.style.copyWith(
+        borderRadius: const FBorderRadius(
+          xs2: BorderRadius.zero,
+          xs: BorderRadius.zero,
+          sm: BorderRadius.zero,
+          md: BorderRadius.zero,
+          lg: BorderRadius.zero,
+          xl: BorderRadius.zero,
+          xl2: BorderRadius.zero,
+          xl3: BorderRadius.zero,
+          pill: BorderRadius.all(Radius.circular(999)),
+        ),
+      ),
+    );
+  }
+}
+
+/// Reading-specific tokens kept beside the Forui theme.
+@immutable
+class DocsThemeData {
+  const DocsThemeData({
+    this.proseMaxWidth = 640,
+    this.contentPadding = const EdgeInsets.symmetric(
+      horizontal: 40,
+      vertical: 72,
+    ),
   });
 
-  /// Background color for code blocks
-  final Color codeBackground;
-
-  /// Maximum width for prose content (for comfortable reading)
   final double proseMaxWidth;
-
-  /// Standard padding for content sections
   final EdgeInsets contentPadding;
-
-  @override
-  ThemeExtension<DocsThemeExtension> copyWith({
-    Color? codeBackground,
-    double? proseMaxWidth,
-    EdgeInsets? contentPadding,
-  }) {
-    return DocsThemeExtension(
-      codeBackground: codeBackground ?? this.codeBackground,
-      proseMaxWidth: proseMaxWidth ?? this.proseMaxWidth,
-      contentPadding: contentPadding ?? this.contentPadding,
-    );
-  }
-
-  @override
-  ThemeExtension<DocsThemeExtension> lerp(
-    covariant ThemeExtension<DocsThemeExtension>? other,
-    double t,
-  ) {
-    if (other is! DocsThemeExtension) return this;
-    return DocsThemeExtension(
-      codeBackground: Color.lerp(codeBackground, other.codeBackground, t)!,
-      proseMaxWidth: proseMaxWidth + (other.proseMaxWidth - proseMaxWidth) * t,
-      contentPadding: EdgeInsets.lerp(contentPadding, other.contentPadding, t)!,
-    );
-  }
 }
 
-/// Extension for convenient access to DocsThemeExtension
-extension DocsThemeExtensionGetter on ThemeData {
-  DocsThemeExtension get docs => extension<DocsThemeExtension>()!;
+/// Makes the book's reading tokens available without a Material [ThemeData].
+class DocsTheme extends InheritedWidget {
+  const DocsTheme({
+    super.key,
+    this.data = const DocsThemeData(),
+    required super.child,
+  });
+
+  final DocsThemeData data;
+
+  static DocsThemeData of(BuildContext context) {
+    final scope = context.dependOnInheritedWidgetOfExactType<DocsTheme>();
+    assert(scope != null, 'No DocsTheme found in context.');
+    return scope!.data;
+  }
+
+  @override
+  bool updateShouldNotify(DocsTheme oldWidget) => data != oldWidget.data;
+}
+
+extension DocsThemeContext on BuildContext {
+  DocsThemeData get docsTheme => DocsTheme.of(this);
 }

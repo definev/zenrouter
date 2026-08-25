@@ -16,7 +16,8 @@ abstract class _$ShopProductsProductIdReviewsRoute extends AppRoute {
   _$ShopProductsProductIdReviewsRoute({required this.productId});
 
   @override
-  Uri toUri() => Uri.parse('/shop/products/$productId/reviews');
+  Uri toUri() =>
+      Uri(pathSegments: ['', 'shop', 'products', productId, 'reviews']);
 
   @override
   List<Object?> get props => [productId];

@@ -4,6 +4,7 @@ import 'package:zenrouter_core/src/coordinator/base.dart';
 import 'package:zenrouter_core/src/mixin/target.dart';
 import 'package:zenrouter_core/src/mixin/uri.dart';
 import 'package:zenrouter_core/src/path/base.dart';
+import 'package:zenrouter_core/src/routing/manifest.dart';
 
 /// Base class for route modules that handle a subset of application routes.
 ///
@@ -24,8 +25,9 @@ import 'package:zenrouter_core/src/path/base.dart';
 ///
 /// - Parse routes: Implement [parseRouteFromUri] for URI patterns
 /// - Define paths: Override [paths] for nested navigation
-/// - Register layouts: Override [defineLayout] for layout constructors
-/// - Register converters: Override [defineConverter] for restorable converters
+/// - Register layouts: Call `bindLayout` on the path
+/// - Register converters: Override `init()` and call `defineRestorableConverter`
+/// - Contribute topology: Override [routeManifest] or [routeManifestFragment]
 abstract class RouteModule<T extends RouteUri> {
   RouteModule._(this.coordinator);
 
@@ -43,6 +45,21 @@ abstract class RouteModule<T extends RouteUri> {
   /// Override to provide paths for nested navigation within this module.
   List<StackPath> get paths => [];
 
+  /// Declarative topology exposed by this module.
+  ///
+  /// Hand-written modules may remain parser-only during migration. Generated
+  /// modules override this getter with their immutable route manifest.
+  RouteManifest<Object> get routeManifest => RouteManifest.empty;
+
+  /// Declarative topology contributed to an owning modular coordinator.
+  ///
+  /// Complete module manifests are exposed as fragments automatically.
+  /// Override this getter directly when the contribution references layouts or
+  /// indexed children declared by another module; the owning coordinator will
+  /// validate those relationships after composing the application graph.
+  RouteManifestFragment<Object> get routeManifestFragment =>
+      routeManifest.fragment;
+
   /// Parses a URI and returns a route if this module handles it.
   ///
   /// Return null if this module doesn't handle the given URI.
@@ -50,12 +67,22 @@ abstract class RouteModule<T extends RouteUri> {
 
   /// Defines layouts for this module.
   ///
-  /// Override to register layout constructors using [defineLayoutParent].
+  /// Deprecated: bind the layout on the path with `bindLayout` instead.
+  @Deprecated(
+    'Bind the layout on the path with bindLayout instead:\n'
+    '  NavigationPath.createWith(label: \'shop\', coordinator: this)\n'
+    '    ..bindLayout(ShopLayout.new);\n'
+    'defineLayout will be removed in a future release.',
+  )
   void defineLayout() {}
 
   /// Defines restorable converters for this module.
   ///
-  /// Override to register converters using [defineConverter].
+  /// Deprecated: register converters in `init()` with `defineRestorableConverter`.
+  @Deprecated(
+    'Register converters in init() with defineRestorableConverter. '
+    'defineConverter will be removed in a future release.',
+  )
   void defineConverter() {}
 }
 
@@ -66,14 +93,66 @@ abstract class RouteModule<T extends RouteUri> {
 ///
 /// ## Role in Navigation Flow
 ///
-/// 1. [defineModules]: Returns the set of modules to register
+/// 1. [defineModules]: Returns modules in deterministic matching order
 /// 2. Route parsing: Modules are checked in order until one matches
 /// 3. Path aggregation: All module paths are combined into coordinator paths
 /// 4. Layout/converter delegation: Each module's define methods are called
+/// 5. Manifest composition: Nested fragments are flattened and validated once
 mixin CoordinatorModular<T extends RouteUri> on CoordinatorCore<T> {
-  late final Map<Type, RouteModule<T>> _modules = {
-    for (final module in defineModules()) module.runtimeType: module,
-  };
+  late final List<RouteModule<T>> _moduleList = List.unmodifiable(
+    defineModules(),
+  );
+
+  late final Map<Type, RouteModule<T>> _modules = _indexModules(_moduleList);
+
+  /// Stable diagnostic name for the composed application manifest.
+  ///
+  /// Override when a specific name is required in serialized tooling output.
+  String get routeManifestName => runtimeType.toString();
+
+  /// Topology owned directly by this coordinator, excluding child modules.
+  ///
+  /// Modular coordinators should override this seam instead of
+  /// [routeManifest], which is the fully composed graph.
+  RouteManifestFragment<Object> get localRouteManifestFragment =>
+      super.routeManifest.fragment;
+
+  Iterable<RouteManifestFragment<Object>> get _routeManifestFragments sync* {
+    final local = localRouteManifestFragment;
+    if (!local.isEmpty) yield local;
+    for (final module in _moduleList) {
+      if (module case CoordinatorModular modular) {
+        yield* modular._routeManifestFragments.cast();
+      } else {
+        final fragment = module.routeManifestFragment;
+        if (!fragment.isEmpty) yield fragment;
+      }
+    }
+  }
+
+  /// Fully composed route topology for this coordinator and all nested
+  /// modules. Graph relationships and ambiguous paths are validated here.
+  @override
+  late final RouteManifest<Object> routeManifest =
+      RouteManifest<Object>.fromFragments(
+        name: routeManifestName,
+        fragments: _routeManifestFragments,
+      );
+
+  Map<Type, RouteModule<T>> _indexModules(Iterable<RouteModule<T>> modules) {
+    final indexed = <Type, RouteModule<T>>{};
+    for (final module in modules) {
+      final type = module.runtimeType;
+      if (indexed.containsKey(type)) {
+        throw StateError(
+          'Duplicate route module type $type. '
+          'Each module type may be registered only once.',
+        );
+      }
+      indexed[type] = module;
+    }
+    return indexed;
+  }
 
   late final Map<Type, RouteModule<T>> _allModules = {
     runtimeType: this,
@@ -92,10 +171,11 @@ mixin CoordinatorModular<T extends RouteUri> on CoordinatorCore<T> {
     super.dispose();
   }
 
-  /// Returns the set of route modules for this coordinator.
+  /// Returns route modules in deterministic matching order.
   ///
   /// The order determines which module is checked first during route parsing.
-  Set<RouteModule<T>> defineModules();
+  /// The iterable is snapshotted once during initialization.
+  Iterable<RouteModule<T>> defineModules();
 
   /// Retrieves a module by its type.
   ///
@@ -114,20 +194,34 @@ mixin CoordinatorModular<T extends RouteUri> on CoordinatorCore<T> {
   T notFoundRoute(Uri uri);
 
   @override
+  @Deprecated(
+    'Bind the layout on the path with bindLayout instead:\n'
+    '  NavigationPath.createWith(label: \'shop\', coordinator: this)\n'
+    '    ..bindLayout(ShopLayout.new);\n'
+    'defineLayout will be removed in a future release.',
+  )
   void defineLayout() {
+    // ignore: deprecated_member_use_from_same_package
     super.defineLayout();
     for (final module in _modules.values) {
       if (module is! CoordinatorCore) {
+        // ignore: deprecated_member_use_from_same_package
         module.defineLayout();
       }
     }
   }
 
   @override
+  @Deprecated(
+    'Register converters in init() with defineRestorableConverter. '
+    'defineConverter will be removed in a future release.',
+  )
   void defineConverter() {
+    // ignore: deprecated_member_use_from_same_package
     super.defineConverter();
     for (final module in _modules.values) {
       if (module is! CoordinatorCore) {
+        // ignore: deprecated_member_use_from_same_package
         module.defineConverter();
       }
     }

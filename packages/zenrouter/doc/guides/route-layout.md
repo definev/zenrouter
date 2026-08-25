@@ -1,513 +1,239 @@
-# RouteLayout Guide
+# Layouts
 
-RouteLayout is a powerful mixin that enables you to create nested navigation structures like shells, tab bars, and custom layouts. This guide covers how to create custom layouts and register them with your Coordinator.
+A `RouteLayout` owns a `StackPath` and wraps child routes (app bar,
+sidebar, tab bar).
 
-## What is RouteLayout?
+1. Create the path with `createWith` and `bindLayout(TheLayout.new)`.
+2. On each child: `Type? get layout => TheLayout`.
 
-`RouteLayout` is a mixin that transforms a route into a container that manages a `StackPath` (navigation container). Think of it as a "shell" or "wrapper" that can display multiple child routes within its own stack path.
+Works with any `Coordinator`. Add the path to `coordinator.paths`.
 
-**Common use cases:**
-- **Tab bars**: Show multiple tabs with their own navigation stacks
-- **Shell routes**: Wrap routes with a persistent UI (e.g., sidebar, navigation bar)
-- **Modal flows**: Create custom navigation containers for modals or sheets
-- **Master-detail layouts**: Side-by-side navigation for tablets and desktops
+```
+/shop                  ShopLayout + ShopHomeRoute
+/shop/products/:id     ShopLayout + ProductRoute
+```
 
-## Built-in Stack Paths
+## Stack
 
-ZenRouter provides two built-in `StackPath` implementations:
-
-| Type | Purpose | Behavior |
-|------|---------|----------|
-| **NavigationPath** | Standard navigation | Mutable stack with push/pop operations |
-| **IndexedStackPath** | Tab navigation | Fixed stack with indexed switching |
-
-Both are automatically registered and ready to use. Custom layouts typically use one of these paths.
-
----
-
-## Creating a RouteLayout
-
-### Step 1: Define Your Layout Route
-
-A layout route must:
-1. Use the `RouteLayout` mixin
-2. Implement `resolvePath()` to return its `StackPath`
-3. Build its UI using `buildPath()`
-
-**Example: Simple Shell Layout**
+Unbounded push/pop under a shell.
 
 ```dart
-class ShellLayout extends AppRoute with RouteLayout<AppRoute> {
-  @override
-  NavigationPath<AppRoute> resolvePath(AppCoordinator coordinator) =>
-      coordinator.shellPath;
+class AppCoordinator extends Coordinator<AppRoute> {
+  late final shopStack = NavigationPath<AppRoute>.createWith(
+    label: 'shop',
+    coordinator: this,
+  )..bindLayout(ShopLayout.new);
 
   @override
-  Widget build(AppCoordinator coordinator, BuildContext context) {
+  List<StackPath> get paths => [...super.paths, shopStack];
+
+  @override
+  AppRoute parseRouteFromUri(Uri uri) { /* ... */ }
+}
+```
+
+`label` must be unique (state restoration). `bindLayout` registers the
+constructor.
+
+```dart
+class ShopLayout extends AppRoute with RouteLayout<AppRoute> {
+  @override
+  NavigationPath<AppRoute> resolvePath(covariant AppCoordinator c) =>
+      c.shopStack;
+
+  @override
+  Widget build(covariant AppCoordinator coordinator, BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My App')),
-      drawer: MyDrawer(),
-      // buildPath() renders the current route in the shell's path
+      appBar: AppBar(title: const Text('Shop')),
+      drawer: const ShopDrawer(),
       body: buildPath(coordinator),
     );
   }
 }
-```
 
-### Step 2: Create the StackPath in Your Coordinator
-
-Add a `StackPath` property to your coordinator. This holds the navigation stack for the layout.
-
-```dart
-class AppCoordinator extends Coordinator<AppRoute> {
-  // Create a dedicated path for the shell layout
-  late final NavigationPath<AppRoute> shellPath = NavigationPath.createWith(
-    label: 'shell',        // Unique label for restoration
-    coordinator: this,
-  )
-  // ✅ Register the route layout constructor
-  ..bindLayout(ShellLayout.new);
+class ShopHomeRoute extends AppRoute {
+  @override
+  Type? get layout => ShopLayout;
 
   @override
-  List<StackPath> get paths => [
-    ...super.paths,
-    shellPath,  // Register the path
-  ];
-}
-```
-
-> **Important:** Always use the `.createWith()` factory to bind paths to coordinators. This ensures proper lifecycle management and state restoration.
-
-> **Why is this needed?**
-> ZenRouter needs to create layout instances during navigation and state restoration. By registering the constructor, you enable ZenRouter to instantiate layouts without reflection (important for web and minification compatibility).
-
-### Step 3: Assign Routes to the Layout
-
-Routes specify which layout they belong to using the `layout` getter:
-
-```dart
-class HomeRoute extends AppRoute {
-  @override
-  Type get layout => ShellLayout;
+  Uri toUri() => Uri.parse('/shop');
 
   @override
-  Uri toUri() => Uri.parse('/home');
-
-  @override
-  Widget build(AppCoordinator coordinator, BuildContext context) {
-    return Center(child: Text('Home Page'));
-  }
-}
-```
-
-When you push `HomeRoute`, the coordinator will:
-1. Check if `ShellLayout` is active
-2. If not, activate/push the layout first
-3. Then push `HomeRoute` to the shell's `NavigationPath`
-
----
-
-## Using bindLayout (Recommended Pattern)
-
-For a more concise approach, use the `bindLayout` extension method to register layouts inline:
-
-```dart
-class AppCoordinator extends Coordinator<AppRoute> {
-  late final NavigationPath<AppRoute> shellPath = NavigationPath.createWith(
-    label: 'shell',
-    coordinator: this,
-  )..bindLayout(ShellLayout.new);  // ✅ Register layout inline
-
-  @override
-  List<StackPath> get paths => [...super.paths, shellPath];
-
-  // No need to override defineLayout() when using bindLayout
-}
-```
-
-**Benefits of `bindLayout`:**
-- ✅ More concise (no separate `defineLayout()` method)
-- ✅ Collocates path and layout registration
-- ✅ Reduces boilerplate
-
-**When to use each approach:**
-| Approach | When to Use |
-|----------|-------------|
-| `bindLayout` | Modern code, single layout per path |
-| `defineLayout()` | Multiple layouts, legacy code migration |
-
----
-
-## Using definePath for Custom StackPaths
-
-If you extend `StackPath` to create custom navigation behavior (e.g., modal sheets, custom transitions), you must register a builder using `definePath`.
-
-### Creating a Custom StackPath
-
-```dart
-class ModalPath<T extends RouteTarget> extends StackPath<T>
-    with StackMutatable<T> {
-  // 1. Define a unique PathKey
-  static const key = PathKey('ModalPath');
-
-  ModalPath._(super.stack, {super.debugLabel, super.coordinator});
-
-  factory ModalPath.createWith({
-    required Coordinator coordinator,
-    required String label,
-  }) => ModalPath._([], debugLabel: label, coordinator: coordinator);
-
-  // 2. Return the key
-  @override
-  PathKey get pathKey => key;
-
-  @override
-  T? get activeRoute => _stack.lastOrNull;
-
-  @override
-  void reset() {
-    for (final route in _stack) {
-      route.completeOnResult(null, null, true);
-    }
-    _stack.clear();
-  }
-
-  @override
-  Future<void> activateRoute(T route) async {
-    reset();
-    push(route);
-  }
-}
-```
-
-### Registering the Custom Path Builder
-
-Use `definePath` to tell ZenRouter how to render your custom path:
-
-```dart
-class AppCoordinator extends Coordinator<AppRoute> {
-  late final ModalPath<AppRoute> modalPath = ModalPath.createWith(
-    label: 'modal',
-    coordinator: this,
-  );
-
-  @override
-  void defineLayout() {
-    // Register custom path builder
-    RouteLayout.definePath(
-      ModalPath.key,
-      (coordinator, path, layout) {
-        return ModalStack(
-          path: path as ModalPath<AppRoute>,
-          coordinator: coordinator,
-        );
-      },
-    );
-  }
-}
-```
-
-The builder receives:
-- `coordinator`: Your app's coordinator
-- `path`: The StackPath instance
-- `layout`: The parent RouteLayout (if nested)
-
----
-
-## Complete Example: Tab Bar with Nested Navigation
-
-Here's a real-world example showing tabs with independent navigation stacks.
-
-```dart
-// ============================================================================
-// Routes
-// ============================================================================
-
-abstract class AppRoute extends RouteTarget with RouteUnique {}
-
-class TabBarLayout extends AppRoute with RouteLayout<AppRoute> {
-  @override
-  IndexedStackPath<AppRoute> resolvePath(AppCoordinator coordinator) =>
-      coordinator.tabIndexed;
-
-  @override
-  Widget build(AppCoordinator coordinator, BuildContext context) {
-    final path = coordinator.tabIndexed;
-    return Scaffold(
-      body: Column(
-        children: [
-          Expanded(child: buildPath(coordinator)),  // Tab content
-          _buildTabBar(coordinator, path),          // Tab buttons
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTabBar(AppCoordinator coordinator, IndexedStackPath path) {
-    return ListenableBuilder(
-      listenable: path,
-      builder: (context, _) => Row(
-        children: [
-          _TabButton(
-            label: 'Home',
-            isActive: path.activeIndex == 0,
-            onTap: () => coordinator.push(HomeTab()),
-          ),
-          _TabButton(
-            label: 'Profile',
-            isActive: path.activeIndex == 1,
-            onTap: () => coordinator.push(ProfileTab()),
-          ),
-        ],
-      ),
+  Widget build(covariant AppCoordinator coordinator, BuildContext context) {
+    return ListTile(
+      title: const Text('Product 1'),
+      onTap: () => coordinator.push(ProductRoute(id: '1')),
     );
   }
 }
 
-// Each tab can have its own nested navigation
-class HomeTabLayout extends AppRoute with RouteLayout<AppRoute> {
-  @override
-  Type get layout => TabBarLayout;  // Nested inside TabBarLayout
-
-  @override
-  NavigationPath<AppRoute> resolvePath(AppCoordinator coordinator) =>
-      coordinator.homeTabPath;
-}
-
-class HomeTab extends AppRoute {
-  @override
-  Type get layout => HomeTabLayout;
-
-  @override
-  Uri toUri() => Uri.parse('/tabs/home');
-
-  @override
-  Widget build(AppCoordinator coordinator, BuildContext context) {
-    return ListView(
-      children: [
-        ListTile(
-          title: Text('Item 1'),
-          onTap: () => coordinator.push(DetailRoute(id: '1')),
-        ),
-      ],
-    );
-  }
-}
-
-class DetailRoute extends AppRoute {
-  DetailRoute({required this.id});
+class ProductRoute extends AppRoute {
+  ProductRoute({required this.id});
   final String id;
 
   @override
-  Type get layout => HomeTabLayout;
+  List<Object?> get props => [id];
 
   @override
-  Uri toUri() => Uri.parse('/tabs/home/detail/$id');
+  Type? get layout => ShopLayout;
 
   @override
-  Widget build(AppCoordinator coordinator, BuildContext context) {
+  Uri toUri() => Uri.parse('/shop/products/$id');
+}
+```
+
+Call `buildPath(coordinator)`, not `super.build()`.
+
+`push(ProductRoute(id: '1'))` activates `ShopLayout` if needed, then
+pushes the product onto `shopStack`.
+
+## Indexed (tabs)
+
+Fixed child list. Switching tabs does not keep a nested stack per tab.
+
+```dart
+late final tabStack = IndexedStackPath<AppRoute>.createWith(
+  coordinator: this,
+  label: 'main-tabs',
+  [HomeTab(), ShopTab(), ProfileTab()],
+)..bindLayout(TabBarLayout.new);
+```
+
+```dart
+class TabBarLayout extends AppRoute with RouteLayout<AppRoute> {
+  @override
+  IndexedStackPath<AppRoute> resolvePath(covariant AppCoordinator c) =>
+      c.tabStack;
+
+  @override
+  Widget build(covariant AppCoordinator coordinator, BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Detail $id')),
-      body: Center(child: Text('Detail for $id')),
+      body: buildPath(coordinator),
+      bottomNavigationBar: ListenableBuilder(
+        listenable: coordinator.tabStack,
+        builder: (context, _) => BottomNavigationBar(
+          currentIndex: coordinator.tabStack.activeIndex,
+          onTap: coordinator.tabStack.activateAt,
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.store), label: 'Shop'),
+            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          ],
+        ),
+      ),
     );
   }
-
-  @override
-  List<Object?> get props => [id];
-}
-
-// ============================================================================
-// Coordinator
-// ============================================================================
-
-class AppCoordinator extends Coordinator<AppRoute> {
-  // Tab container with indexed navigation
-  late final IndexedStackPath<AppRoute> tabIndexed =
-      IndexedStackPath.createWith(
-    coordinator: this,
-    label: 'tabs',
-    [HomeTabLayout(), ProfileTab()],
-  )..bindLayout(TabBarLayout.new);
-
-  // Each tab gets its own navigation stack
-  late final NavigationPath<AppRoute> homeTabPath =
-      NavigationPath.createWith(
-    label: 'home-tab',
-    coordinator: this,
-  )..bindLayout(HomeTabLayout.new);
-
-  @override
-  List<StackPath> get paths => [
-    ...super.paths,
-    tabIndexed,
-    homeTabPath,
-  ];
-
-  @override
-  AppRoute parseRouteFromUri(Uri uri) {
-    return switch (uri.pathSegments) {
-      ['tabs', 'home'] => HomeTab(),
-      ['tabs', 'home', 'detail', final id] => DetailRoute(id: id),
-      ['tabs', 'profile'] => ProfileTab(),
-      _ => HomeTab(),
-    };
-  }
 }
 ```
 
----
+Tab routes set `layout => TabBarLayout`.
 
-## Layout Hierarchies
+## Branched (stateful shell)
 
-Layouts can be nested arbitrarily. The coordinator resolves the full hierarchy when navigating.
+Each child is a layout with its own stack. Switching branches retains
+depth.
 
-**Example hierarchy:**
-```
-RootLayout (NavigationPath)
-  └─ TabBarLayout (IndexedStackPath)
-       ├─ HomeTabLayout (NavigationPath)
-       │    └─ DetailRoute
-       └─ ProfileTab
-```
+```dart
+late final branches = BranchedStackPath<AppRoute>.createWith(
+  [HomeBranchLayout(), SettingsBranchLayout()],
+  coordinator: this,
+  label: 'app-branches',
+)..bindLayout(AppShellLayout.new);
 
-When you push `DetailRoute`:
-1. Coordinator activates `RootLayout` (if needed)
-2. Then activates `TabBarLayout` inside root
-3. Then activates `HomeTabLayout` inside tabs
-4. Finally pushes `DetailRoute` to home tab's path
-
-**Navigation path resolution:**
-- Each route's `layout` getter points to its parent
-- The coordinator walks up the chain to build the full hierarchy
-- All required layouts are activated/pushed automatically
-
----
-
-## Key Concepts Reference
-
-### RouteLayout Methods
-
-| Method | Purpose |
-|--------|---------|
-| `resolvePath()` | Returns the StackPath this layout manages |
-| `buildPath()` | Renders the current route in the path |
-| `build()` | Builds the layout's UI (wrap with shell, etc.) |
-
-### Registration Functions
-
-| Function | Purpose | When to Use |
-|----------|---------|-------------|
-| `bindLayout()` | Register layout constructor inline | Modern code, recommended |
-| `defineLayout()` | Register layout in coordinator | Multiple layouts, legacy code |
-| `definePath()` | Register custom StackPath builder | Custom navigation containers |
-
-### Best Practices
-
-✅ **Do:**
-- Use `bindLayout` for cleaner code
-- Always use `.createWith()` to bind paths to coordinators
-- Provide unique `label` for each path (required for state restoration)
-- Keep layout hierarchies simple and logical
-
-❌ **Don't:**
-- Create paths without binding to a coordinator
-- Forget to register layouts with `bindLayout` or `defineLayout`
-- Create circular layout dependencies
-- Use the same label for multiple paths
-
----
-
-## Troubleshooting
-
-### Default layout builders require `Coordinator`
-
-In debug mode you may see:
-
-```
-The default layout builder for "NavigationPath" requires a zenrouter Coordinator
-(extend Coordinator<YourRoute>), but received ...
+await branches.goToBranch(1);
 ```
 
-**Cause:** [`kDefaultLayoutBuilderTable`](../../lib/src/coordinator/layout.dart) builders for [`NavigationPath`](../api/navigation-paths.md) and [`IndexedStackPath`](../api/navigation-paths.md) need Flutter's [`Coordinator`](../api/coordinator.md) (`NavigationStack`, `routerDelegate`, restoration IDs, transitions). A bare [`CoordinatorCore`](https://pub.dev/packages/zenrouter_core) that does not extend `Coordinator` cannot use those defaults.
+Register each branch's child `NavigationPath` on `coordinator.paths`.
 
-**Solution:**
+## Nesting
 
-1. **Recommended** — extend `Coordinator<YourRoute>` for any app using `NavigationPath` / `IndexedStackPath` with the stock builders.
-2. **Custom core** — register your own builder that accepts your `CoordinatorCore` subtype:
+```
+TabBarLayout          (indexed)
+  └─ HomeTabLayout    (stack)
+       └─ ProductRoute
+```
+
+The coordinator walks `layout` and activates missing parents.
+
+## Custom StackPath
 
 ```dart
 @override
-void defineLayout() {
+void init() {
+  super.init();
   defineLayoutBuilder(
-    NavigationPath.key,
-    (coordinatorCore, path, layout) {
-      final coordinator = coordinatorCore as MyCustomCoordinator;
-      return MyNavigationStack(
-        path: path as NavigationPath<MyRoute>,
-        coordinator: coordinator,
+    ModalPath.key,
+    (coordinator, path, layout) {
+      return ModalStack(
+        path: path as ModalPath<AppRoute>,
+        coordinator: coordinator as AppCoordinator,
       );
     },
   );
 }
 ```
 
-See also [Migration Guide — `RouteLayoutBuilder`](../MIGRATION_GUIDE.md#routelayoutbuilder-first-parameter-coordinatorcore).
+Default builders for `NavigationPath` and `IndexedStackPath` require
+Flutter `Coordinator`, not a bare `CoordinatorCore`.
 
-### Error: "Missing RouteLayout constructor"
+## Troubleshooting
 
-```
-Missing RouteLayout constructor for [MyLayout] must define by calling 
-[defineLayoutParent] in [defineLayout] function
-```
+**Missing constructor for the [MyLayout] layout**
 
-**Solution:** Register the layout constructor:
+Add `..bindLayout(MyLayout.new)` on the path.
+
+**Layout does not appear**
+
+- Path is in `coordinator.paths` (spread `super.paths`)
+- Child `layout` getter is the correct type
+- Path created with `createWith`
+
+**Default layout builder requires a zenrouter Coordinator**
+
+Extend `Coordinator`, or register a custom builder.
+
+## Manifest layouts
+
+Only if the coordinator uses a `RouteManifest`. Declare the same shell
+on the graph so matching and the Graph tab see it.
+
+`parentId` is a manifest ID (`ShopRouteId.layout`). `layout` is a type
+(`ShopLayout`). They must name the same shell.
+
 ```dart
-// Option 1: Using bindLayout (recommended)
-late final path = NavigationPath.createWith(...)
-  ..bindLayout(MyLayout.new);
+RouteManifestLayout.stack(id: ShopRouteId.layout, path: '/shop');
 
-// Option 2: Using defineLayout
-@override
-void defineLayout() {
-  RouteLayout.defineLayout(MyLayout, MyLayout.new);
-}
+RouteManifestRoute(
+  id: ShopRouteId.home,
+  path: '/shop',
+  parentId: ShopRouteId.layout,
+);
+
+RouteManifestLayout.indexed(
+  id: TabsRouteId.layout,
+  path: '/tabs',
+  childIds: [TabsRouteId.home, TabsRouteId.shop, TabsRouteId.profile],
+);
+
+RouteManifestLayout.branched(
+  id: ShellRouteId.shell,
+  path: '/',
+  childIds: [ShellRouteId.homeBranch, ShellRouteId.settingsBranch],
+);
 ```
 
-### Error: "No layout builder provided"
+Indexed `childId`s must be direct children. Branched children must
+themselves be layouts. Cycles fail at manifest construction.
 
-```
-No layout builder provided for [CustomPath]. If you extend the [StackPath] 
-class, you must register it via [RouteLayout.definePath]
-```
+| Kind | Manifest | Path |
+|------|----------|------|
+| Stack | `RouteManifestLayout.stack` | `NavigationPath` |
+| Tabs | `RouteManifestLayout.indexed` | `IndexedStackPath` |
+| Stateful shell | `RouteManifestLayout.branched` | `BranchedStackPath` |
 
-**Solution:** Register your custom path's builder:
-```dart
-@override
-void defineLayout() {
-  RouteLayout.definePath(
-    CustomPath.key,
-    (coordinator, path, layout) => CustomPathWidget(path: path),
-  );
-}
-```
+## See also
 
-### Layout Not Appearing
-
-**Check:**
-1. Path is added to `coordinator.paths` list
-2. Layout is registered with `bindLayout` or `defineLayout`
-3. Route's `layout` getter returns the correct Type
-4. Path is bound to coordinator with `.createWith()`
-
----
-
-## Next Steps
-
-- **See [getting-started.md](./getting-started.md)** for basic navigation patterns
-- **See [query-parameters.md](./query-parameters.md)** for handling URL parameters
-- **See [state-restoration.md](./state-restoration.md)** for persisting navigation state
-- **Check example code** in `packages/zenrouter/example/lib/main_coordinator.dart`
-
----
-
-**Need help?** File an issue at [github.com/definev/zenrouter/issues](https://github.com/definev/zenrouter/issues)
+- [Modular coordinator](coordinator-modular.md)
+- [State restoration](state-restoration.md)
+- [Bottom navigation](../recipes/bottom-navigation.md)
+- [`main_coordinator.dart`](../../example/lib/main_coordinator.dart)

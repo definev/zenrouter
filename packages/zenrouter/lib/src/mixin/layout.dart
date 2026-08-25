@@ -1,5 +1,4 @@
 import 'package:flutter/widgets.dart';
-import 'package:zenrouter/src/coordinator/layout.dart';
 import 'package:zenrouter/zenrouter.dart';
 
 typedef DecodeLayoutKeyCallback = Object Function(String key);

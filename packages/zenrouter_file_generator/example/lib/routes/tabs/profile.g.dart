@@ -17,7 +17,7 @@ abstract class _$TabProfileRoute extends AppRoute {
   Type? get layout => TabsLayout;
 
   @override
-  Uri toUri() => Uri.parse('/tabs/profile');
+  Uri toUri() => Uri(pathSegments: ['', 'tabs', 'profile']);
 
   @override
   List<Object?> get props => [];

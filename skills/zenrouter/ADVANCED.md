@@ -4,10 +4,155 @@ Deep-dive reference for patterns beyond the core workflow. Read [SKILL.md](./SKI
 
 ---
 
+## RouteManifestFragment
+
+A fragment is one feature's contribution to the application graph. It validates
+local shape and ID uniqueness. Parent links, indexed/branch children, cycles,
+and ambiguous paths are validated only after `CoordinatorModular` (or
+`RouteManifest.fromFragments`) composes the full graph.
+
+Use a **complete** `RouteManifest` + `RouteModuleBinding` when every
+`parentId` and indexed/branch child lives in that same module.
+
+Override `routeManifestFragment` when the contribution points at a layout
+declared by another module. Do **not** wrap that fragment in
+`RouteManifest(...)` — construction validates parents immediately and will
+throw. Prefer putting the child route in the module that owns the layout.
+If the child must live elsewhere, contribute a fragment and parse locally:
+
+```dart
+enum SharedId { shell, account }
+
+class ShellModule extends RouteModule<AppRoute> {
+  ShellModule(super.coordinator);
+
+  @override
+  RouteManifestFragment<SharedId> get routeManifestFragment =>
+      RouteManifestFragment(
+        name: 'shell',
+        idCodec: RouteIdCodec.enumValues(SharedId.values),
+        layouts: [
+          RouteManifestLayout.stack(id: SharedId.shell, path: '/account'),
+        ],
+      );
+
+  @override
+  FutureOr<AppRoute?> parseRouteFromUri(Uri uri) => null;
+}
+
+class AccountModule extends RouteModule<AppRoute> {
+  AccountModule(super.coordinator);
+
+  @override
+  RouteManifestFragment<SharedId> get routeManifestFragment =>
+      RouteManifestFragment(
+        name: 'account',
+        idCodec: RouteIdCodec.enumValues(SharedId.values),
+        routes: [
+          RouteManifestRoute(
+            id: SharedId.account,
+            path: '/account/profile',
+            parentId: SharedId.shell, // owned by ShellModule
+          ),
+        ],
+      );
+
+  @override
+  FutureOr<AppRoute?> parseRouteFromUri(Uri uri) =>
+      switch (uri.pathSegments) {
+        ['account', 'profile'] => AccountRoute(),
+        _ => null,
+      };
+}
+```
+
+`CoordinatorModular.routeManifest` is `RouteManifest<Object>.fromFragments`
+of `localRouteManifestFragment` plus every nested module fragment. IDs stay
+their original runtime values (enums are not stringified).
+
+Hand-composed apps without modules bind **after** `fromFragments` (the
+composed graph is complete, so `RouteModuleBinding` on the coordinator is valid):
+
+```dart
+static final manifest = RouteManifest<Object>.fromFragments(
+  name: 'app',
+  fragments: [
+    appShellManifestFragment,
+    accountsManifestFragment,
+  ],
+);
+
+@override
+late final routeBindings = manifest.bind<AppRoute>(
+  bindings: <RouteBinding<Object, AppRoute>>[
+    RouteBinding<AppShellRouteId, AppRoute>(
+      id: AppShellRouteId.home,
+      create: (_) => HomeRoute(),
+    ),
+    RouteBinding<AccountsRouteId, AppRoute>(
+      id: AccountsRouteId.profile,
+      create: (match) =>
+          ProfileRoute(id: match.pathParameters['profileId']!),
+    ),
+  ],
+  notFound: NotFoundRoute.new,
+);
+```
+
+---
+
+## Typed IDs and RouteIdCodec
+
+`RouteManifest<I>` IDs are domain values, not intrinsically strings.
+
+| Style | `I` | When |
+|:------|:----|:-----|
+| Hand-written feature | enum (`ShopRouteId`) | Default for new modules |
+| File generator | `String` (class name) | `@ZenRoute` projects |
+| Composed app | `Object` | Union of feature-owned ID types |
+
+`RouteIdCodec` is only required at the JSON seam (`encode` / `fromJson`).
+Matching and `location()` never need it. Still attach
+`RouteIdCodec.enumValues(MyId.values)` on handwritten fragments so tooling
+and `manifest.encode()` work.
+
+```dart
+final decoded = RouteManifest<Object>.decode(manifest.encode());
+```
+
+When every composed fragment has a codec, non-String wire IDs are scoped by
+fragment name. Homogeneous `String` graphs keep their existing wire IDs.
+
+---
+
+## Deferred Bindings
+
+`RouteBinding.create` may be async. Use `RouteBinding.deferred` so a deferred
+library loads before the factory runs:
+
+```dart
+RouteBinding.deferred(
+  id: ShopRouteId.home,
+  loadLibrary: shop_home.loadLibrary,
+  create: (_) => shop_home.ShopHomeRoute(),
+);
+
+notFound: deferredRouteNotFoundBinding(
+  loadLibrary: missing.loadLibrary,
+  create: (uri) => missing.NotFoundRoute(uri),
+);
+```
+
+File-based coordinators emit this automatically when `deferredImport: true`.
+
+---
+
 ## Coordinator as Module
 
 When a feature group itself has sub-modules, use a `Coordinator<T>` with
-`CoordinatorModular<T>` and override `coordinator` to point to the parent:
+`CoordinatorModular<T>` and override `coordinator` to point at the parent.
+Keep destinations on child `RouteModuleBinding` modules — do not mix
+`RouteModuleBinding` onto this grouping coordinator.
 
 ```dart
 class ShopCoordinator extends Coordinator<AppRoute>
@@ -25,10 +170,10 @@ class ShopCoordinator extends Coordinator<AppRoute>
   List<StackPath> get paths => [...super.paths, shopStack];
 
   @override
-  Set<RouteModule<AppRoute>> defineModules() => {
+  Iterable<RouteModule<AppRoute>> defineModules() => [
     ShopProductsModule(this),
     ShopReviewsModule(this),
-  };
+  ];
 
   @override
   AppRoute notFoundRoute(Uri uri) => NotFoundRoute(uri: uri);
@@ -39,25 +184,30 @@ Register in the parent's `defineModules()`:
 
 ```dart
 @override
-Set<RouteModule<AppRoute>> defineModules() => {
+Iterable<RouteModule<AppRoute>> defineModules() => [
   AuthModule(this),
-  ShopCoordinator(this),   // ← Coordinator-as-Module
-};
+  ShopCoordinator(this),
+];
 ```
 
 **Rules:**
-- Overriding `coordinator` sets `isRouteModule = true` — prevents the child from
-  creating its own root `NavigationPath`.
+- Overriding `coordinator` sets `isRouteModule = true` — the child does not
+  create its own root `NavigationPath`.
 - Always spread `super.paths` so child module paths are included.
 - Access sibling modules via `coordinator.getModule<OtherModule>()`.
+- Parsing walks sub-modules then, because `isRouteModule` is true, returns
+  `null` so the parent can try the next sibling. `notFoundRoute` on a nested
+  coordinator is unused.
 
 ---
 
 ## RouteModule
 
-`RouteModule<T>` encapsulates a feature's routes, navigation paths, layouts, and
-restorable converters. The coordinator delegates to modules in order — first
-non-null result from `parseRouteFromUri` wins.
+`RouteModule<T>` encapsulates a feature's routes, paths, layouts, and
+restorable converters. Prefer `RouteModuleBinding` so URI parsing comes from
+the module manifest. Parser-era modules may keep a hand-written
+`parseRouteFromUri` and optionally expose topology via `routeManifest` /
+`routeManifestFragment`.
 
 ### API
 
@@ -68,122 +218,50 @@ abstract class RouteModule<T extends RouteUri> {
   /// Always points to the root coordinator (even when nested).
   final CoordinatorModular<T> coordinator;
 
-  /// Navigation paths owned by this module. Default: [].
-  List<StackPath> get paths;
+  List<StackPath> get paths; // default: []
 
-  /// Return the matching route or null for unrecognised URIs.
+  RouteManifest<Object> get routeManifest; // default: RouteManifest.empty
+  RouteManifestFragment<Object> get routeManifestFragment; // default: routeManifest.fragment
+
   FutureOr<T?> parseRouteFromUri(Uri uri);
-
-  /// Register layout constructors (called once during coordinator init).
-  void defineLayout() {}
-
-  /// Register restorable converters (called once during coordinator init).
-  void defineConverter() {}
 }
 ```
 
-### Minimal module
+`RouteModuleBinding` overrides `routeManifest` and `parseRouteFromUri` from
+`routeBindings`.
+
+### Layouts
+
+Bind the layout on the path with `bindLayout`. Do **not** override the
+deprecated `defineLayout` hook:
 
 ```dart
-class AuthModule extends RouteModule<AppRoute> {
-  AuthModule(super.coordinator);
-
-  @override
-  FutureOr<AppRoute?> parseRouteFromUri(Uri uri) => switch (uri.pathSegments) {
-    ['auth', 'login'] => AuthLoginRoute(),
-    ['auth', 'register'] => AuthRegisterRoute(),
-    _ => null,
-  };
-}
+late final settingsPath = NavigationPath<AppRoute>.createWith(
+  label: 'settings',
+  coordinator: coordinator,
+)..bindLayout(SettingsLayout.new);
 ```
 
-### Module with NavigationPath + Layout
-
-```dart
-class ShopModule extends RouteModule<AppRoute> {
-  ShopModule(super.coordinator);
-
-  late final shopStack = NavigationPath<AppRoute>.createWith(
-    coordinator: coordinator,
-    label: 'shop',
-  )..bindLayout(ShopLayout.new);
-
-  @override
-  List<StackPath> get paths => [shopStack];
-
-  @override
-  FutureOr<AppRoute?> parseRouteFromUri(Uri uri) => switch (uri.pathSegments) {
-    ['shop'] => ShopHomeRoute(),
-    ['shop', 'products', final id] => ProductDetailRoute(id: id),
-    _ => null,
-  };
-}
-```
-
-### Async parsing
-
-`parseRouteFromUri` can return `Future<T?>` for routes that need async
-resolution (e.g. lazy loading):
+Headless `CoordinatorCore` code without Flutter `bindLayout` can still
+register a constructor in `init()`:
 
 ```dart
 @override
-Future<AppRoute?> parseRouteFromUri(Uri uri) async {
-  final route = await _lazyLoadRoute(uri);
-  return switch (route) {
-    final route? => route,
-    _ => null,
-  };
+void init() {
+  super.init();
+  defineLayoutParentConstructor(SettingsLayout, (_) => SettingsLayout());
 }
 ```
 
-### defineLayout
+### Converters
 
-Override to register layout constructors via `defineLayoutParentConstructor`.
-Called automatically during coordinator construction — do **not** call manually:
+Register restorable converters in `init()`:
 
 ```dart
 @override
-void defineLayout() {
-  coordinator.defineLayoutParentConstructor(
-    SettingsLayout,
-    () => SettingsLayout(),
-  );
-}
-```
-
-> [!TIP]
-> Using `bindLayout(LayoutClass.new)` on a `NavigationPath` is the preferred
-> shorthand — it registers the constructor for you. Override `defineLayout`
-> only when you need layouts not tied to a specific path.
-
-### defineConverter
-
-Override to register `RestorableConverter`s for state restoration:
-
-```dart
-@override
-void defineConverter() {
-  RestorableConverter.defineConverter(
-    'book_detail',
-    BookDetailConverter.new,
-  );
-}
-```
-
-### Accessing sibling modules
-
-Use `coordinator.getModule<T>()` to access another module's paths or
-functionality. This is most common in layout `resolvePath`:
-
-```dart
-class ShopLayout extends AppRoute with RouteLayout<AppRoute> {
-  @override
-  NavigationPath<AppRoute> resolvePath(covariant AppCoordinator coordinator) =>
-      coordinator.getModule<ShopModule>().shopStack;
-
-  @override
-  Widget build(covariant AppCoordinator coordinator, BuildContext context) =>
-      Scaffold(body: buildPath(coordinator));
+void init() {
+  super.init();
+  defineRestorableConverter('book_detail', BookDetailConverter.new);
 }
 ```
 
@@ -191,11 +269,10 @@ class ShopLayout extends AppRoute with RouteLayout<AppRoute> {
 
 | Rule | Why |
 |:-----|:----|
-| Always return `null` for unrecognised URIs | So other modules can claim them |
-| Use the inherited `coordinator` field for `NavigationPath<T>.createWith` | It always refers to the root coordinator that owns the navigation state |
-| Module order in `defineModules()` matters | First non-null `parseRouteFromUri` wins |
-| `defineLayout` / `defineConverter` are called once | During coordinator construction — do not call them manually |
-| `getModule<T>()` throws `TypeError` if `T` is not registered | Make sure the target module is in `defineModules()` |
+| Register layouts with `bindLayout` | `defineLayout` is deprecated |
+| Register converters in `init()` | `defineConverter` is deprecated |
+| `getModule<T>()` throws `TypeError` if `T` is missing | Register the module in `defineModules()` first |
+| Cross-module `parentId` uses a fragment | A complete `RouteManifest` cannot see foreign IDs |
 
 ---
 
@@ -237,7 +314,7 @@ Rules are evaluated in list order; first non-`continueRedirect` result wins.
 ```dart
 class ShopIndexRoute extends AppRoute with RouteRedirectRule<AppRoute> {
   @override
-  Uri toUri() => Uri.parse('/shop');
+  Uri toUri() => ShopModule.manifest.location(ShopRouteId.home);
 
   @override
   Widget build(covariant AppCoordinator coordinator, BuildContext context) =>
@@ -304,7 +381,7 @@ Rules are evaluated in list order; first non-`null` result wins. If every rule r
 ```dart
 class EditorRoute extends AppRoute with RouteGuardRule<AppRoute> {
   @override
-  Uri toUri() => Uri.parse('/editor');
+  Uri toUri() => AppCoordinator.manifest.location(AppRouteId.editor);
 
   @override
   Widget build(covariant AppCoordinator coordinator, BuildContext context) =>
@@ -326,10 +403,41 @@ Full multi-rule sample (upload + unsaved + audit + reactive `canPop`):
 
 ## IndexedStackPath (Tab Navigation)
 
-For tab-bar style navigation where all tabs stay alive:
+Declare fixed children on the **kind**, and keep the same ordered list in the
+runtime path.
 
 ```dart
-// In coordinator / module:
+enum TabsRouteId { layout, home, shop, profile }
+
+static final manifest = RouteManifest<TabsRouteId>(
+  name: 'tabs',
+  idCodec: RouteIdCodec.enumValues(TabsRouteId.values),
+  routes: [
+    RouteManifestRoute(
+      id: TabsRouteId.home,
+      path: '/tabs/home',
+      parentId: TabsRouteId.layout,
+    ),
+    RouteManifestRoute(
+      id: TabsRouteId.shop,
+      path: '/tabs/shop',
+      parentId: TabsRouteId.layout,
+    ),
+    RouteManifestRoute(
+      id: TabsRouteId.profile,
+      path: '/tabs/profile',
+      parentId: TabsRouteId.layout,
+    ),
+  ],
+  layouts: [
+    RouteManifestLayout.indexed(
+      id: TabsRouteId.layout,
+      path: '/tabs',
+      childIds: [TabsRouteId.home, TabsRouteId.shop, TabsRouteId.profile],
+    ),
+  ],
+);
+
 late final tabStack = IndexedStackPath<AppRoute>.createWith(
   coordinator: this,
   label: 'main-tabs',
@@ -339,7 +447,6 @@ late final tabStack = IndexedStackPath<AppRoute>.createWith(
 @override
 List<StackPath> get paths => [...super.paths, tabStack];
 
-// In layout:
 class TabBarLayout extends AppRoute with RouteLayout<AppRoute> {
   @override
   IndexedStackPath<AppRoute> resolvePath(covariant AppCoordinator coordinator) =>
@@ -362,56 +469,67 @@ class TabBarLayout extends AppRoute with RouteLayout<AppRoute> {
 }
 ```
 
+Every indexed `childId` must be a **direct** child (`parentId` equals the
+layout id).
+
 ---
 
-## Named Parameter Routes
+## BranchedStackPath (Stateful Shell Navigation)
 
-Files wrapped in `[]` represent dynamic URI segments. The name inside the brackets matches the parameter name used in `parseRouteFromUri` and `toUri()`:
-
-| File | URI | parseRouteFromUri |
-|:-----|:----|:------------------|
-| `transactions/[id].dart` | `/transaction/:id` | `['transaction', final id] => TransactionDetailRoute(id: id)` |
-| `posts/[slug].dart` | `/blog/posts/:slug` | `['blog', 'posts', final slug] => BlogPostRoute(slug: slug)` |
-| `users/[userId]/orders/[orderId].dart` | `/users/:userId/orders/:orderId` | `['users', final userId, 'orders', final orderId] => ...` |
-
-The route class inside `[id].dart` takes the parameter as a constructor argument and includes it in `props`:
+Use `BranchedStackPath` when every fixed destination is a layout root with its
+own child `NavigationPath`. Branch switching retains each branch's depth.
 
 ```dart
-// routes/(dashboard)/transactions/[id].dart
-class TransactionDetailRoute extends AppRoute {
-  TransactionDetailRoute({required this.id});
-  final String id;
+enum ShellRouteId { shell, homeBranch, settingsBranch }
 
-  @override
-  List<Object?> get props => [id];
+RouteManifestLayout.branched(
+  id: ShellRouteId.shell,
+  path: '/',
+  childIds: [ShellRouteId.homeBranch, ShellRouteId.settingsBranch],
+);
+RouteManifestLayout.stack(
+  id: ShellRouteId.homeBranch,
+  path: '/home',
+  parentId: ShellRouteId.shell,
+);
+RouteManifestLayout.stack(
+  id: ShellRouteId.settingsBranch,
+  path: '/settings',
+  parentId: ShellRouteId.shell,
+);
 
-  @override
-  Object? get parentLayoutKey => DashboardLayout;
+late final branches = BranchedStackPath<AppRoute>.createWith(
+  [HomeBranchLayout(), SettingsBranchLayout()],
+  coordinator: this,
+  label: 'app-branches',
+)..bindLayout(AppShellLayout.new);
 
-  @override
-  Uri toUri() => Uri.parse('/transaction/$id');
-
-  @override
-  Widget build(covariant AppCoordinator coordinator, BuildContext context) =>
-      TransactionDetailPage(id: id);
-}
+await branches.goToBranch(1);
 ```
 
+Each branch entry must implement `RouteLayoutParent`. Every direct child of a
+branched layout must be one of the declared branch layouts — leaf routes cannot
+sit directly under the shell. Register every branch's child path in
+`Coordinator.paths`.
+
 ---
 
-## Catch-All Parameter Routes
+## Parameter Routes
 
-Files wrapped in `[...]` capture all remaining URI segments as a list. The name inside indicates the parameter purpose:
+Files wrapped in `[]` / `[...]` are a naming convention. The source of truth
+is the manifest pattern.
 
-| File | URI | parseRouteFromUri |
-|:-----|:----|:------------------|
-| `blog/[...slug].dart` | `/blog/*` | `['blog', ...final slug] => BlogRoute(slug: slug)` |
-| `docs/[...path].dart` | `/docs/*` | `['docs', ...final path] => DocsRoute(path: path)` |
+| File | Pattern | Binding |
+|:-----|:--------|:--------|
+| `transactions/[id].dart` | `/transaction/:id` | `match.pathParameters['id']!` |
+| `posts/[slug].dart` | `/blog/posts/:slug` | `match.pathParameters['slug']!` |
+| `users/[userId]/orders/[orderId].dart` | `/users/:userId/orders/:orderId` | both path parameters |
+| `blog/[...slug].dart` | `/blog/...:slug` | `match.restParameters['slug']!` |
+| `docs/[...slugs]/[id].dart` | `/docs/...:slugs/:id` | rest + path |
 
-The route class inside `[...slug].dart` takes the segments as a `List<String>` constructor argument:
+Named `:id` routes are in [SKILL.md §4](./SKILL.md#4-route-definition). Catch-all:
 
 ```dart
-// routes/blog/[...slug].dart
 class BlogRoute extends AppRoute {
   BlogRoute({required this.slug});
   final List<String> slug;
@@ -420,13 +538,37 @@ class BlogRoute extends AppRoute {
   List<Object?> get props => [slug];
 
   @override
-  Object? get parentLayoutKey => BlogLayout;
+  Type? get layout => BlogLayout;
 
   @override
-  Uri toUri() => Uri.parse('/blog/${slug.join('/')}');
+  Uri toUri() => BlogModule.manifest.location(
+    BlogRouteId.article,
+    restParameters: {'slug': slug},
+  );
 
   @override
   Widget build(covariant AppCoordinator coordinator, BuildContext context) =>
       BlogPage(slug: slug);
 }
+
+RouteBinding(
+  id: BlogRouteId.article,
+  create: (match) => BlogRoute(slug: match.restParameters['slug']!),
+);
 ```
+
+---
+
+## Manifest Construction Failures
+
+These throw at coordinator/module init — fix the graph, do not catch them:
+
+| Exception | Typical cause |
+|:----------|:--------------|
+| `RouteManifestValidationException` | Duplicate IDs, unknown `parentId`, indexed child not a direct child, branch child not a layout, parent cycle, equally specific overlapping paths |
+| `RouteBindingValidationException` | Duplicate binding, unknown ID, binding a layout, unbound route |
+| `ArgumentError` on `RoutePattern` | Path missing `/`, contains `?`/`#`, empty segments, bad/duplicate parameter names, two rest params |
+
+`CoordinatorModular` validates after flattening every fragment, so a
+cross-module `parentId` that looks fine in isolation still fails if the
+target layout was never contributed.

@@ -312,10 +312,14 @@ void main() {
     });
 
     test('applies only inserts', () async {
+      final retainedA = TestRoute('a');
+      final retainedC = TestRoute('c');
       final path = NavigationPath.create(
         label: 'test',
-        stack: <TestRoute>[TestRoute('a'), TestRoute('c')],
+        stack: <TestRoute>[retainedA, retainedC],
       );
+      var notifyCount = 0;
+      path.addListener(() => notifyCount++);
 
       final ops = [
         const Keep<TestRoute>(0, 0),
@@ -330,6 +334,11 @@ void main() {
       expect(path.stack[0].id, 'a');
       expect(path.stack[1].id, 'b');
       expect(path.stack[2].id, 'c');
+      expect(path.stack[0], same(retainedA));
+      expect(path.stack[2], same(retainedC));
+      expect(retainedA.onResult.isCompleted, isFalse);
+      expect(retainedC.onResult.isCompleted, isFalse);
+      expect(notifyCount, 1);
     });
 
     test('applies mixed operations', () async {

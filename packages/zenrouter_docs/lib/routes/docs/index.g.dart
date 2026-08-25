@@ -17,7 +17,7 @@ abstract class _$DocsIndexRoute extends DocsRoute {
   Type? get layout => DocsLayout;
 
   @override
-  Uri toUri() => Uri.parse('/docs');
+  Uri toUri() => Uri(pathSegments: ['', 'docs']);
 
   @override
   List<Object?> get props => [];

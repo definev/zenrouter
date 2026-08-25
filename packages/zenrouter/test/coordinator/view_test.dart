@@ -65,6 +65,21 @@ class ProfileRoute extends ViewRoute {
   List<Object?> get props => [id];
 }
 
+class _LayoutOnlyCoordinator extends CoordinatorCore<ViewRoute>
+    with
+        ChangeNotifier,
+        CoordinatorLayoutCore<ViewRoute>,
+        CoordinatorLayoutBuilder<ViewRoute> {
+  @override
+  late final StackPath<ViewRoute> root = NavigationPath.create(label: 'root');
+
+  @override
+  Widget layoutBuilder(BuildContext context) => const SizedBox.shrink();
+
+  @override
+  FutureOr<ViewRoute?> parseRouteFromUri(Uri uri) => HomeRoute();
+}
+
 class ViewTestCoordinator extends Coordinator<ViewRoute> {
   ViewTestCoordinator({this.parser, this.asyncParse = false});
 
@@ -165,10 +180,44 @@ void main() {
       expect(find.text('Settings'), findsNothing);
     });
 
+    testWidgets('skips initialUri when the coordinator cannot navigate', (
+      tester,
+    ) async {
+      final coordinator = _LayoutOnlyCoordinator();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CoordinatorView<ViewRoute>(
+            coordinator: coordinator,
+            initialUri: Uri.parse('/'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(coordinator.root.stack, isEmpty);
+    });
+
     testWidgets('does not navigate when initialUri is null', (tester) async {
       final coordinator = ViewTestCoordinator();
 
       await tester.pumpWidget(_host(coordinator: coordinator));
+      await tester.pumpAndSettle();
+
+      expect(coordinator.root.stack, isEmpty);
+    });
+
+    testWidgets('does not navigate after dispose during async parse', (
+      tester,
+    ) async {
+      final coordinator = ViewTestCoordinator(asyncParse: true);
+
+      await tester.pumpWidget(
+        _host(coordinator: coordinator, initialUri: Uri.parse('/settings')),
+      );
+      await tester.pump();
+
+      await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();
 
       expect(coordinator.root.stack, isEmpty);

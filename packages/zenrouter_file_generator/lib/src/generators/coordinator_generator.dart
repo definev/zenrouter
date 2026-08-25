@@ -2,6 +2,7 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
 import 'package:dart_style/dart_style.dart';
 import 'package:glob/glob.dart';
+import 'package:zenrouter_core/zenrouter_core.dart';
 
 import 'package:zenrouter_file_annotation/zenrouter_file_annotation.dart';
 
@@ -11,10 +12,11 @@ typedef FileImportPath = (String path, bool isDeferred);
 ///
 /// This generator runs after all individual route generators and produces:
 /// - The AppRoute base class
-/// - The AppCoordinator class with parseRouteFromUri
+/// - The immutable RouteManifest and RouteBinding registry
 /// - Navigation path definitions
 /// - Layout registrations
 /// - Type-safe navigation extensions
+/// - Type-safe `coordinator.location.{route}` reverse routing
 class CoordinatorGenerator implements Builder {
   /// Global deferred import configuration.
   /// When true, all routes will use deferred imports unless explicitly disabled.
@@ -150,13 +152,13 @@ class CoordinatorGenerator implements Builder {
     // Build the route tree
     var tree = _buildRouteTree(routes, layouts);
 
-    // Validate and enforce IndexedStack routes to be non-deferred
+    // Validate and enforce IndexedStack routes to be non-deferred.
     // This must happen BEFORE we build allFilePaths
-    _validateRouteConflicts(tree.routes);
     tree = RouteTreeInfo(
       routes: _validateIndexedStackDeferredImports(tree.routes, tree.layouts),
       layouts: tree.layouts,
     );
+    _validateRouteManifest(tree, coordinatorName);
 
     // Now build allFilePaths with correct deferred import flags
     final allFilePaths = <FileImportPath>[];
@@ -189,7 +191,6 @@ class CoordinatorGenerator implements Builder {
       coordinatorName,
       routeBaseName,
       routeBasePath,
-      routeFileMap,
     );
 
     // Format the generated code
@@ -393,12 +394,17 @@ class CoordinatorGenerator implements Builder {
     final dirParts = PathParser.parseDirParts(relativePath);
 
     // Determine layout type
-    final isIndexed = content.contains('LayoutType.indexed');
-    final layoutType = isIndexed ? LayoutType.indexed : LayoutType.stack;
+    final layoutType = switch (content) {
+      final content when content.contains('LayoutType.branched') =>
+        LayoutType.branched,
+      final content when content.contains('LayoutType.indexed') =>
+        LayoutType.indexed,
+      _ => LayoutType.stack,
+    };
 
     // Extract indexed routes if present (can be Route or Layout types)
     final indexedRoutes = <String>[];
-    if (isIndexed) {
+    if (layoutType == LayoutType.indexed) {
       final routesMatch = RegExp(r'routes:\s*\[([^\]]+)\]').firstMatch(content);
       if (routesMatch != null) {
         final routesList = routesMatch.group(1)!;
@@ -412,12 +418,28 @@ class CoordinatorGenerator implements Builder {
       }
     }
 
+    // Extract branch layout roots if present.
+    final branchLayouts = <String>[];
+    if (layoutType == LayoutType.branched) {
+      final branchesMatch = RegExp(
+        r'branches:\s*\[([^\]]+)\]',
+      ).firstMatch(content);
+      if (branchesMatch != null) {
+        final branchesList = branchesMatch.group(1)!;
+        final layoutTypes = RegExp(r'(\w+Layout)').allMatches(branchesList);
+        for (final match in layoutTypes) {
+          branchLayouts.add(match.group(1)!);
+        }
+      }
+    }
+
     return LayoutInfo(
       className: className,
       pathSegments: segments,
       dirParts: dirParts,
       layoutType: layoutType,
       indexedRouteTypes: indexedRoutes,
+      branchLayoutTypes: branchLayouts,
     );
   }
 
@@ -486,36 +508,58 @@ class CoordinatorGenerator implements Builder {
     return true;
   }
 
-  /// Validate routes for duplicates and throw descriptive errors.
-  ///
-  /// Checks for duplicate routes (same path pattern).
-  /// Note: Static routes can coexist with dynamic routes - they will be
-  /// automatically ordered correctly (static before dynamic) by the sorting logic.
-  void _validateRouteConflicts(List<RouteInfo> routes) {
-    final pathPatterns = <String, List<RouteInfo>>{};
+  RouteManifest<String> _createRouteManifest(RouteTreeInfo tree, String name) {
+    return RouteManifest<String>(
+      name: name,
+      routes: [
+        for (final route in tree.routes)
+          RouteManifestRoute(
+            id: route.className,
+            path: _routePattern(route.pathSegments),
+            parentId: route.parentLayoutType,
+          ),
+      ],
+      layouts: [
+        for (final layout in tree.layouts)
+          switch (layout.layoutType) {
+            LayoutType.stack => RouteManifestLayout.stack(
+              id: layout.className,
+              path: _routePattern(layout.pathSegments),
+              parentId: layout.parentLayoutType,
+            ),
+            LayoutType.indexed => RouteManifestLayout.indexed(
+              id: layout.className,
+              path: _routePattern(layout.pathSegments),
+              parentId: layout.parentLayoutType,
+              childIds: layout.indexedRouteTypes,
+            ),
+            LayoutType.branched => RouteManifestLayout.branched(
+              id: layout.className,
+              path: _routePattern(layout.pathSegments),
+              parentId: layout.parentLayoutType,
+              childIds: layout.branchLayoutTypes,
+            ),
+          },
+      ],
+    );
+  }
 
-    // Group routes by path pattern
-    for (final route in routes) {
-      final pattern = route.pathSegments.join('/');
-      pathPatterns.putIfAbsent(pattern, () => []).add(route);
-    }
+  String _routePattern(List<String> segments) =>
+      segments.isEmpty ? '/' : '/${segments.join('/')}';
 
-    // Check for duplicate routes (same path pattern)
-    for (final entry in pathPatterns.entries) {
-      if (entry.value.length > 1) {
-        final duplicates = entry.value;
-        final filePaths = duplicates
-            .map((r) => r.filePath ?? 'unknown')
-            .join(', ');
-        final classNames = duplicates.map((r) => r.className).join(', ');
-        throw ArgumentError(
-          'Duplicate route pattern detected: /${entry.key}\n'
-          'Found ${duplicates.length} routes with the same path:\n'
-          '  Classes: $classNames\n'
-          '  Files: $filePaths\n'
-          'Please ensure each route has a unique path pattern.',
-        );
-      }
+  void _validateRouteManifest(RouteTreeInfo tree, String name) {
+    try {
+      _createRouteManifest(tree, name);
+    } on RouteManifestValidationException<String> catch (error) {
+      final routeSources = [
+        for (final route in tree.routes)
+          if (error.nodeIds.contains(route.className) && route.filePath != null)
+            '${route.className}: ${route.filePath}',
+      ];
+      throw StateError(
+        '${error.message}'
+        '${routeSources.isEmpty ? '' : '\n${routeSources.join('\n')}'}',
+      );
     }
   }
 
@@ -608,10 +652,7 @@ class CoordinatorGenerator implements Builder {
     String coordinatorName,
     String routeBaseName,
     String? routeBasePath,
-    Map<String, String> routeFileMap,
   ) {
-    final deferredImports = allFilePaths.where((f) => f.$2);
-
     final buffer = StringBuffer();
 
     // Header
@@ -675,29 +716,46 @@ class CoordinatorGenerator implements Builder {
     // Generate Coordinator
     buffer.writeln('/// Generated coordinator managing all routes.');
     buffer.writeln(
-      'class $coordinatorName extends Coordinator<$routeBaseName> {',
+      'class $coordinatorName extends Coordinator<$routeBaseName> '
+      'with RouteModuleBinding<$routeBaseName, String> {',
     );
+
+    _writeRouteManifest(buffer, tree, coordinatorName);
+    _writeRouteBindings(buffer, tree, routeBaseName);
 
     // Generate navigation paths for layouts
     for (final layout in tree.layouts) {
       final pathFieldName = _getPathFieldName(layout.className);
       final pathName = layout.className.replaceAll('Layout', '');
-      if (layout.layoutType == LayoutType.indexed) {
-        final routeInstances = layout.indexedRouteTypes
-            .map((r) => '$r()')
-            .join(', ');
-        buffer.writeln(
-          '  late final $pathFieldName = IndexedStackPath<$routeBaseName>.createWith('
-          'coordinator: this, '
-          "label: '$pathName', "
-          '[',
-        );
-        buffer.writeln('    $routeInstances,');
-        buffer.writeln("  ],)..bindLayout(${layout.className}.new);");
-      } else {
-        buffer.writeln(
-          "  late final $pathFieldName = NavigationPath<$routeBaseName>.createWith(coordinator: this, label: '$pathName')..bindLayout(${layout.className}.new);",
-        );
+      switch (layout.layoutType) {
+        case LayoutType.stack:
+          buffer.writeln(
+            "  late final $pathFieldName = NavigationPath<$routeBaseName>.createWith(coordinator: this, label: '$pathName')..bindLayout(${layout.className}.new);",
+          );
+        case LayoutType.indexed:
+          final routeInstances = layout.indexedRouteTypes
+              .map((route) => '$route()')
+              .join(', ');
+          buffer.writeln(
+            '  late final $pathFieldName = IndexedStackPath<$routeBaseName>.createWith('
+            'coordinator: this, '
+            "label: '$pathName', "
+            '[',
+          );
+          buffer.writeln('    $routeInstances,');
+          buffer.writeln("  ],)..bindLayout(${layout.className}.new);");
+        case LayoutType.branched:
+          final branchInstances = layout.branchLayoutTypes
+              .map((branch) => '$branch()')
+              .join(', ');
+          buffer.writeln(
+            '  late final $pathFieldName = BranchedStackPath<$routeBaseName>.createWith('
+            'coordinator: this, '
+            "label: '$pathName', "
+            '[',
+          );
+          buffer.writeln('    $branchInstances,');
+          buffer.writeln("  ],)..bindLayout(${layout.className}.new);");
       }
     }
     buffer.writeln();
@@ -709,80 +767,6 @@ class CoordinatorGenerator implements Builder {
       buffer.write(', ${_getPathFieldName(layout.className)}');
     }
     buffer.writeln('];');
-    buffer.writeln();
-
-    // Generate parseRouteFromUri
-    buffer.writeln('  @override');
-    if (deferredImports.isNotEmpty) {
-      buffer.writeln(
-        '  Future<$routeBaseName> parseRouteFromUri(Uri uri) async {',
-      );
-    } else {
-      buffer.writeln('  $routeBaseName parseRouteFromUri(Uri uri) {');
-    }
-    buffer.writeln('    return switch (uri.pathSegments) {');
-
-    // Validate routes for conflicts before sorting
-    // Validate routes for duplicates (static/dynamic conflicts are allowed)
-    _validateRouteConflicts(tree.routes);
-    // Validate that routes in IndexedStack layouts cannot be deferred imports
-    _validateIndexedStackDeferredImports(tree.routes, tree.layouts);
-
-    // Sort routes by specificity (more segments first, static before dynamic)
-    // This ensures static routes come before dynamic routes, allowing both to coexist
-    // Performance optimization: use pre-computed route characteristics
-    final sortedRoutes = List<RouteInfo>.from(tree.routes)
-      ..sort((a, b) {
-        // 1. Routes with rest params go last
-        if (a.hasRestParams && !b.hasRestParams) return 1; // a goes after b
-        if (!a.hasRestParams && b.hasRestParams) return -1; // a goes before b
-
-        // 2. More static segments first (cached)
-        if (a.staticSegmentCount != b.staticSegmentCount) {
-          return b.staticSegmentCount - a.staticSegmentCount;
-        }
-
-        // 3. More total segments first
-        final segmentDiff = b.pathSegments.length - a.pathSegments.length;
-        if (segmentDiff != 0) return segmentDiff;
-
-        // 4. Static segments before dynamic (cached)
-        return a.dynamicSegmentCount - b.dynamicSegmentCount;
-      });
-
-    // Root route
-    final rootRoute = sortedRoutes
-        .where((r) => r.pathSegments.isEmpty)
-        .firstOrNull;
-    if (rootRoute != null) {
-      final routeInstance = rootRoute.hasQueries
-          ? '${rootRoute.className}(queries: uri.queryParameters)'
-          : '${rootRoute.className}()';
-      if (rootRoute.hasDeferredImport) {
-        final relativePath = routeFileMap[rootRoute.className] ?? 'index.dart';
-        buffer.writeln(
-          '      [] => ${_wrapDeferredImportLoad(relativePath, routeInstance)},',
-        );
-      } else {
-        buffer.writeln('      [] => $routeInstance,');
-      }
-    }
-
-    // Other routes
-    for (final route in sortedRoutes) {
-      if (route.pathSegments.isEmpty) continue;
-
-      final pattern = _generateSwitchPattern(route);
-      final constructor = _generateConstructor(route);
-      buffer.writeln('      $pattern => $constructor,');
-    }
-
-    // Default not found
-    buffer.writeln(
-      '      _ => NotFoundRoute(uri: uri, queries: uri.queryParameters),',
-    );
-    buffer.writeln('    };');
-    buffer.writeln('  }');
     buffer.writeln();
 
     // Generate layoutBuilder override for CoordinatorProvider
@@ -798,13 +782,17 @@ class CoordinatorGenerator implements Builder {
     buffer.writeln('}');
     buffer.writeln();
 
+    _writeLocationClass(buffer, tree, coordinatorName);
+
     // Generate NotFoundRoute only if custom one doesn't exist
     if (customNotFoundRoutePath == null) {
       buffer.writeln('/// Default not found route.');
       buffer.writeln(
         '/// You can customize this by creating your own NotFoundRoute class.',
       );
-      buffer.writeln('class NotFoundRoute extends $routeBaseName {');
+      buffer.writeln(
+        'class NotFoundRoute extends $routeBaseName with RouteNotFound {',
+      );
       buffer.writeln('  final Uri uri;');
       buffer.writeln('  final Map<String, String> queries;');
       buffer.writeln();
@@ -817,7 +805,7 @@ class CoordinatorGenerator implements Builder {
       buffer.writeln('  String? query(String name) => queries[name];');
       buffer.writeln();
       buffer.writeln('  @override');
-      buffer.writeln("  Uri toUri() => Uri.parse('/not-found');");
+      buffer.writeln('  Uri toUri() => uri;');
       buffer.writeln();
       buffer.writeln('  @override');
       buffer.writeln('  List<Object?> get props => [uri, queries];');
@@ -849,6 +837,13 @@ class CoordinatorGenerator implements Builder {
     // Generate type-safe navigation extension
     buffer.writeln('/// Type-safe navigation extension methods.');
     buffer.writeln('extension ${coordinatorName}Nav on $coordinatorName {');
+    buffer.writeln(
+      '  /// Type-safe reverse routing without constructing presentation routes.',
+    );
+    buffer.writeln(
+      '  ${coordinatorName}Location get location => $coordinatorName.location;',
+    );
+    buffer.writeln();
     for (final route in tree.routes) {
       final baseMethodName = _getBaseMethodName(route.className);
       final (params, args) = _buildMethodParams(route);
@@ -933,30 +928,239 @@ class CoordinatorGenerator implements Builder {
     );
     buffer.writeln('}');
 
-    /// Extension for pushing [routeBase] routes.
-    buffer.writeln('/// Extension on [$routeBaseName] for navigation methods.');
+    buffer.writeln(
+      '/// Destination navigation for [$routeBaseName] instances.',
+    );
     buffer.writeln(
       'extension ${coordinatorName}NavContext on $routeBaseName {',
     );
-    // Navigate
     buffer.writeln(
-      '  Future<void> navigate(BuildContext context) => context.$contextGetterName.navigate(this);',
+      '  Future<void> navigate(BuildContext context) => '
+      'context.$contextGetterName.navigate(this);',
     );
-    // Push
     buffer.writeln(
-      '  Future<T?> push<T extends Object>(BuildContext context) => context.$contextGetterName.push<T>(this);',
+      '  Future<T?> push<T extends Object>(BuildContext context) => '
+      'context.$contextGetterName.push<T>(this);',
     );
-    // Replace
     buffer.writeln(
-      '  Future<void> replace(BuildContext context) => context.$contextGetterName.replace(this);',
+      '  Future<void> pushSilently(BuildContext context) => '
+      'context.$contextGetterName.pushSilently(this);',
     );
-    // Recover
     buffer.writeln(
-      '  Future<void> recover(BuildContext context) => context.$contextGetterName.recover(this);',
+      '  Future<void> replace(BuildContext context) => '
+      'context.$contextGetterName.replace(this);',
+    );
+    buffer.writeln(
+      '  Future<R?> pushReplacement<R extends Object, RO extends Object>(',
+    );
+    buffer.writeln('    BuildContext context, {');
+    buffer.writeln('    RO? result,');
+    buffer.writeln(
+      '  }) => context.$contextGetterName.pushReplacement<R, RO>(',
+    );
+    buffer.writeln('    this,');
+    buffer.writeln('    result: result,');
+    buffer.writeln('  );');
+    buffer.writeln(
+      '  Future<void> pushOrMoveToTop(BuildContext context) => '
+      'context.$contextGetterName.pushOrMoveToTop(this);',
+    );
+    buffer.writeln(
+      '  Future<void> recover(BuildContext context) => '
+      'context.$contextGetterName.recover(this);',
     );
     buffer.writeln('}');
 
     return buffer.toString();
+  }
+
+  void _writeRouteManifest(
+    StringBuffer buffer,
+    RouteTreeInfo tree,
+    String coordinatorName,
+  ) {
+    buffer.writeln('  /// Immutable application route topology.');
+    buffer.writeln(
+      '  static final RouteManifest<String> manifest = RouteManifest<String>(',
+    );
+    buffer.writeln('    name: ${_dartString(coordinatorName)},');
+    buffer.writeln('    routes: [');
+    for (final route in tree.routes) {
+      buffer.writeln('      RouteManifestRoute(');
+      buffer.writeln('        id: ${_dartString(route.className)},');
+      buffer.writeln(
+        '        path: ${_dartString(_routePattern(route.pathSegments))},',
+      );
+      if (route.parentLayoutType != null) {
+        buffer.writeln(
+          '        parentId: ${_dartString(route.parentLayoutType!)},',
+        );
+      }
+      buffer.writeln('      ),');
+    }
+    buffer.writeln('    ],');
+    buffer.writeln('    layouts: [');
+    for (final layout in tree.layouts) {
+      buffer.writeln('      ${_writeLayoutConstructor(layout)}');
+    }
+    buffer.writeln('    ],');
+    buffer.writeln('  );');
+    buffer.writeln();
+    buffer.writeln(
+      '  /// Type-safe reverse routing without constructing presentation routes.',
+    );
+    buffer.writeln('  static const location = ${coordinatorName}Location();');
+    buffer.writeln();
+  }
+
+  void _writeRouteBindings(
+    StringBuffer buffer,
+    RouteTreeInfo tree,
+    String routeBaseName,
+  ) {
+    buffer.writeln(
+      '  /// Presentation bindings from manifest IDs to route targets.',
+    );
+    buffer.writeln('  @override');
+    buffer.writeln(
+      '  late final routeBindings = manifest.bind<$routeBaseName>(',
+    );
+    buffer.writeln('    bindings: [');
+    for (final route in tree.routes) {
+      _writeRouteBinding(buffer, route);
+    }
+    buffer.writeln('    ],');
+    buffer.writeln(
+      '    notFound: (uri) => '
+      'NotFoundRoute(uri: uri, queries: uri.queryParameters),',
+    );
+    buffer.writeln('  );');
+    buffer.writeln();
+  }
+
+  void _writeRouteBinding(StringBuffer buffer, RouteInfo route) {
+    final alias = _deferredAlias(route);
+    final create = _generateBindingCreate(route, alias);
+    final matchParam = _bindingUsesMatch(route) ? 'match' : '_';
+    if (alias != null) {
+      buffer.writeln('      RouteBinding.deferred(');
+      buffer.writeln('        id: ${_dartString(route.className)},');
+      buffer.writeln('        loadLibrary: $alias.loadLibrary,');
+      buffer.writeln('        create: ($matchParam) => $create,');
+      buffer.writeln('      ),');
+    } else {
+      buffer.writeln('      RouteBinding(');
+      buffer.writeln('        id: ${_dartString(route.className)},');
+      buffer.writeln('        create: ($matchParam) => $create,');
+      buffer.writeln('      ),');
+    }
+  }
+
+  bool _bindingUsesMatch(RouteInfo route) =>
+      route.parameters.isNotEmpty || route.hasQueries;
+
+  String _generateBindingCreate(RouteInfo route, String? alias) {
+    final args = <String>[];
+    for (final param in route.parameters) {
+      final parameterMap = param.isRest ? 'restParameters' : 'pathParameters';
+      args.add(
+        '${param.name}: match.$parameterMap[${_dartString(param.name)}]!',
+      );
+    }
+    if (route.hasQueries) {
+      args.add('queries: match.uri.queryParameters');
+    }
+
+    final className = alias == null
+        ? route.className
+        : '$alias.${route.className}';
+    if (args.isEmpty) {
+      return '$className()';
+    }
+    return '$className(${args.join(', ')})';
+  }
+
+  String? _deferredAlias(RouteInfo route) {
+    if (!route.hasDeferredImport) return null;
+    final relativePath = route.filePath!.replaceFirst('lib/routes/', '');
+    return _getAliasImport(relativePath);
+  }
+
+  void _writeLocationClass(
+    StringBuffer buffer,
+    RouteTreeInfo tree,
+    String coordinatorName,
+  ) {
+    final className = '${coordinatorName}Location';
+    buffer.writeln(
+      '/// Type-safe reverse routing without constructing presentation routes.',
+    );
+    buffer.writeln('final class $className {');
+    buffer.writeln('  /// Creates the [$className] reverse-routing surface.');
+    buffer.writeln('  const $className();');
+    buffer.writeln();
+
+    for (final route in tree.routes) {
+      _writeLocationMember(buffer, route, coordinatorName);
+    }
+
+    buffer.writeln('}');
+    buffer.writeln();
+  }
+
+  void _writeLocationMember(
+    StringBuffer buffer,
+    RouteInfo route,
+    String coordinatorName,
+  ) {
+    final memberName = _getLocationMemberName(route.className);
+    final parameters = <String>[];
+    final pathEntries = <String>[];
+    final restEntries = <String>[];
+    for (final parameter in route.parameters) {
+      if (parameter.isRest) {
+        parameters.add('required List<String> ${parameter.name}');
+        restEntries.add('${_dartString(parameter.name)}: ${parameter.name}');
+      } else {
+        parameters.add('required String ${parameter.name}');
+        pathEntries.add('${_dartString(parameter.name)}: ${parameter.name}');
+      }
+    }
+    if (route.hasQueries) {
+      parameters.add('Map<String, String> queries = const {}');
+    }
+
+    final isGetter = parameters.isEmpty;
+    if (!isGetter) {
+      parameters.add('String? fragment');
+    }
+
+    if (isGetter) {
+      buffer.writeln('  Uri get $memberName =>');
+    } else {
+      buffer.writeln('  Uri $memberName({${parameters.join(', ')}}) =>');
+    }
+    buffer.writeln('      $coordinatorName.manifest.location(');
+    buffer.writeln('        ${_dartString(route.className)},');
+    if (pathEntries.isNotEmpty) {
+      buffer.writeln('        pathParameters: {${pathEntries.join(', ')}},');
+    }
+    if (restEntries.isNotEmpty) {
+      buffer.writeln('        restParameters: {${restEntries.join(', ')}},');
+    }
+    if (route.hasQueries) {
+      buffer.writeln('        queryParameters: queries,');
+    }
+    if (!isGetter) {
+      buffer.writeln('        fragment: fragment,');
+    }
+    buffer.writeln('      );');
+    buffer.writeln();
+  }
+
+  String _getLocationMemberName(String className) {
+    final methodBase = _getBaseMethodName(className);
+    return '${methodBase[0].toLowerCase()}${methodBase.substring(1)}';
   }
 
   String _getPathFieldName(String className) {
@@ -968,50 +1172,35 @@ class CoordinatorGenerator implements Builder {
     return '${name}Path';
   }
 
-  String _generateSwitchPattern(RouteInfo route) {
-    final parts = route.pathSegments
-        .map((segment) {
-          if (segment.startsWith('...:')) {
-            final paramName = segment.substring(4);
-            return '...final $paramName';
-          }
-          if (segment.startsWith(':')) {
-            final paramName = segment.substring(1);
-            return 'final $paramName';
-          }
-          return "'$segment'";
-        })
-        .join(', ');
-
-    return '[$parts]';
+  String _writeLayoutConstructor(LayoutInfo layout) {
+    final parent = layout.parentLayoutType == null
+        ? ''
+        : 'parentId: ${_dartString(layout.parentLayoutType!)}, ';
+    final header =
+        'RouteManifestLayout.${layout.layoutType.name}('
+        'id: ${_dartString(layout.className)}, '
+        'path: ${_dartString(_routePattern(layout.pathSegments))}, '
+        '$parent';
+    return switch (layout.layoutType) {
+      LayoutType.stack => '$header),',
+      LayoutType.indexed =>
+        '${header}childIds: ${_dartStringList(layout.indexedRouteTypes)}),',
+      LayoutType.branched =>
+        '${header}childIds: ${_dartStringList(layout.branchLayoutTypes)}),',
+    };
   }
 
-  String _generateConstructor(RouteInfo route) {
-    final args = <String>[];
-    String routeInstance = '';
+  String _dartStringList(Iterable<String> values) =>
+      '[${values.map(_dartString).join(', ')}]';
 
-    // Add path parameters
-    for (final param in route.parameters) {
-      args.add('${param.name}: ${param.name}');
-    }
-
-    // Add query parameters only if route expects them
-    if (route.hasQueries) {
-      args.add('queries: uri.queryParameters');
-    }
-
-    if (args.isEmpty) {
-      routeInstance = '${route.className}()';
-    } else {
-      routeInstance = '${route.className}(${args.join(', ')})';
-    }
-
-    final relativePath = route.filePath!.replaceFirst('lib/routes/', '');
-
-    if (route.hasDeferredImport) {
-      return _wrapDeferredImportLoad(relativePath, routeInstance);
-    }
-    return routeInstance;
+  String _dartString(String value) {
+    final escaped = value
+        .replaceAll(r'\', r'\\')
+        .replaceAll("'", r"\'")
+        .replaceAll(r'$', r'\$')
+        .replaceAll('\n', r'\n')
+        .replaceAll('\r', r'\r');
+    return "'$escaped'";
   }
 
   String _getBaseMethodName(String className) {
@@ -1228,6 +1417,7 @@ class LayoutInfo {
   final List<String> dirParts;
   final LayoutType layoutType;
   final List<String> indexedRouteTypes;
+  final List<String> branchLayoutTypes;
   final String? parentLayoutType;
 
   const LayoutInfo({
@@ -1236,6 +1426,7 @@ class LayoutInfo {
     required this.dirParts,
     required this.layoutType,
     this.indexedRouteTypes = const [],
+    this.branchLayoutTypes = const [],
     this.parentLayoutType,
   });
 
@@ -1245,6 +1436,7 @@ class LayoutInfo {
     List<String>? dirParts,
     LayoutType? layoutType,
     List<String>? indexedRouteTypes,
+    List<String>? branchLayoutTypes,
     String? parentLayoutType,
   }) {
     return LayoutInfo(
@@ -1253,6 +1445,7 @@ class LayoutInfo {
       dirParts: dirParts ?? this.dirParts,
       layoutType: layoutType ?? this.layoutType,
       indexedRouteTypes: indexedRouteTypes ?? this.indexedRouteTypes,
+      branchLayoutTypes: branchLayoutTypes ?? this.branchLayoutTypes,
       parentLayoutType: parentLayoutType ?? this.parentLayoutType,
     );
   }

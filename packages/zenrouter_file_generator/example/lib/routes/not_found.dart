@@ -53,7 +53,7 @@ class NotFoundRoute extends AppRoute {
             ),
             const SizedBox(height: 32),
             ElevatedButton.icon(
-              onPressed: () => coordinator.recoverRouteFromUri(Uri.parse('/')),
+              onPressed: () => coordinator.recoverUri(Uri.parse('/')),
               icon: const Icon(Icons.arrow_back),
               label: const Text('Go Home'),
             ),

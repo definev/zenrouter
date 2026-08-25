@@ -18,7 +18,7 @@ abstract class _$ForYouSheetRoute extends AppRoute
   Type? get layout => ForYouLayout;
 
   @override
-  Uri toUri() => Uri.parse('/tabs/feed/for-you/sheet');
+  Uri toUri() => Uri(pathSegments: ['', 'tabs', 'feed', 'for-you', 'sheet']);
 
   @override
   List<Object?> get props => [];

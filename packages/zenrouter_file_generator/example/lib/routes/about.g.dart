@@ -13,7 +13,7 @@ abstract class _$AboutRoute extends AppRoute {
   _$AboutRoute();
 
   @override
-  Uri toUri() => Uri.parse('/about');
+  Uri toUri() => Uri(pathSegments: ['', 'about']);
 
   @override
   List<Object?> get props => [];

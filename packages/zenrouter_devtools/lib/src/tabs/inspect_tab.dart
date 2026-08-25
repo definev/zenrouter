@@ -24,12 +24,12 @@ class PathListView<T extends RouteUnique> extends StatelessWidget {
 
     // Sort to ensure root (null) or specific order if needed.
     // Putting null (Root) first usually makes sense.
-    final sortedKeys =
-        groupedPaths.keys.toList()..sort((a, b) {
-          if (a == null) return -1;
-          if (b == null) return 1;
-          return a.runtimeType.toString().compareTo(b.runtimeType.toString());
-        });
+    final sortedKeys = groupedPaths.keys.toList()
+      ..sort((a, b) {
+        if (a == null) return -1;
+        if (b == null) return 1;
+        return a.runtimeType.toString().compareTo(b.runtimeType.toString());
+      });
 
     return ListenableBuilder(
       listenable: coordinator,
@@ -163,37 +163,34 @@ class _PathTabsState<T extends RouteUnique> extends State<_PathTabs<T>> {
     return Column(
       children: [
         LayoutBuilder(
-          builder:
-              (context, constraints) => Container(
-                width: constraints.maxWidth,
-                decoration: const BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: DebugTheme.borderDark),
-                  ),
-                ),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      for (int i = 0; i < widget.sortedKeys.length; i++)
-                        _TabButton(
-                          key: _tabKeys[i],
-                          label:
-                              widget.sortedKeys[i]?.toString() ??
-                              widget.coordinator.toString(),
-                          isSelected: i == _selectedIndex,
-                          onTap: () {
-                            setState(() {
-                              _selectedIndex = i;
-                            });
-                            _pageController.jumpToPage(i);
-                            _ensureTabVisible(i);
-                          },
-                        ),
-                    ],
-                  ),
-                ),
+          builder: (context, constraints) => Container(
+            width: constraints.maxWidth,
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: DebugTheme.borderDark)),
+            ),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (int i = 0; i < widget.sortedKeys.length; i++)
+                    _TabButton(
+                      key: _tabKeys[i],
+                      label:
+                          widget.sortedKeys[i]?.toString() ??
+                          widget.coordinator.toString(),
+                      isSelected: i == _selectedIndex,
+                      onTap: () {
+                        setState(() {
+                          _selectedIndex = i;
+                        });
+                        _pageController.jumpToPage(i);
+                        _ensureTabVisible(i);
+                      },
+                    ),
+                ],
               ),
+            ),
+          ),
         ),
         Expanded(
           child: PageView.builder(
@@ -260,8 +257,9 @@ class _TabButton extends StatelessWidget {
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
-              color:
-                  isSelected ? DebugTheme.textPrimary : const Color(0x00000000),
+              color: isSelected
+                  ? DebugTheme.textPrimary
+                  : const Color(0x00000000),
               width: 2,
             ),
           ),
@@ -269,8 +267,9 @@ class _TabButton extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            color:
-                isSelected ? DebugTheme.textPrimary : DebugTheme.textDisabled,
+            color: isSelected
+                ? DebugTheme.textPrimary
+                : DebugTheme.textDisabled,
             fontSize: DebugTheme.fontSizeXs,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.5,
@@ -305,7 +304,7 @@ class _PathItemView<T extends RouteUnique> extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildPathHeader(),
+          _buildPathHeader(context),
           if (path.stack.isEmpty)
             Container(
               height: 52,
@@ -328,7 +327,7 @@ class _PathItemView<T extends RouteUnique> extends StatelessWidget {
     );
   }
 
-  Widget _buildPathHeader() {
+  Widget _buildPathHeader(BuildContext context) {
     return Container(
       padding: const EdgeInsets.only(
         left: DebugTheme.spacing,
@@ -336,7 +335,12 @@ class _PathItemView<T extends RouteUnique> extends StatelessWidget {
         top: DebugTheme.spacing,
         bottom: DebugTheme.spacing,
       ),
-      color: isActive ? DebugTheme.backgroundLight : const Color(0x00000000),
+      color: isActive
+          ? DebugTheme.surface(
+              DebugTheme.backgroundLight,
+              seeThrough: DebugPanelAppearance.seeThroughOf(context),
+            )
+          : const Color(0x00000000),
       child: Row(
         children: [
           Expanded(
@@ -349,10 +353,9 @@ class _PathItemView<T extends RouteUnique> extends StatelessWidget {
                       Text(
                         coordinator.debugLabel(path),
                         style: TextStyle(
-                          color:
-                              isActive
-                                  ? DebugTheme.textPrimary
-                                  : DebugTheme.textMuted,
+                          color: isActive
+                              ? DebugTheme.textPrimary
+                              : DebugTheme.textMuted,
                           fontSize: DebugTheme.fontSizeMd,
                           fontWeight: FontWeight.w500,
                           decoration: TextDecoration.none,
@@ -385,16 +388,14 @@ class _PathItemView<T extends RouteUnique> extends StatelessWidget {
           if (path.stack.isNotEmpty && path is NavigationPath)
             SmallIconButton(
               icon: CupertinoIcons.arrow_left,
-              onTap:
-                  path.stack.length > 1
-                      ? () async {
-                        await (path as NavigationPath).pop();
-                      }
-                      : null,
-              color:
-                  path.stack.length > 1
-                      ? DebugTheme.textPrimary
-                      : DebugTheme.textDisabled,
+              onTap: path.stack.length > 1
+                  ? () async {
+                      await (path as NavigationPath).pop();
+                    }
+                  : null,
+              color: path.stack.length > 1
+                  ? DebugTheme.textPrimary
+                  : DebugTheme.textDisabled,
             ),
         ],
       ),
@@ -470,10 +471,12 @@ class _ReadOnlyRouteItemState extends State<_ReadOnlyRouteItem> {
             top: DebugTheme.spacingSm,
             bottom: DebugTheme.spacingSm,
           ),
-          color:
-              widget.isRouteActive || _isHovered
-                  ? DebugTheme.backgroundDark
-                  : const Color(0x00000000),
+          color: widget.isRouteActive || _isHovered
+              ? DebugTheme.surface(
+                  DebugTheme.backgroundDark,
+                  seeThrough: DebugPanelAppearance.seeThroughOf(context),
+                )
+              : const Color(0x00000000),
           child: Row(
             children: [
               Expanded(
@@ -483,15 +486,13 @@ class _ReadOnlyRouteItemState extends State<_ReadOnlyRouteItem> {
                     Text(
                       widget.route.toString(),
                       style: TextStyle(
-                        color:
-                            widget.isRouteActive
-                                ? DebugTheme.textPrimary
-                                : DebugTheme.textSecondary,
+                        color: widget.isRouteActive
+                            ? DebugTheme.textPrimary
+                            : DebugTheme.textSecondary,
                         fontSize: DebugTheme.fontSize,
-                        fontWeight:
-                            widget.isRouteActive
-                                ? FontWeight.w600
-                                : FontWeight.normal,
+                        fontWeight: widget.isRouteActive
+                            ? FontWeight.w600
+                            : FontWeight.normal,
                         decoration: TextDecoration.none,
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -502,10 +503,9 @@ class _ReadOnlyRouteItemState extends State<_ReadOnlyRouteItem> {
                         color: DebugTheme.textMuted,
                         fontSize: DebugTheme.fontSizeSm,
                         fontFamily: 'monospace',
-                        fontWeight:
-                            widget.isRouteActive
-                                ? FontWeight.w600
-                                : FontWeight.normal,
+                        fontWeight: widget.isRouteActive
+                            ? FontWeight.w600
+                            : FontWeight.normal,
                         decoration: TextDecoration.none,
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -518,10 +518,9 @@ class _ReadOnlyRouteItemState extends State<_ReadOnlyRouteItem> {
                     ? CupertinoIcons.circle_fill
                     : CupertinoIcons.circle,
                 size: 16,
-                color:
-                    widget.isRouteActive
-                        ? const Color(0xFF2196F3)
-                        : DebugTheme.textDisabled,
+                color: widget.isRouteActive
+                    ? const Color(0xFF2196F3)
+                    : DebugTheme.textDisabled,
               ),
             ],
           ),
@@ -553,7 +552,12 @@ class _NavigationRouteItem extends StatelessWidget {
         top: DebugTheme.spacingSm,
         bottom: DebugTheme.spacingSm,
       ),
-      color: isTop ? DebugTheme.backgroundDark : const Color(0x00000000),
+      color: isTop
+          ? DebugTheme.surface(
+              DebugTheme.backgroundDark,
+              seeThrough: DebugPanelAppearance.seeThroughOf(context),
+            )
+          : const Color(0x00000000),
       child: Row(
         children: [
           Expanded(
@@ -566,14 +570,14 @@ class _NavigationRouteItem extends StatelessWidget {
                       Text(
                         route.toString(),
                         style: TextStyle(
-                          color:
-                              isTop
-                                  ? DebugTheme.textPrimary
-                                  : DebugTheme.textSecondary,
+                          color: isTop
+                              ? DebugTheme.textPrimary
+                              : DebugTheme.textSecondary,
                           fontSize: DebugTheme.fontSize,
                           fontFamily: 'monospace',
-                          fontWeight:
-                              isTop ? FontWeight.w600 : FontWeight.normal,
+                          fontWeight: isTop
+                              ? FontWeight.w600
+                              : FontWeight.normal,
                           decoration: TextDecoration.none,
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -585,8 +589,9 @@ class _NavigationRouteItem extends StatelessWidget {
                             color: DebugTheme.textMuted,
                             fontSize: DebugTheme.fontSizeSm,
                             fontFamily: 'monospace',
-                            fontWeight:
-                                isTop ? FontWeight.w600 : FontWeight.normal,
+                            fontWeight: isTop
+                                ? FontWeight.w600
+                                : FontWeight.normal,
                             decoration: TextDecoration.none,
                           ),
                           overflow: TextOverflow.ellipsis,

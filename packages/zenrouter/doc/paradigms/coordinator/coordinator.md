@@ -1,8 +1,10 @@
-# Write your first Coordinator
+# Coordinator
 
-> **Centralize routing, handle deep links, manage nested navigation**
+> Deep linking, URL sync, nested navigation
 
-You are now starting the quick start guide to create your first Coordinator to enable handling routing in your app. In about 15 minutes, you will learn the basics. Now let's start!
+This walkthrough builds a sample app with `parseRouteFromUri`. For the
+other styles and for `RouteManifest`, see
+[Getting Started](../../guides/getting-started.md).
 
 ## What is a Coordinator?
 
@@ -61,7 +63,9 @@ A `Coordinator` manages multiple `StackPath`s and provides:
 3. **Deep Linking** - Handles incoming deep links
 4. **Nested Navigation** - Manages multiple navigation stacks
 
-When using Coordinator you must override `parseRouteFromUri` method to convert **URI** to **Route**.
+Override `parseRouteFromUri` to map a URI to a route. Alternatively,
+mix `RouteModuleBinding` and declare a `RouteManifest`
+([Getting Started](../../guides/getting-started.md#routemanifest)).
 
 The AppRoute class represents a route in the application. It extends the RouteTarget class and implements the RouteUnique mixin. This ensures that each route has a unique identifier. See more at [Mixin Section](#routeunique).
 
@@ -203,8 +207,7 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      routerDelegate: appCoordinator.routerDelegate,
-      routeInformationParser: appCoordinator.routeInformationParser,
+      routerConfig: appCoordinator,
     );
   }
 }
@@ -501,8 +504,7 @@ class Settings extends AppRoute {
 }
 ```
 
-Great, every route is set up. Now let's wire it up in the `lib/routes/coordinator.dart` file. The final boilerplate code when defining a layout is that you have to define a factory function in the `defineLayout` method.
-The `defineLayout` function takes 2 parameters: the `Type` of `RouteLayout` and a factory `Function` that creates the `RouteLayout`.
+Great, every route is set up. Now let's wire it up in the `lib/routes/coordinator.dart` file. Bind each layout on its path with `bindLayout`:
 
 ```dart
 /// file: lib/routes/coordinator.dart
@@ -594,14 +596,25 @@ Quick reference for `Coordinator`:
 | `pop()` | Pop from nearest dynamic path |
 | `replace(T)` | Wipe stack and replace with route |
 | `pushOrMoveToTop(T)` | Push or move route to top |
-| `recoverRouteFromUri(Uri)` | Handle deep link URI |
+| `recoverUri(Uri)` | Handle deep link URI |
+| `recover(T)` | Recover from a route (deeplink strategy) |
+| `defineDeeplinkHandler(strategy, handler)` | Override built-in deeplink behaviour |
+
+Capability mixins (from `zenrouter_core`; `Coordinator` includes all of them):
+
+| Mixin | Role |
+|-------|------|
+| `CoordinatorLayoutCore` | Layout-parent activation |
+| `CoordinatorNavigatable` | `navigate` |
+| `CoordinatorMutatable` | `push` / `pop` / `replace` / … |
+| `CoordinatorRecoverable` | `recover` / deep links |
 
 | Property | Description |
 |----------|-------------|
 | `root` | Main navigation path (always present) |
 | `paths` | All navigation paths managed by coordinator |
-| `routerDelegate` | Router delegate for MaterialApp.router |
-| `routeInformationParser` | Route information parser |
+| `routerDelegate` | Router delegate (via `RouterConfig`) |
+| `routeInformationParser` | Route information parser (via `RouterConfig`) |
 
 **Example:**
 ```dart
@@ -617,8 +630,7 @@ class AppCoordinator extends Coordinator<AppRoute> {
 }
 
 MaterialApp.router(
-  routerDelegate: coordinator.routerDelegate,
-  routeInformationParser: coordinator.routeInformationParser,
+  routerConfig: coordinator,
 )
 ```
 
@@ -872,7 +884,7 @@ adb shell am start -W -a android.intent.action.VIEW \\
 #### Flutter
 ```dart
 // In your code
-coordinator.recoverRouteFromUri(
+coordinator.recoverUri(
   Uri.parse('myapp://home/feed/123'),
 );
 ```

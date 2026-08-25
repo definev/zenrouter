@@ -22,6 +22,7 @@ This package is part of the [ZenRouter](https://github.com/definev/zenrouter/blo
 - 🌟 **Catch-all routes** - `[...params].dart` files capture multiple path segments
 - 📦 **Route groups** - `(name)/` folders wrap routes in layouts without affecting URLs
 - 🎯 **Type-safe navigation** - Generated extension methods for type-safe navigation
+- 🧭 **Declarative route graph** - Generated manifest, conflict validation, and reverse routing
 - 📱 **Full ZenRouter support** - Deep linking, guards, redirects, transitions, and more
 - 🚀 **Zero boilerplate** - Routes are generated from your file structure
 - 🕸️ **Lazy loading** - Routes can be lazy loaded using the `deferredImport` option in the `@ZenCoordinator` annotation. Improves app startup time and reduces initial bundle size.
@@ -48,12 +49,12 @@ Add `zenrouter_file_generator`, `zenrouter_file_annotation` and `zenrouter` to y
 
 ```yaml
 dependencies:
-  zenrouter: ^1.0.0
-  zenrouter_file_annotation: ^1.0.1
+  zenrouter: ^3.0.0-beta.1
+  zenrouter_file_annotation: ^3.0.0-beta.1
 
 dev_dependencies:
   build_runner: ^2.10.4
-  zenrouter_file_generator: ^1.1.1
+  zenrouter_file_generator: ^3.0.0-beta.1
 ```
 
 ## Quick Start
@@ -203,17 +204,21 @@ class DocsItemRoute extends _$DocsItemRoute {
 
 #### Generated pattern matching
 
-The generator uses Dart's rest patterns for URL parsing:
+Catch-all segments become `restParameters` on the manifest match. The
+generated coordinator binds them through `RouteBinding`:
 
 ```dart
-// Generated parseRouteFromUri
-AppRoute parseRouteFromUri(Uri uri) {
-  return switch (uri.pathSegments) {
-    ['docs', ...final slugs] => DocsRoute(slugs: slugs),
-    ['docs', ...final slugs, final id] => DocsItemRoute(slugs: slugs, id: id),
-    _ => NotFoundRoute(uri: uri),
-  };
-}
+RouteBinding(
+  id: 'DocsRoute',
+  create: (match) => DocsRoute(slugs: match.restParameters['slugs']!),
+),
+RouteBinding(
+  id: 'DocsItemRoute',
+  create: (match) => DocsItemRoute(
+    slugs: match.restParameters['slugs']!,
+    id: match.pathParameters['id']!,
+  ),
+),
 
 // Generated navigation methods
 extension AppCoordinatorNav on AppCoordinator {
@@ -290,8 +295,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      routerDelegate: coordinator.routerDelegate,
-      routeInformationParser: coordinator.routeInformationParser,
+      routerConfig: coordinator,
     );
   }
 }
@@ -416,18 +420,13 @@ class LoginRoute extends _$LoginRoute {
 
 ### Generated Code
 
-The generator correctly handles route groups:
+The generator correctly handles route groups. Parentheses folders do not
+appear in the URI; bindings still wrap those routes in the group layout:
 
 ```dart
-// Generated parseRouteFromUri
-AppRoute parseRouteFromUri(Uri uri) {
-  return switch (uri.pathSegments) {
-    ['login'] => LoginRoute(),      // /login - wrapped by AuthLayout
-    ['register'] => RegisterRoute(), // /register - wrapped by AuthLayout
-    ['dashboard'] => DashboardRoute(),
-    _ => NotFoundRoute(uri: uri),
-  };
-}
+RouteBinding(id: 'LoginRoute', create: (_) => LoginRoute()),
+RouteBinding(id: 'RegisterRoute', create: (_) => RegisterRoute()),
+RouteBinding(id: 'DashboardRoute', create: (_) => DashboardRoute()),
 
 // Generated navigation methods
 extension AppCoordinatorNav on AppCoordinator {
@@ -682,6 +681,36 @@ class TabsLayout extends _$TabsLayout {
 }
 ```
 
+### Branched Layout (BranchedStackPath)
+
+For stateful shells where each branch is a child layout with its own stack:
+
+```dart
+@ZenLayout(
+  type: LayoutType.branched,
+  branches: [HomeLayout, SearchLayout, SettingsLayout],
+)
+class AppShellLayout extends _$AppShellLayout {
+  @override
+  Widget build(AppCoordinator coordinator, BuildContext context) {
+    final path = resolvePath(coordinator);
+
+    return Scaffold(
+      body: buildPath(coordinator),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: path.activeBranchIndex,
+        onDestinationSelected: path.goToBranch,
+        destinations: const [/* ... */],
+      ),
+    );
+  }
+}
+```
+
+Every entry in `branches` must be a direct child `@ZenLayout`. The generator
+creates a `BranchedStackPath` for the shell and a separate path for each branch,
+so switching branches preserves each branch's navigation depth.
+
 ## Generated Code Structure
 
 After running `build_runner`, your routes directory will look like:
@@ -700,44 +729,87 @@ lib/routes/
 The generator creates `routes.zen.dart` with:
 
 - `AppRoute` base class (or custom name via `@ZenCoordinator`)
-- `AppCoordinator` class with `parseRouteFromUri` implementation
+- `AppCoordinator.manifest`, an immutable `RouteManifest`
+- `RouteModuleBinding` and generated `RouteBinding` / `RouteBinding.deferred` adapters
 - Navigation path definitions for layouts
+- Static, type-safe `AppCoordinator.location.{route}` reverse-routing helpers
 - Type-safe navigation extension methods (push/replace/recover)
 
 ```dart
 // routes.zen.dart (generated)
 abstract class AppRoute extends RouteTarget with RouteUnique {}
 
-class AppCoordinator extends Coordinator<AppRoute> {
+class AppCoordinator extends Coordinator<AppRoute>
+    with RouteModuleBinding<AppRoute, String> {
+  static final RouteManifest<String> manifest = RouteManifest<String>(
+    name: 'AppCoordinator',
+    routes: [
+      RouteManifestRoute(id: 'IndexRoute', path: '/'),
+      RouteManifestRoute(id: 'AboutRoute', path: '/about'),
+      RouteManifestRoute(id: 'ProfileIdRoute', path: '/profile/:id'),
+    ],
+  );
+
+  @override
+  late final routeBindings = manifest.bind<AppRoute>(
+    bindings: [
+      RouteBinding(id: 'IndexRoute', create: (_) => IndexRoute()),
+      RouteBinding(id: 'AboutRoute', create: (_) => AboutRoute()),
+      RouteBinding(
+        id: 'ProfileIdRoute',
+        create: (match) => ProfileIdRoute(
+          id: match.pathParameters['id']!,
+        ),
+      ),
+    ],
+    notFound: (uri) => NotFoundRoute(uri: uri),
+  );
+
   final IndexedStackPath<AppRoute> tabsPath = IndexedStackPath([...]);
   
   @override
   List<StackPath> get paths => [root, tabsPath];
-  
-  @override
-  AppRoute parseRouteFromUri(Uri uri) {
-    return switch (uri.pathSegments) {
-      [] => IndexRoute(),
-      ['about'] => AboutRoute(),
-      ['profile', final id] => ProfileIdRoute(id: id),
-      _ => NotFoundRoute(uri: uri),
-    };
-  }
+
+  static const location = AppCoordinatorLocation();
+}
+
+final class AppCoordinatorLocation {
+  const AppCoordinatorLocation();
+
+  Uri get about => AppCoordinator.manifest.location('AboutRoute');
+
+  Uri profileId({required String id}) => AppCoordinator.manifest.location(
+    'ProfileIdRoute',
+    pathParameters: {'id': id},
+  );
 }
 
 // Type-safe navigation extensions
 extension AppCoordinatorNav on AppCoordinator {
+  AppCoordinatorLocation get location => AppCoordinator.location;
+
   // Push, Replace, Recover methods for each route
   Future<dynamic> pushAbout() => push(AboutRoute());
   void replaceAbout() => replace(AboutRoute());
-  void recoverAbout() => recoverRouteFromUri(AboutRoute().toUri());
+  void recoverAbout() => recoverUri(AboutRoute().toUri());
   
   // Routes with parameters
   Future<dynamic> pushProfileId(String id) => push(ProfileIdRoute(id: id));
   void replaceProfileId(String id) => replace(ProfileIdRoute(id: id));
-  void recoverProfileId(String id) => recoverRouteFromUri(ProfileIdRoute(id: id).toUri());
+  void recoverProfileId(String id) => recoverUri(ProfileIdRoute(id: id).toUri());
 }
 ```
+
+The same path pattern drives parsing and link generation:
+
+```dart
+final uri = coordinator.location.profileId(id: 'core team');
+// /profile/core%20team
+```
+
+The generator rejects duplicate or equally-specific ambiguous patterns before
+emitting the coordinator. Widget builders, transitions, and route constructors
+remain in generated Flutter bindings rather than entering the manifest.
 
 ### Navigation Methods: Push / Replace / Recover
 
@@ -776,7 +848,7 @@ coordinator.replaceTabProfile();
 // Restore complete navigation state from a URI
 // This rebuilds the entire navigation stack to reach the target route
 coordinator.recoverProfileId('user-123');
-// Equivalent to: coordinator.recoverRouteFromUri(Uri.parse('/profile/user-123'));
+// Equivalent to: coordinator.recoverUri(Uri.parse('/profile/user-123'));
 
 // Use for:
 // - Deep links from external sources
@@ -895,8 +967,7 @@ void main() {
   final coordinator = DebugAppCoordinator();
   
   runApp(MaterialApp.router(
-    routerDelegate: coordinator.routerDelegate,
-    routeInformationParser: coordinator.routeInformationParser,
+    routerConfig: coordinator,
   ));
 }
 ```

@@ -12,6 +12,7 @@ RouteTarget (base class)
 │   └── RouteLayoutChild                 ← declares parentLayoutKey
 │       ├── RouteUri                     ← combines identity + layout child (abstract)
 │       │   ├── RouteDeepLink            ← deep link strategy
+│       │   ├── RouteNotFound            ← unmatched URI keeps the requested path
 │       │   └── RouteUnique              ← concrete: build(), toUri(), layout resolution
 │       │       ├── RouteTransition      ← custom page transition
 │       │       ├── RouteQueryParameters ← reactive URL query params
@@ -256,6 +257,23 @@ class NotificationRoute extends AppRoute with RouteDeepLink {
 
 ---
 
+### RouteNotFound
+
+**Package:** `zenrouter_core` · **Applies to:** `RouteUri`
+
+Marker mixin for the route produced when no manifest pattern matches. The
+requested URI is preserved; `CoordinatorCore.resolveRoute` reports it as
+`NotFoundRouteResolution` instead of a match.
+
+```dart
+mixin RouteNotFound on RouteUri {}
+```
+
+Apply on the standalone `notFound` factory and on `notFoundRoute`. Do not
+register this class as a `RouteManifestRoute`. See [SKILL.md §4](./SKILL.md#4-route-definition).
+
+---
+
 ## zenrouter (Flutter) Mixins
 
 ### RouteUnique
@@ -422,7 +440,8 @@ class BookDetailConverter extends RestorableConverter<BookDetailRoute> {
 
 // Register in coordinator:
 @override
-void defineConverter() {
+void init() {
+  super.init();
   defineRestorableConverter('book_detail', BookDetailConverter.new);
 }
 ```
@@ -441,6 +460,7 @@ void defineConverter() {
 | `RouteRedirect<T>` | core | `RouteTarget` | Simple redirect |
 | `RouteRedirectRule<T>` | core | `RouteTarget` | Composable redirect chain |
 | `RouteDeepLink` | core | `RouteUri` | Deep link strategy |
+| `RouteNotFound` | core | `RouteUri` | Unmatched URI / 404 |
 | `RouteUnique` | zenrouter | `RouteTarget` | build + toUri + layout |
 | `RouteLayout<T>` | zenrouter | `RouteUnique` | Shell/tab layout |
 | `RouteTransition` | zenrouter | `RouteUnique` | Custom page transition |

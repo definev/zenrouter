@@ -11,10 +11,7 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      routerDelegate: appCoordinator.routerDelegate,
-      routeInformationParser: appCoordinator.routeInformationParser,
-    );
+    return MaterialApp.router(routerConfig: appCoordinator);
   }
 }
 
@@ -135,8 +132,10 @@ class FirstTab extends AppRoute {
               'First page ${activeIndex == 0 ? '(Focused)' : '(No focused)'}',
             ),
             FilledButton(
-              onPressed: () =>
-                  coordinator.push(FirstTabChild(message: "Hello")),
+              onPressed: () => coordinator.debugFlowAction(
+                'Open Hello message',
+                () => coordinator.push(FirstTabChild(message: "Hello")),
+              ),
               child: Text('Go "Hello"'),
             ),
             FilledButton(
@@ -236,6 +235,48 @@ class NotFound extends AppRoute {
 }
 
 class AppCoordinator extends Coordinator<AppRoute> with CoordinatorDebug {
+  static final manifest = RouteManifest<String>(
+    name: 'DevtoolsExample',
+    routes: [
+      RouteManifestRoute(
+        id: 'FirstTab',
+        path: '/first',
+        parentId: 'FirstLayout',
+      ),
+      RouteManifestRoute(
+        id: 'FirstTabChild',
+        path: '/first/:message',
+        parentId: 'FirstLayout',
+      ),
+      RouteManifestRoute(
+        id: 'SecondTab',
+        path: '/second',
+        parentId: 'CustomLayout',
+      ),
+      RouteManifestRoute(
+        id: 'ThirdTab',
+        path: '/third',
+        parentId: 'CustomLayout',
+      ),
+      RouteManifestRoute(id: 'NotFound', path: '/not-found'),
+    ],
+    layouts: [
+      RouteManifestLayout.indexed(
+        id: 'CustomLayout',
+        path: '/',
+        childIds: ['FirstLayout', 'SecondTab', 'ThirdTab'],
+      ),
+      RouteManifestLayout.stack(
+        id: 'FirstLayout',
+        path: '/first',
+        parentId: 'CustomLayout',
+      ),
+    ],
+  );
+
+  @override
+  RouteManifest<String> get routeManifest => manifest;
+
   late final customIndexed = IndexedStackPath<AppRoute>.createWith(
     coordinator: this,
     label: 'CustomIndexed',

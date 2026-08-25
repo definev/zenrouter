@@ -151,8 +151,7 @@ class AppCoordinator extends Coordinator<AppRoute> {
 final coordinator = AppCoordinator();
 
 MaterialApp.router(
-  routerDelegate: coordinator.routerDelegate,
-  routeInformationParser: coordinator.routeInformationParser,
+  routerConfig: coordinator,
 );
 
 // Navigation
@@ -410,8 +409,7 @@ ZenRouter support `restoration` by default. You just need to enable it in `Mater
 
 ```dart
 MaterialApp.router(
-  routerDelegate: coordinator.routerDelegate,
-  routeInformationParser: coordinator.routeInformationParser,
+  routerConfig: coordinator,
   restorationScopeId: 'app',
 );
 ```
@@ -576,7 +574,7 @@ See [URL Strategies Recipe](../recipes/url-strategies.md) for deployment configu
 - [ ] Replace `go_router` dependency with `zenrouter`
 - [ ] Convert `GoRoute` definitions to `RouteTarget` classes
 - [ ] Create a `Coordinator` with `parseRouteFromUri` implementation
-- [ ] Update `MaterialApp` to use `coordinator.routerDelegate` and `routeInformationParser`
+- [ ] Update `MaterialApp` to use `routerConfig: coordinator`
 - [ ] Replace `context.go()`, `context.push()` with `coordinator.push()`, `coordinator.replace()`
 - [ ] Replace `context.pushReplacement()` with `coordinator.pushReplacement()`
 - [ ] Migrate `redirect` callbacks to `RouteRedirect` mixins

@@ -1,8 +1,11 @@
 import 'dart:async';
 
 import 'package:meta/meta.dart';
+import 'package:zenrouter_core/src/contracts/mutatable.dart';
+import 'package:zenrouter_core/src/contracts/navigatable.dart';
 import 'package:zenrouter_core/src/coordinator/modular.dart';
-
+import 'package:zenrouter_core/src/history/commit.dart';
+import 'package:zenrouter_core/src/history/intent.dart';
 import 'package:zenrouter_core/src/internal/equatable.dart';
 import 'package:zenrouter_core/src/internal/reactive.dart';
 import 'package:zenrouter_core/src/mixin/deeplink.dart';
@@ -10,40 +13,41 @@ import 'package:zenrouter_core/src/mixin/layout.dart';
 import 'package:zenrouter_core/src/mixin/redirect.dart';
 import 'package:zenrouter_core/src/mixin/uri.dart';
 import 'package:zenrouter_core/src/path/base.dart';
+import 'package:zenrouter_core/src/path/commit.dart';
 import 'package:zenrouter_core/src/path/navigatable.dart';
+import 'package:zenrouter_core/src/routing/resolution.dart';
+import 'package:zenrouter_core/src/routing/cancellation.dart';
+import 'package:zenrouter_core/src/routing/manifest.dart';
 
-enum _ResolveLayoutStrategy { pushToTop, override }
+part 'layout.dart';
+part 'mutatable.dart';
+part 'navigatable.dart';
+part 'recoverable.dart';
 
-/// The central hub for navigation state and operations in ZenRouter.
+/// The central hub for navigation state in ZenRouter.
 ///
-/// [CoordinatorCore] manages navigation state, coordinates between paths,
-/// handles deep links, and integrates all routing components.
+/// [CoordinatorCore] owns path state, layout-parent resolution hooks, and URI
+/// parsing. Navigation *operations* live in capability mixins:
 ///
-/// ## Role in Navigation Flow
+/// - [CoordinatorLayoutCore] — layout-parent registration / activation
+/// - [CoordinatorNavigatable] — [navigate]
+/// - [CoordinatorMutatable] — [push], [pop], [replace], …
+/// - [CoordinatorRecoverable] — [recover] / deep links
 ///
-/// When a navigation operation occurs:
-///
-/// 1. [push], [replace], or [navigate] is called with a route
-/// 2. [RouteRedirect.resolve] processes any redirects
-/// 3. Layout hierarchy is resolved via [RouteLayoutParent.resolveParentLayout]
-/// 4. Route is pushed/popped on the appropriate [StackPath]
-/// 5. Listeners are notified, triggering UI rebuilds
-///
-/// ## Navigation Methods
-///
-/// - [push]: Adds route to stack - standard forward navigation
-/// - [pop]: Removes top route - back navigation
-/// - [replace]: Clears stack, sets single route - reset state
-/// - [navigate]: Smart navigation - pops to existing or pushes new
-/// - [recover]: Deep link handling respecting [RouteDeepLink] strategy
+/// Compose only the mixins you need (see package docs). Flutter apps typically
+/// use `Coordinator` which mixes all of them in.
 abstract class CoordinatorCore<T extends RouteUri> extends Equatable
     with ListenableObject
-    implements RouteModule<T> {
+    implements RouteModule<T>, RouteResolver<T> {
   CoordinatorCore({this.initialRoutePath}) {
-    for (final path in paths) {
-      path.addListener(notifyListeners);
+    if (!isRouteModule) {
+      for (final path in paths) {
+        path.addListener(_handlePathChanged);
+      }
     }
+    _publishedUri = currentUri;
     init();
+    _publishedUri = currentUri;
   }
 
   /// {@macro zenrouter.coordinator.modular.coordinator}
@@ -62,10 +66,13 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
       : this;
 
   @override
+  @mustCallSuper
   void dispose() {
-    for (final path in paths) {
-      path.removeListener(notifyListeners);
-      path.dispose();
+    if (!isRouteModule) {
+      for (final path in paths) {
+        path.removeListener(_handlePathChanged);
+        path.dispose();
+      }
     }
     super.dispose();
   }
@@ -97,23 +104,43 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
   @mustCallSuper
   List<StackPath> get paths => isRouteModule ? [] : [root];
 
+  /// Static route topology exposed to tooling and routing adapters.
+  ///
+  /// Hand-written coordinators remain parser-compatible without a manifest.
+  @override
+  RouteManifest<Object> get routeManifest => RouteManifest.empty;
+
+  @override
+  RouteManifestFragment<Object> get routeManifestFragment =>
+      routeManifest.fragment;
+
   /// Defines the layout structure for this coordinator.
   ///
-  /// This method is called during initialization. Override this to register
-  /// custom layouts using [Coordinator.defineRouteLayout].
+  /// Deprecated: bind the layout on the path with `bindLayout` instead.
   @override
+  @Deprecated(
+    'Bind the layout on the path with bindLayout instead:\n'
+    '  NavigationPath.createWith(label: \'shop\', coordinator: this)\n'
+    '    ..bindLayout(ShopLayout.new);\n'
+    'defineLayout will be removed in a future release.',
+  )
   void defineLayout() {}
 
   /// Defines the restorable converters for this coordinator.
   ///
-  /// Override this method to register custom restorable converters using
-  /// [defineRestorableConverter].
+  /// Deprecated: register converters in [init] with `defineRestorableConverter`.
   @override
+  @Deprecated(
+    'Register converters in init() with defineRestorableConverter. '
+    'defineConverter will be removed in a future release.',
+  )
   void defineConverter() {}
 
   @mustCallSuper
   void init() {
+    // ignore: deprecated_member_use_from_same_package
     defineLayout();
+    // ignore: deprecated_member_use_from_same_package
     defineConverter();
   }
 
@@ -122,8 +149,218 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
   /// This path is used to set the initial route when the app is launched.
   final Uri? initialRoutePath;
 
+  NavigationHistoryIntent _pendingHistoryIntent =
+      NavigationHistoryIntent.automatic;
+  final List<NavigationHistoryIntent> _historyIntentScopes = [];
+
+  late Uri _publishedUri;
+  int _transactionDepth = 0;
+  bool _transactionChanged = false;
+  int _navigationRevision = 0;
+  final Object _transactionZoneKey = Object();
+  Future<void> _transactionQueue = Future<void>.value();
+  bool _transactionQueueIdle = true;
+  Object? _activeQueueToken;
+
+  /// Whether a navigation transaction is currently running for this coordinator.
+  ///
+  /// Used by path implementations that must notify synchronously inside a
+  /// transaction (so deferred microtasks do not publish extra commits) and
+  /// asynchronously outside one (so reset is safe during a Flutter build).
+  bool get isInNavigationTransaction {
+    if (isRouteModule) return rootCoordinator.isInNavigationTransaction;
+    return _transactionDepth > 0 || Zone.current[_transactionZoneKey] == true;
+  }
+
+  /// The most recently published atomic navigation commit.
+  NavigationCommit? get lastNavigationCommit => isRouteModule
+      ? rootCoordinator.lastNavigationCommit
+      : _lastNavigationCommit;
+  NavigationCommit? _lastNavigationCommit;
+
+  void _handlePathChanged() {
+    if (_transactionDepth > 0) {
+      _transactionChanged = true;
+      return;
+    }
+
+    _publishNavigationCommit(_publishedUri);
+  }
+
+  void _publishNavigationCommit(Uri previousUri) {
+    final current = currentUri;
+    _publishedUri = current;
+    _lastNavigationCommit = NavigationCommit(
+      revision: ++_navigationRevision,
+      previousUri: previousUri,
+      currentUri: current,
+      historyIntent: _pendingHistoryIntent,
+    );
+    notifyListeners();
+  }
+
+  /// Runs path mutations as one coordinator-level navigation commit.
+  ///
+  /// Nested transactions join the outer transaction. Path listeners may fire
+  /// many times internally, but coordinator listeners observe one final state.
+  /// If [operation] changes state and then throws, the changed state is still
+  /// published before the original error is rethrown.
+  ///
+  /// [operation] must finish at the commit boundary. Do not await a route's
+  /// later pop-result future inside a transaction; use `pushSilently` for
+  /// commit-only work. A long-running outer transaction intentionally blocks
+  /// later top-level mutations to preserve ordering.
+  Future<R> runNavigationTransaction<R>(
+    FutureOr<R> Function() operation, {
+    NavigationHistoryIntent historyIntent = NavigationHistoryIntent.automatic,
+  }) {
+    if (isRouteModule) {
+      return rootCoordinator.runNavigationTransaction(
+        operation,
+        historyIntent: historyIntent,
+      );
+    }
+
+    if (Zone.current[_transactionZoneKey] == true) {
+      return _runNavigationTransaction(operation, historyIntent: historyIntent);
+    }
+
+    final wasIdle = _transactionQueueIdle;
+    final previous = _transactionQueue;
+    final token = Object();
+    final done = Completer<void>();
+    _transactionQueueIdle = false;
+    _activeQueueToken = token;
+    _transactionQueue = done.future;
+
+    Future<R> startTransaction() => runZoned(
+      () => _runNavigationTransaction(
+        operation,
+        historyIntent: historyIntent,
+        queueToken: token,
+        queueDone: done,
+      ),
+      zoneValues: {_transactionZoneKey: true},
+    );
+
+    return wasIdle
+        ? startTransaction()
+        : previous.then<R>((_) => startTransaction());
+  }
+
+  Future<R> _runNavigationTransaction<R>(
+    FutureOr<R> Function() operation, {
+    required NavigationHistoryIntent historyIntent,
+    Object? queueToken,
+    Completer<void>? queueDone,
+  }) async {
+    final isOutermost = _transactionDepth == 0;
+    final previousIntent = _pendingHistoryIntent;
+    final previousUri = _publishedUri;
+    final hasHistoryScope = historyIntent != NavigationHistoryIntent.automatic;
+
+    if (isOutermost) _transactionChanged = false;
+    _transactionDepth++;
+
+    try {
+      if (hasHistoryScope) {
+        _historyIntentScopes.add(historyIntent);
+        recordHistoryIntent(historyIntent);
+      }
+
+      return await operation();
+    } finally {
+      if (isOutermost && !_transactionChanged) {
+        // NavigationPath.reset still defers when it is not in a transaction
+        // (or has no coordinator). Drain that notify before treating this as
+        // a no-op. Skip the drain when a path already notified synchronously;
+        // in-transaction NavigationPath.reset does that on purpose.
+        await Future<void>.microtask(() {});
+      }
+
+      if (hasHistoryScope && _historyIntentScopes.isNotEmpty) {
+        _historyIntentScopes.removeLast();
+      }
+      _transactionDepth--;
+
+      if (isOutermost) {
+        if (_transactionChanged) {
+          _publishNavigationCommit(previousUri);
+        } else {
+          _pendingHistoryIntent = previousIntent;
+        }
+        _transactionChanged = false;
+        // Restore idle and release the queue before this future completes so
+        // a sequential `await` does not chain onto [_transactionQueue] and
+        // the caller's future has no extra listeners. Overlapping calls
+        // replace [_activeQueueToken] and wait on [queueDone].
+        if (queueToken != null && identical(_activeQueueToken, queueToken)) {
+          _transactionQueueIdle = true;
+        }
+        if (queueDone != null && !queueDone.isCompleted) {
+          queueDone.complete();
+        }
+      }
+    }
+  }
+
+  /// Records how the next committed URI should affect external history.
+  ///
+  void recordHistoryIntent(NavigationHistoryIntent intent) {
+    if (isRouteModule) {
+      rootCoordinator.recordHistoryIntent(intent);
+      return;
+    }
+
+    final effectiveIntent = _historyIntentScopes.isEmpty
+        ? intent
+        : _historyIntentScopes.first;
+    if (effectiveIntent == NavigationHistoryIntent.automatic) return;
+    _pendingHistoryIntent = effectiveIntent;
+  }
+
+  /// Runs [operation] with a history intent that inner stack mutations cannot
+  /// override.
+  ///
+  /// Browser back/forward handling uses this to keep traversal semantics while
+  /// it applies the corresponding push/pop/replace mutations locally.
+  Future<R> withHistoryIntent<R>(
+    NavigationHistoryIntent intent,
+    FutureOr<R> Function() operation,
+  ) async {
+    if (isRouteModule) {
+      return rootCoordinator.withHistoryIntent(intent, operation);
+    }
+
+    final previousIntent = _pendingHistoryIntent;
+    _historyIntentScopes.add(intent);
+    recordHistoryIntent(intent);
+    try {
+      return await operation();
+    } catch (_) {
+      _pendingHistoryIntent = previousIntent;
+      rethrow;
+    } finally {
+      _historyIntentScopes.removeLast();
+    }
+  }
+
+  /// Returns and clears the history intent for the next URI report.
+  ///
+  /// Intended for history adapters such as Flutter's
+  /// `RouteInformationProvider`.
+  NavigationHistoryIntent consumeHistoryIntent() {
+    if (isRouteModule) return rootCoordinator.consumeHistoryIntent();
+
+    final intent = _pendingHistoryIntent;
+    _pendingHistoryIntent = NavigationHistoryIntent.automatic;
+    return intent;
+  }
+
   /// Returns the current URI based on the active route.
-  Uri get currentUri => activePath.activeRoute?.identifier ?? Uri.parse('/');
+  Uri get currentUri => isRouteModule
+      ? rootCoordinator.currentUri
+      : activePath.activeRoute?.identifier ?? Uri.parse('/');
 
   /// Returns the deepest active [RouteLayout] in the navigation hierarchy.
   ///
@@ -193,261 +430,63 @@ abstract class CoordinatorCore<T extends RouteUri> extends Equatable
 
   /// Parses a [Uri] into a route object.
   ///
-  /// Required override - this is how deep links and web URLs become routes.
+  /// Override directly for parser-based routing, or use a route-binding adapter
+  /// to derive parsing from a manifest and binding registry.
   @override
   FutureOr<T?> parseRouteFromUri(Uri uri);
 
-  /// Handles deep link navigation by parsing URI and calling [recover].
-  Future<void> recoverRouteFromUri(Uri uri) async {
-    final route = await parseRouteFromUri(uri);
-    if (route == null) {
-      throw StateError(
-        'If you want to use coordinator deeplink feature, you must return route from [parseRouteFromUri]',
-      );
-    }
-    return recover(route);
-  }
-
-  /// Ensures the layout hierarchy is properly activated for navigation.
-  Future<void> _prepareParentLayoutList(
-    RouteLayoutParent layout, {
-    _ResolveLayoutStrategy strategy = _ResolveLayoutStrategy.override,
-  }) async {
-    RouteLayoutParent? current = layout;
-    List<RouteLayoutParent> parentLayoutList = [];
-    List<StackPath> parentLayoutPathList = [];
-    while (current != null) {
-      parentLayoutList.add(current);
-      parentLayoutPathList.add(current.resolvePath(this));
-      current = current.resolveParentLayout(this);
-    }
-    parentLayoutPathList.add(root);
-
-    for (var i = parentLayoutPathList.length - 1; i >= 1; i--) {
-      final grandParentLayout = parentLayoutPathList[i];
-      final parentLayout = parentLayoutList[i - 1];
-      switch (strategy) {
-        case _ResolveLayoutStrategy.pushToTop
-            when grandParentLayout is StackMutatable:
-          grandParentLayout.pushOrMoveToTop(parentLayout);
-        default:
-          grandParentLayout.activateRoute(parentLayout);
+  /// Resolves a request into an adapter-neutral routing outcome.
+  ///
+  /// Existing coordinators remain compatible through [parseRouteFromUri].
+  /// Override this method when routing needs request headers, HTTP redirects,
+  /// loader data, or custom status codes.
+  @override
+  Future<RouteResolution<T>> resolveRoute(RouteRequest request) async {
+    try {
+      request.cancellationToken.throwIfCancelled();
+      final route = await parseRouteFromUri(request.uri);
+      request.cancellationToken.throwIfCancelled();
+      if (route == null) {
+        return NotFoundRouteResolution(request: request);
       }
-    }
-  }
-
-  /// Recovers navigation state from a route, respecting [RouteDeepLink] strategy.
-  ///
-  /// [navigate]/[push]/[replace] are intentionally not awaited: their futures
-  /// complete when the route is later popped (via [StackMutatable.push]), so
-  /// awaiting them would hang callers such as [recoverRouteFromUri].
-  Future<void> recover(T route) async {
-    T? target = await RouteRedirect.resolve(route, this);
-    if (target == null) return;
-
-    if (target is RouteDeepLink) {
-      switch (target.deeplinkStrategy) {
-        case DeeplinkStrategy.navigate:
-          navigate(target);
-        case DeeplinkStrategy.push:
-          push(target);
-        case DeeplinkStrategy.replace:
-          replace(target);
-        case DeeplinkStrategy.custom:
-          await target.deeplinkHandler(this, target.identifier);
+      if (route is RouteNotFound) {
+        return NotFoundRouteResolution(request: request, route: route);
       }
-    } else {
-      replace(target);
-    }
-  }
-
-  /// Navigates to a route with smart history handling.
-  ///
-  /// If route exists in stack, pops back to it. Otherwise pushes new route.
-  /// Used for browser back/forward navigation.
-  Future<void> navigate(T route) async {
-    final target = await RouteRedirect.resolve(route, this);
-    if (target == null) return;
-
-    final parentLayout = target.resolveParentLayout(this);
-    if (parentLayout != null) {
-      await _prepareParentLayoutList(
-        parentLayout,
-        strategy: _ResolveLayoutStrategy.pushToTop,
+      return MatchedRouteResolution(request: request, route: route);
+    } on RouteResolutionCancelled {
+      rethrow;
+    } catch (error, stackTrace) {
+      return ErrorRouteResolution(
+        request: request,
+        error: error,
+        stackTrace: stackTrace,
       );
     }
-
-    final parentPath = parentLayout?.resolvePath(this) ?? root;
-
-    assert(
-      parentPath is StackNavigatable,
-      UnimplementedError(
-        'ZenRouter: parentPath (${parentPath.pathKey.key}) does not implement '
-        'StackNavigatable. The navigate() call for route $route will have no '
-        'effect on the navigation stack or browser history.',
-      ),
-    );
-
-    if (parentPath case StackNavigatable parentPath) {
-      await parentPath.navigate(target);
-    }
   }
-
-  /// Clears all paths and sets a single route as the new state.
-  Future<void> replace(T route) async {
-    T? target = await RouteRedirect.resolve(route, this);
-    if (target == null) return;
-
-    for (final path in paths) path.reset();
-
-    final parentLayout = target.resolveParentLayout(this);
-    if (parentLayout != null) {
-      await _prepareParentLayoutList(
-        parentLayout,
-        strategy: _ResolveLayoutStrategy.override,
-      );
-    }
-
-    final parentPath = parentLayout?.resolvePath(this) ?? root;
-    await parentPath.activateRoute(target);
-  }
-
-  /// Adds a route to the navigation stack.
-  ///
-  /// Resolves redirects, ensures layout hierarchy is active, then pushes to path.
-  /// Returns a future that completes when the route is popped with a result.
-  Future<R?> push<R extends Object>(T route) async {
-    T? target = await RouteRedirect.resolve(route, this);
-    if (target == null) return null;
-
-    final parentLayout = target.resolveParentLayout(this);
-    if (parentLayout != null) {
-      await _prepareParentLayoutList(
-        parentLayout,
-        strategy: _ResolveLayoutStrategy.pushToTop,
-      );
-    }
-
-    final parentPath = parentLayout?.resolvePath(this) ?? root;
-    switch (parentPath) {
-      case StackMutatable():
-        return parentPath.push(target);
-      default:
-        parentPath.activateRoute(target);
-        return null;
-    }
-  }
-
-  /// Pushes a route to the top, or moves it to top if already in stack.
-  ///
-  /// Useful for tab navigation to switch without duplicating entries.
-  void pushOrMoveToTop(T route) async {
-    final target = await RouteRedirect.resolve(route, this);
-    if (target == null) return;
-
-    final parentLayout = target.resolveParentLayout(this);
-    if (parentLayout != null) {
-      await _prepareParentLayoutList(
-        parentLayout,
-        strategy: _ResolveLayoutStrategy.pushToTop,
-      );
-    }
-
-    final parentPath = parentLayout?.resolvePath(this) ?? root;
-
-    switch (parentPath) {
-      case StackMutatable():
-        parentPath.pushOrMoveToTop(target);
-      default:
-        parentPath.activateRoute(target);
-    }
-  }
-
-  /// Replaces the current route with a new one.
-  ///
-  /// Pops the current route (respecting guards) then pushes the new route.
-  Future<R?> pushReplacement<R extends Object, RO extends Object>(
-    T route, {
-    RO? result,
-  }) async {
-    final target = await RouteRedirect.resolve(route, this);
-    if (target == null) return null;
-
-    final parentLayout = target.resolveParentLayout(this);
-    final parentPath = parentLayout?.resolvePath(this) ?? root;
-
-    final currentPath = this.activePath;
-    final currentRoute = currentPath.activeRoute;
-    if (currentPath case StackMutatable activePath
-        when currentRoute != null && activePath != parentPath) {
-      if (activePath.stack.length == 1) {
-        currentRoute.completeOnResult(result, this);
-        currentRoute.onDiscard();
-        activePath.reset();
-      } else {
-        final popped = await activePath.pop(result);
-        if (popped == null || !popped) return null;
-        // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
-        await currentRoute.onResult.future;
-      }
-    }
-
-    if (parentLayout != null) {
-      await _prepareParentLayoutList(
-        parentLayout,
-        strategy: _ResolveLayoutStrategy.pushToTop,
-      );
-    }
-
-    if (parentPath case StackMutatable parentPath) {
-      return parentPath.pushReplacement(target, result: result);
-    }
-
-    return null;
-  }
-
-  /// Pops from the nearest eligible path with at least two entries.
-  ///
-  /// Only the deepest mutatable path is popped. Unlike the previous
-  /// multi-path behavior, nested shells are not popped together with
-  /// their child stacks in a single call.
-  Future<void> pop([Object? result]) async {
-    final dynamicPaths = activePaths.whereType<StackMutatable>().toList();
-
-    for (var i = dynamicPaths.length - 1; i >= 0; i--) {
-      final path = dynamicPaths[i];
-      if (path.stack.length >= 2) {
-        await path.pop(result);
-        return;
-      }
-    }
-  }
-
-  /// Attempts to pop from the nearest eligible path.
-  ///
-  /// Returns true if pop succeeded, false if blocked by guard, null if no path eligible.
-  Future<bool?> tryPop([Object? result]) async {
-    final mutatablePaths = activePaths.whereType<StackMutatable>().toList();
-
-    for (var i = mutatablePaths.length - 1; i >= 0; i--) {
-      final path = mutatablePaths[i];
-      if (path.stack.length >= 2) {
-        return await path.pop(result);
-      }
-    }
-
-    return null;
-  }
-
-  /// Triggers a rebuild of the coordinator.
-  void markNeedRebuild() => notifyListeners();
 
   /// Registers a constructor for a layout parent.
+  ///
+  /// Implemented by [CoordinatorLayoutCore].
   void defineLayoutParentConstructor(
     Object layoutKey,
     RouteLayoutParentConstructor constructor,
   );
 
   /// Creates a layout parent instance from registered constructor.
+  ///
+  /// Implemented by [CoordinatorLayoutCore].
   RouteLayoutParent? createLayoutParent(Object layoutKey);
+
+  /// Triggers a rebuild of the coordinator.
+  void markNeedRebuild({
+    NavigationHistoryIntent historyIntent = NavigationHistoryIntent.automatic,
+  }) {
+    if (isRouteModule) {
+      rootCoordinator.markNeedRebuild(historyIntent: historyIntent);
+      return;
+    }
+
+    recordHistoryIntent(historyIntent);
+    _handlePathChanged();
+  }
 }

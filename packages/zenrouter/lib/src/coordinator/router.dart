@@ -18,7 +18,7 @@ import 'package:zenrouter/zenrouter.dart';
 class CoordinatorRouteParser extends RouteInformationParser<Uri> {
   const CoordinatorRouteParser({required this.coordinator});
 
-  final Coordinator coordinator;
+  final Coordinator<RouteUnique> coordinator;
 
   /// Converts [RouteInformation] to a [Uri] configuration.
   @override
@@ -55,10 +55,25 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
     coordinator.addListener(notifyListeners);
   }
 
-  final Coordinator coordinator;
+  final Coordinator<RouteUnique> coordinator;
+
+  Future<void> _commitQueue = Future<void>.value();
+  RouteCancellationToken? _pendingResolution;
+  int _routeGeneration = 0;
 
   @override
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+  final Map<StackPath, GlobalKey<NavigatorState>> _pathNavigatorKeys = {};
+
+  /// Returns the stable Navigator key owned by [path].
+  ///
+  /// System back is dispatched to the deepest active path first, so nested
+  /// navigators get the same `maybePop`/`PopScope` behavior as the root path.
+  GlobalKey<NavigatorState> navigatorKeyFor(StackPath path) {
+    if (identical(path, coordinator.root)) return navigatorKey;
+    return _pathNavigatorKeys.putIfAbsent(path, GlobalKey<NavigatorState>.new);
+  }
 
   @override
   Uri? get currentConfiguration => coordinator.currentUri;
@@ -103,34 +118,114 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
   /// - Path types (NavigationPath vs IndexedStackPath) are static
   @override
   Future<void> setNewRoutePath(Uri configuration) async {
-    final route = await coordinator.parseRouteFromUri(configuration);
-    assert(
-      () {
-        try {
-          final _ = coordinator.coordinator;
-          return true;
-        } on UnimplementedError catch (err) {
-          if (err.message?.contains('This coordinator is standalone') == true) {
-            return route != null;
-          }
-          return true;
-        }
-      }(),
-      'If you want to use coordinator as [RouterConfig], you must return route from [parseRouteFromUri]',
+    final generation = ++_routeGeneration;
+    final cancellationToken = RouteCancellationToken();
+    _pendingResolution?.cancel(
+      'Superseded by route generation $generation ($configuration)',
     );
+    _pendingResolution = cancellationToken;
 
-    if (route case RouteDeepLink()) {
-      // Not awaited: recover → push/navigate futures complete on pop.
-      coordinator.recover(route!);
-      return;
+    try {
+      final resolved = await _resolveConfiguration(
+        configuration,
+        cancellationToken,
+      );
+      cancellationToken.throwIfCancelled();
+
+      final operation = _commitQueue.then((_) async {
+        cancellationToken.throwIfCancelled();
+        if (identical(_pendingResolution, cancellationToken)) {
+          _pendingResolution = null;
+        }
+        await _applyResolvedRoutePath(configuration, resolved);
+      });
+      _commitQueue = operation.then<void>((_) {}, onError: (_, _) {});
+      await operation;
+    } on RouteResolutionCancelled {
+      // Superseded route information is expected control flow, not a Router
+      // failure. The newest generation owns the next commit.
+    } finally {
+      if (identical(_pendingResolution, cancellationToken)) {
+        _pendingResolution = null;
+      }
+    }
+  }
+
+  Future<void> _applyResolvedRoutePath(
+    Uri configuration,
+    ({RouteUnique? route, bool redirected}) resolved,
+  ) async {
+    final route = resolved.route;
+
+    await coordinator.runNavigationTransaction(
+      () async {
+        assert(
+          () {
+            try {
+              final _ = coordinator.coordinator;
+              return true;
+            } on UnimplementedError catch (err) {
+              if (err.message?.contains('This coordinator is standalone') ==
+                  true) {
+                return route != null;
+              }
+              return true;
+            }
+          }(),
+          'If you want to use coordinator as [RouterConfig], you must return route from [parseRouteFromUri]',
+        );
+
+        if (route case RouteDeepLink()) {
+          await coordinator.recover(route!);
+          return;
+        }
+
+        assert(
+          route != null,
+          'You must to provide a parse route for $configuration in [parseRouteFromUri] to use deeplink to it',
+        );
+        await coordinator.navigate(route!);
+      },
+      historyIntent: resolved.redirected
+          ? NavigationHistoryIntent.replace
+          : NavigationHistoryIntent.traverse,
+    );
+  }
+
+  Future<({RouteUnique? route, bool redirected})> _resolveConfiguration(
+    Uri configuration,
+    RouteCancellationToken cancellationToken,
+  ) async {
+    var request = RouteRequest.navigation(
+      configuration,
+      cancellationToken: cancellationToken,
+    );
+    var redirected = false;
+    final visited = <Uri>{};
+
+    while (visited.add(request.uri)) {
+      cancellationToken.throwIfCancelled();
+      final resolution = await Future.any<RouteResolution<RouteUnique>>([
+        coordinator.resolveRoute(request),
+        cancellationToken.whenCancelled.then(
+          (reason) => throw RouteResolutionCancelled(reason),
+        ),
+      ]);
+      cancellationToken.throwIfCancelled();
+      switch (resolution) {
+        case MatchedRouteResolution(:final route):
+          return (route: route, redirected: redirected);
+        case NotFoundRouteResolution(:final route):
+          return (route: route, redirected: redirected);
+        case final RedirectRouteResolution resolution:
+          redirected = true;
+          request = resolution.createRedirectRequest();
+        case ErrorRouteResolution(:final error, :final stackTrace):
+          Error.throwWithStackTrace(error, stackTrace);
+      }
     }
 
-    assert(
-      route != null,
-      'You must to provide a parse route for $configuration in [parseRouteFromUri] to use deeplink to it',
-    );
-    // Not awaited: navigate → push future completes when the route is popped.
-    coordinator.navigate(route!);
+    throw StateError('Redirect loop detected while resolving $configuration');
   }
 
   /// Dont need to handle restored route since it handled in [CoordinatorRestorable]
@@ -139,12 +234,27 @@ class CoordinatorRouterDelegate extends RouterDelegate<Uri>
 
   @override
   Future<bool> popRoute() async {
+    // Let the Navigator evaluate the current route's PopScope entries first.
+    // This is required for Android predictive back: WebView pages may consume
+    // the back action without changing the app route, and bypassing
+    // Navigator.maybePop() sends the request straight to the coordinator.
+    for (final path in coordinator.activePaths.reversed) {
+      final pathNavigatorKey = identical(path, coordinator.root)
+          ? navigatorKey
+          : _pathNavigatorKeys[path];
+      final navigatorResult = await pathNavigatorKey?.currentState?.maybePop();
+      if (navigatorResult == true) return true;
+    }
+
     final result = await coordinator.tryPop();
     return result ?? false;
   }
 
   @override
   void dispose() {
+    _pendingResolution?.cancel('Router delegate disposed');
+    _pendingResolution = null;
+    _pathNavigatorKeys.clear();
     coordinator.removeListener(notifyListeners);
     super.dispose();
   }

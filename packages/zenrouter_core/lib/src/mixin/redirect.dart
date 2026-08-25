@@ -21,18 +21,33 @@ import 'package:zenrouter_core/src/mixin/target.dart';
 ///
 /// This chain continues until a route returns itself or navigation is cancelled.
 mixin RouteRedirect<T extends RouteTarget> on RouteTarget {
+  /// Maximum number of hops [resolve] will follow before treating the chain
+  /// as a cycle. Prevents `A → B → A` from hanging navigation.
+  static const maxRedirectHops = 20;
+
   /// Resolves the final destination by following the redirect chain.
   ///
   /// This static method handles the full redirect resolution process:
   /// - Iteratively follows redirects until a non-redirecting route is found
   /// - Calls [redirectWith] if coordinator is available, otherwise [redirect]
   /// - Handles route discarding for redirected-away routes
+  /// - Throws [StateError] if a cycle is detected or [maxRedirectHops] is exceeded
   static Future<T?> resolve<T extends RouteTarget>(
     T route,
     CoordinatorCore? coordinator,
   ) async {
     T target = route;
+    final seen = <RouteTarget>{};
+    var hops = 0;
     while (target is RouteRedirect) {
+      if (!seen.add(target) || hops >= maxRedirectHops) {
+        target.onDiscard();
+        throw StateError(
+          'RouteRedirect loop detected after $hops hops starting from $route',
+        );
+      }
+      hops += 1;
+
       final redirect = target as RouteRedirect;
       final newTarget = await switch (coordinator) {
         null => redirect.redirect(),

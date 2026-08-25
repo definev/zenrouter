@@ -41,18 +41,16 @@ class _SmallIconButtonState extends State<SmallIconButton> {
           decoration: BoxDecoration(
             border: Border.all(color: DebugTheme.border),
             borderRadius: BorderRadius.circular(DebugTheme.radiusSm),
-            color:
-                _isHovered && widget.onTap != null
-                    ? DebugTheme.backgroundLight
-                    : DebugTheme.backgroundDark,
+            color: _isHovered && widget.onTap != null
+                ? DebugTheme.backgroundLight
+                : DebugTheme.backgroundDark,
           ),
           child: Icon(
             widget.icon,
             size: 11,
-            color:
-                widget.onTap != null
-                    ? (widget.color ?? DebugTheme.textPrimary)
-                    : DebugTheme.textPlaceholder,
+            color: widget.onTap != null
+                ? (widget.color ?? DebugTheme.textPrimary)
+                : DebugTheme.textPlaceholder,
           ),
         ),
       ),
@@ -99,27 +97,30 @@ class _ActionButtonState extends State<ActionButton> {
           height: 28,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color:
-                _isHovered
-                    ? DebugTheme.backgroundLight
-                    : widget.backgroundColor,
+            color: _isHovered
+                ? DebugTheme.backgroundLight
+                : widget.backgroundColor,
             borderRadius: BorderRadius.circular(DebugTheme.radius),
             border: Border.all(color: DebugTheme.border),
           ),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                widget.label,
-                style: TextStyle(
-                  color: widget.color,
-                  fontSize: DebugTheme.fontSize,
-                  fontWeight: FontWeight.w500,
-                  decoration: TextDecoration.none,
+              Flexible(
+                child: Text(
+                  widget.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: widget.color,
+                    fontSize: DebugTheme.fontSize,
+                    fontWeight: FontWeight.w500,
+                    decoration: TextDecoration.none,
+                  ),
                 ),
               ),
               if (widget.icon != null) ...[
-                const SizedBox(width: DebugTheme.spacing),
+                const SizedBox(width: DebugTheme.spacingXs),
                 Icon(widget.icon, color: widget.color, size: 11),
               ],
             ],
@@ -141,10 +142,14 @@ class TabButton extends StatefulWidget {
     required this.label,
     required this.isSelected,
     required this.onTap,
+    this.icon,
+    this.iconOnly = false,
     this.count = 0,
   });
 
   final String label;
+  final IconData? icon;
+  final bool iconOnly;
   final bool isSelected;
   final VoidCallback onTap;
   final int count;
@@ -158,64 +163,87 @@ class _TabButtonState extends State<TabButton> {
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: Container(
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color:
-                widget.isSelected || _isHovered
-                    ? DebugTheme.backgroundLight
-                    : const Color(0x00000000),
-            border:
-                widget.isSelected
-                    ? const Border(
+    final seeThrough = DebugPanelAppearance.seeThroughOf(context);
+    return Semantics(
+      button: true,
+      selected: widget.isSelected,
+      label: widget.label,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: Container(
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: widget.isSelected || _isHovered
+                  ? DebugTheme.surface(
+                      DebugTheme.backgroundLight,
+                      seeThrough: seeThrough,
+                    )
+                  : const Color(0x00000000),
+              border: widget.isSelected
+                  ? const Border(
                       bottom: BorderSide(color: Color(0xFFFFFFFF), width: 2),
                     )
-                    : null,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                widget.label,
-                style: TextStyle(
-                  color:
-                      widget.isSelected
+                  : null,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (widget.icon != null) ...[
+                  Icon(
+                    widget.icon,
+                    size: widget.iconOnly ? 16 : 13,
+                    color: widget.isSelected
+                        ? DebugTheme.textPrimary
+                        : DebugTheme.textDisabled,
+                  ),
+                  if (!widget.iconOnly)
+                    const SizedBox(width: DebugTheme.spacingXs),
+                ],
+                if (!widget.iconOnly)
+                  Text(
+                    widget.label,
+                    style: TextStyle(
+                      color: widget.isSelected
                           ? DebugTheme.textPrimary
                           : DebugTheme.textDisabled,
-                  fontSize: DebugTheme.fontSizeMd,
-                  fontWeight:
-                      widget.isSelected ? FontWeight.w600 : FontWeight.w500,
-                  decoration: TextDecoration.none,
-                ),
-              ),
-              if (widget.count > 0) ...[
-                const SizedBox(width: DebugTheme.spacingSm),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: DebugTheme.spacingXs,
-                    vertical: 1,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFB71C1C).withAlpha(150),
-                    borderRadius: BorderRadius.circular(DebugTheme.radiusSm),
-                  ),
-                  child: Text(
-                    widget.count.toString(),
-                    style: const TextStyle(
-                      color: Color(0xFFFFCDD2),
-                      fontSize: DebugTheme.fontSizeSm,
-                      fontWeight: FontWeight.bold,
+                      fontSize: DebugTheme.fontSizeMd,
+                      fontWeight: widget.isSelected
+                          ? FontWeight.w600
+                          : FontWeight.w500,
                       decoration: TextDecoration.none,
                     ),
                   ),
-                ),
+                if (widget.count > 0) ...[
+                  SizedBox(
+                    width: widget.iconOnly
+                        ? DebugTheme.spacingXs
+                        : DebugTheme.spacingSm,
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DebugTheme.spacingXs,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFB71C1C).withAlpha(150),
+                      borderRadius: BorderRadius.circular(DebugTheme.radiusSm),
+                    ),
+                    child: Text(
+                      widget.count.toString(),
+                      style: const TextStyle(
+                        color: Color(0xFFFFCDD2),
+                        fontSize: DebugTheme.fontSizeSm,
+                        fontWeight: FontWeight.bold,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

@@ -162,3 +162,109 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T>
     await activateRoute(route);
   }
 }
+
+/// A fixed collection of layout branches with an independent child path per
+/// branch.
+///
+/// [BranchedStackPath] owns branch selection while each branch route owns its
+/// own [StackPath] through [RouteLayoutParent.resolvePath]. Switching branches
+/// therefore preserves the navigation depth of every branch.
+///
+/// Branch roots must implement [RouteLayoutParent]. Use [goToBranch] to switch
+/// branches directly, or navigate to a route inside a branch and let the
+/// coordinator activate the required branch hierarchy.
+class BranchedStackPath<T extends RouteTarget> extends IndexedStackPath<T> {
+  BranchedStackPath._(List<T> branches, {super.debugLabel, super.coordinator})
+    : super._(_validateBranches(branches));
+
+  /// Creates a branched path with fixed layout roots.
+  factory BranchedStackPath.create(
+    List<T> branches, {
+    String? label,
+    Coordinator? coordinator,
+  }) => BranchedStackPath._(
+    branches,
+    debugLabel: label,
+    coordinator: coordinator,
+  );
+
+  /// Creates a branched path associated with a [Coordinator].
+  factory BranchedStackPath.createWith(
+    List<T> branches, {
+    required Coordinator coordinator,
+    required String label,
+  }) => BranchedStackPath._(
+    branches,
+    debugLabel: label,
+    coordinator: coordinator,
+  );
+
+  /// The key used to select the built-in branched layout builder.
+  static const key = PathKey('BranchedStackPath');
+
+  @override
+  PathKey get pathKey => key;
+
+  /// The index of the currently active branch.
+  int get activeBranchIndex => activeIndex;
+
+  /// The layout root of the currently active branch.
+  T get activeBranch => activeRoute;
+
+  /// Switches to the branch at [index].
+  Future<void> goToBranch(int index) => goToIndexed(index);
+
+  /// Resets branch selection and every child path owned by the branch roots.
+  ///
+  /// This keeps a shell removal from leaking stale branch history when the
+  /// shell is activated again. Ordinary branch switches do not reset children.
+  @override
+  void reset() {
+    final branchCoordinator = proxyCoordinator ?? coordinator;
+    if (branchCoordinator != null) {
+      for (final branch in stack.cast<RouteLayoutParent>()) {
+        final childPath = branch.resolvePath(branchCoordinator);
+        if (!identical(childPath, this)) childPath.reset();
+      }
+    }
+    super.reset();
+  }
+
+  static List<T> _validateBranches<T extends RouteTarget>(List<T> branches) {
+    if (branches.isEmpty) {
+      throw ArgumentError.value(
+        branches,
+        'branches',
+        'A branched path requires at least one branch layout',
+      );
+    }
+    final invalidBranches = branches
+        .where((branch) => branch is! RouteLayoutParent)
+        .map((branch) => branch.runtimeType)
+        .toList(growable: false);
+    if (invalidBranches.isNotEmpty) {
+      throw ArgumentError.value(
+        branches,
+        'branches',
+        'Every branch must implement RouteLayoutParent; invalid roots: '
+            '$invalidBranches',
+      );
+    }
+    final branchKeys = <Object>{};
+    final duplicateBranchKeys = <Object>{};
+    for (final branch in branches.cast<RouteLayoutParent>()) {
+      if (!branchKeys.add(branch.layoutKey)) {
+        duplicateBranchKeys.add(branch.layoutKey);
+      }
+    }
+    if (duplicateBranchKeys.isNotEmpty) {
+      throw ArgumentError.value(
+        branches,
+        'branches',
+        'Branch layout keys must be unique; duplicates: '
+            '$duplicateBranchKeys',
+      );
+    }
+    return branches;
+  }
+}

@@ -1,0 +1,50 @@
+# Codecov configuration for the zenrouter monorepo.
+# Coverage is uploaded per package with flags from .github/workflows/test.yml.
+
+comment:
+  layout: "condensed_header, flags, condensed_files, condensed_footer"
+  behavior: default
+  require_changes: false
+  hide_project_coverage: false
+
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+      zenrouter:
+        target: 90%
+        flags:
+          - zenrouter
+      zenrouter_core:
+        target: 90%
+        flags:
+          - zenrouter_core
+    patch:
+      default:
+        target: auto
+        threshold: 1%
+
+flag_management:
+  default_rules:
+    carryforward: true
+  individual_flags:
+    - name: zenrouter
+      paths:
+        - packages/zenrouter/
+      statuses:
+        - type: project
+          target: 90%
+    - name: zenrouter_core
+      paths:
+        - packages/zenrouter_core/
+      statuses:
+        - type: project
+          target: 90%
+
+ignore:
+  - "**/test/**"
+  - "**/example/**"
+  - "**/*.g.dart"
+  - "**/benchmark/**"

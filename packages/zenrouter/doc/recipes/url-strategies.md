@@ -41,8 +41,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      routerDelegate: coordinator.routerDelegate,
-      routeInformationParser: coordinator.routeInformationParser,
+      routerConfig: coordinator,
     );
   }
 }

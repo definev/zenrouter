@@ -245,7 +245,8 @@ class TestCoordinator extends Coordinator<AppRoute> {
   List<StackPath> get paths => [...super.paths, tabStack, undefinedTabStack];
 
   @override
-  void defineConverter() {
+  void init() {
+    super.init();
     defineRestorableConverter('test_bookmark', () => const BookmarkConverter());
   }
 

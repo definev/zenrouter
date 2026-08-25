@@ -1,4 +1,29 @@
+## Unreleased
+
+- **Feat**: Add see-through panel mode (translucent surfaces + backdrop blur) via the header tool menu and `setDebugPanelSeeThrough` / `defaultDebugPanelSeeThrough`. Narrow viewports (<600) enable see-through by default until toggled.
+- **Feat**: Compact mobile chrome — shorter header, icon-only tabs, and a collapsed “Go to…” URI bar that expands on demand.
+- **Feat**: Make the floating debug panel freely draggable from the header, with viewport clamping; resize still pins the opposite corner.
+- **Fix**: Respect top/bottom safe area (and keyboard insets) for the mobile panel and FAB without double-applying the bottom inset.
+
+## 3.0.0-beta.1
+
+Prerelease for early testers. APIs may still change before 3.0.0.
+
+- **BREAKING**: Update dependency to `zenrouter: ^3.0.0-beta.1`
+- **Feat**: Support **Stack** (floating overlay), **Row** (side-by-side horizontal split), and **Column** (bottom panel vertical split) layout modes for DevTools with an anchored header tool menu (`⋮`), coordinator configuration (`defaultDebugLayoutMode`, `debugLayoutMode`, `setDebugLayoutMode`), and unified `Flex` split panels using `package:hit` for enlarged touch/drag targets on minimal resize handles.
+- **Feat**: Add an interactive declarative navigation graph with active route highlighting.
+- **Feat**: Add an observed runtime flow recorder with directed edges, visit counts, action labels, and a Graph mode switcher.
+- **Feat**: Extract the Observed matched transition log as a URI-first `NavigationFlowSession` JSON document. The document contains URIs, history intent, labels, and timestamps — never PNG previews.
+- **Feat**: Replay extracted sessions on the Observed canvas with Play/Pause, step, speed, and playhead highlight. Optional confirm-gated Drive calls `navigate` on the live coordinator for the playhead URI; Play alone does not drive the app.
+- **Feat**: Export Observed session JSON to the clipboard and import it by rematching URIs against the current `RouteManifest`. Unmatched URIs are skipped. Live Play pauses recording; Import does not.
+- **Feat**: Add an Observed replay timeline with a scrubber and collapsible event list.
+- **Feat**: Make the debug panel resizable with fullscreen/restore controls and responsive viewport clamping.
+- **Feat**: Make the collapsed devtool launcher freely draggable, position-preserving, and safe-area aware.
+- **Feat**: Add automatic, memory-bounded app screen previews to Observed flow nodes with a capture toggle.
+- **Changed**: Render Topology and Observed graphs with `vyuh_node_flow` for consistent pan, zoom, selection, connections, and viewport fitting.
+
 ## 2.0.0
+
 - **BREAKING**: Update dependency to `zenrouter: ^2.0.0`
 
 ## 1.1.1

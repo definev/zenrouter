@@ -30,13 +30,6 @@ mixin RouteUnique on RouteTarget implements RouteUri {
   @override
   Object? get parentLayoutKey => layout;
 
-  // coverage:ignore-start
-  /// Creates an instance of the layout for this route.
-  @Deprecated('Use `createParentLayout` instead.')
-  RouteLayout createLayout(covariant Coordinator coordinator) =>
-      createParentLayout(coordinator);
-  // coverage:ignore-end
-
   @override
   RouteLayout createParentLayout(covariant CoordinatorCore coordinator) {
     final constructor = _proxy.createParentLayout(coordinator);
@@ -44,24 +37,12 @@ mixin RouteUnique on RouteTarget implements RouteUri {
     if (constructor == null) {
       throw UnimplementedError(
         'Missing constructor for the [$parentLayoutKey] layout. '
-        'You can define a constructor by calling `bindLayout` in the corresponding [StackPath].\n'
-        'Alternatively, you can define a constructor for this layout by calling [defineLayoutParent] '
-        'in the [defineLayout] function of [${coordinator.runtimeType}].',
+        'You can define a constructor by calling `bindLayout` in the corresponding [StackPath].',
       );
     }
 
     return constructor as RouteLayout;
   }
-
-  // coverage:ignore-start
-  /// Resolves the parent layout for this route.
-  ///
-  /// Checks if an instance of the required layout is already active in the
-  /// coordinator. If so, returns it. Otherwise, creates a new one.
-  @Deprecated('use `resolveParentLayout` instead.')
-  RouteLayout? resolveLayout(covariant CoordinatorCore coordinator) =>
-      resolveParentLayout(coordinator);
-  // coverage:ignore-end
 
   late final _proxy = RouteLayoutChild.proxy(this);
 
@@ -69,10 +50,32 @@ mixin RouteUnique on RouteTarget implements RouteUri {
   RouteLayout? resolveParentLayout(coordinator) {
     final layout = _proxy.resolveParentLayout(coordinator) as RouteLayout?;
 
-    // Validate that routes using IndexedStackPath are in the initial stack
+    // Validate that routes using fixed-membership paths are declared upfront.
     // Using assert with closure to ensure all validation logic is removed in production
     assert(() {
       final p = layout?.resolvePath(coordinator);
+      if (p is BranchedStackPath) {
+        final path = p as BranchedStackPath;
+        final routeInBranches = path.stack.any(
+          (route) => route.runtimeType == runtimeType,
+        );
+        if (!routeInBranches) {
+          throw AssertionError(
+            'Layout [$runtimeType] resolves under a BranchedStackPath but is '
+            'not declared as a branch root.\n'
+            'BranchedStackPath: ${path.debugLabel ?? 'unlabeled'}\n'
+            'Current branches: '
+            '${path.stack.map((route) => route.runtimeType).toList()}\n\n'
+            'Fix: add [$runtimeType] as a branch layout when creating the path:\n'
+            '  BranchedStackPath.createWith(\n'
+            '    [...existing branches..., $runtimeType()],\n'
+            '    coordinator: this,\n'
+            "    label: '${path.debugLabel ?? 'your-label'}',\n"
+            '  )',
+          );
+        }
+        return true;
+      }
       if (p is IndexedStackPath) {
         final path = p as IndexedStackPath;
         final routeInStack = path.stack.any(

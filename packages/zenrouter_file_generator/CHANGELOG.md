@@ -1,3 +1,33 @@
+## 3.0.0-beta.1
+
+Prerelease for early testers. Requires `zenrouter_core` and
+`zenrouter_file_annotation` `^3.0.0-beta.1`. APIs may still change before 3.0.0.
+
+- Generate `BranchedStackPath` fields, branched manifest topology, and typed
+  layout base classes from `@ZenLayout(type: LayoutType.branched, branches: ...)`.
+- Emit sealed `RouteManifestLayoutKind.stack()` / `.indexed([...])` /
+  `.branched([...])` values so generated manifests keep fixed children on
+  the kind.
+- Generate `Coordinator.manifest` as the static route topology used by
+  `RouteModuleBinding` and generated `RouteBinding` adapters.
+- Mix `RouteModuleBinding` into the generated coordinator and emit
+  `RouteBinding` / `RouteBinding.deferred` instead of a `parseRouteFromUri`
+  switch.
+- Emit `RouteManifest<String>` explicitly while handwritten coordinators may
+  use enum or domain ID types.
+- Generate `AppCoordinator.location.{route}` reverse-routing helpers
+  (`location.home`, `location.profileId(...)`) instead of `{route}Location()`.
+- `NavContext` now forwards every destination operation (`push`,
+  `pushSilently`, `navigate`, `replace`, `pushReplacement`,
+  `pushOrMoveToTop`, `recover`). `pop` / `tryPop` stay on the coordinator.
+- Reject duplicate and equally-specific ambiguous route patterns during code
+  generation.
+- Generated not-found routes preserve the requested URI and implement
+  `RouteNotFound`, allowing core resolution and SSR adapters to retain HTTP 404
+  semantics.
+- Generated dynamic route URIs are absolute and encode each path segment
+  independently.
+
 ## 1.1.3
 - **Chore**: Bump `analyzer: ^12.0.0`, `build: ^4.0.6`, `source_gen: ^4.2.3`, `dart_style: ^3.1.8`
 

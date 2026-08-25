@@ -4,12 +4,9 @@
 /// and Table of Contents support.
 library;
 
-import 'dart:async';
-
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:markdown/markdown.dart' as md;
-import 'package:google_fonts/google_fonts.dart';
 import 'package:zenrouter_docs/theme/app_theme.dart';
 import 'package:zenrouter_docs/widgets/code_block.dart';
 
@@ -18,9 +15,9 @@ class TocController extends ChangeNotifier {
   final List<TocItem> _items = [];
   TocItem? _activeItem;
   bool _isUserScrolling = false;
+  bool _notificationScheduled = false;
+  bool _disposed = false;
   DateTime? _lastManualScroll;
-  DateTime? _lastItemAdded;
-  Timer? _itemsReadyTimer;
 
   List<TocItem> get items => List.unmodifiable(_items);
   TocItem? get activeItem => _activeItem;
@@ -61,37 +58,43 @@ class TocController extends ChangeNotifier {
   }
 
   void addItem(TocItem tocItem) {
+    if (_items.contains(tocItem)) return;
+
     _items.add(tocItem);
-    _lastItemAdded = DateTime.now();
     if (_items.length == 1) {
-      setActiveItem(tocItem);
+      _activeItem = tocItem;
     }
     notifyListeners();
+  }
 
-    // Cancel existing timer and start a new one
-    // This will trigger the callback after items stop being added
-    _itemsReadyTimer?.cancel();
-    _itemsReadyTimer = Timer(const Duration(milliseconds: 200), () {
-      if (onItemsReady != null && _lastItemAdded != null) {
-        final timeSinceLastAdd = DateTime.now().difference(_lastItemAdded!);
-        if (timeSinceLastAdd.inMilliseconds >= 150) {
-          onItemsReady?.call();
-        }
-      }
+  void removeItem(TocItem tocItem) {
+    if (!_items.remove(tocItem)) return;
+    if (_activeItem == tocItem) {
+      _activeItem = _items.firstOrNull;
+    }
+    _notifyAfterFrame();
+  }
+
+  void clearItems() {
+    if (_items.isEmpty && _activeItem == null) return;
+    _items.clear();
+    _activeItem = null;
+    _notifyAfterFrame();
+  }
+
+  void _notifyAfterFrame() {
+    if (_notificationScheduled || _disposed) return;
+    _notificationScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _notificationScheduled = false;
+      if (!_disposed) notifyListeners();
     });
   }
 
-  /// Callback to notify when items should be checked for scroll position
-  /// This is called after items stop being added for a short period
-  void Function()? onItemsReady;
-
-  void clearItems() {
-    _itemsReadyTimer?.cancel();
-    _itemsReadyTimer = null;
-    _items.clear();
-    _activeItem = null;
-    _lastItemAdded = null;
-    notifyListeners();
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 
   /// Updates the active item based on the current scroll position
@@ -99,12 +102,14 @@ class TocController extends ChangeNotifier {
   void updateActiveItemFromScrollPosition(
     double scrollPosition,
     double viewportHeight,
+    double maxScrollExtent,
   ) {
     if (_items.isEmpty) return;
 
-    // Check if scrolled to bottom
-    // Note: maxScrollExtent would need to be passed separately if needed
-    // For now, we'll just check based on item positions
+    if (scrollPosition >= maxScrollExtent - 50) {
+      setActiveItem(_items.last, fromScroll: true);
+      return;
+    }
 
     TocItem? activeItem;
     double minDistance = double.infinity;
@@ -179,19 +184,25 @@ class MarkdownSection extends StatelessWidget {
     super.key,
     required this.markdown,
     this.tocController,
+    this.onOpenUri,
   });
 
   final String markdown;
   final TocController? tocController;
+  final ValueChanged<Uri>? onOpenUri;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     return MarkdownBody(
       data: markdown,
-      styleSheet: _buildMarkdownStyleSheet(context, isDark),
+      selectable: true,
+      onTapLink: onOpenUri == null
+          ? null
+          : (text, href, title) {
+              final uri = href == null ? null : Uri.tryParse(href);
+              if (uri != null) onOpenUri!(uri);
+            },
+      styleSheet: _buildMarkdownStyleSheet(),
       extensionSet: md.ExtensionSet(
         md.ExtensionSet.gitHubFlavored.blockSyntaxes,
         <md.InlineSyntax>[
@@ -230,76 +241,68 @@ class MarkdownSection extends StatelessWidget {
     );
   }
 
-  MarkdownStyleSheet _buildMarkdownStyleSheet(
-    BuildContext context,
-    bool isDark,
-  ) {
-    final theme = Theme.of(context);
-    final docs = theme.docs;
-
+  MarkdownStyleSheet _buildMarkdownStyleSheet() {
     return MarkdownStyleSheet(
       // Heading styles
-      h1: GoogleFonts.libreBaskerville(
-        fontSize: 32,
-        fontWeight: FontWeight.bold,
-        color: theme.colorScheme.onSurface,
+      h1: AppTypography.sans(
+        fontSize: 42,
+        fontWeight: FontWeight.w300,
+        color: AppTheme.ink,
         height: 1.4,
       ),
-      h2: GoogleFonts.libreBaskerville(
-        fontSize: 26,
-        fontWeight: FontWeight.bold,
-        color: theme.colorScheme.onSurface,
+      h2: AppTypography.sans(
+        fontSize: 35,
+        fontWeight: FontWeight.w300,
+        color: AppTheme.primary,
         height: 1.4,
       ),
-      h3: GoogleFonts.libreBaskerville(
-        fontSize: 22,
-        fontWeight: FontWeight.w600,
-        color: theme.colorScheme.onSurface,
+      h3: AppTypography.sans(
+        fontSize: 24,
+        fontWeight: FontWeight.w400,
+        color: AppTheme.ink,
         height: 1.4,
       ),
-      h4: GoogleFonts.libreBaskerville(
+      h4: AppTypography.sans(
         fontSize: 18,
         fontWeight: FontWeight.w600,
-        color: theme.colorScheme.onSurface,
+        color: AppTheme.ink,
         height: 1.4,
       ),
-      h5: GoogleFonts.libreBaskerville(
+      h5: AppTypography.sans(
         fontSize: 16,
         fontWeight: FontWeight.w600,
-        color: theme.colorScheme.onSurface,
+        color: AppTheme.ink,
         height: 1.4,
       ),
-      h6: GoogleFonts.libreBaskerville(
+      h6: AppTypography.sans(
         fontSize: 14,
         fontWeight: FontWeight.w600,
-        color: theme.colorScheme.onSurface,
+        color: AppTheme.ink,
         height: 1.4,
       ),
 
       // Paragraph style
-      p: GoogleFonts.libreBaskerville(
-        fontSize: 16,
-        color: theme.colorScheme.onSurface.withValues(alpha: 0.87),
-        height: 1.7,
+      p: AppTypography.serif(
+        fontSize: 14,
+        color: AppTheme.ink.withValues(alpha: 0.87),
+        height: 1.72,
         letterSpacing: 0.15,
       ),
 
-      codeblockDecoration: BoxDecoration(
-        color: docs.codeBackground,
-        borderRadius: BorderRadius.circular(16),
+      codeblockDecoration: const BoxDecoration(
+        color: AppTheme.codeBackground,
+        borderRadius: BorderRadius.zero,
       ),
 
       // Blockquote style
-      blockquote: GoogleFonts.libreBaskerville(
-        fontSize: 16,
-        color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+      blockquote: AppTypography.serif(
+        fontSize: 14,
+        color: AppTheme.ink.withValues(alpha: 0.8),
         fontStyle: FontStyle.italic,
         height: 1.6,
       ),
-      blockquoteDecoration: BoxDecoration(
-        border: Border(
-          left: BorderSide(color: theme.colorScheme.primary, width: 4),
-        ),
+      blockquoteDecoration: const BoxDecoration(
+        border: Border(left: BorderSide(color: AppTheme.primary, width: 4)),
       ),
       blockquotePadding: const EdgeInsets.symmetric(
         horizontal: 20,
@@ -308,29 +311,29 @@ class MarkdownSection extends StatelessWidget {
 
       // Link style
       a: TextStyle(
-        color: theme.colorScheme.primary,
+        color: AppTheme.primary,
         decoration: TextDecoration.underline,
-        decorationColor: theme.colorScheme.primary.withValues(alpha: 0.5),
+        decorationColor: AppTheme.primary.withValues(alpha: 0.5),
       ),
 
       // List styles
-      listBullet: GoogleFonts.libreBaskerville(
+      listBullet: AppTypography.sans(
         fontSize: 16,
-        color: theme.colorScheme.primary,
+        color: AppTheme.primary,
         fontWeight: FontWeight.bold,
       ),
       listIndent: 20,
 
       // Table styles
-      tableHead: GoogleFonts.libreBaskerville(
+      tableHead: AppTypography.serif(
         fontWeight: FontWeight.bold,
-        color: theme.colorScheme.onSurface,
+        color: AppTheme.ink,
       ),
-      tableBody: GoogleFonts.libreBaskerville(
-        color: theme.colorScheme.onSurface.withValues(alpha: 0.87),
+      tableBody: AppTypography.serif(
+        color: AppTheme.ink.withValues(alpha: 0.87),
       ),
       tableBorder: TableBorder.all(
-        color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+        color: AppTheme.divider.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(8),
       ),
       tableCellsPadding: const EdgeInsets.all(12),
@@ -339,7 +342,7 @@ class MarkdownSection extends StatelessWidget {
       horizontalRuleDecoration: BoxDecoration(
         border: Border(
           top: BorderSide(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+            color: AppTheme.divider.withValues(alpha: 0.5),
             width: 0.5,
           ),
         ),
@@ -349,7 +352,7 @@ class MarkdownSection extends StatelessWidget {
       textAlign: WrapAlignment.start,
       blockSpacing: 16,
 
-      code: GoogleFonts.ptMono(fontSize: 16, color: theme.colorScheme.primary),
+      code: AppTypography.mono(fontSize: 16, color: AppTheme.primary),
     );
   }
 }
@@ -409,9 +412,6 @@ class CodeTextBuilder extends MarkdownElementBuilder {
     TextStyle? preferredStyle,
     TextStyle? parentStyle,
   ) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     // The issue: Container is a block widget, causing line breaks.
     // Solution: Wrap the Container in a WidgetSpan inside Text.rich
     // This allows it to be placed inline with surrounding text
@@ -420,17 +420,14 @@ class CodeTextBuilder extends MarkdownElementBuilder {
         alignment: PlaceholderAlignment.middle,
         child: Container(
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF2D2D2D) : const Color(0xFFEFF1F3),
+            color: const Color(0xFFEFF1F3),
             borderRadius: BorderRadius.circular(8),
           ),
           margin: const EdgeInsets.only(top: 0.8),
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Text(
             element.textContent.trim(),
-            style: GoogleFonts.ptMono(
-              fontSize: 16,
-              color: theme.colorScheme.primary,
-            ),
+            style: AppTypography.mono(fontSize: 16, color: AppTheme.primary),
           ),
         ),
       ),
@@ -476,36 +473,89 @@ class _HeadingWidget extends StatefulWidget {
 
 class _HeadingWidgetState extends State<_HeadingWidget> {
   final GlobalKey _key = GlobalKey();
-  late final TocItem? _item;
-  bool _itemAdded = false;
+  late TocItem _item;
+  TocController? _registeredController;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-      if (!_itemAdded && mounted) {
-        widget.tocController?.addItem(
-          _item = TocItem(
-            title: widget.element.textContent,
-            level: widget.type.index + 1,
-            key: _key,
-          ),
-        );
-        _itemAdded = true;
-      }
+    _item = _createItem();
+    _registerAfterLayout();
+  }
+
+  TocItem _createItem() => TocItem(
+    title: widget.element.textContent,
+    level: widget.type.index + 1,
+    key: _key,
+  );
+
+  void _registerAfterLayout() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _registeredController != null) return;
+      _registeredController = widget.tocController;
+      _registeredController?.addItem(_item);
     });
+  }
+
+  void _unregister() {
+    _registeredController?.removeItem(_item);
+    _registeredController = null;
+  }
+
+  @override
+  void didUpdateWidget(covariant _HeadingWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final itemChanged =
+        oldWidget.type != widget.type ||
+        oldWidget.element.textContent != widget.element.textContent;
+    if (oldWidget.tocController == widget.tocController && !itemChanged) {
+      return;
+    }
+
+    _unregister();
+    if (itemChanged) _item = _createItem();
+    _registerAfterLayout();
+  }
+
+  @override
+  void dispose() {
+    _unregister();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final style = switch (widget.type) {
-      HeadingType.h1 => theme.textTheme.headlineLarge,
-      HeadingType.h2 => theme.textTheme.headlineMedium,
-      HeadingType.h3 => theme.textTheme.headlineSmall,
-      HeadingType.h4 => theme.textTheme.titleLarge,
-      HeadingType.h5 => theme.textTheme.titleMedium,
-      HeadingType.h6 => theme.textTheme.titleSmall,
+      HeadingType.h1 => AppTypography.sans(
+        fontSize: 38,
+        fontWeight: FontWeight.w300,
+        color: AppTheme.primary,
+      ),
+      HeadingType.h2 => AppTypography.sans(
+        fontSize: 31,
+        fontWeight: FontWeight.w300,
+        color: AppTheme.primary,
+      ),
+      HeadingType.h3 => AppTypography.sans(
+        fontSize: 24,
+        fontWeight: FontWeight.w500,
+        color: AppTheme.ink,
+      ),
+      HeadingType.h4 => AppTypography.sans(
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+        color: AppTheme.ink,
+      ),
+      HeadingType.h5 => AppTypography.sans(
+        fontSize: 17,
+        fontWeight: FontWeight.w600,
+        color: AppTheme.ink,
+      ),
+      HeadingType.h6 => AppTypography.sans(
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+        color: AppTheme.ink,
+      ),
     };
     final padTop = switch (widget.type) {
       HeadingType.h1 => 32,
@@ -519,8 +569,8 @@ class _HeadingWidgetState extends State<_HeadingWidget> {
     return Padding(
       padding: EdgeInsets.only(top: padTop),
       child: GestureDetector(
-        onTap: () => widget.tocController?.scrollToItem(_item!),
-        child: Text('# ${widget.element.textContent}', key: _key, style: style),
+        onTap: () => widget.tocController?.scrollToItem(_item),
+        child: Text(widget.element.textContent, key: _key, style: style),
       ),
     );
   }

@@ -1,3 +1,14 @@
+## 3.0.0-beta.1
+
+Prerelease for early testers. APIs may still change before 3.0.0.
+
+- Add `LayoutType.branched` and `ZenLayout.branches` for stateful shells whose
+  direct child layouts retain independent navigation stacks.
+- Generate absolute route URIs with `Uri(pathSegments: ...)` so dynamic and
+  catch-all parameters round-trip reserved characters without changing URL
+  structure.
+- Normalize dynamic and catch-all parameters in generated layout patterns.
+
 ## 1.0.1
 - **Fix**: Publish `PathParser.parseDirParts` used by `zenrouter_file_generator` 1.1.x to prevent build script compilation failures.
 

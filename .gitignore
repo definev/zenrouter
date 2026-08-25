@@ -32,3 +32,8 @@ migrate_working_dir/
 
 # FVM Version Cache
 .fvm/
+
+# Flutter SDK downloaded by the Vercel build script
+/.flutter-sdk/
+.vercel
+.env*

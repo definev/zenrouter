@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:zenrouter/src/coordinator/layout.dart';
 import 'package:zenrouter/zenrouter.dart';
+
+part 'layout.dart';
 
 /// The Flutter-specific implementation of navigation coordinator.
 ///
@@ -8,8 +9,12 @@ import 'package:zenrouter/zenrouter.dart';
 ///
 /// ```
 /// Coordinator<T extends RouteUnique>
-///   extends CoordinatorCore<T>           // Core navigation logic
-///   with CoordinatorLayout<T>,           // Layout builders
+///   extends CoordinatorCore<T>           // Core state
+///   with CoordinatorLayoutCore<T>,       // Layout-parent activation (core)
+///        CoordinatorNavigatable<T>,      // navigate
+///        CoordinatorMutatable<T>,        // push / pop / replace
+///        CoordinatorRecoverable<T>,      // recover / deep links
+///        CoordinatorLayout<T>,           // Flutter layout builders
 ///        CoordinatorRestoration<T>,      // State restoration
 ///        CoordinatorTransitionStrategy<T> // Page transitions
 ///   implements RouterConfig<Uri>,         // Flutter Router integration
@@ -27,17 +32,6 @@ import 'package:zenrouter/zenrouter.dart';
 /// 5. Triggering UI rebuilds through [NavigationStack]
 /// 6. Synchronizing browser URL via [CoordinatorRouterDelegate]
 ///
-/// ## Class Architecture
-///
-/// This class composes functionality from multiple sources:
-///
-/// | Component | Responsibility |
-/// |-----------|----------------|
-/// | [CoordinatorCore] | Core navigation logic (push, pop, replace) |
-/// | [CoordinatorLayout] | Layout builder registration and parent constructors |
-/// | [CoordinatorRestoration] | State restoration key encoding/decoding |
-/// | [CoordinatorTransitionStrategy] | Default page transition configuration |
-///
 /// ## Abstract Nature
 ///
 /// This is an **abstract class** that requires implementation of:
@@ -53,21 +47,6 @@ import 'package:zenrouter/zenrouter.dart';
 ///   }
 /// }
 /// ```
-///
-/// ## Relationship with CoordinatorModular
-///
-/// [Coordinator] can operate in two modes:
-///
-/// **Standalone Mode** (default):
-/// - Has its own root [NavigationPath]
-/// - Can be used directly with [MaterialApp.router]
-/// - Full control over navigation state
-///
-/// **Modular Mode** (part of [CoordinatorModular]):
-/// - Shares root path with parent coordinator
-/// - Cannot use [routerDelegate] or [routeInformationParser]
-/// - Integrates into larger navigation hierarchy
-/// - Access parent via [coordinator] getter
 ///
 /// ## Quick Start
 ///
@@ -93,6 +72,10 @@ import 'package:zenrouter/zenrouter.dart';
 /// ```
 abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
     with
+        CoordinatorLayoutCore<T>,
+        CoordinatorNavigatable<T>,
+        CoordinatorMutatable<T>,
+        CoordinatorRecoverable<T>,
         CoordinatorLayout<T>,
         CoordinatorRestoration<T>,
         CoordinatorTransitionStrategy<T>
@@ -180,11 +163,10 @@ abstract class Coordinator<T extends RouteUnique> extends CoordinatorCore<T>
   /// [RouteLayoutChild.parentLayoutKey] and create new instance of layout parent.
   ///
   /// ## When to Override
-  /// Override [defineLayout] in your coordinator subclass instead of calling
-  /// this directly.
+  /// Prefer [bindLayout] on the [StackPath] instead of calling this directly.
   ///
   /// ## Relationship
-  /// - Registers constructor with [CoordinatorLayout.defineLayoutParentConstructor]
+  /// - Registers constructor with [CoordinatorLayoutCore.defineLayoutParentConstructor]
   /// - Encodes layout key for restoration via [CoordinatorRestoration.encodeLayoutKey]
   void defineLayoutParent(RouteLayoutConstructor constructor) {
     final instance = constructor()..onDiscard();

@@ -3,6 +3,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zenrouter_core/zenrouter_core.dart';
 
+import '../support/harness.dart';
+
 class TestRoute extends RouteTarget {
   TestRoute(this.id);
   final String id;
@@ -62,11 +64,14 @@ void main() {
       expect(route.resultValue, 'test-result');
     });
 
-    test('deepEquals compares hashCode', () {
+    test('deepEquals compares lifecycle identity', () {
       final route1 = TestRoute('1');
       final route2 = route1;
+      final equalButDistinctRoute = TestRoute('1');
 
       expect(route1.deepEquals(route2), isTrue);
+      expect(route1 == equalButDistinctRoute, isTrue);
+      expect(route1.deepEquals(equalButDistinctRoute), isFalse);
     });
 
     test('onDiscard completes onResult', () async {
@@ -94,6 +99,23 @@ void main() {
         () => route.completeOnResult('second', null, true),
         returnsNormally,
       );
+    });
+
+    test('default props are empty', () {
+      expect(_BareRoute().props, isEmpty);
+    });
+
+    test('system onDidPop removes the route from a mutatable path', () async {
+      final path = AppStackPath();
+      final route = AppRoute('1');
+      path.seed([route]);
+      route.isPopByPath = false;
+
+      route.onDidPop('done', null);
+
+      expect(path.stack, isEmpty);
+      expect(route.stackPath, isNull);
+      expect(route.onResult.isCompleted, isTrue);
     });
 
     test('onUpdate is callable', () {
@@ -150,3 +172,5 @@ class _MockStackPath implements StackPath<TestRoute> {
 }
 
 typedef VoidCallback = void Function();
+
+class _BareRoute extends RouteTarget {}

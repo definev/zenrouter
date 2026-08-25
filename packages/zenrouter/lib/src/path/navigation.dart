@@ -1,5 +1,7 @@
 // ignore_for_file: invalid_use_of_protected_member
 
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:zenrouter/zenrouter.dart';
 
@@ -58,7 +60,28 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
   PathKey get pathKey => key;
 
   @override
-  void reset() => clear();
+  void reset() {
+    if (stack.isEmpty) return;
+    clear();
+    // Inside a transaction the coordinator drains at most one microtask
+    // before committing. Notify synchronously so every reset is folded into
+    // that single commit. Outside a transaction, defer so reset stays safe
+    // during a Flutter build and in headless use.
+    if (coordinator?.isInNavigationTransaction == true) {
+      notifyListeners();
+      return;
+    }
+    _notifyResetListeners();
+  }
+
+  void _notifyResetListeners() {
+    // A layout route can be removed while Navigator is updating its pages.
+    // Publishing in a microtask is safe both for that build phase and for
+    // headless consumers where no Flutter binding has been initialized.
+    scheduleMicrotask(() {
+      if (hasListeners) notifyListeners();
+    });
+  }
 
   @override
   T? get activeRoute => stack.lastOrNull;
@@ -66,7 +89,7 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
   @override
   Future<void> activateRoute(T route) async {
     reset();
-    push(route);
+    await pushSilently(route);
   }
 
   @override

@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
 import 'package:zenrouter/zenrouter.dart';
 
@@ -12,20 +13,68 @@ import 'package:zenrouter/zenrouter.dart';
 /// can be parsed the URI defaults to `/`.
 class CoordinatorRouteInformationProvider
     extends PlatformRouteInformationProvider {
-  CoordinatorRouteInformationProvider({required Coordinator coordinator})
-    : _coordinator = coordinator,
-      super(
-        initialRouteInformation: RouteInformation(
-          uri: resolveInitialUri(
-            WidgetsBinding.instance.platformDispatcher.defaultRouteName,
-            coordinator.initialRoutePath,
-          ),
-        ),
+  CoordinatorRouteInformationProvider({
+    required Coordinator<RouteUnique> coordinator,
+  }) : _coordinator = coordinator,
+       super(
+         initialRouteInformation: RouteInformation(
+           uri: resolveInitialUri(
+             WidgetsBinding.instance.platformDispatcher.defaultRouteName,
+             coordinator.initialRoutePath,
+           ),
+         ),
+       );
+
+  final Coordinator<RouteUnique> _coordinator;
+
+  Coordinator<RouteUnique> get coordinator => _coordinator;
+
+  @visibleForTesting
+  static RouteInformationReportingType resolveReportingType(
+    NavigationHistoryIntent intent,
+    RouteInformationReportingType fallback, {
+    Uri? reportedUri,
+    Uri? engineUri,
+  }) => switch (intent) {
+    NavigationHistoryIntent.automatic => fallback,
+    NavigationHistoryIntent.push => RouteInformationReportingType.navigate,
+    NavigationHistoryIntent.replace => RouteInformationReportingType.neglect,
+    // Flutter's `none` still reports to the engine. If the URIs differ it
+    // *pushes* a history entry (`replace: false`). A blocked traversal must
+    // restore the current entry instead of looping the back button.
+    NavigationHistoryIntent.traverse =>
+      reportedUri != null &&
+              engineUri != null &&
+              !sameHistoryUri(reportedUri, engineUri)
+          ? RouteInformationReportingType.neglect
+          : RouteInformationReportingType.none,
+  };
+
+  /// URI comparison matching Flutter's history-equality rules.
+  @visibleForTesting
+  static bool sameHistoryUri(Uri a, Uri b) =>
+      a.path == b.path &&
+      a.fragment == b.fragment &&
+      const DeepCollectionEquality.unordered().equals(
+        a.queryParametersAll,
+        b.queryParametersAll,
       );
 
-  final Coordinator _coordinator;
-
-  Coordinator get coordinator => _coordinator;
+  @override
+  void routerReportsNewRouteInformation(
+    RouteInformation routeInformation, {
+    RouteInformationReportingType type = RouteInformationReportingType.none,
+  }) {
+    super.routerReportsNewRouteInformation(
+      routeInformation,
+      type: resolveReportingType(
+        coordinator.consumeHistoryIntent(),
+        type,
+        reportedUri: routeInformation.uri,
+        engineUri: value.uri,
+      ),
+    );
+  }
 
   @visibleForTesting
   static Uri resolveInitialUri(String? platformRouteName, Uri? initialUri) {

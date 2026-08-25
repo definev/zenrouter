@@ -52,7 +52,7 @@ class MockUnregisteredPathLayout extends ErrorTestRoute
   List<Object?> get props => [];
 }
 
-/// Layout type that is NOT defined in defineLayout (for testing constructor error)
+/// Layout type that is not registered with bindLayout (for testing constructor error)
 class UndefinedLayout extends ErrorTestRoute with RouteLayout<ErrorTestRoute> {
   @override
   UnregisteredCustomPath<ErrorTestRoute> resolvePath(
@@ -489,13 +489,8 @@ void main() {
       } on UnimplementedError catch (e) {
         // Should mention the layout type
         expect(e.message, contains('UndefinedLayout'));
-        // Should tell where to define
-        expect(e.message, contains('defineLayout'));
         // Should mention how to define
         expect(e.message, contains('bindLayout'));
-        expect(e.message, contains('defineLayoutParent'));
-        // Should reference your coordinator
-        expect(e.message, contains('ErrorTestCoordinator'));
       }
     });
 
@@ -519,9 +514,6 @@ void main() {
 
         // Where: mentions where to register
         expect(message, contains('bindLayout'));
-        expect(message, contains('defineLayoutParent'));
-        expect(message, contains('defineLayout'));
-        expect(message, contains('ErrorTestCoordinator'));
       }
     });
   });

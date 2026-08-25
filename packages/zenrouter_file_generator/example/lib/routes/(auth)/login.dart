@@ -63,7 +63,8 @@ class LoginRoute extends _$LoginRoute {
             children: [
               const Text("Don't have an account?"),
               TextButton(
-                onPressed: () => coordinator.pushRegister(),
+                onPressed: () =>
+                    coordinator.location.register.pushSilentlyWith(coordinator),
                 child: const Text('Sign Up'),
               ),
             ],

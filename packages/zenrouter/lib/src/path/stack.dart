@@ -103,6 +103,7 @@ class _NavigationStackState<T extends RouteTarget>
   List<NavigatorObserver> _observers = [];
 
   NavigationPathRestorable<T>? _restorable;
+  late final HeroController _heroController;
 
   void _updateObservers() {
     _observers = switch (widget.coordinator) {
@@ -117,6 +118,7 @@ class _NavigationStackState<T extends RouteTarget>
   @override
   void initState() {
     super.initState();
+    _heroController = MaterialApp.createMaterialHeroController();
     if (widget.defaultRoute != null) {
       widget.path.pushOrMoveToTop(widget.defaultRoute!);
     }
@@ -131,6 +133,7 @@ class _NavigationStackState<T extends RouteTarget>
     widget.path.removeListener(_updatePages);
     widget.path.removeListener(_updateRestorable);
     _restorable?.dispose();
+    _heroController.dispose();
     super.dispose();
   }
 
@@ -146,7 +149,7 @@ class _NavigationStackState<T extends RouteTarget>
 
     return destination.pageBuilder(
       context,
-      ValueKey(route),
+      ObjectKey(route),
       _buildPopScope(route: route, guard: guard, destination: destination),
     );
   }
@@ -171,17 +174,11 @@ class _NavigationStackState<T extends RouteTarget>
 
           switch (didPop) {
             case true when result != null:
-              route.completeOnResult(result, widget.coordinator);
+              route.completeOnResult(result, widget.coordinator, true);
               route.onDidPop(result, widget.coordinator);
             case true:
               result = route.resultValue;
-              route.completeOnResult(
-                result,
-                widget.coordinator,
-
-                /// Fail silently if it's a force pop from the platform.
-                route.isPopByPath == false,
-              );
+              route.completeOnResult(result, widget.coordinator, true);
               route.onDidPop(result, widget.coordinator);
             case false when route is RouteGuard:
               widget.path.pop();
@@ -227,7 +224,11 @@ class _NavigationStackState<T extends RouteTarget>
     final currentRoutes = widget.path.stack;
 
     // Calculate diff between previous and current routes
-    final diffOps = myersDiff(_previousRoutes, currentRoutes);
+    final diffOps = myersDiff(
+      _previousRoutes,
+      currentRoutes,
+      equals: identical,
+    );
 
     // Build new pages list using diff operations
     final newPages = <Page>[];
@@ -283,15 +284,21 @@ class _NavigationStackState<T extends RouteTarget>
   @override
   Widget build(BuildContext context) {
     if (_pages.isEmpty) return const SizedBox.shrink();
-    return Navigator(
-      key: widget.navigatorKey,
-      pages: _pages,
-      observers: _observers,
-      onDidRemovePage: (page) {},
-      restorationScopeId: switch (widget.restorationId) {
-        null => null,
-        final restorationId => '${restorationId}_navigator',
-      },
+    // Each path Navigator must own a HeroController. Sibling stacks
+    // (indexed shells, Drive creating another path) cannot share
+    // MaterialApp's inherited controller.
+    return HeroControllerScope(
+      controller: _heroController,
+      child: Navigator(
+        key: widget.navigatorKey,
+        pages: _pages,
+        observers: _observers,
+        onDidRemovePage: (page) {},
+        restorationScopeId: switch (widget.restorationId) {
+          null => null,
+          final restorationId => '${restorationId}_navigator',
+        },
+      ),
     );
   }
 

@@ -204,8 +204,7 @@ class AppCoordinator extends Coordinator<AppRoute> {
 final coordinator = AppCoordinator();
 
 MaterialApp.router(
-  routerDelegate: coordinator.routerDelegate,
-  routeInformationParser: coordinator.routeInformationParser,
+  routerConfig: coordinator,
 );
 ```
 

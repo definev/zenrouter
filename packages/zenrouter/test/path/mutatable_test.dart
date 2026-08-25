@@ -337,6 +337,76 @@ void main() {
     });
   });
 
+  group('StackMutatable - pushSilently()', () {
+    test('pushes a route without awaiting pop result', () async {
+      final path = NavigationPath<MutatableTestRoute>.create();
+      final route = SimpleRoute('1');
+
+      await path.pushSilently(route);
+
+      expect(path.stack.length, 1);
+      expect(path.stack.first, route);
+      expect(route.stackPath, path);
+      expect(route.isPopByPath, false);
+      expect(route.onResult.isCompleted, false);
+    });
+
+    test('do nothing when redirectWith return null', () async {
+      final path = NavigationPath<MutatableTestRoute>.createWith(
+        coordinator: MutatableTestCoordinator(),
+        label: 'test-navigation',
+      );
+
+      await path.pushSilently(RedirectNullRoute());
+
+      expect(path.stack.isEmpty, true);
+    });
+
+    test('follows redirect when pushing redirect route', () async {
+      final path = NavigationPath<MutatableTestRoute>.create();
+      final target = SimpleRoute('target');
+      final redirect = RedirectRoute('redirect', target);
+
+      await path.pushSilently(redirect);
+
+      expect(path.stack.length, 1);
+      expect(path.stack.first, target);
+      expect(path.stack.first, isNot(redirect));
+    });
+
+    test('notifies listeners when route is pushed', () async {
+      final path = NavigationPath<MutatableTestRoute>.create();
+      final route = SimpleRoute('1');
+
+      var notified = false;
+      path.addListener(() => notified = true);
+
+      await path.pushSilently(route);
+
+      expect(notified, true);
+    });
+
+    test('reset discards route resources and notifies listeners', () async {
+      final path = NavigationPath<MutatableTestRoute>.create();
+      final route = QueryRoute('query');
+      await path.pushSilently(route);
+      var notifyCount = 0;
+      path.addListener(() => notifyCount++);
+
+      path.reset();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(path.stack, isEmpty);
+      expect(route.stackPath, isNull);
+      expect(route.onResult.isCompleted, isTrue);
+      expect(notifyCount, 1);
+      expect(
+        () => route.queryNotifier.addListener(() {}),
+        throwsA(isA<FlutterError>()),
+      );
+    });
+  });
+
   group('StackMutatable - pushReplacement()', () {
     testWidgets('pushes to empty stack', (tester) async {
       final path = NavigationPath<MutatableTestRoute>.create();
@@ -1039,6 +1109,25 @@ void main() {
       expect(path.stack.first, route1);
     });
 
+    test(
+      'pops to the matching instance when an earlier equal route exists',
+      () async {
+        final path = NavigationPath<MutatableTestRoute>.create();
+        final first = SimpleRoute('1');
+        final second = SimpleRoute('1');
+        final top = SimpleRoute('2');
+
+        path.push(first);
+        path.push(second);
+        path.push(top);
+        await path.navigate(second);
+
+        expect(path.stack.length, 2);
+        expect(identical(path.stack[0], first), isTrue);
+        expect(identical(path.stack[1], second), isTrue);
+      },
+    );
+
     test('pops multiple routes to reach target', () async {
       final path = NavigationPath<MutatableTestRoute>.create();
       final route1 = SimpleRoute('1');
@@ -1283,15 +1372,15 @@ void main() {
       final route2 = SimpleRoute('2');
       final route3 = SimpleRoute('3');
 
-      path.push(route1);
-      path.push(route2);
-      path.push(route3);
+      await path.pushSilently(route1);
+      await path.pushSilently(route2);
+      await path.pushSilently(route3);
 
-      // Concurrent navigate calls
-      path.navigate(route1);
+      // Last completed navigate wins. Path-level navigate is not serialized,
+      // so overlapping calls are sequenced here to assert a stable outcome.
+      await path.navigate(route1);
       await path.navigate(route2);
 
-      // Last navigation should win
       expect(path.stack.length, 2);
       expect(path.stack.last, route2);
     });

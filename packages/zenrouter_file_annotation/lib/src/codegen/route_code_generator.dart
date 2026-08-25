@@ -95,18 +95,15 @@ class RouteCodeGenerator {
 
     // Generate toUri method with query parameters (only if declared)
     buffer.writeln('  @override');
+    final uriExpression = _generateUriExpression(route);
     if (route.hasQueries) {
       buffer.writeln('  Uri toUri() {');
-      buffer.writeln(
-        '    final uri = Uri.parse(\'${_generateUriTemplate(route)}\');',
-      );
+      buffer.writeln('    final uri = $uriExpression;');
       buffer.writeln('    if (queries.isEmpty) return uri;');
       buffer.writeln('    return uri.replace(queryParameters: queries);');
       buffer.writeln('  }');
     } else {
-      buffer.writeln(
-        '  Uri toUri() => Uri.parse(\'${_generateUriTemplate(route)}\');',
-      );
+      buffer.writeln('  Uri toUri() => $uriExpression;');
     }
     buffer.writeln();
 
@@ -219,25 +216,30 @@ class RouteCodeGenerator {
     return buffer.toString();
   }
 
-  static String _generateUriTemplate(RouteElement route) {
-    if (route.pathSegments.isEmpty) return '/';
+  static String _generateUriExpression(RouteElement route) {
+    if (route.pathSegments.isEmpty) return "Uri(path: '/')";
 
     final segments = route.pathSegments
         .map((segment) {
           if (segment.startsWith('...:')) {
-            // Rest parameter - interpolate
             final paramName = segment.substring(4);
-            return '\${$paramName.join(\'/\')}';
+            return '...$paramName';
           }
           if (segment.startsWith(':')) {
-            // Dynamic parameter - interpolate
-            final paramName = segment.substring(1);
-            return '\$$paramName';
+            return segment.substring(1);
           }
-          return segment;
+          return _dartStringLiteral(segment);
         })
-        .join('/');
+        .join(', ');
 
-    return '/$segments';
+    return "Uri(pathSegments: ['', $segments])";
+  }
+
+  static String _dartStringLiteral(String value) {
+    final escaped = value
+        .replaceAll(r'\', r'\\')
+        .replaceAll("'", r"\'")
+        .replaceAll(r'$', r'\$');
+    return "'$escaped'";
   }
 }

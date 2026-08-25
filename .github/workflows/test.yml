@@ -11,14 +11,12 @@ jobs:
     name: Run Tests
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # Required for coverage-badge-action to update gh-pages
-      pull-requests: write  # Required for commenting on PRs
-    
+      contents: read
+      pull-requests: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Required for coverage-badge-action
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -53,11 +51,35 @@ jobs:
         working-directory: packages/zenrouter_file_generator
         continue-on-error: false
 
+      - name: Prefix coverage paths for the monorepo
+        run: |
+          for pair in \
+            "packages/zenrouter/coverage/lcov.info:packages/zenrouter/" \
+            "packages/zenrouter_core/coverage/lcov.info:packages/zenrouter_core/"
+          do
+            file="${pair%%:*}"
+            prefix="${pair#*:}"
+            if [ -f "$file" ]; then
+              sed -i "s|^SF:lib/|SF:${prefix}lib/|" "$file"
+            fi
+          done
+
       - name: Upload coverage to Codecov (zenrouter)
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
-            token: ${{ secrets.CODECOV_TOKEN }}  
-            files: packages/zenrouter/coverage/lcov.info
-            flags: zenrouter
-            disable_search: true
-            fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: packages/zenrouter/coverage/lcov.info
+          flags: zenrouter
+          name: zenrouter
+          disable_search: true
+          fail_ci_if_error: true
+
+      - name: Upload coverage to Codecov (zenrouter_core)
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: packages/zenrouter_core/coverage/lcov.info
+          flags: zenrouter_core
+          name: zenrouter_core
+          disable_search: true
+          fail_ci_if_error: true

@@ -17,7 +17,7 @@ abstract class _$ForgotPasswordRoute extends AppRoute {
   Type? get layout => AuthLayout;
 
   @override
-  Uri toUri() => Uri.parse('/forgot-password');
+  Uri toUri() => Uri(pathSegments: ['', 'forgot-password']);
 
   @override
   List<Object?> get props => [];

@@ -287,6 +287,20 @@ void main() {
         ),
       );
     });
+
+    test('a second onDiscard still reports the disposed notifier', () {
+      route.onDiscard();
+      expect(
+        () => route.onDiscard(),
+        throwsA(
+          isA<FlutterError>().having(
+            (e) => e.message,
+            'message',
+            contains('disposed'),
+          ),
+        ),
+      );
+    });
   });
 }
 

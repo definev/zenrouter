@@ -6,3 +6,12 @@
 library;
 
 export 'src/coordinator_debug.dart';
+export 'src/graph/navigation_flow.dart';
+export 'src/graph/navigation_flow_player.dart';
+export 'src/graph/navigation_flow_session.dart';
+export 'src/graph/navigation_graph.dart';
+export 'src/tabs/active_tab.dart';
+export 'src/tabs/graph_tab.dart';
+export 'src/tabs/inspect_tab.dart';
+export 'src/tabs/problems_tab.dart';
+export 'src/tabs/routes_tab.dart';

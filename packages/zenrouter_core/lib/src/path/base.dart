@@ -2,12 +2,14 @@
 
 import 'dart:async';
 
-import 'package:meta/meta.dart' show protected, mustCallSuper;
+import 'package:meta/meta.dart' show internal, protected, mustCallSuper;
+import 'package:zenrouter_core/src/contracts/mutatable.dart';
 import 'package:zenrouter_core/src/coordinator/base.dart';
 import 'package:zenrouter_core/src/internal/reactive.dart';
 import 'package:zenrouter_core/src/mixin/guard.dart';
 import 'package:zenrouter_core/src/mixin/redirect.dart';
 import 'package:zenrouter_core/src/mixin/target.dart';
+import 'package:zenrouter_core/src/path/commit.dart';
 import 'package:zenrouter_core/src/path/navigatable.dart';
 
 part 'mutatable.dart';
@@ -17,7 +19,9 @@ part 'mutatable.dart';
 /// Each [StackPath] subclass defines a unique [PathKey] used for:
 /// - Registering layout builders in [CoordinatorCore]
 /// - Looking up the appropriate builder when rendering pages
+// coverage:ignore-start
 extension type const PathKey(String key) {}
+// coverage:ignore-end
 
 /// A container managing a stack of [RouteTarget]s for navigation.
 ///
@@ -36,6 +40,8 @@ extension type const PathKey(String key) {}
 ///
 /// - [NavigationPath]: Mutable stack for standard push/pop navigation
 /// - [IndexedStackPath]: Fixed stack for tab-based navigation
+/// - `BranchedStackPath`: Fixed layout roots with an independent child stack
+///   per branch (provided by the Flutter package)
 abstract class StackPath<T extends RouteTarget> with ListenableObject {
   StackPath(this._stack, {this.debugLabel, CoordinatorCore? coordinator})
     : _proxyCoordinator = coordinator?.isRouteModule == true
@@ -110,7 +116,7 @@ abstract class StackPath<T extends RouteTarget> with ListenableObject {
   /// use [StackMutatable.pop] which respects guards.
   void clear() {
     for (final route in _stack) {
-      route.completeOnResult(null, null, true);
+      route.onDiscard();
       route.clearStackPath();
     }
     _stack.clear();

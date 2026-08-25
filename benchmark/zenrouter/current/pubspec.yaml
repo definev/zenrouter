@@ -1,0 +1,11 @@
+name: zenrouter_benchmark_current
+publish_to: none
+
+environment:
+  sdk: ^3.8.0
+
+resolution: workspace
+
+dependencies:
+  zenrouter:
+  zenrouter_core:

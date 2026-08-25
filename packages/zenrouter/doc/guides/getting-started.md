@@ -1,93 +1,43 @@
-# Getting Started with ZenRouter
+# Getting Started
 
-Welcome to ZenRouter! This guide will help you choose the right paradigm and get started quickly.
+Pick a navigation style and follow that section to the end before
+opening another.
 
-## Quick Navigation
-
-- [Installation](#installation)
-- [Choose Your Paradigm](#choose-your-paradigm)
-- [Imperative Quick Start](#imperative-quick-start)
-- [Declarative Quick Start](#declarative-quick-start)
-- [Coordinator Quick Start](#coordinator-quick-start)
-- [Common Recipes](#common-recipes)
-- [Migrating?](#migrating-from-another-router)
-- [Next Steps](#next-steps)
-
----
-
-## Installation
-
-Add zenrouter to your `pubspec.yaml`:
-
-```yaml
-dependencies:
-  zenrouter: ^0.1.0  # Check pub.dev for latest version
-```
-
-Then run:
+## Install
 
 ```bash
-flutter pub get
+flutter pub add zenrouter
 ```
 
-## Choose Your Paradigm
-
-ZenRouter offers three paradigms. Choose based on your needs:
+## Which style
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     DECISION FLOWCHART                      │
-└─────────────────────────────────────────────────────────────┘
-
-Do you need web support or deep linking?
+Need deep linking, URL sync, or the browser back button?
 │
-├─ YES → Use COORDINATOR
-│        ✓ Deep linking
-│        ✓ URL synchronization  
-│        ✓ Browser back button
-│        ✓ Centralized routing
-│        → See: Coordinator Quick Start
+├─ YES → Coordinator
 │
-└─ NO → Is your navigation driven by state?
+└─ NO → Is the stack derived from state?
        │
-       ├─ YES → Use DECLARATIVE
-       │        ✓ State-driven routing
-       │        ✓ React-like declarative UI
-       │        ✓ Efficient updates with Myers diff
-       │        → See: Declarative Quick Start
+       ├─ YES → Declarative
        │
-       └─ NO → Use IMPERATIVE
-                ✓ Simple and straightforward
-                ✓ Direct control over stack
-                ✓ Event-driven navigation
-                → See: Imperative Quick Start
+       └─ NO  → Imperative
 ```
 
-## Comparison Table
+| | Imperative | Declarative | Coordinator |
+|---|:---:|:---:|:---:|
+| Control | `path.push` / `pop` | Rebuild a route list | `coordinator.push` / URI |
+| Web / deep links | | | Yes |
+| Typical use | Flows, onboarding | Wizards, state-driven stacks | Web, large apps |
 
-| Feature | Imperative | Declarative | Coordinator |
-|---------|-----------|-------------|-------------|
-| **Complexity** | ⭐ Simple | ⭐⭐ Moderate | ⭐⭐⭐ Advanced |
-| **Control** | Full | State-driven | Centralized |
-| **Deep Linking** | ❌ No | ❌ No | ✅ Yes |
-| **Web Support** | ❌ No | ❌ No | ✅ Yes |
-| **URL Sync** | ❌ No | ❌ No | ✅ Yes |
-| **State-Driven** | Compatible | ✅ Native | Compatible |
-| **Best For** | Mobile apps | Tab bars, lists | Web, large apps |
-| **Learning Curve** | Easy | Easy | Moderate |
+You can mix them later (for example a coordinator app with an
+imperative modal). Start with one.
 
----
-
-## Imperative Quick Start
-
-**Best for:** Mobile-only apps, event-driven navigation, Navigator 1.0 migration
-
-### 1. Define Routes
+## Imperative
 
 ```dart
+import 'package:flutter/material.dart';
 import 'package:zenrouter/zenrouter.dart';
 
-// Base class
 sealed class AppRoute extends RouteTarget {
   Widget build(BuildContext context);
 }
@@ -96,11 +46,10 @@ class HomeRoute extends AppRoute {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Home')),
       body: Center(
         child: ElevatedButton(
           onPressed: () => path.push(ProfileRoute()),
-          child: const Text('Go to Profile'),
+          child: const Text('Profile'),
         ),
       ),
     );
@@ -110,405 +59,297 @@ class HomeRoute extends AppRoute {
 class ProfileRoute extends AppRoute {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
-      body: const Center(child: Text('Profile Page')),
-    );
+    return Scaffold(appBar: AppBar(title: const Text('Profile')));
   }
 }
-```
 
-### 2. Create Navigation Path
-
-```dart
 final path = NavigationPath<AppRoute>.create();
-```
-
-### 3. Render with NavigationStack
-
-```dart
-void main() {
-  runApp(const MyApp());
-}
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-  
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       home: NavigationStack(
         path: path,
         defaultRoute: HomeRoute(),
-        resolver: (route) => StackTransition.material(
-          route.build(context),
-        ),
+        resolver: (route) => StackTransition.material(route.build(context)),
       ),
     );
   }
 }
 ```
 
-### 4. Navigate!
-
 ```dart
-// Navigate to a specific route (Pop to the route if it's already in the stack or push it otherwise)
-path.navigate(ProfileRoute());
-
-// Push a route
 path.push(ProfileRoute());
-
-// Pop back
+path.navigate(HomeRoute());
 path.pop();
-
-// Replace entire stack
-path.replace([HomeRoute()]);
 ```
 
-**Next steps:** [Imperative Navigation Guide](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/imperative.md)
+[Imperative guide](../paradigms/imperative.md) ·
+[Example](../../example/lib/main_imperative.dart)
 
----
+## Declarative
 
-## Declarative Quick Start
-
-**Best for:** State-driven navigation, tab bars, filtered lists, React-like UI
-
-### 1. Define Routes with Equality
+Rebuild the route list from state. ZenRouter diffs it (Myers) and
+applies the minimum operations. Parameterized routes must override
+`props`.
 
 ```dart
-import 'package:zenrouter/zenrouter.dart';
-
 class PageRoute extends RouteTarget {
-  final int pageNumber;
-  
   PageRoute(this.pageNumber);
-  
-  // IMPORTANT: Implement equality for Myers diff!
+  final int pageNumber;
+
   @override
   List<Object?> get props => [pageNumber];
 }
+
+NavigationStack.declarative(
+  routes: [
+    for (final n in pages) PageRoute(n),
+  ],
+  resolver: (route) => StackTransition.material(
+    PageScreen(pageNumber: (route as PageRoute).pageNumber),
+  ),
+);
 ```
 
-### 2. Create Stateful Widget
+[Declarative guide](../paradigms/declarative.md) ·
+[Example](../../example/lib/main_declrative.dart)
+
+## Coordinator
+
+`Coordinator` is `RouterConfig`. Routes mix `RouteUnique` and implement
+`toUri()`. Implement `parseRouteFromUri` to map a URI to a route.
 
 ```dart
-class MyApp extends StatefulWidget {
-  @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  final List<int> _pages = [1]; // State
-  
-  void _addPage() {
-    setState(() {
-      _pages.add(_pages.length + 1);
-    });
-  }
-  
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        body: NavigationStack.declarative(
-          // Derive routes from state
-          routes: [
-            for (final page in _pages) PageRoute(page),
-          ],
-          resolver: (route) => StackTransition.material(
-            PageScreen(pageNumber: (route as PageRoute).pageNumber),
-          ),
-        ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: _addPage,
-          child: const Icon(Icons.add),
-        ),
-      ),
-    );
-  }
-}
-
-class PageScreen extends StatelessWidget {
-  final int pageNumber;
-  
-  const PageScreen({super.key, required this.pageNumber});
-  
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Page $pageNumber')),
-      body: Center(child: Text('Page $pageNumber')),
-    );
-  }
-}
-```
-
-**Next steps:** [Declarative Navigation Guide](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/declarative.md)
-
----
-
-## Coordinator Quick Start
-
-**Best for:** Web apps, deep linking, complex nested navigation, large apps
-
-### 1. Define Routes with RouteUnique
-
-```dart
-import 'package:zenrouter/zenrouter.dart';
-
 abstract class AppRoute extends RouteTarget with RouteUnique {}
 
 class HomeRoute extends AppRoute {
   @override
   Uri toUri() => Uri.parse('/');
-  
+
   @override
-  Widget build(Coordinator coordinator, BuildContext context) {
+  Widget build(covariant AppCoordinator coordinator, BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Home')),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () => coordinator.push(ProfileRoute()),
-          child: const Text('Go to Profile'),
-        ),
+      body: ListTile(
+        title: const Text('Product 42'),
+        onTap: () => coordinator.push(ProductRoute(id: '42')),
       ),
     );
   }
 }
 
-class ProfileRoute extends AppRoute {
+class ProductRoute extends AppRoute {
+  ProductRoute({required this.id});
+  final String id;
+
   @override
-  Uri toUri() => Uri.parse('/profile');
-  
+  List<Object?> get props => [id];
+
   @override
-  Widget build(Coordinator coordinator, BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
-      body: const Center(child: Text('Profile Page')),
-    );
+  Uri toUri() => Uri.parse('/products/$id');
+
+  @override
+  Widget build(covariant AppCoordinator coordinator, BuildContext context) {
+    return Scaffold(appBar: AppBar(title: Text('Product $id')));
   }
 }
-```
 
-### 2. Create Coordinator
+class NotFoundRoute extends AppRoute with RouteNotFound {
+  NotFoundRoute(this.uri);
+  final Uri uri;
 
-```dart
+  @override
+  Uri toUri() => uri;
+
+  @override
+  Widget build(covariant AppCoordinator coordinator, BuildContext context) {
+    return Scaffold(body: Center(child: Text('No route matches $uri')));
+  }
+}
+
 class AppCoordinator extends Coordinator<AppRoute> {
   @override
   AppRoute parseRouteFromUri(Uri uri) {
     return switch (uri.pathSegments) {
       [] => HomeRoute(),
-      ['profile'] => ProfileRoute(),
-      _ => NotFoundRoute(),
+      ['products', final id] => ProductRoute(id: id),
+      _ => NotFoundRoute(uri),
     };
   }
 }
 
-final coordinator = AppCoordinator();
+void main() {
+  runApp(MaterialApp.router(routerConfig: AppCoordinator()));
+}
 ```
 
-### 3. Use MaterialApp.router
+```dart
+coordinator.push(ProductRoute(id: '42'));
+coordinator.navigate(HomeRoute());
+coordinator.replace(HomeRoute());
+coordinator.pop();
+await coordinator.pushUri(Uri.parse('/products/42'));
+```
+
+| Method | Behavior |
+|--------|----------|
+| `push` | Push onto the resolved stack |
+| `navigate` | Pop to an existing equal route, or push |
+| `replace` | Reset to a single route |
+| `recover` / `recoverUri` | Deep-link entry |
+| `pushUri` / `navigateUri` | Parse, then push or navigate |
+
+[Coordinator guide](../paradigms/coordinator/coordinator.md) ·
+[Example](../../example/lib/main_coordinator.dart)
+
+New Coordinator apps should declare a
+[RouteManifest](#routemanifest) instead of growing that `switch`.
+
+## Layouts
+
+A layout is a shell that stays on screen while its children change.
+This is independent of how you parse URIs.
 
 ```dart
-void main() {
-  runApp(const MyApp());
-}
+late final shopStack = NavigationPath<AppRoute>.createWith(
+  label: 'shop',
+  coordinator: this,
+)..bindLayout(ShopLayout.new);
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-  
+@override
+List<StackPath> get paths => [...super.paths, shopStack];
+
+class ShopLayout extends AppRoute with RouteLayout<AppRoute> {
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp.router(
-      routerDelegate: coordinator.routerDelegate,
-      routeInformationParser: coordinator.routeInformationParser,
+  NavigationPath<AppRoute> resolvePath(covariant AppCoordinator c) =>
+      c.shopStack;
+
+  @override
+  Widget build(covariant AppCoordinator coordinator, BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Shop')),
+      body: buildPath(coordinator),
     );
   }
 }
-```
 
-### 4. Navigate!
-
-```dart
-// Push a route
-coordinator.push(ProfileRoute());
-
-// Pop back
-coordinator.pop();
-
-// Replace stack
-coordinator.replace(HomeRoute());
-```
-
-Now you have:
-- ✅ Deep linking: Open `myapp://profile` to go directly to profile
-- ✅ Web URLs: Navigate to `/profile` in browser
-- ✅ Browser back button support
-
-**Next steps:** [Coordinator Pattern Guide](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/coordinator/coordinator.md)
-
----
-
-## Mixing Paradigms
-
-You can combine paradigms in the same app:
-
-```dart
-// Use coordinator for main navigation (deep linking)
-class AppCoordinator extends Coordinator<AppRoute> { ... }
-
-// Use declarative for a tab bar (state-driven)
-NavigationStack.declarative(
-  routes: [
-    for (final tab in tabs) TabRoute(tab),
-  ],
-  resolver: resolver,
-)
-
-// Use imperative for a modal flow (event-driven)
-final modalPath = NavigationPath<ModalRoute>.create();
-modalPath.push(Step1Route());
-```
-
-## Common Recipes
-
-### Recipe: Tab Bar Navigation
-
-**Use:** Declarative or Coordinator with `IndexedStackPath`
-
-```dart
-// Declarative approach
-int selectedTab = 0;
-
-NavigationStack.declarative(
-  routes: [
-    HomeRoute(),
-    switch (selectedTab) {
-      0 => FeedRoute(),
-      1 => ProfileRoute(),
-      2 => SettingsRoute(),
-      _ => FeedRoute(),
-    },
-  ],
-  resolver: resolver,
-)
-```
-
-### Recipe: Multi-Step Form
-
-**Use:** Imperative with state passing
-
-```dart
-// Step 1
-path.push(PersonalInfoStep(data: FormData()));
-
-// Step 2 (in PersonalInfoStep)
-path.push(PreferencesStep(data: updatedData));
-
-// Step 3 (in PreferencesStep)
-path.push(ReviewStep(data: updatedData));
-```
-
-### Recipe: Authentication Flow
-
-**Use:** Coordinator with `RouteRedirect`
-
-```dart
-class ProtectedRoute extends AppRoute with RouteRedirect {
+class ShopHomeRoute extends AppRoute {
   @override
-  Future<AppRoute> redirect() async {
-    final isAuthed = await auth.check();
-    return isAuthed ? ProtectedRoute() : LoginRoute();
-  }
+  Type? get layout => ShopLayout;
 }
 ```
 
-### Recipe: Deep Linking
+[Layouts](route-layout.md)
 
-**Use:** Coordinator with `RouteDeepLink`
+## DevTools
+
+```bash
+flutter pub add zenrouter_devtools
+```
 
 ```dart
-class ProductRoute extends AppRoute with RouteDeepLink {
-  // Use custom deeplink strategy
-  @override
-  DeeplinkStrategy get deeplinkStrategy => DeeplinkStrategy.custom;
-  
-  @override
-  Future<void> deeplinkHandler(Coordinator coordinator, Uri uri) async {
-    // Track analytics
-    analytics.logDeepLink(uri);
+class AppCoordinator extends Coordinator<AppRoute>
+    with CoordinatorDebug<AppRoute> {}
+```
 
-    // Set up navigation stack
-    coordinator.replace(ShopTab());
-    coordinator.push(this);
-  }
+Inspect stacks and push a URI. Off in release.
+
+## RouteManifest
+
+The recommended way to declare Coordinator routes in 3.0.
+
+A `parseRouteFromUri` switch and each `toUri()` are two copies of the
+same paths. They drift. Overlaps fail when a user opens the URL, not
+when the app starts. Nested shells have no static check against the
+URL tree.
+
+`RouteManifest` is the graph (IDs, patterns, layout parents).
+`RouteBinding` constructs the `RouteTarget`. Matching,
+`manifest.location(...)`, and the DevTools Graph tab share that
+declaration.
+
+| Benefit | What it replaces |
+|---------|------------------|
+| One pattern for match and `location()` | `switch` + `Uri.parse` in every `toUri()` |
+| Invalid graph fails at startup | Broken link found in production |
+| Typed `pathParameters` / `restParameters` | Manual `uri.pathSegments` indexing |
+| Feature fragments compose into one graph | One giant parser |
+| Graph tab (topology + observed flow) | Guessing the tree from stack dumps |
+
+`parseRouteFromUri` still works. Use a manifest for new graphs.
+
+```dart
+enum AppRouteId { home, product }
+
+class AppCoordinator extends Coordinator<AppRoute>
+    with RouteModuleBinding<AppRoute, AppRouteId> {
+  static final manifest = RouteManifest<AppRouteId>(
+    name: 'app',
+    idCodec: RouteIdCodec.enumValues(AppRouteId.values),
+    routes: [
+      RouteManifestRoute(id: AppRouteId.home, path: '/'),
+      RouteManifestRoute(id: AppRouteId.product, path: '/products/:id'),
+    ],
+  );
+
+  @override
+  late final routeBindings = manifest.bind<AppRoute>(
+    bindings: [
+      RouteBinding(id: AppRouteId.home, create: (_) => HomeRoute()),
+      RouteBinding(
+        id: AppRouteId.product,
+        create: (match) => ProductRoute(id: match.pathParameters['id']!),
+      ),
+    ],
+    notFound: NotFoundRoute.new,
+  );
 }
 ```
 
----
+Do not also override `parseRouteFromUri` on this class.
+`RouteModuleBinding` already implements it.
 
-## Common Recipes
+Use `manifest.location` in `toUri()`. Bind every `RouteManifestRoute`.
+Do not bind layout IDs. A standalone registry needs `notFound`
+(`RouteNotFound`).
 
-Once you've chosen your paradigm, explore these cookbooks for common scenarios:
+| Pattern | Matches | Binding |
+|---------|---------|---------|
+| `/shop` | `/shop` | — |
+| `/products/:id` | `/products/42` | `match.pathParameters['id']` |
+| `/docs/...:slugs` | `/docs`, `/docs/a/b` | `match.restParameters['slugs']` |
 
-### Navigation Patterns
-- [404 Handling](../recipes/404-handling.md) - Custom error pages and fallback routes
-- [Bottom Navigation](../recipes/bottom-navigation.md) - Persistent tab navigation with independent stacks
-- [Route Transitions](../recipes/route-transitions.md) - Custom animations and page transitions
+Query strings are not in the pattern. Read
+`match.uri.queryParameters` or use
+[RouteQueryParameters](query-parameters.md).
 
-### Advanced Features
-- [Authentication Flow](../recipes/authentication-flow.md) - Guards, protected routes, and role-based access
-- [State Management Integration](../recipes/state-management.md) - Riverpod, Bloc, Provider patterns
-- [URL Strategies](../recipes/url-strategies.md) - Web deployment and SEO
+Layouts on a manifest: `RouteManifestLayout` plus `parentId` on
+children, matching the same shell as `layout` / `bindLayout`.
 
-**[🔗 Browse All Recipes](../recipes/)**
+A non-empty `routeManifest` enables the Graph tab in DevTools.
 
----
+[`zenrouter_file_generator`](https://pub.dev/packages/zenrouter_file_generator)
+generates this coordinator, manifest, and bindings from `lib/routes/`.
 
-## Migrating from Another Router?
+[Manifest example](../../example/lib/main_route_manifest.dart)
 
-Already using a different router? We have step-by-step migration guides:
+## Migrating from 2.x
 
-- **[From go_router](../migration/from-go-router.md)** - Most popular Flutter router
-- **[From auto_route](../migration/from-auto-route.md)** - Code generation alternative
-- **[From Navigator 1.0/2.0](../migration/from-navigator.md)** - Flutter's built-in APIs
+`extend Coordinator` and `parseRouteFromUri` are unchanged.
 
-Each guide includes:
-- Feature comparison tables
-- Side-by-side code examples
-- Migration checklists
-- Common gotchas
+| Deprecated | Replacement |
+|------------|-------------|
+| `defineLayout()` | `..bindLayout(ShopLayout.new)` on the path |
+| `defineConverter()` | `defineRestorableConverter(...)` in `init()` |
+| `createLayout` / `resolveLayout` | `createParentLayout` / `resolveParentLayout` |
 
----
+[Migration guide](../../MIGRATION_GUIDE.md#300-manifests-capability-mixins-and-lifecycle)
 
-## Next Steps
+## See also
 
-1. **Read the paradigm guide** for your chosen approach
-2. **Explore the examples** in the `example/` directory
-3. **Check the API reference** for detailed documentation
-4. **Join the community** for support and discussions
-
-## Documentation
-
-- **Paradigm Guides**
-  - [Imperative Navigation](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/imperative.md)
-  - [Declarative Navigation](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/declarative.md)
-  - [Coordinator Pattern](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/paradigms/coordinator/coordinator.md)
-
-- **API Reference**
-  - [Navigation Paths](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/navigation-paths.md)
-  - [Route Mixins](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/mixins.md)
-  - [Coordinator API](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/doc/api/coordinator.md)
-
-- **Examples**
-  - [Imperative Example](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/example/lib/main_imperative.dart)
-  - [Declarative Example](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/example/lib/main_declrative.dart)
-  - [Coordinator Example](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/example/lib/main_coordinator.dart)
-
-## Need Help?
-
-- **Issues**: [GitHub Issues](https://github.com/definev/zenrouter/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/definev/zenrouter/discussions)
-- **Examples**: Check the `example/` directory
-
-Happy routing! 🧘
+- [Layouts](route-layout.md)
+- [Modular coordinator](coordinator-modular.md)
+- [Query parameters](query-parameters.md)
+- [Recipes](../recipes/)
+- [From go_router](../migration/from-go-router.md)

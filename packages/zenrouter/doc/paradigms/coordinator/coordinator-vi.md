@@ -202,7 +202,7 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      routeConfig: appCoordinator,
+      routerConfig: appCoordinator,
     );
   }
 }
@@ -499,8 +499,7 @@ class Settings extends AppRoute {
 }
 ```
 
-Tuyệt vời, mọi route đã được thiết lập. Bây giờ hãy kết nối nó trong tệp `lib/routes/coordinator.dart`. Mã boilerplate cuối cùng khi định nghĩa một layout là bạn phải định nghĩa một hàm factory trong phương thức `defineLayout`.
-Hàm `defineLayout` nhận 2 tham số: `Type` của `RouteLayout` và một factory `Function` tạo ra `RouteLayout`.
+Tuyệt vời, mọi route đã được thiết lập. Bây giờ hãy kết nối nó trong tệp `lib/routes/coordinator.dart`. Gắn layout vào path bằng `bindLayout`:
 
 ```dart
 /// file: lib/routes/coordinator.dart
@@ -594,14 +593,25 @@ Tham khảo nhanh cho `Coordinator`:
 | `pop()` | Pop từ đường dẫn động (dynamic path) gần nhất |
 | `replace(T)` | Xóa stack và thay thế bằng route |
 | `pushOrMoveToTop(T)` | Đẩy hoặc di chuyển route lên đầu |
-| `recoverRouteFromUri(Uri)` | Xử lý URI deep link |
+| `recoverUri(Uri)` | Xử lý URI deep link |
+| `recover(T)` | Khôi phục từ route (chiến lược deeplink) |
+| `defineDeeplinkHandler(strategy, handler)` | Ghi đè hành vi deeplink mặc định |
+
+Capability mixins (từ `zenrouter_core`; `Coordinator` gồm tất cả):
+
+| Mixin | Vai trò |
+|-------|---------|
+| `CoordinatorLayoutCore` | Kích hoạt layout-parent |
+| `CoordinatorNavigatable` | `navigate` |
+| `CoordinatorMutatable` | `push` / `pop` / `replace` / … |
+| `CoordinatorRecoverable` | `recover` / deep links |
 
 | Thuộc tính | Mô tả |
 |----------|-------------|
 | `root` | Đường dẫn điều hướng chính (luôn hiện diện) |
 | `paths` | Tất cả các đường dẫn điều hướng được quản lý bởi coordinator |
-| `routerDelegate` | Router delegate cho MaterialApp.router |
-| `routeInformationParser` | Route information parser |
+| `routerDelegate` | Router delegate (qua `RouterConfig`) |
+| `routeInformationParser` | Route information parser (qua `RouterConfig`) |
 
 **Ví dụ:**
 ```dart
@@ -617,8 +627,7 @@ class AppCoordinator extends Coordinator<AppRoute> {
 }
 
 MaterialApp.router(
-  routerDelegate: coordinator.routerDelegate,
-  routeInformationParser: coordinator.routeInformationParser,
+  routerConfig: coordinator,
 )
 ```
 
@@ -703,10 +712,10 @@ class DetailRoute extends AppRoute {
 
 // Đăng ký trong Coordinator
 class AppCoordinator extends Coordinator<AppRoute> {
-  @override
-  void defineLayout() {
-    defineLayoutParent(HomeLayout.new);
-  }
+  late final homeStack = NavigationPath<AppRoute>.createWith(
+    label: 'home',
+    coordinator: this,
+  )..bindLayout(HomeLayout.new);
 }
 ```
 
@@ -871,7 +880,7 @@ adb shell am start -W -a android.intent.action.VIEW \\
 #### Flutter
 ```dart
 // Trong mã của bạn
-coordinator.recoverRouteFromUri(
+coordinator.recoverUri(
   Uri.parse('myapp://home/feed/123'),
 );
 ```

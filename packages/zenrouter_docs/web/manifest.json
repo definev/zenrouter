@@ -1,11 +1,11 @@
 {
-    "name": "ZenRouter Documentation",
+    "name": "The Art of Navigation in Flutter — ZenRouter",
     "short_name": "ZenRouter",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "Interactive documentation for ZenRouter - teaching the Coordinator pattern and file-based routing.",
+    "background_color": "#F1EEE8",
+    "theme_color": "#1976A3",
+    "description": "A guided field book for typed route graphs, layouts, URLs, and production navigation in Flutter.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

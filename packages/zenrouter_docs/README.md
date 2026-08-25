@@ -1,79 +1,82 @@
-# ZenRouter Documentation
+# ZenRouter documentation
 
-Interactive documentation application for ZenRouter - teaching the Coordinator pattern and file-based routing by embodying these patterns in its own architecture.
+The documentation site is a guided technical book for ZenRouter 3.
 
-## Overview
+The editorial plan, audience, learning journey, page contract, visual direction,
+and definition of done live in
+[`../../docs/DOCUMENTATION_BLUEPRINT.md`](../../docs/DOCUMENTATION_BLUEPRINT.md).
+That blueprint is the implementation baseline; the site should not grow a
+second competing information architecture.
 
-This Flutter web application serves as the official documentation for ZenRouter, demonstrating best practices and patterns through its own implementation.
+## Content model
+
+- `assets/content/outline.md` is the source of truth for chapter order, part
+  grouping, titles, and summaries.
+- `assets/content/chapter-01.md` through `chapter-20.md` contain the prose.
+  Edit these Markdown files to update the site; no Dart content registry needs
+  to be changed.
+- `lib/content/book_content.dart` loads only the small outline at startup.
+  Chapter bodies are fetched on demand, cached by chapter number, and adjacent
+  chapters are prefetched after the current page is visible.
+- `lib/content/book_outline.dart` keeps only the 20-file ordering contract and
+  legacy URL redirects; it contains no editorial copy.
+- `lib/routes/docs/chapter/[slug].dart` renders every chapter through one
+  generated ZenRouter route.
+- Legacy documentation URLs are mapped to the closest chapter by
+  `CustomDocsCoordinator`.
+- The site uses its own generated manifest, bindings, layouts, and locations as
+  a live example of the architecture it teaches.
+- The interface uses Forui (`FTheme`, `FScaffold`, `FButton`, and `FTappable`)
+  over `WidgetsApp.router`; the documentation shell has no Material component
+  layer.
+
+The examples in this edition target `zenrouter` 3.0.0-beta.1 and must be
+re-audited when stable 3.0 is released.
 
 ## Development
 
-### Running the App
+```bash
+fvm dart run build_runner build
+fvm flutter run -d web-server
+```
+
+After changing a chapter Markdown file, restart the web app (or rebuild the
+web release) so Flutter refreshes its asset manifest.
+
+Each entry in `outline.md` uses this Markdown format:
+
+```markdown
+## II · Build Compass
+
+- 05 | Build your first graph | Create a typed home route and parameterized article route.
+```
+
+Validate the content registry, analyze the app, and build the web release:
 
 ```bash
-flutter run -d chrome
+fvm flutter test
+fvm dart analyze
+fvm flutter build web
 ```
 
-### Building for Web
+## Vercel deployment
 
-```bash
-flutter build web
-```
+The repository-level `vercel.json` builds this Flutter app from the Dart
+workspace and serves it as a single-page application. Keep the Vercel project
+Root Directory at the repository root (`.`), rather than setting it to this
+package directory.
 
-## Assets & Icons
+Import the Git repository in Vercel with the **Other** framework preset. The
+checked-in configuration installs Flutter 3.47.0 when needed, builds the docs,
+publishes `packages/zenrouter_docs/build/web`, and rewrites deep links to
+`index.html`.
 
-### Logo Files
+Vercel automatically creates preview deployments for non-production branches
+and production deployments for pushes to the configured production branch.
 
-The project includes two logo variants:
-- `assets/logo_light.png` - Light theme logo (512x512)
-- `assets/logo_dark.png` - Dark theme logo (512x512)
+## Editorial rules
 
-### Generating App Icons & Favicons
-
-This project uses [`icons_launcher`](https://pub.dev/packages/icons_launcher) to automatically generate app icons and favicons for all platforms from the logo.
-
-To regenerate icons after updating the logo:
-
-```bash
-dart run icons_launcher:create
-```
-
-This will generate:
-- **Android**: App icons for all densities (mdpi, hdpi, xhdpi, xxhdpi, xxxhdpi)
-- **iOS**: App icons for all required sizes (iPhone, iPad, App Store)
-- **Web**: Favicons (16x16, 32x32, 48x48) and PWA icons (192x192, 512x512)
-
-### Icon Configuration
-
-The icon configuration is defined in `pubspec.yaml`:
-
-```yaml
-icons_launcher:
-  image_path: "assets/logo_light.png"
-  platforms:
-    android:
-      enable: true
-    ios:
-      enable: true
-    web:
-      enable: true
-      favicon:
-        enable: true
-```
-
-## Architecture
-
-This documentation app practices what it preaches by using:
-- **ZenRouter** for file-based routing
-- **Coordinator Pattern** for navigation flow management
-- **Literary Programming Style** inspired by Trollope and Knuth
-
-## Related Packages
-
-- [zenrouter](../zenrouter) - Core routing package
-- [zenrouter_file_generator](../zenrouter_file_generator) - Code generation for file-based routes
-- [zenrouter_devtools](../zenrouter_devtools) - DevTools extension for debugging
-
-## License
-
-See [LICENSE](LICENSE) file for details.
+Write one invariant per example. Lead with a concrete navigation problem, keep
+domain state outside route values, and introduce the manifest before
+handwritten URI parsing. Tutorials explain; reference pages specify. Migration
+material must be labeled and kept out of the main new-user path.

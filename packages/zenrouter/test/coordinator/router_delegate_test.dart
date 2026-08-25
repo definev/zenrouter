@@ -76,6 +76,27 @@ class GuardedRoute extends AppRoute with RouteGuard {
   List<Object?> get props => [allowPop];
 }
 
+class PopScopeRoute extends AppRoute {
+  PopScopeRoute({required this.onPopInvoked});
+
+  final ValueChanged<bool> onPopInvoked;
+
+  @override
+  Uri toUri() => Uri.parse('/pop-scope');
+
+  @override
+  Widget build(covariant TestCoordinator coordinator, BuildContext context) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) => onPopInvoked(didPop),
+      child: const Scaffold(body: Text('Pop scope')),
+    );
+  }
+
+  @override
+  List<Object?> get props => [onPopInvoked];
+}
+
 class DeepLinkRoute extends AppRoute with RouteDeepLink {
   DeepLinkRoute(this.path);
   final String path;
@@ -152,7 +173,7 @@ class TestCoordinator extends Coordinator<AppRoute> {
   List<StackPath> get paths => [...super.paths, tabStack];
 
   @override
-  AppRoute parseRouteFromUri(Uri uri) {
+  FutureOr<AppRoute> parseRouteFromUri(Uri uri) {
     final segments = uri.pathSegments;
     if (segments.isEmpty) return HomeRoute();
 
@@ -165,6 +186,59 @@ class TestCoordinator extends Coordinator<AppRoute> {
       ['tabs', 'search'] => SearchTab(),
       _ => HomeRoute(),
     };
+  }
+}
+
+class QueuedTestCoordinator extends TestCoordinator {
+  final firstParseGate = Completer<void>();
+  final parseOrder = <String>[];
+
+  @override
+  Future<AppRoute> parseRouteFromUri(Uri uri) async {
+    parseOrder.add(uri.path);
+    if (uri.path == '/settings') await firstParseGate.future;
+    return super.parseRouteFromUri(uri);
+  }
+}
+
+class ResolutionTestCoordinator extends TestCoordinator {
+  @override
+  Future<RouteResolution<AppRoute>> resolveRoute(RouteRequest request) async {
+    return switch (request.uri.path) {
+      '/legacy' => RedirectRouteResolution(
+        request: request,
+        location: Uri.parse('/settings'),
+        statusCode: 308,
+      ),
+      '/loop' => RedirectRouteResolution(
+        request: request,
+        location: Uri.parse('/loop-b'),
+      ),
+      '/loop-b' => RedirectRouteResolution(
+        request: request,
+        location: Uri.parse('/loop'),
+      ),
+      '/broken' => ErrorRouteResolution(
+        request: request,
+        error: StateError('resolution failed'),
+        stackTrace: StackTrace.current,
+      ),
+      _ => super.resolveRoute(request),
+    };
+  }
+}
+
+class CancellationAwareCoordinator extends TestCoordinator {
+  bool cancellationObserved = false;
+
+  @override
+  Future<RouteResolution<AppRoute>> resolveRoute(RouteRequest request) async {
+    if (request.uri.path == '/slow') {
+      await request.cancellationToken.whenCancelled;
+      cancellationObserved = true;
+      request.cancellationToken.throwIfCancelled();
+    }
+    return super.resolveRoute(request);
   }
 }
 
@@ -236,6 +310,32 @@ void main() {
       expect(find.text('Settings'), findsOneWidget);
     });
 
+    testWidgets('popRoute lets the current PopScope consume back', (
+      tester,
+    ) async {
+      final popResults = <bool>[];
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerDelegate: coordinator.routerDelegate,
+          routeInformationParser: coordinator.routeInformationParser,
+        ),
+      );
+
+      coordinator.replace(HomeRoute());
+      coordinator.push(
+        PopScopeRoute(onPopInvoked: (didPop) => popResults.add(didPop)),
+      );
+      await tester.pumpAndSettle();
+
+      final handled = await coordinator.routerDelegate.popRoute();
+      await tester.pumpAndSettle();
+
+      expect(handled, isTrue);
+      expect(popResults, [isFalse]);
+      expect(coordinator.root.stack, hasLength(2));
+      expect(find.text('Pop scope'), findsOneWidget);
+    });
+
     testWidgets('Guard prevents browser back and restores URL', (tester) async {
       await tester.pumpWidget(
         MaterialApp.router(
@@ -269,6 +369,18 @@ void main() {
 
       // Should have notified listeners to restore URL
       expect(capturedNotification, isTrue);
+
+      // A blocked traversal must restore the current history entry (neglect),
+      // not push a new one. Flutter maps `none` + mismatched URIs to push.
+      expect(
+        CoordinatorRouteInformationProvider.resolveReportingType(
+          NavigationHistoryIntent.traverse,
+          RouteInformationReportingType.none,
+          reportedUri: coordinator.currentUri,
+          engineUri: Uri.parse('/'),
+        ),
+        RouteInformationReportingType.neglect,
+      );
     });
 
     testWidgets('IndexedStackPath switches tabs', (tester) async {
@@ -321,6 +433,106 @@ void main() {
       expect(coordinator.root.stack.length, 2);
       expect(coordinator.root.stack.last, isA<SettingsRoute>());
       expect(find.text('Settings'), findsOneWidget);
+    });
+
+    test('new route information supersedes unresolved work', () async {
+      final queuedCoordinator = QueuedTestCoordinator();
+
+      final first = queuedCoordinator.routerDelegate.setNewRoutePath(
+        Uri.parse('/settings'),
+      );
+      await pumpEventQueue();
+      final second = queuedCoordinator.routerDelegate.setNewRoutePath(
+        Uri.parse('/profile/2'),
+      );
+
+      await second;
+      expect(queuedCoordinator.parseOrder, ['/settings', '/profile/2']);
+      expect(
+        queuedCoordinator.root.activeRoute,
+        isA<ProfileRoute>().having((route) => route.id, 'id', '2'),
+      );
+
+      await first;
+      expect(queuedCoordinator.firstParseGate.isCompleted, isFalse);
+      expect(
+        queuedCoordinator.root.activeRoute,
+        isA<ProfileRoute>().having((route) => route.id, 'id', '2'),
+      );
+
+      queuedCoordinator.firstParseGate.complete();
+      await pumpEventQueue();
+
+      queuedCoordinator.dispose();
+    });
+
+    test('passes cooperative cancellation to route resolvers', () async {
+      final cancellationCoordinator = CancellationAwareCoordinator();
+
+      final slow = cancellationCoordinator.routerDelegate.setNewRoutePath(
+        Uri.parse('/slow'),
+      );
+      await pumpEventQueue();
+      final latest = cancellationCoordinator.routerDelegate.setNewRoutePath(
+        Uri.parse('/settings'),
+      );
+
+      await Future.wait([slow, latest]);
+
+      expect(cancellationCoordinator.cancellationObserved, isTrue);
+      expect(cancellationCoordinator.root.activeRoute, isA<SettingsRoute>());
+      cancellationCoordinator.dispose();
+    });
+
+    test('applies typed redirects with replace history intent', () async {
+      final resolutionCoordinator = ResolutionTestCoordinator();
+
+      await resolutionCoordinator.routerDelegate.setNewRoutePath(
+        Uri.parse('/legacy'),
+      );
+
+      expect(resolutionCoordinator.root.activeRoute, isA<SettingsRoute>());
+      expect(
+        resolutionCoordinator.consumeHistoryIntent(),
+        NavigationHistoryIntent.replace,
+      );
+      resolutionCoordinator.dispose();
+    });
+
+    test('rejects a cyclic typed redirect chain', () async {
+      final resolutionCoordinator = ResolutionTestCoordinator();
+
+      await expectLater(
+        resolutionCoordinator.routerDelegate.setNewRoutePath(
+          Uri.parse('/loop'),
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            contains('Redirect loop detected'),
+          ),
+        ),
+      );
+      resolutionCoordinator.dispose();
+    });
+
+    test('propagates typed routing failures with their stack trace', () async {
+      final resolutionCoordinator = ResolutionTestCoordinator();
+
+      await expectLater(
+        resolutionCoordinator.routerDelegate.setNewRoutePath(
+          Uri.parse('/broken'),
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            'resolution failed',
+          ),
+        ),
+      );
+      resolutionCoordinator.dispose();
     });
   });
 

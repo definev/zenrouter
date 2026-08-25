@@ -1,19 +1,12 @@
-/// # Code Block Widget
-///
-/// Code examples are the bridge between theory and practice. They must
-/// be readable, copyable, and visually distinct from prose. We use
-/// syntax highlighting to aid comprehension and a monospace font to
-/// preserve alignment.
 library;
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/widgets.dart';
+import 'package:forui/forui.dart';
 import 'package:syntax_highlight/syntax_highlight.dart';
-
 import 'package:zenrouter_docs/theme/app_theme.dart';
 
-/// A syntax-highlighted code block with optional title and copy button.
+/// A syntax-highlighted code block with a Forui copy control.
 class CodeBlock extends StatefulWidget {
   const CodeBlock({
     super.key,
@@ -24,19 +17,10 @@ class CodeBlock extends StatefulWidget {
     this.highlightedLines = const [],
   });
 
-  /// The source code to display
   final String code;
-
-  /// The programming language for syntax highlighting
   final String language;
-
-  /// Optional title shown above the code block
   final String? title;
-
-  /// Whether to show line numbers
   final bool showLineNumbers;
-
-  /// Lines to highlight (1-indexed)
   final List<int> highlightedLines;
 
   @override
@@ -44,65 +28,48 @@ class CodeBlock extends StatefulWidget {
 }
 
 class _CodeBlockState extends State<CodeBlock> {
-  bool? _isDark;
-  Future<Highlighter>? highlighter;
-
-  Future<Highlighter> _initHighlighter(BuildContext context) async {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final highlighterTheme = isDark
-        ? await HighlighterTheme.loadDarkTheme()
-        : await HighlighterTheme.loadLightTheme();
-    await Highlighter.initialize([widget.language]);
-    return Highlighter(language: widget.language, theme: highlighterTheme);
-  }
+  Future<Highlighter>? _highlighter;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        highlighter = _initHighlighter(context);
-        setState(() {});
-      }
-    });
+    _highlighter = _SyntaxHighlighters.forLanguage(widget.language);
+  }
+
+  @override
+  void didUpdateWidget(covariant CodeBlock oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.language != widget.language) {
+      _highlighter = _SyntaxHighlighters.forLanguage(widget.language);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final docs = theme.docs;
-    final isDark = theme.brightness == Brightness.dark;
-    if (_isDark != isDark) {
-      _isDark = isDark;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          highlighter = _initHighlighter(context);
-          setState(() {});
-        }
-      });
-    }
+    final docs = context.docsTheme;
 
-    if (highlighter == null) return const SizedBox();
-
-    return FutureBuilder(
-      key: ValueKey(highlighter),
-      future: highlighter!,
+    return FutureBuilder<Highlighter>(
+      future: _highlighter,
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const SizedBox();
+        final highlightedCode =
+            snapshot.data?.highlight(widget.code) ??
+            TextSpan(text: widget.code);
 
-        final highlighter = snapshot.data!;
-        final highlightedCode = highlighter.highlight(widget.code);
-
-        return ConstrainedBox(
+        return Container(
           constraints: BoxConstraints(maxWidth: docs.proseMaxWidth + 100),
+          decoration: const BoxDecoration(
+            color: AppTheme.codeBackground,
+            border: Border.fromBorderSide(BorderSide(color: AppTheme.divider)),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Header with title and copy button
-              if (widget.title != null) _buildHeader(context, isDark),
-
-              // Code content - LayoutBuilder ensures full width when code is short
+              if (widget.title != null)
+                _CodeHeader(
+                  title: widget.title!,
+                  code: widget.code,
+                  language: widget.language,
+                ),
               LayoutBuilder(
                 builder: (context, constraints) => SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
@@ -113,9 +80,10 @@ class _CodeBlockState extends State<CodeBlock> {
                       padding: const EdgeInsets.all(16),
                       child: Text.rich(
                         highlightedCode,
-                        style: GoogleFonts.jetBrainsMono(
-                          fontSize: 14,
-                          color: theme.colorScheme.onSurface,
+                        style: AppTypography.mono(
+                          fontSize: 13,
+                          height: 1.45,
+                          color: AppTheme.ink,
                         ),
                       ),
                     ),
@@ -128,48 +96,75 @@ class _CodeBlockState extends State<CodeBlock> {
       },
     );
   }
+}
 
-  Widget _buildHeader(BuildContext context, bool isDark) {
-    final theme = Theme.of(context);
+/// Shares grammar and theme work across every code block on the page.
+///
+/// Unsupported languages render as plain text immediately instead of leaving
+/// a permanent blank placeholder.
+abstract final class _SyntaxHighlighters {
+  static const _supported = {'dart', 'json', 'yaml'};
+  static final Map<String, Future<Highlighter>> _cache = {};
+  static Future<HighlighterTheme>? _theme;
 
+  static Future<Highlighter>? forLanguage(String language) {
+    if (!_supported.contains(language)) return null;
+    return _cache.putIfAbsent(language, () => _create(language));
+  }
+
+  static Future<Highlighter> _create(String language) async {
+    final theme = await (_theme ??= HighlighterTheme.loadLightTheme());
+    await Highlighter.initialize([language]);
+    return Highlighter(language: language, theme: theme);
+  }
+}
+
+class _CodeHeader extends StatelessWidget {
+  const _CodeHeader({
+    required this.title,
+    required this.code,
+    required this.language,
+  });
+
+  final String title;
+  final String code;
+  final String language;
+
+  IconData get _languageIcon => switch (language) {
+    'shell' => FLucideIcons.terminal,
+    'yaml' || 'json' => FLucideIcons.braces,
+    _ => FLucideIcons.code2,
+  };
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: theme.dividerColor)),
+      padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppTheme.divider)),
       ),
       child: Row(
         children: [
-          Icon(_getLanguageIcon(), size: 16, color: theme.colorScheme.primary),
+          Icon(_languageIcon, size: 15, color: AppTheme.primary),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              widget.title!,
-              style: GoogleFonts.jetBrainsMono(
-                fontSize: 13,
+              title,
+              style: AppTypography.mono(
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                color: AppTheme.mutedInk,
                 decoration: TextDecoration.none,
               ),
             ),
           ),
-          _CopyButton(code: widget.code),
+          _CopyButton(code: code),
         ],
       ),
     );
   }
-
-  IconData _getLanguageIcon() {
-    return switch (widget.language) {
-      'dart' => Icons.flutter_dash_rounded,
-      'yaml' => Icons.settings,
-      'shell' => Icons.terminal,
-      'json' => Icons.data_object,
-      _ => Icons.code,
-    };
-  }
 }
 
-/// A button to copy code to clipboard.
 class _CopyButton extends StatefulWidget {
   const _CopyButton({required this.code});
 
@@ -184,31 +179,28 @@ class _CopyButtonState extends State<_CopyButton> {
 
   Future<void> _copyToClipboard() async {
     await Clipboard.setData(ClipboardData(text: widget.code.trim()));
+    if (!mounted) return;
     setState(() => _copied = true);
-    await Future.delayed(const Duration(seconds: 2));
+    await Future<void>.delayed(const Duration(seconds: 2));
     if (mounted) setState(() => _copied = false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return IconButton(
-      icon: Icon(
-        _copied ? Icons.check : Icons.copy,
-        size: 18,
-        color: _copied
-            ? Colors.green
-            : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+    return FButton.icon(
+      semanticsLabel: _copied ? 'Copied' : 'Copy code',
+      variant: FButtonVariant.ghost,
+      size: FButtonSizeVariant.xs,
+      onPress: _copyToClipboard,
+      child: Icon(
+        _copied ? FLucideIcons.check : FLucideIcons.copy,
+        size: 16,
+        color: _copied ? AppTheme.success : AppTheme.mutedInk,
       ),
-      onPressed: _copyToClipboard,
-      tooltip: _copied ? 'Copied!' : 'Copy code',
-      visualDensity: VisualDensity.compact,
     );
   }
 }
 
-/// An inline code span for use within prose.
 class InlineCode extends StatelessWidget {
   const InlineCode(this.code, {super.key});
 
@@ -216,21 +208,15 @@ class InlineCode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final docs = theme.docs;
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: docs.codeBackground,
+        color: AppTheme.codeBackground,
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         code,
-        style: GoogleFonts.jetBrainsMono(
-          fontSize: 14,
-          color: theme.colorScheme.primary,
-        ),
+        style: AppTypography.mono(fontSize: 14, color: AppTheme.primary),
       ),
     );
   }

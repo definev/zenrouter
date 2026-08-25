@@ -23,8 +23,7 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      routerDelegate: appCoordinator.routerDelegate,
-      routeInformationParser: appCoordinator.routeInformationParser,
+      routerConfig: appCoordinator,
       title: 'Coordinator Example',
     );
   }

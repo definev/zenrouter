@@ -22,8 +22,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp.router(
       title: 'ZenRouter Nested Routes Example',
       restorationScopeId: 'main_coordinator',
-      routerDelegate: coordinator.routerDelegate,
-      routeInformationParser: coordinator.routeInformationParser,
+      routerConfig: coordinator,
     );
   }
 }
@@ -232,9 +231,7 @@ class SettingsTab extends AppRoute {
         ),
         const SizedBox(height: 8),
         ElevatedButton(
-          onPressed: () {
-            coordinator.recoverRouteFromUri(Uri.parse('/home/feed/3221'));
-          },
+          onPressed: () => coordinator.recoverUri(Uri.parse('/home/feed/3221')),
           child: const Text('Recover Route'),
         ),
       ],

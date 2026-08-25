@@ -6,22 +6,81 @@ part of 'base.dart';
 ///
 /// Provides push/pop functionality for navigating between routes.
 /// This mixin is applied to paths that need dynamic navigation.
+///
+/// Implements the shared [Mutatable] contract also used by
+/// [CoordinatorMutatable].
 mixin StackMutatable<T extends RouteTarget> on StackPath<T>
-    implements StackNavigatable<T> {
+    implements StackNavigatable<T>, Mutatable<T>, StackCommit<T> {
+  /// Replaces the entire stack as one observable mutation.
+  ///
+  /// Route instances retained by identity keep their lifecycle. Removed
+  /// instances are discarded, while incoming instances are rebound to this
+  /// path. This is intended for declarative adapters that must not expose an
+  /// intermediate empty stack while applying a diff.
+  void replaceAll(Iterable<T> routes) {
+    final nextStack = List<T>.of(routes);
+    final retainedRoutes = Set<T>.identity()..addAll(nextStack);
+
+    for (final route in _stack) {
+      if (retainedRoutes.contains(route)) continue;
+      route.onDiscard();
+      route.clearStackPath();
+    }
+
+    for (final route in nextStack) {
+      route.isPopByPath = false;
+      route.bindStackPath(this);
+    }
+
+    _stack
+      ..clear()
+      ..addAll(nextStack);
+    notifyListeners();
+  }
+
   /// Adds a new route to the top of the stack.
   ///
   /// Resolves redirects via [RouteRedirect.resolve] before pushing.
   /// Returns a future that completes when the popped route provides a result.
+  @override
   Future<R?> push<R extends Object>(T element) async {
-    T? target = await RouteRedirect.resolve(element, coordinator);
+    final target = await commitRoute(element);
     if (target == null) return null;
 
+    // ignore: invalid_use_of_visible_for_testing_member
+    return await target.onResult.future as R?;
+  }
+
+  /// Resolves redirects and commits a route, returning the actual stack entry.
+  @internal
+  Future<T?> commitRoute(T element) async {
+    final target = await RouteRedirect.resolve(element, coordinator);
+    if (target == null) return null;
+    return commitResolvedRoute(target);
+  }
+
+  /// Commits a route whose redirect and layout have already been resolved.
+  @override
+  @internal
+  T commitResolvedRoute(T target) {
+    _addRouteToStack(target);
+    return target;
+  }
+
+  /// Adds a route to the stack without subscribing to its pop result.
+  ///
+  /// Same stack mutation as [push], but the returned future completes once
+  /// the route is on the stack instead of when it is later popped.
+  @override
+  Future<void> pushSilently(T element) async {
+    await commitRoute(element);
+  }
+
+  void _addRouteToStack(T target) {
     target.isPopByPath = false;
     target.bindStackPath(this);
     _stack.add(target);
     notifyListeners();
-    // ignore: invalid_use_of_visible_for_testing_member
-    return await target.onResult.future as R?;
   }
 
   /// Replaces the current route with a new one.
@@ -32,40 +91,67 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
   /// - Multiple elements: Pops top route (respecting guards), then pushes new route
   ///
   /// Returns null if redirect resolution fails or guard blocks the pop.
+  @override
   Future<R?> pushReplacement<R extends Object, RO extends Object>(
     T element, {
     RO? result,
   }) async {
-    T? target = await RouteRedirect.resolve(element, coordinator);
+    final target = await commitReplacement(element, result: result);
     if (target == null) return null;
 
+    // ignore: invalid_use_of_visible_for_testing_member
+    return await target.onResult.future as R?;
+  }
+
+  /// Resolves and commits a replacement without waiting for its later result.
+  @internal
+  Future<T?> commitReplacement<RO extends Object>(
+    T element, {
+    RO? result,
+  }) async {
+    final target = await RouteRedirect.resolve(element, coordinator);
+    if (target == null) return null;
+    return commitResolvedReplacement(target, result: result);
+  }
+
+  /// Commits an already-resolved replacement route.
+  @override
+  @internal
+  Future<T?> commitResolvedReplacement<RO extends Object>(
+    T target, {
+    RO? result,
+  }) async {
     final activeRoute = this.activeRoute;
     if (activeRoute case final activeRoute?) {
       if (stack.length == 1) {
         activeRoute.completeOnResult(result, coordinator);
-        activeRoute.onDiscard();
         reset();
-        return push(target);
+        return commitResolvedRoute(target);
       }
 
       final popped = await pop(result);
       if (popped == null || !popped) return null;
-      // ignore: invalid_use_of_visible_for_testing_member
-      await activeRoute.onResult.future;
-      return push(target);
+      return commitResolvedRoute(target);
     }
 
-    return push(target);
+    return commitResolvedRoute(target);
   }
 
   /// Adds a route to the top, or moves it to the top if already in stack.
   ///
   /// If the route exists in the stack, it's moved to the top position.
   /// If not, it's pushed as a new entry. Useful for tab navigation.
+  @override
   Future<void> pushOrMoveToTop(T element) async {
     T? target = await RouteRedirect.resolve(element, coordinator);
     if (target == null) return;
+    commitResolvedMoveToTop(target);
+  }
 
+  /// Moves an already-resolved route to the top, or appends it.
+  @override
+  @internal
+  void commitResolvedMoveToTop(T target) {
     target.isPopByPath = false;
     target.bindStackPath(this);
     final index = _stack.indexOf(target);
@@ -115,6 +201,12 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
     final element = _stack.removeLast();
     element.isPopByPath = true;
     element.bindResultValue(result);
+    // Complete and tear down here so push()/pushReplacement do not depend on
+    // a later Flutter page callback. Awaiting onResult inside a transaction
+    // hung headless and blocked the queue; skipping it left results pending
+    // when pop+push landed in the same frame.
+    element.completeOnResult(result, coordinator, true);
+    element.onDidPop(result, coordinator);
     notifyListeners();
     return true;
   }
@@ -136,26 +228,46 @@ mixin StackMutatable<T extends RouteTarget> on StackPath<T>
   Future<void> navigate(T route) async {
     T? target = await RouteRedirect.resolve(route, coordinator);
     if (target == null) return;
+    await commitResolvedNavigate(target);
+  }
 
-    final routeIndex = stack.indexOf(target);
-    if (routeIndex != -1) {
-      while (stack.length > routeIndex + 1) {
-        final allowPop = await pop();
-        if (allowPop == null || !allowPop) {
-          notifyListeners();
-          return;
-        }
-      }
-
-      final existingRoute = stack[routeIndex];
-      existingRoute.onUpdate(target);
+  /// Pops back to an already-resolved route, or commits it as a new entry.
+  @override
+  @internal
+  Future<void> commitResolvedNavigate(T target) async {
+    // Same lifecycle entry: pop back to it. Never discard a live stack member.
+    final identityIndex = _stack.indexWhere(
+      (route) => route.deepEquals(target),
+    );
+    if (identityIndex != -1) {
+      if (!await _popBackTo(identityIndex)) return;
       notifyListeners();
-
-      if (!existingRoute.deepEquals(target)) {
-        target.onDiscard();
-      }
-    } else {
-      await push(target);
+      return;
     }
+
+    // New instance that compares equal: merge into the existing occupant and
+    // discard the unused incoming route. It was never on this stack, so pop()
+    // cannot have disposed it.
+    final equalIndex = _stack.indexOf(target);
+    if (equalIndex != -1) {
+      if (!await _popBackTo(equalIndex)) return;
+      _stack[equalIndex].onUpdate(target);
+      notifyListeners();
+      target.onDiscard();
+      return;
+    }
+
+    commitResolvedRoute(target);
+  }
+
+  Future<bool> _popBackTo(int routeIndex) async {
+    while (_stack.length > routeIndex + 1) {
+      final allowPop = await pop();
+      if (allowPop == null || !allowPop) {
+        notifyListeners();
+        return false;
+      }
+    }
+    return true;
   }
 }

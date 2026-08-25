@@ -96,9 +96,6 @@ class UnimplementedRoute extends BaseTestRoute {
 
 class DummyCoordinator extends Coordinator<RouteUnique> {
   @override
-  void defineConverter() {}
-
-  @override
   RouteUnique parseRouteFromUri(Uri uri) => TestRoute(uri.path);
 
   @override
