@@ -59,6 +59,21 @@ fvm dart analyze
 fvm flutter build web
 ```
 
+## Vercel deployment
+
+The repository-level `vercel.json` builds this Flutter app from the Dart
+workspace and serves it as a single-page application. Keep the Vercel project
+Root Directory at the repository root (`.`), rather than setting it to this
+package directory.
+
+Import the Git repository in Vercel with the **Other** framework preset. The
+checked-in configuration installs Flutter 3.47.0 when needed, builds the docs,
+publishes `packages/zenrouter_docs/build/web`, and rewrites deep links to
+`index.html`.
+
+Vercel automatically creates preview deployments for non-production branches
+and production deployments for pushes to the configured production branch.
+
 ## Editorial rules
 
 Write one invariant per example. Lead with a concrete navigation problem, keep
