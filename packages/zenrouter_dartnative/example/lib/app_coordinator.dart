@@ -1,41 +1,39 @@
 import 'package:zenrouter_dartnative/zenrouter_dartnative.dart';
 
 import 'app_route.dart';
-import 'controls/controls_coordinator.dart';
-import 'gallery/gallery_coordinator.dart';
-import 'navigation_demo.dart';
-import 'playground_layout.dart';
 
+/// Coordinates the cupping studio: a persistent shelf, pushed tastings, and
+/// a barista module that owns its own routes.
 class AppCoordinator extends Coordinator<AppRoute>
     with CoordinatorModular<AppRoute> {
-  AppCoordinator() : super(initialRoute: HomeRoute());
+  AppCoordinator() : super(initialRoute: StudioLayoutRoute());
 
-  late final sections = BranchedStackPath<AppRoute>.createWith(
-    [ControlsLayout(), GalleryLayout()],
-    coordinator: this,
-    label: 'playground-sections',
-  )..bindLayout(PlaygroundLayout.new);
-
-  @override
-  Iterable<RouteModule<AppRoute>> defineModules() => [
-    ControlsCoordinator(this),
-    GalleryCoordinator(this),
-  ];
+  late final IndexedStackPath<AppRoute> tabs =
+      IndexedStackPath<AppRoute>.createWith(
+        [ShelfRoute(), LogbookRoute()],
+        coordinator: this,
+        label: 'studio-tabs',
+      )..bindLayout(StudioLayoutRoute.new);
 
   @override
-  List<StackPath> get paths => [...super.paths, sections];
+  Iterable<RouteModule<AppRoute>> defineModules() => [BaristaCoordinator(this)];
+
+  @override
+  List<StackPath> get paths => [...super.paths, tabs];
 
   @override
   Future<AppRoute?> parseRouteFromUri(Uri uri) async =>
       switch (uri.pathSegments) {
-        [] => CounterRoute(),
-        ['navigation'] => HomeRoute(),
-        ['details', final id] => DetailRoute(id),
-        ['editor'] => EditorRoute(),
-        ['sheet'] => SheetRoute(),
+        [] || ['shelf'] => ShelfRoute(),
+        ['logbook'] => LogbookRoute(),
+        ['lot', final id] => LotRoute(id),
+        ['cupping'] => CuppingRoute(lotId: uri.queryParameters['lot']),
+        ['brew'] => BrewGuideRoute(
+          lotId: uri.queryParameters['lot'] ?? 'yirga',
+        ),
         _ => await super.parseRouteFromUri(uri),
       };
 
   @override
-  AppRoute notFoundRoute(Uri uri) => MissingRoute(uri);
+  AppRoute notFoundRoute(Uri uri) => NotFoundRoute(uri);
 }

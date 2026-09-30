@@ -9,5 +9,5 @@ part 'feed.g.dart';
 class FeedRoute extends _$FeedRoute {
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) =>
-      const Text('Feed');
+      const Text('Green coffee shelf');
 }

@@ -9,5 +9,5 @@ part 'profile.g.dart';
 class ProfileRoute extends _$ProfileRoute {
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) =>
-      const Text('Profile');
+      const Text('Cupping logbook');
 }

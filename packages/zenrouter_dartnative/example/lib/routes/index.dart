@@ -11,17 +11,14 @@ class IndexRoute extends _$IndexRoute {
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) => Scaffold(
     floatingActionButton: const NativeDevToolsLauncher(),
-    appBar: AppBar(title: const Text('File routing')),
+    appBar: AppBar(title: const Text('Cupping studio')),
     body: Column(
       children: [
         Button(
-          title: 'Open item 42',
-          onPressed: () => coordinator.pushItemId(id: '42'),
+          title: 'Open Yirgacheffe',
+          onPressed: () => coordinator.pushItemId(id: 'yirga'),
         ),
-        Button(
-          title: 'Open profile tab',
-          onPressed: coordinator.recoverProfile,
-        ),
+        Button(title: 'Open logbook', onPressed: coordinator.recoverProfile),
       ],
     ),
   );

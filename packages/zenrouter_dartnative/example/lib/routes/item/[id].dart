@@ -13,7 +13,7 @@ class ItemIdRoute extends _$ItemIdRoute {
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) => Scaffold(
     floatingActionButton: const NativeDevToolsLauncher(),
-    appBar: AppBar(title: Text('Item $id')),
-    body: Text('URI: ${toUri()}'),
+    appBar: AppBar(title: Text('Lot $id')),
+    body: Text('Coffee lot $id · ${toUri()}'),
   );
 }

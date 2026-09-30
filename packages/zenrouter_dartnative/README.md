@@ -60,8 +60,8 @@ Inside a child widget, use `CoordinatorScope.of<AppRoute>(context)` to obtain it
 coordinator. The scope is installed in **every** native screen, since pushed
 screens do not share the root's widget ancestry. The example uses a regular
 coordinator with `parseRouteFromUri`, dynamic parameters, guards, and a
-not-found route. Its Controls and Gallery feature coordinators demonstrate
-coordinators used as route modules and nested layouts.
+not-found route. Its Barista feature coordinator demonstrates coordinators used as route
+modules and nested tab layouts.
 
 ## Supported contract
 
@@ -178,24 +178,24 @@ Use the same `CoordinatorModular` and `RouteModule` contracts as ZenRouter:
 ```dart
 class AppCoordinator extends Coordinator<AppRoute>
     with CoordinatorModular<AppRoute> {
-  AppCoordinator() : super(initialRoute: HomeRoute());
+  AppCoordinator() : super(initialRoute: StudioLayoutRoute());
 
   @override
-  Iterable<RouteModule<AppRoute>> defineModules() => [GalleryCoordinator(this)];
+  Iterable<RouteModule<AppRoute>> defineModules() => [BaristaCoordinator(this)];
 
   @override
-  AppRoute notFoundRoute(Uri uri) => MissingRoute(uri);
+  AppRoute notFoundRoute(Uri uri) => NotFoundRoute(uri);
 }
 
-class GalleryCoordinator extends Coordinator<AppRoute> {
-  GalleryCoordinator(this.coordinator);
+class BaristaCoordinator extends Coordinator<AppRoute> {
+  BaristaCoordinator(this.coordinator);
 
   @override
   final CoordinatorModular<AppRoute> coordinator;
 
   @override
   AppRoute? parseRouteFromUri(Uri uri) =>
-      uri.path == '/gallery' ? GalleryRoute() : null;
+      uri.path == '/barista' ? BaristaRoute() : null;
 }
 ```
 

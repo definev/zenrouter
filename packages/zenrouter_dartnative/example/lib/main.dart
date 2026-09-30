@@ -9,13 +9,8 @@ import 'dartnative_plugin_registrant.dart';
 Future<void> main() async {
   DartNativePluginRegistrant.registerAll();
   final coordinator = AppCoordinator();
-  // Resolve the initial layout hierarchy before mounting the single host.
-  const initialUri = String.fromEnvironment(
-    'INITIAL_URI',
-    defaultValue: '/controls/counter',
-  );
-  await coordinator.recoverUri(Uri.parse(initialUri));
   final devTools = NativeDevToolsController();
+
   runApp(
     CoordinatorView<AppRoute>(
       coordinator: coordinator,
@@ -26,9 +21,12 @@ Future<void> main() async {
           coordinator: coordinator,
           controller: devTools,
           debugRoutes: [
-            Uri.parse('/'),
-            Uri.parse('/controls/counter'),
-            Uri.parse('/tabs/profile'),
+            Uri.parse('/shelf'),
+            Uri.parse('/logbook'),
+            Uri.parse('/lot/yirga'),
+            Uri.parse('/cupping?lot=yirga'),
+            Uri.parse('/brew?lot=yirga'),
+            Uri.parse('/barista'),
           ],
           child: child,
         );
