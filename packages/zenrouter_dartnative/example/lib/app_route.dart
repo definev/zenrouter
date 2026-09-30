@@ -380,66 +380,69 @@ class _SampleOrderDialogState extends State<SampleOrderDialog> {
     return Center(
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Row(
-              children: [
-                const Icon(CupertinoIcons.cube_box_fill, color: roastAmber),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Text(
-                    'Request Sample Roast',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: ink,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Row(
+                children: [
+                  const Icon(CupertinoIcons.cube_box_fill, color: roastAmber),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Request Sample Roast',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: ink,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${widget.lot.name} (${widget.lot.origin} · ${widget.lot.process})',
-              style: const TextStyle(
-                color: coffee,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
+                ],
               ),
-            ),
-            const SizedBox(height: 14),
-            const Text(
-              'Select sample package size for roastery test:',
-              style: TextStyle(color: muted, fontSize: 13),
-            ),
-            const SizedBox(height: 8),
-            SegmentedControl(
-              segments: _weights,
-              selectedIndex: _weightIndex,
-              onValueChanged: (idx) => setState(() => _weightIndex = idx),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: action(
-                    'Cancel',
-                    () => coordinator.pop(),
-                    secondary: true,
-                  ),
+              const SizedBox(height: 8),
+              Text(
+                '${widget.lot.name} (${widget.lot.origin} · ${widget.lot.process})',
+                style: const TextStyle(
+                  color: coffee,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: action(
-                    'Order',
-                    () => coordinator.pop('$weight sample ordered'),
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'Select sample package size for roastery test:',
+                style: TextStyle(color: muted, fontSize: 13),
+              ),
+              const SizedBox(height: 8),
+              SegmentedControl(
+                segments: _weights,
+                selectedIndex: _weightIndex,
+                onValueChanged: (idx) => setState(() => _weightIndex = idx),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: Button(
+                      title: 'Cancel',
+                      automaticTint: true,
+                      color: muted,
+                      onPressed: () => coordinator.pop(),
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: action(
+                      'Order',
+                      () => coordinator.pop('$weight sample ordered'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
