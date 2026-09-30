@@ -22,20 +22,18 @@ Flutter or `vyuh_node_flow` dependency.
 Graph, observed flow, replay, and screen previews are not part of this initial
 package.
 
-## Setup
+## Installation
 
-Until publication, add this package to a DartNative app locally and run
-`dn pub get`:
+Add `zenrouter_dartnative_devtools` to your DartNative app's `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  zenrouter_dartnative_devtools:
-    path: /path/to/zenrouter/packages/zenrouter_dartnative_devtools
+  dartnative: ^1.0.0
+  zenrouter_dartnative: ^0.1.0
+  zenrouter_dartnative_devtools: ^0.1.0
 ```
 
-For local development, override `zenrouter_dartnative` and `zenrouter_core`
-to the sibling packages in the checkout. After publication, use
-`zenrouter_dartnative_devtools: ^0.1.0` instead of the path dependency.
+Run **`dn pub get`** to install.
 
 Decorate every presentation through `CoordinatorView.presentationBuilder` and
 place `NativeDevToolsLauncher` in each screen's `Scaffold.floatingActionButton`

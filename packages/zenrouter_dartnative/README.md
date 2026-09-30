@@ -7,30 +7,17 @@ Navigator.pages, path classes, or layout builders.
 It is intentionally outside the repository's Flutter pub workspace. No changes
 to the core routing engine or existing Flutter adapter are required.
 
-## Use locally
+## Installation
 
-Version 0.1.0 introduces the native adapter. Until the release is published,
-use a path dependency from a DartNative app:
+Add `zenrouter_dartnative` to your DartNative app's `pubspec.yaml`:
 
 ```yaml
 dependencies:
   dartnative: ^1.0.0
-  zenrouter_dartnative:
-    path: /path/to/zenrouter/packages/zenrouter_dartnative
+  zenrouter_dartnative: ^0.1.0
 ```
 
-Run **`dn pub get`**, not ordinary `flutter pub get`. DartNative's command resolves
-its closed framework from the installed SDK. For development before `zenrouter_core` 3.0.0 is published, add a local
-override in the app:
-
-```yaml
-dependency_overrides:
-  zenrouter_core:
-    path: /path/to/zenrouter/packages/zenrouter_core
-```
-
-After publication, use `zenrouter_dartnative: ^0.1.0` instead of the path
-dependency. The package requires `zenrouter_core: ^3.0.0`.
+Run **`dn pub get`**, not `flutter pub get`. DartNative's command resolves its framework and platform bindings from the installed SDK.
 
 ```dart
 import 'package:dartnative/dartnative.dart';

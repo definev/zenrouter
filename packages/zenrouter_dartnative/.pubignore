@@ -14,3 +14,4 @@ example/android/
 example/assets/
 example/tool/
 example/lib/dartnative_plugin_registrant.dart
+dist/

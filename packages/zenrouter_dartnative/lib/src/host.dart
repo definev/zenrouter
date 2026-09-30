@@ -11,7 +11,7 @@ import 'session.dart';
 ///
 /// This host exclusively owns the ordered DartNative presentation stack. Do
 /// not mix raw Navigator calls, native hot-restart replay, nested hosts, or
-/// unmanaged overlays with coordinator navigation in this experimental version.
+/// unmanaged overlays with coordinator navigation.
 /// The caller owns/disposes [coordinator]. A failed native command stops the
 /// session and reports through [onError]; restart the app to recover.
 class CoordinatorView<T extends RouteUnique> extends StatefulWidget {

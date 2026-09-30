@@ -13,3 +13,4 @@ example/.metadata
 example/.vscode/
 example/assets/
 example/tool/generate_app_assets.dart
+dist/

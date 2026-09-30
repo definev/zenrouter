@@ -1,4 +1,4 @@
-/// Headless portion of the experimental DartNative adapter.
+/// Headless portion of the ZenRouter DartNative adapter.
 ///
 /// This entry point can run on the Dart VM without loading native bindings.
 library;

@@ -1,4 +1,4 @@
-/// Experimental native navigation and layout paths for DartNative.
+/// Native navigation, route presentations, and persistent layouts for DartNative.
 library;
 
 export 'zenrouter_dartnative_core.dart';
