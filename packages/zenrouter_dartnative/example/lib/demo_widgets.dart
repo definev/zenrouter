@@ -146,7 +146,7 @@ class FeatureTabs extends StatelessWidget {
       backgroundColor: paper,
       body: IndexedStack(index: layout.activeIndex, children: layout.children),
       extendBodyBehindAppBar: false,
-      extendBody: false,
+      extendBody: isIOS26,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: layout.activeIndex,
         iconColor: coffee,

@@ -214,143 +214,246 @@ class LotRoute extends AppRoute {
 
   @override
   Widget build(Coordinator<AppRoute> coordinator, BuildContext context) =>
-      StudioPage(
-        title: lot.name,
-        eyebrow: '${lot.origin} · ${lot.process}',
-        children: [
-          StudioCard(
-            title: 'Origin & Terroir',
-            subtitle: 'Elevation: ${lot.elevation} · Variety: ${lot.variety}',
-            children: [
-              Text(
-                lot.roasterNotes,
-                style: const TextStyle(color: ink, height: 1.4),
-              ),
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: paper,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(CupertinoIcons.flame_fill, color: roastAmber),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Key notes: ${lot.flavorNotes}',
-                        style: const TextStyle(
-                          color: ink,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          StudioCard(
-            title: 'Cupping & Service',
-            subtitle: 'Evaluate lot quality or inspect the bar recipe.',
-            children: [
-              action('Evaluate & Score Lot', () async {
-                final score = await coordinator.push<String>(
-                  CuppingRoute(lotId: id),
-                );
-                if (score != null) {
-                  coordinator.pop(score);
-                }
-              }),
-              const SizedBox(height: 6),
-              action(
-                'View Pour-over Recipe',
-                () => unawaited(coordinator.push(BrewGuideRoute(lotId: id))),
-                secondary: true,
-              ),
-            ],
-          ),
-        ],
-      );
+      LotScreen(id: id, lot: lot);
 }
 
-/// Scenario 1: Modal Dialog route powered by [ExperimentalDialogPresentation].
-class ConfirmDiscardDialogRoute extends AppRoute {
-  ConfirmDiscardDialogRoute({this.lotName});
+class LotScreen extends StatefulWidget {
+  const LotScreen({super.key, required this.id, required this.lot});
 
-  final String? lotName;
+  final String id;
+  final CoffeeLot lot;
 
   @override
-  List<Object?> get props => [lotName];
+  State<LotScreen> createState() => _LotScreenState();
+}
+
+class _LotScreenState extends State<LotScreen> {
+  String? _sampleStatus;
+
+  @override
+  Widget build(BuildContext context) {
+    final coordinator = CoordinatorScope.of<AppRoute>(context);
+    final lot = widget.lot;
+
+    return StudioPage(
+      title: lot.name,
+      eyebrow: '${lot.origin} · ${lot.process}',
+      children: [
+        if (_sampleStatus != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Card(
+              color: cardColor,
+              borderRadius: 14,
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  const Icon(
+                    CupertinoIcons.checkmark_seal_fill,
+                    color: scoreGreen,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Roastery dispatch: $_sampleStatus',
+                      style: const TextStyle(
+                        color: ink,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        StudioCard(
+          title: 'Origin & Terroir',
+          subtitle: 'Elevation: ${lot.elevation} · Variety: ${lot.variety}',
+          children: [
+            Text(
+              lot.roasterNotes,
+              style: const TextStyle(color: ink, height: 1.4),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: paper,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  const Icon(CupertinoIcons.flame_fill, color: roastAmber),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Key notes: ${lot.flavorNotes}',
+                      style: const TextStyle(
+                        color: ink,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        StudioCard(
+          title: 'Cupping & Service',
+          subtitle: 'Evaluate lot quality, view recipes, or request samples.',
+          children: [
+            action('Evaluate & Score Lot', () async {
+              final score = await coordinator.push<String>(
+                CuppingRoute(lotId: widget.id),
+              );
+              if (score != null) {
+                coordinator.pop(score);
+              }
+            }),
+            const SizedBox(height: 6),
+            action(
+              'View Pour-over Recipe',
+              () =>
+                  unawaited(coordinator.push(BrewGuideRoute(lotId: widget.id))),
+              secondary: true,
+            ),
+            const SizedBox(height: 6),
+            action('Request Sample Roast (Dialog Route)', () async {
+              final result = await coordinator.push<String>(
+                SampleOrderDialogRoute(lotId: widget.id),
+              );
+              if (mounted && result != null) {
+                setState(() => _sampleStatus = result);
+              }
+            }, secondary: true),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Scenario: Modal Dialog route powered by [ExperimentalDialogPresentation].
+class SampleOrderDialogRoute extends AppRoute {
+  SampleOrderDialogRoute({required this.lotId});
+
+  final String lotId;
+
+  CoffeeLot get lot => lotById(lotId);
+
+  @override
+  List<Object?> get props => [lotId];
 
   @override
   Presentation get presentation =>
-      const ExperimentalDialogPresentation(cornerRadius: 18, dimOpacity: 0.35);
+      const ExperimentalDialogPresentation(cornerRadius: 20, dimOpacity: 0.35);
 
   @override
-  Uri toUri() => Uri(path: '/dialog/confirm-discard');
+  Uri toUri() => Uri(path: '/dialog/sample', queryParameters: {'lot': lotId});
 
   @override
-  Widget build(
-    Coordinator<AppRoute> coordinator,
-    BuildContext context,
-  ) => Center(
-    child: Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24),
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Discard ${lotName ?? 'Lot'} Score?',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: ink,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Your sensory evaluation has not been saved. Discard and return to lot details?',
-            style: TextStyle(color: muted, fontSize: 13, height: 1.4),
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: action(
-                  'Keep Editing',
-                  () => coordinator.pop(false),
-                  secondary: true,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(child: action('Discard', () => coordinator.pop(true))),
-            ],
-          ),
-        ],
-      ),
-    ),
-  );
+  Widget build(Coordinator<AppRoute> coordinator, BuildContext context) =>
+      SampleOrderDialog(lot: lot);
 }
 
-/// Guarded cupping form. Demonstrates both confirmation scenarios on Back:
-/// 1. Route Dialog (ExperimentalDialogPresentation)
-/// 2. Native Alert (showAlert)
+class SampleOrderDialog extends StatefulWidget {
+  const SampleOrderDialog({super.key, required this.lot});
+
+  final CoffeeLot lot;
+
+  @override
+  State<SampleOrderDialog> createState() => _SampleOrderDialogState();
+}
+
+class _SampleOrderDialogState extends State<SampleOrderDialog> {
+  int _weightIndex = 1;
+  static const _weights = ['100 g', '250 g', '500 g'];
+
+  @override
+  Widget build(BuildContext context) {
+    final coordinator = CoordinatorScope.of<AppRoute>(context);
+    final weight = _weights[_weightIndex];
+
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Row(
+              children: [
+                const Icon(CupertinoIcons.cube_box_fill, color: roastAmber),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Request Sample Roast',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: ink,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${widget.lot.name} (${widget.lot.origin} · ${widget.lot.process})',
+              style: const TextStyle(
+                color: coffee,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Select sample package size for roastery test:',
+              style: TextStyle(color: muted, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            SegmentedControl(
+              segments: _weights,
+              selectedIndex: _weightIndex,
+              onValueChanged: (idx) => setState(() => _weightIndex = idx),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: action(
+                    'Cancel',
+                    () => coordinator.pop(),
+                    secondary: true,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: action(
+                    'Order',
+                    () => coordinator.pop('$weight sample ordered'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Guarded cupping form. Back is locked until score is committed.
+/// When leaving before saving, it directly prompts via native [showAlert].
 class CuppingRoute extends AppRoute with RouteGuard {
   CuppingRoute({this.lotId});
 
   final String? lotId;
   final _committed = ValueNotifier<bool>(false);
   final _score = ValueNotifier<double>(86.5);
-  int confirmStyle = 0; // 0: Route Dialog, 1: Native Alert
   BuildContext? mountedContext;
 
   CoffeeLot get lot => lotById(lotId ?? 'yirga');
@@ -373,27 +476,18 @@ class CuppingRoute extends AppRoute with RouteGuard {
   @override
   Future<bool> popGuardWith(covariant CoordinatorCore coordinator) async {
     if (_committed.value) return true;
+    if (mountedContext == null) return false;
 
-    bool allowLeave = false;
-    if (confirmStyle == 0 && coordinator is Coordinator<AppRoute>) {
-      // Scenario 1: Router-managed modal Dialog route
-      final discard = await coordinator.push<bool>(
-        ConfirmDiscardDialogRoute(lotName: lot.name),
-      );
-      allowLeave = discard == true;
-    } else if (mountedContext != null) {
-      // Scenario 2: Native platform popup dialog (UIAlertController / AlertDialog)
-      final choice = await showAlert(
-        context: mountedContext!,
-        title: 'Discard ${lot.name} Score?',
-        message:
-            'Your sensory score has not been saved yet. Discard evaluation and return?',
-        actions: const ['Keep Editing', 'Discard'],
-      );
-      allowLeave = choice == 1;
-    }
+    // Directly prompt with native platform alert dialog
+    final choice = await showAlert(
+      context: mountedContext!,
+      title: 'Discard ${lot.name} Score?',
+      message:
+          'Your sensory evaluation has not been saved. Discard score and leave?',
+      actions: const ['Keep Editing', 'Discard'],
+    );
 
-    if (allowLeave) {
+    if (choice == 1) {
       _committed.value = true;
       return true;
     }
@@ -465,27 +559,6 @@ class _CuppingScreenState extends State<CuppingScreen> {
               divisions: 40,
               onChanged: (value) =>
                   setState(() => widget.route._score.value = value),
-            ),
-          ],
-        ),
-        StudioCard(
-          title: 'Back Confirmation Dialog',
-          subtitle:
-              'Choose which dialog appears when pressing Back before saving:',
-          children: [
-            SegmentedControl(
-              segments: const ['Dialog Route', 'Native Alert'],
-              selectedIndex: widget.route.confirmStyle,
-              onValueChanged: (index) {
-                setState(() => widget.route.confirmStyle = index);
-              },
-            ),
-            const SizedBox(height: 10),
-            Text(
-              widget.route.confirmStyle == 0
-                  ? '• Scenario 1: Router-managed modal Dialog route using ExperimentalDialogPresentation.'
-                  : '• Scenario 2: Native platform popup dialog using showAlert() (UIAlertController on iOS).',
-              style: const TextStyle(color: muted, fontSize: 13, height: 1.3),
             ),
           ],
         ),
