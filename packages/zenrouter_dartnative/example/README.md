@@ -17,7 +17,8 @@ of another full screen.
 | Shelf | `/shelf` | Indexed tab. Push a lot and await its score. |
 | Logbook | `/logbook` | Indexed tab retained while detail screens are open. |
 | Lot | `/lot/:id` | Dynamic route with its own lifecycle and result. |
-| Cupping | `/cupping?lot=:id` | Guard blocks Back until the score is committed. |
+| Cupping | `/cupping?lot=:id` | Guard blocks Back; prompts with Dialog Route or Native Alert. |
+| Discard dialog | `/dialog/confirm-discard` | Centered modal dialog via `ExperimentalDialogPresentation`. |
 | Brew guide | `/brew?lot=:id` | Native modal sheet presentation. |
 | Barista | `/barista` | Route module parsed by `BaristaCoordinator`. |
 

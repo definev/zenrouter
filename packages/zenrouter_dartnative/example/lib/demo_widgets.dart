@@ -22,7 +22,7 @@ Widget action(
   padding: const EdgeInsets.symmetric(vertical: 4),
   child: Button(
     title: label,
-    variant: secondary ? ButtonVariant.bordered : ButtonVariant.filled,
+    variant: secondary ? ButtonVariant.tinted : ButtonVariant.filled,
     color: secondary ? muted : coffee,
     onPressed: () async {
       try {
@@ -104,7 +104,7 @@ class StudioCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       borderRadius: 16,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             title,
@@ -145,8 +145,13 @@ class FeatureTabs extends StatelessWidget {
     builder: (context, layout) => Scaffold(
       backgroundColor: paper,
       body: IndexedStack(index: layout.activeIndex, children: layout.children),
+      extendBodyBehindAppBar: false,
+      extendBody: false,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: layout.activeIndex,
+        iconColor: coffee,
+        selectedIconColor: coffee,
+        indicatorColor: ink,
         onTap: (index) => unawaited(layout.selectIndex(index)),
         items: const [
           BottomNavigationBarItem(

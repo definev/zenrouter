@@ -123,17 +123,19 @@ class _ShelfScreenState extends State<ShelfScreen> {
                 borderRadius: 16,
                 padding: const EdgeInsets.all(16),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Row(
                       children: [
                         CircleAvatar(
                           backgroundColor: coffee,
-                          child: Text(
-                            lot.origin.substring(0, 1),
-                            style: const TextStyle(
-                              color: Color(0xFFFFFFFF),
-                              fontWeight: FontWeight.w700,
+                          child: Center(
+                            child: Text(
+                              lot.origin.substring(0, 1),
+                              style: const TextStyle(
+                                color: Color(0xFFFFFFFF),
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ),
@@ -274,13 +276,82 @@ class LotRoute extends AppRoute {
       );
 }
 
-/// Guarded cupping form. Back is locked until score is committed or discarded.
+/// Scenario 1: Modal Dialog route powered by [ExperimentalDialogPresentation].
+class ConfirmDiscardDialogRoute extends AppRoute {
+  ConfirmDiscardDialogRoute({this.lotName});
+
+  final String? lotName;
+
+  @override
+  List<Object?> get props => [lotName];
+
+  @override
+  Presentation get presentation =>
+      const ExperimentalDialogPresentation(cornerRadius: 18, dimOpacity: 0.35);
+
+  @override
+  Uri toUri() => Uri(path: '/dialog/confirm-discard');
+
+  @override
+  Widget build(
+    Coordinator<AppRoute> coordinator,
+    BuildContext context,
+  ) => Center(
+    child: Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Discard ${lotName ?? 'Lot'} Score?',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: ink,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Your sensory evaluation has not been saved. Discard and return to lot details?',
+            style: TextStyle(color: muted, fontSize: 13, height: 1.4),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Expanded(
+                child: action(
+                  'Keep Editing',
+                  () => coordinator.pop(false),
+                  secondary: true,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(child: action('Discard', () => coordinator.pop(true))),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// Guarded cupping form. Demonstrates both confirmation scenarios on Back:
+/// 1. Route Dialog (ExperimentalDialogPresentation)
+/// 2. Native Alert (showAlert)
 class CuppingRoute extends AppRoute with RouteGuard {
   CuppingRoute({this.lotId});
 
   final String? lotId;
   final _committed = ValueNotifier<bool>(false);
   final _score = ValueNotifier<double>(86.5);
+  int confirmStyle = 0; // 0: Route Dialog, 1: Native Alert
+  BuildContext? mountedContext;
 
   CoffeeLot get lot => lotById(lotId ?? 'yirga');
 
@@ -300,11 +371,56 @@ class CuppingRoute extends AppRoute with RouteGuard {
   ListenableMixin get canPopListenable => _committed.toListenableMixin();
 
   @override
-  Future<bool> popGuard() async => _committed.value;
+  Future<bool> popGuardWith(covariant CoordinatorCore coordinator) async {
+    if (_committed.value) return true;
+
+    bool allowLeave = false;
+    if (confirmStyle == 0 && coordinator is Coordinator<AppRoute>) {
+      // Scenario 1: Router-managed modal Dialog route
+      final discard = await coordinator.push<bool>(
+        ConfirmDiscardDialogRoute(lotName: lot.name),
+      );
+      allowLeave = discard == true;
+    } else if (mountedContext != null) {
+      // Scenario 2: Native platform popup dialog (UIAlertController / AlertDialog)
+      final choice = await showAlert(
+        context: mountedContext!,
+        title: 'Discard ${lot.name} Score?',
+        message:
+            'Your sensory score has not been saved yet. Discard evaluation and return?',
+        actions: const ['Keep Editing', 'Discard'],
+      );
+      allowLeave = choice == 1;
+    }
+
+    if (allowLeave) {
+      _committed.value = true;
+      return true;
+    }
+    return false;
+  }
 
   @override
-  Widget build(Coordinator<AppRoute> coordinator, BuildContext context) {
-    final coffee = lot;
+  Widget build(Coordinator<AppRoute> coordinator, BuildContext context) =>
+      CuppingScreen(route: this);
+}
+
+class CuppingScreen extends StatefulWidget {
+  const CuppingScreen({super.key, required this.route});
+
+  final CuppingRoute route;
+
+  @override
+  State<CuppingScreen> createState() => _CuppingScreenState();
+}
+
+class _CuppingScreenState extends State<CuppingScreen> {
+  @override
+  Widget build(BuildContext context) {
+    widget.route.mountedContext = context;
+    final coffee = widget.route.lot;
+    final coordinator = CoordinatorScope.of<AppRoute>(context);
+
     return StudioPage(
       title: 'Cupping Scorecard',
       eyebrow: coffee.name,
@@ -316,7 +432,7 @@ class CuppingRoute extends AppRoute with RouteGuard {
           children: [
             Center(
               child: ValueListenableBuilder<double>(
-                valueListenable: _score,
+                valueListenable: widget.route._score,
                 builder: (_, value, _) => Column(
                   children: [
                     Text(
@@ -343,23 +459,43 @@ class CuppingRoute extends AppRoute with RouteGuard {
             ),
             const SizedBox(height: 16),
             Slider(
-              value: _score.value,
+              value: widget.route._score.value,
               min: 75,
               max: 95,
               divisions: 40,
-              onChanged: (value) => _score.value = value,
+              onChanged: (value) =>
+                  setState(() => widget.route._score.value = value),
             ),
-            const SizedBox(height: 16),
-            action('Save & Record Score', () {
-              _committed.value = true;
-              coordinator.pop(_score.value.toStringAsFixed(1));
-            }),
-            action('Discard Evaluation', () {
-              _committed.value = true;
-              coordinator.pop();
-            }, secondary: true),
           ],
         ),
+        StudioCard(
+          title: 'Back Confirmation Dialog',
+          subtitle:
+              'Choose which dialog appears when pressing Back before saving:',
+          children: [
+            SegmentedControl(
+              segments: const ['Dialog Route', 'Native Alert'],
+              selectedIndex: widget.route.confirmStyle,
+              onValueChanged: (index) {
+                setState(() => widget.route.confirmStyle = index);
+              },
+            ),
+            const SizedBox(height: 10),
+            Text(
+              widget.route.confirmStyle == 0
+                  ? '• Scenario 1: Router-managed modal Dialog route using ExperimentalDialogPresentation.'
+                  : '• Scenario 2: Native platform popup dialog using showAlert() (UIAlertController on iOS).',
+              style: const TextStyle(color: muted, fontSize: 13, height: 1.3),
+            ),
+          ],
+        ),
+        action('Save & Record Score', () {
+          widget.route._committed.value = true;
+          coordinator.pop(widget.route._score.value.toStringAsFixed(1));
+        }),
+        action('Discard Evaluation', () {
+          coordinator.pop();
+        }, secondary: true),
       ],
     );
   }
