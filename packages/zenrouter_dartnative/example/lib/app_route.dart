@@ -62,13 +62,33 @@ class _ShelfScreenState extends State<ShelfScreen> {
             padding: const EdgeInsets.only(bottom: 14),
             child: Card(
               color: cardColor,
-              child: ListTile(
-                leading: const Icon(
-                  CupertinoIcons.star_fill,
-                  color: roastAmber,
-                ),
-                title: Text('Evaluated: $_lastScoredLot'),
-                subtitle: Text('Score awarded: $_lastScore pts'),
+              borderRadius: 14,
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(CupertinoIcons.star_fill, color: roastAmber),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Evaluated: $_lastScoredLot',
+                          style: const TextStyle(
+                            color: ink,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Score awarded: $_lastScore pts',
+                          style: const TextStyle(color: muted, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           )
@@ -86,46 +106,87 @@ class _ShelfScreenState extends State<ShelfScreen> {
           ),
         for (final lot in coffeeLots) ...[
           Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Card(
-              color: cardColor,
-              borderRadius: 14,
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: coffee,
-                  child: Text(
-                    lot.origin.substring(0, 1),
-                    style: const TextStyle(
-                      color: Color(0xFFFFFFFF),
-                      fontWeight: FontWeight.w700,
+            padding: const EdgeInsets.only(bottom: 12),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () async {
+                final score = await coordinator.push<String>(LotRoute(lot.id));
+                if (mounted && score != null) {
+                  setState(() {
+                    _lastScore = score;
+                    _lastScoredLot = lot.name;
+                  });
+                }
+              },
+              child: Card(
+                color: cardColor,
+                borderRadius: 16,
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: coffee,
+                          child: Text(
+                            lot.origin.substring(0, 1),
+                            style: const TextStyle(
+                              color: Color(0xFFFFFFFF),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                lot.name,
+                                style: const TextStyle(
+                                  color: ink,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${lot.origin} · ${lot.process} · ${lot.elevation}',
+                                style: const TextStyle(
+                                  color: muted,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(CupertinoIcons.chevron_right, color: muted),
+                      ],
                     ),
-                  ),
+                    const SizedBox(height: 12),
+                    Text(
+                      lot.flavorNotes,
+                      style: const TextStyle(
+                        color: ink,
+                        fontSize: 13,
+                        height: 1.3,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    action('Taste & Evaluate', () async {
+                      final score = await coordinator.push<String>(
+                        LotRoute(lot.id),
+                      );
+                      if (mounted && score != null) {
+                        setState(() {
+                          _lastScore = score;
+                          _lastScoredLot = lot.name;
+                        });
+                      }
+                    }),
+                  ],
                 ),
-                title: Text(
-                  lot.name,
-                  style: const TextStyle(
-                    color: ink,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                subtitle: Text(
-                  '${lot.origin} · ${lot.process} · ${lot.flavorNotes}',
-                ),
-                trailing: const Icon(
-                  CupertinoIcons.chevron_right,
-                  color: muted,
-                ),
-                onTap: () async {
-                  final score = await coordinator.push<String>(
-                    LotRoute(lot.id),
-                  );
-                  if (mounted && score != null) {
-                    setState(() {
-                      _lastScore = score;
-                      _lastScoredLot = lot.name;
-                    });
-                  }
-                },
               ),
             ),
           ),
@@ -388,19 +449,35 @@ class LogbookRoute extends AppRoute {
               child: Card(
                 color: cardColor,
                 borderRadius: 14,
-                child: ListTile(
-                  leading: const Icon(
-                    CupertinoIcons.checkmark_seal_fill,
-                    color: scoreGreen,
-                  ),
-                  title: Text(
-                    '${entry.name} · ${entry.score} pts',
-                    style: const TextStyle(
-                      color: ink,
-                      fontWeight: FontWeight.w700,
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    const Icon(
+                      CupertinoIcons.checkmark_seal_fill,
+                      color: scoreGreen,
                     ),
-                  ),
-                  subtitle: Text('${entry.origin} · ${entry.notes}'),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${entry.name} · ${entry.score} pts',
+                            style: const TextStyle(
+                              color: ink,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${entry.origin} · ${entry.notes}',
+                            style: const TextStyle(color: muted, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
