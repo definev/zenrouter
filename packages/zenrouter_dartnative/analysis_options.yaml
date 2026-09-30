@@ -1,0 +1,7 @@
+analyzer:
+  exclude:
+    - example/**
+  errors:
+    invalid_use_of_internal_member: ignore
+    invalid_use_of_protected_member: ignore
+

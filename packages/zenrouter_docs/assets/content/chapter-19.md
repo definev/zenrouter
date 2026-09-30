@@ -2,11 +2,11 @@ ZenRouter 3.0 can be adopted incrementally. A typical Flutter app that only exte
 
 ## Pin and baseline
 
-Pin the prerelease and run the existing suite before changing APIs:
+Pin the stable 3.0 release and run the existing suite before changing APIs:
 
 ```yaml
 dependencies:
-  zenrouter: ^3.0.0-beta.1
+  zenrouter: ^3.0.0
 ```
 
 Record for each public flow:

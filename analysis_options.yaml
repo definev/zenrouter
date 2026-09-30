@@ -1,5 +1,8 @@
 analyzer:
   exclude:
+    # DartNative packages use their own SDK and package resolution.
+    - packages/zenrouter_dartnative/**
+    - packages/zenrouter_dartnative_devtools/**
     # Pinned to zenrouter 2.2.0 / zenrouter_core 2.1.0. Root analyze would
     # otherwise type-check it against the current workspace API.
     - benchmark/zenrouter/old/**

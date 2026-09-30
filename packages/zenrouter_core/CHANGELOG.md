@@ -1,3 +1,133 @@
+## 3.0.0
+
+Stable adapter-neutral routing engine. The changes below are cumulative since
+2.3.0 and apply to both Flutter and DartNative adapters.
+
+### Breaking changes
+
+- **Route manifests now describe topology only.** `RouteManifestRoute` no
+  longer duplicates query, guard, redirect, deferred-loading, or deep-link
+  metadata from concrete route implementations.
+- **Navigation operations moved out of `CoordinatorCore`** into composable
+  capability mixins. `CoordinatorCore` is now a state container only
+  (paths, URI parsing, layout-parent hooks).
+
+  | Mixin | Capabilities |
+  |-------|--------------|
+  | `CoordinatorLayoutCore` | Layout-parent registration / hierarchy activation |
+  | `CoordinatorNavigatable` | `navigate` |
+  | `CoordinatorMutatable` | `push`, `pushSilently`, `pop`, `replace`, `pushReplacement`, `pushOrMoveToTop`, `tryPop` |
+  | `CoordinatorRecoverable` | `recover`, `recoverUri`, `defineDeeplinkHandler` |
+
+  Flutter `Coordinator` still composes the full capability set. Custom
+  `CoordinatorCore` subclasses must mix in the capabilities they need.
+
+- **Route value hashing now follows Dart's equality contract.** Mutable path
+  and result lifecycle state no longer contributes to `hashCode`;
+  `RouteTarget.deepEquals` now means same lifecycle entry (reference identity).
+- **`Equatable.internalProps` is removed.** Equality and hashing use
+  `runtimeType` + `props` only. Delete any leftover subclass overrides.
+- **`CoordinatorModular.defineModules` now returns `Iterable`** and snapshots
+  its deterministic iteration order. Duplicate module runtime types throw.
+- **`StackMutatable.pop` completes `onResult` and calls `onDidPop`.** Callers
+  of `push` no longer depend on a later Flutter page callback. A second
+  `completeOnResult` after `pop` throws. `onDidPop` is idempotent.
+
+- **`CoordinatorMutatable.pushOrMoveToTop` returns `Future<void>`**, aligned
+  with `StackMutatable`; await it when sequencing navigation operations.
+
+### Deprecated
+
+- **`defineLayout` and `defineConverter`** remain invoked by `init()` for
+  compatibility. Bind layouts on their paths with `bindLayout`, and register
+  restorable converters through `defineRestorableConverter` in `init()`.
+
+### Added
+
+- **Sealed layout kinds**: `RouteManifestLayoutKind` is a sealed class.
+  Fixed children live on `indexed(childIds)` and `branched(childIds)`.
+  Construct layouts with `RouteManifestLayout.stack/indexed/branched` so the
+  ID type is inferred from the node id. JSON still uses `kind` plus
+  `indexedChildIds` / `branchChildIds`.
+- **Branched manifest layouts**: `RouteManifestLayoutKind.branched(...)`
+  declares an ordered set of direct child layout roots and validates that
+  every direct child belongs to the branch topology.
+- **Declarative route graph** via the immutable, versioned `RouteManifest`,
+  with deterministic URI matching, layout relationship validation, ambiguous
+  pattern detection, composition, JSON serialization, and reverse routing.
+- **Strongly typed manifest IDs** via `RouteManifest<I>` and
+  `RouteIdCodec<I>`. `RouteManifestMatch.id` supports concise Dart object
+  patterns while codecs keep strings isolated to the JSON seam.
+- **Manifest seam for route modules** via `RouteModule.routeManifest` and
+  `RouteManifestFragment`. `CoordinatorModular` automatically flattens nested
+  fragments, validates the complete graph, preserves typed in-memory IDs, and
+  composes fragment-scoped JSON codecs. Hand-written parser-only coordinators
+  still default to `RouteManifest.empty` for compatibility.
+- **Runtime Route Bindings** via the validated `RouteBindingRegistry`.
+  `RouteModuleBinding` is the single adapter (coordinator implements
+  `RouteModule`). It provides manifest-backed
+  URI parsing without handwritten parser switches while supporting sync,
+  async, not-found, and heterogeneous typed-ID bindings.
+  `deferredBindingFactory` / `deferredRouteNotFoundBinding` wrap any
+  factory so a deferred library can load before a match or not-found route
+  is created. `RouteBinding.deferred` uses the same wrapper.
+  `RouteManifest.bind<T>` builds a registry while inferring its ID type from
+  the manifest.
+- **Shared contracts** `Navigatable<T>` and `Mutatable<T>` implemented by both
+  stack paths and coordinator mixins. `Mutatable` includes `pushSilently` in
+  addition to `push`, `pushOrMoveToTop`, and `pushReplacement`. `pop` stays
+  off the shared contract because path and coordinator return types differ.
+- **`defineDeeplinkHandler`**: override built-in `DeeplinkStrategy` behaviour
+  (`navigate` / `push` / `replace`). `custom` still uses
+  `RouteDeepLink.deeplinkHandler`.
+- **URI-based coordinator actions**: `navigateUri`, `pushUri`,
+  `pushSilentlyUri`, `replaceUri`, `recoverUri`, `pushReplacementUri`, and
+  `pushOrMoveToTopUri` parse a URI before delegating to the corresponding route
+  operation. The same operations are also available on `Uri`
+  (`uri.pushWith(coordinator)`, `uri.navigateWith(coordinator)`,
+  `uri.replaceWith(coordinator)`, …).
+- **`markNeedRebuild`** on `CoordinatorCore`.
+- **Commit-only navigation** via `pushSilently`, allowing Router/deep-link code
+  to await stack commitment without waiting for a later pop result.
+- **Atomic declarative stack replacement** via `StackMutatable.replaceAll`,
+  preserving retained route lifecycles and emitting one committed state.
+- **Navigation history intent** (`push`, `replace`, `traverse`, `automatic`)
+  is recorded in core and consumed by platform history adapters.
+- **Adapter-neutral route resolution**: `RouteRequest`, `RouteResolver`, and
+  typed match/redirect/not-found/error outcomes with status, headers, and
+  hydration data.
+- **Atomic coordinator transactions** publish one `NavigationCommit` with a
+  monotonic revision, previous/final URI, and history intent for nested
+  mutations. `isInNavigationTransaction` lets paths notify synchronously during
+  multi-path operations; outside a transaction, deferred notifications remain
+  safe for rendering and headless consumers.
+- **Cooperative route cancellation** via `RouteCancellationToken`, propagated
+  across redirect requests and kept distinct from typed 500 failures.
+- **Redirect continuation semantics** for 301, 302, 303, 307, and 308,
+  including method/body/header handling and relative-location resolution.
+- **Versioned hydration envelope** via `RouteHydrationPayload`, with immutable
+  JSON-compatible data, schema validation, and encode/decode support.
+
+### Fixed
+
+- Apply already-resolved routes through the internal `StackCommit` seam,
+  avoiding a second redirect pass during a single navigation operation.
+- Activate destinations on indexed/branched parents during `pushReplacement`
+  instead of leaving navigation at an intermediate popped state.
+- Match an existing route by lifecycle identity before choosing a value-equal
+  entry during `navigate`, so the intended instance is retained.
+- Keep independent top-level asynchronous mutations serialized; only actual
+  nested mutations share a transaction. Multi-path resets publish one final
+  commit, and awaited operations leave the transaction queue ready for reuse.
+- Complete pop results and cleanup without depending on a platform callback.
+  Repeated `onDidPop` acknowledgements do not repeat lifecycle notifications.
+
+### Requirements
+
+- Dart 3.8 or newer.
+- Runtime dependencies remain platform-neutral (`meta` and `collection`);
+  Flutter and DartNative attach behavior through adapters and route bindings.
+
 ## 3.0.0-beta.1
 
 Prerelease for early testers. APIs may still change before 3.0.0.

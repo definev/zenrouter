@@ -36,19 +36,21 @@ Need deep linking or a browser URL?
 | [`zenrouter`](packages/zenrouter/) | Flutter `Coordinator`, `NavigationStack`, restoration |
 | [`zenrouter_core`](packages/zenrouter_core/) | `RouteTarget`, `CoordinatorCore`, paths, mixins, `RouteManifest` |
 | [`zenrouter_devtools`](packages/zenrouter_devtools/) | Overlay, Graph tab |
-| [`zenrouter_file_generator`](packages/zenrouter_file_generator/) | File-based codegen |
+| [`zenrouter_file_annotation`](packages/zenrouter_file_annotation/) | Shared file-routing annotations |
+| [`zenrouter_file_generator`](packages/zenrouter_file_generator/) | Flutter and DartNative file-based codegen |
+| [`zenrouter_dartnative`](packages/zenrouter_dartnative/) | DartNative navigation and logical layouts (0.1.0) |
+| [`zenrouter_dartnative_devtools`](packages/zenrouter_dartnative_devtools/) | Native navigation inspector (0.1.0) |
 
 iOS, Android, Web, macOS, Windows, Linux
 
-3.0 is a prerelease for early testers:
+Install ZenRouter 3.0 stable:
 
 ```yaml
 dependencies:
-  zenrouter: ^3.0.0-beta.1
+  zenrouter: ^3.0.0
 ```
 
-`flutter pub add zenrouter` still resolves 2.x. 2.x coordinators that
-`extend Coordinator` still compile. See
+For an existing 2.x app, review the breaking changes before upgrading. See
 [Migrating from 2.x](packages/zenrouter/README.md#migrating-from-2x).
 
 ## License

@@ -1,9 +1,61 @@
-## Unreleased
+## 3.0.0
 
-- **Feat**: Add see-through panel mode (translucent surfaces + backdrop blur) via the header tool menu and `setDebugPanelSeeThrough` / `defaultDebugPanelSeeThrough`. Narrow viewports (<600) enable see-through by default until toggled.
-- **Feat**: Compact mobile chrome — shorter header, icon-only tabs, and a collapsed “Go to…” URI bar that expands on demand.
-- **Feat**: Make the floating debug panel freely draggable from the header, with viewport clamping; resize still pins the opposite corner.
-- **Fix**: Respect top/bottom safe area (and keyboard insets) for the mobile panel and FAB without double-applying the bottom inset.
+Stable Flutter navigation inspection tools for ZenRouter 3.
+
+### Breaking changes
+
+- Require `zenrouter: ^3.0.0` and its manifest, binding, and navigation commit
+  APIs. Keep the router and DevTools on the same release line.
+
+### Added
+
+- Interactive Topology graph from `RouteManifest`, with active route
+  highlighting and layout relationships.
+- Observed runtime flow recorder with directed edges, visit counts, transition
+  labels, and a switch between topology and observed graph modes.
+- URI-first `NavigationFlowSession` JSON export/import, containing history
+  intent, labels, and timestamps. Screenshot bytes stay in memory and are
+  excluded from exported sessions.
+- Replay sessions with Play/Pause, stepping, speed selection, playhead
+  highlighting, a scrubber, and a collapsible event list.
+- Optional confirmation-gated Drive navigates the live coordinator to the
+  playhead URI. Replay alone leaves the application's navigation state intact.
+- Clipboard export and import rematch URIs against the current manifest;
+  unmatched URIs are skipped. Live replay holds a recording/capture pause
+  lease; importing a session does not itself pause recording.
+- Automatic bounded in-memory screen previews on observed nodes, with a capture
+  toggle and an overridable default capture setting.
+- Floating Stack, horizontal Row, and vertical Column panel layouts, controlled
+  by `defaultDebugLayoutMode`, `debugLayoutMode`, and `setDebugLayoutMode`.
+- Resizable panel with fullscreen/restore controls and viewport clamping.
+- Freely draggable panel header and collapsed launcher, preserving the
+  launcher's position when opening and closing the inspector.
+- See-through panel surfaces with backdrop blur, controlled by
+  `defaultDebugPanelSeeThrough` and `setDebugPanelSeeThrough`. Viewports narrower
+  than 600 logical pixels enable this mode until explicitly toggled.
+- Compact mobile header, icon-only tabs, and an expandable URI input bar.
+
+### Changed
+
+- Render both graph modes through `vyuh_node_flow` for consistent pan, zoom,
+  selection, connections, and viewport fitting.
+- Use unified `Flex` split panels and enlarged interaction targets from `hit`
+  for narrow resize handles; resizing keeps the opposite corner anchored.
+- Keep route screenshots bounded and separate from serialized navigation logs.
+
+### Fixed
+
+- Request a frame when scheduling a preview on an idle screen, so opening the
+  recorder captures the app without waiting for another UI update.
+- Apply mobile safe-area and keyboard insets to the panel and launcher without
+  double-counting the bottom inset.
+- Clamp dragged/resized panels and launchers to the current viewport.
+
+### Requirements
+
+- Dart 3.9 or newer; Flutter 3.32 or newer; `zenrouter: ^3.0.0`.
+- This is the Flutter inspector. Native apps use the separate
+  `zenrouter_dartnative_devtools` 0.1.0 package.
 
 ## 3.0.0-beta.1
 

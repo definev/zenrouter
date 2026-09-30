@@ -4,12 +4,12 @@ File-based routing is a graph authoring tool. It turns `lib/routes/` into the sa
 
 ```yaml
 dependencies:
-  zenrouter: ^3.0.0-beta.1
-  zenrouter_file_annotation: ^3.0.0-beta.1
+  zenrouter: ^3.0.0
+  zenrouter_file_annotation: ^3.0.0
 
 dev_dependencies:
   build_runner: ^2.10.4
-  zenrouter_file_generator: ^3.0.0-beta.1
+  zenrouter_file_generator: ^3.0.0
 ```
 
 ## Start with the directory contract

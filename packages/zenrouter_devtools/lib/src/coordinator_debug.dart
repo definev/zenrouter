@@ -431,6 +431,9 @@ mixin CoordinatorDebug<T extends RouteUnique> on Coordinator<T> {
         startTime: startTime,
       );
     });
+    // A post-frame callback alone does not request a frame. Opening the
+    // recorder on an idle screen still needs a frame to capture its preview.
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   Future<void> _captureDebugScreen(

@@ -1,0 +1,32 @@
+name: zenrouter_dartnative_example
+description: Native navigation, indexed layouts, and guards on DartNative.
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  dartnative: ^1.0.0
+  dartnative_ios: ^1.0.0
+  dartnative_android: ^1.0.0
+  zenrouter_dartnative:
+    path: ..
+  zenrouter_dartnative_devtools:
+    path: ../../zenrouter_dartnative_devtools
+  zenrouter_file_annotation:
+    path: ../../zenrouter_file_annotation
+
+dev_dependencies:
+  lints: ^6.0.0
+  build_runner: ^2.10.4
+  zenrouter_file_generator:
+    path: ../../zenrouter_file_generator
+
+dependency_overrides:
+  zenrouter_dartnative:
+    path: ..
+  zenrouter_core:
+    path: ../../zenrouter_core
+  zenrouter_file_annotation:
+    path: ../../zenrouter_file_annotation

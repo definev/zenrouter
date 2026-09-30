@@ -11,6 +11,8 @@ builders:
   # Coordinator generator - aggregates all routes into routes.zen.dart
   # 
   # Configuration options:
+  #   platform: flutter | dartnative (default: flutter)
+  #     Set on BOTH zen_route and zen_coordinator in the consuming app.
   #   deferredImport: bool (default: false)
   #     When true, all routes will use deferred imports unless explicitly 
   #     disabled in the route annotation. This can improve app startup time
@@ -27,4 +29,3 @@ builders:
       "$lib$": ["routes/routes.zen.dart"]
     auto_apply: dependents
     build_to: source
-

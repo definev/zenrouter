@@ -1,3 +1,31 @@
+## 3.0.0
+
+Stable annotations and shared route structure for ZenRouter 3 file-based routing.
+
+### Added
+
+- `LayoutType.branched` and `ZenLayout.branches` describe stateful shells with
+  fixed direct child layout roots and independent logical navigation histories.
+- Shared route/layout models and code-generation utilities support the
+  `zenrouter_file_generator` 3.0.0 Flutter and DartNative targets.
+
+### Changed
+
+- Layout patterns normalize dynamic and catch-all parameter segments, keeping
+  the parent layout pattern consistent with its generated child routes.
+- Generated dynamic and catch-all route URIs use absolute
+  `Uri(pathSegments: ...)` construction and encode each path segment separately.
+
+### Fixed
+
+- Reserved characters in route parameters round-trip without being interpreted
+  as path separators or changing the URI structure.
+
+### Requirements
+
+- Dart 3.7 or newer. This package has no Flutter runtime dependency.
+- Use `zenrouter_file_generator: ^3.0.0` for the matching generated APIs.
+
 ## 3.0.0-beta.1
 
 Prerelease for early testers. APIs may still change before 3.0.0.

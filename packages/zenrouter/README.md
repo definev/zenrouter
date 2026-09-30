@@ -18,11 +18,11 @@ view of how screens connect.
 
 ## Install
 
-3.0 is a prerelease. `flutter pub add zenrouter` still resolves 2.x.
+Install the stable 3.0 release:
 
 ```yaml
 dependencies:
-  zenrouter: ^3.0.0-beta.1
+  zenrouter: ^3.0.0
 ```
 
 ## Which style

@@ -12,7 +12,7 @@ matching `chapter-NN.md` file and is loaded only when a reader opens it.
 
 ## II · Build Compass
 
-- 04 | Install ZenRouter 3 | Set up the 3.0 beta and choose handwritten or generated routes.
+- 04 | Install ZenRouter 3 | Set up the 3.0 stable release and choose handwritten or generated routes.
 - 05 | Build your first graph | Create a typed home route and parameterized article route.
 - 06 | Navigate without string drift | Keep forward matching and reverse URLs aligned.
 

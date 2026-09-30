@@ -1,0 +1,16 @@
+# SDK caches and local dependency overrides are never part of the release.
+.dart_tool/
+build/
+coverage/
+pubspec.lock
+pubspec_overrides.yaml
+*.iml
+example/.dart_tool/
+example/build/
+example/pubspec.lock
+example/pubspec_overrides.yaml
+example/ios/
+example/android/
+example/assets/
+example/tool/
+example/lib/dartnative_plugin_registrant.dart

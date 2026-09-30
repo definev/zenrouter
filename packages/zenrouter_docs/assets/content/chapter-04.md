@@ -1,4 +1,4 @@
-This guide targets ZenRouter 3, currently published as a prerelease. Pinning the intended version is the first correctness check; otherwise you can copy a valid 3.0 example into a project that resolved 2.x APIs.
+This guide targets ZenRouter 3.0 stable. Pinning the intended version is the first correctness check; otherwise you can copy a valid 3.0 example into a project that resolved 2.x APIs.
 
 ## Prerequisites
 
@@ -15,13 +15,13 @@ If the repository uses FVM, run the same commands through `fvm` and continue usi
 
 ## Install the Coordinator package
 
-Pin the beta explicitly:
+Use the stable 3.0 dependency:
 
 ```yaml
 dependencies:
   flutter:
     sdk: flutter
-  zenrouter: ^3.0.0-beta.1
+  zenrouter: ^3.0.0
 ```
 
 Then resolve dependencies:
@@ -38,12 +38,12 @@ Choose file generation when a `lib/routes/` directory should own the public grap
 
 ```yaml
 dependencies:
-  zenrouter: ^3.0.0-beta.1
-  zenrouter_file_annotation: ^3.0.0-beta.1
+  zenrouter: ^3.0.0
+  zenrouter_file_annotation: ^3.0.0
 
 dev_dependencies:
   build_runner: ^2.10.4
-  zenrouter_file_generator: ^3.0.0-beta.1
+  zenrouter_file_generator: ^3.0.0
 ```
 
 Generate after adding or renaming route files:
@@ -110,7 +110,7 @@ If generation is enabled, also confirm that the generated Coordinator exports a 
 
 ## Common installation failures
 
-**2.x was selected.** Inspect `pubspec.lock` and pin `^3.0.0-beta.1` instead of relying on the default stable resolver.
+**2.x was selected.** Inspect `pubspec.lock` and pin `^3.0.0` before resolving dependencies again.
 
 **Generator and annotations are on different release lines.** Keep the ZenRouter packages on compatible versions.
 
@@ -120,6 +120,6 @@ If generation is enabled, also confirm that the generated Coordinator exports a 
 
 ## Checkpoint
 
-Dependency resolution, analysis, and a test run complete on the intended 3.0 beta line. If using file routing, generation is deterministic and leaves no unexpected diff on a second run.
+Dependency resolution, analysis, and a test run complete on the intended stable 3.0 line. If using file routing, generation is deterministic and leaves no unexpected diff on a second run.
 
 Next, **Build your first graph** turns this setup into a two-screen, URL-aware Compass app.

@@ -1,0 +1,72 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+*.swo
+*~
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# OS noise
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# DartNative/Dart/Pub related
+**/doc/api/
+**/ios/DartNative/.last_build_id
+.dart_tool/
+.dn-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Secrets — environment files and keys must never be committed.
+# (.dnkeys is the dartnative_keys bundle: gitignored but shipped as an asset.)
+.env
+.env.*
+!.env.example
+.dnkeys
+*.pem
+*.p12
+*.mobileprovision
+
+# Xcode per-developer UI state — changes every session
+*.xcuserstate
+
+# Exported binaries (builds under /build/ are already ignored)
+*.apk
+*.aab
+*.ipa
+
+# Symbolication related
+app.*.symbols
+*.dSYM
+*.dSYM.zip
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release

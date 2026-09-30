@@ -10,7 +10,7 @@
 
 </div>
 
-A code generator for **file-based routing** in Flutter using [zenrouter](https://pub.dev/packages/zenrouter). Generate type-safe routes from your file/directory structure, similar to Next.js, Nuxt.js or expo-router.
+A code generator for **file-based routing** in Flutter and DartNative using [zenrouter](https://pub.dev/packages/zenrouter). Generate type-safe routes from your file/directory structure, similar to Next.js, Nuxt.js or expo-router.
 
 This package is part of the [ZenRouter](https://github.com/definev/zenrouter/blob/main/packages/zenrouter/README.md) ecosystem and builds on the Coordinator paradigm for deep linking and web support.
 
@@ -49,13 +49,68 @@ Add `zenrouter_file_generator`, `zenrouter_file_annotation` and `zenrouter` to y
 
 ```yaml
 dependencies:
-  zenrouter: ^3.0.0-beta.1
-  zenrouter_file_annotation: ^3.0.0-beta.1
+  zenrouter: ^3.0.0
+  zenrouter_file_annotation: ^3.0.0
 
 dev_dependencies:
   build_runner: ^2.10.4
-  zenrouter_file_generator: ^3.0.0-beta.1
+  zenrouter_file_generator: ^3.0.0
 ```
+
+### DartNative
+
+The same file parser and route manifest builder can generate a DartNative
+coordinator. Add the native adapter and annotations to a DartNative app, and
+keep the generator in `dev_dependencies`:
+
+```yaml
+dependencies:
+  dartnative: ^1.0.0
+  zenrouter_dartnative:
+    path: /path/to/zenrouter/packages/zenrouter_dartnative
+  zenrouter_file_annotation:
+    path: /path/to/zenrouter/packages/zenrouter_file_annotation
+
+dev_dependencies:
+  build_runner: ^2.10.4
+  zenrouter_file_generator:
+    path: /path/to/zenrouter/packages/zenrouter_file_generator
+
+dependency_overrides:
+  zenrouter_core:
+    path: /path/to/zenrouter/packages/zenrouter_core
+  zenrouter_file_annotation:
+    path: /path/to/zenrouter/packages/zenrouter_file_annotation
+```
+
+Configure both builders in the app's `build.yaml`:
+
+```yaml
+targets:
+  $default:
+    builders:
+      zenrouter_file_generator|zen_route:
+        options:
+          platform: dartnative
+      zenrouter_file_generator|zen_coordinator:
+        options:
+          platform: dartnative
+```
+
+Put a root `@ZenRoute` in `lib/routes/index.dart`, with no parent layout.
+Routes use `package:dartnative/dartnative.dart` widgets and import the
+generated `routes.zen.dart` file. Run `dn pub get` and then use the Dart
+executable bundled with the same DartNative SDK to run `build_runner build`.
+The generated `AppCoordinator()` starts at the
+root route; mount it with `CoordinatorView<AppRoute>`. See the
+[`zenrouter_dartnative` example](../zenrouter_dartnative/example/lib/main_file_router.dart).
+
+Native generation supports dynamic paths, catch-all paths, route groups,
+manifests, bindings, type-safe navigation, and stack, indexed, and branched
+logical layouts. It currently rejects `@ZenRoute` query helpers, Flutter
+transition mixins, and deferred imports. For native transitions, override
+the route's `presentation` instead. The DartNative adapter's native stack and
+restoration limits still apply.
 
 ## Quick Start
 

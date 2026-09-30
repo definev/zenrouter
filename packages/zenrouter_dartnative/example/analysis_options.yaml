@@ -1,0 +1,9 @@
+include: package:lints/recommended.yaml
+analyzer:
+  exclude:
+    - tool/**
+
+# File-based routes use dynamic segments such as [id].dart.
+linter:
+  rules:
+    file_names: false

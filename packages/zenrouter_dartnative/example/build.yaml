@@ -1,0 +1,9 @@
+targets:
+  $default:
+    builders:
+      zenrouter_file_generator|zen_route:
+        options:
+          platform: dartnative
+      zenrouter_file_generator|zen_coordinator:
+        options:
+          platform: dartnative

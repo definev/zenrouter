@@ -10,6 +10,9 @@ import 'package:zenrouter_file_annotation/zenrouter_file_annotation.dart';
 ///
 /// Generates the `_$RouteName` base class for each @ZenRoute annotated class.
 class RouteGenerator extends GeneratorForAnnotation<ZenRoute> {
+  RouteGenerator({this.native = false});
+
+  final bool native;
   // Cached regex patterns for performance
   static final _routeBaseMatchSingleQuote = RegExp(r"routeBase:\s*'([^']+)'");
   static final _routeBaseMatchDoubleQuote = RegExp(r'routeBase:\s*"([^"]+)"');
@@ -58,6 +61,14 @@ class RouteGenerator extends GeneratorForAnnotation<ZenRoute> {
     if (routeElement == null) {
       throw InvalidGenerationSourceError(
         'Route file must be inside lib/routes directory.',
+        element: element,
+      );
+    }
+
+    if (native && (routeElement.hasTransition || routeElement.hasQueries)) {
+      throw InvalidGenerationSourceError(
+        'DartNative routes do not support @ZenRoute transition or queries yet. '
+        'Use a native Presentation for transitions and handle URI queries in the route.',
         element: element,
       );
     }

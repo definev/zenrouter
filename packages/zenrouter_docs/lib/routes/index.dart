@@ -458,7 +458,7 @@ class _QuickStartCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              "dependencies:\n  zenrouter: ^3.0.0-beta.1\n\nfinal uri =\n  coordinator.location.article('42');",
+              "dependencies:\n  zenrouter: ^3.0.0\n\nfinal uri =\n  coordinator.location.article('42');",
               style: AppTypography.mono(
                 fontSize: 12,
                 height: 1.55,

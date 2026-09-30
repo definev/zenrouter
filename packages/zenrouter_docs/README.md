@@ -30,8 +30,7 @@ second competing information architecture.
   over `WidgetsApp.router`; the documentation shell has no Material component
   layer.
 
-The examples in this edition target `zenrouter` 3.0.0-beta.1 and must be
-re-audited when stable 3.0 is released.
+The examples in this edition target the stable `zenrouter` 3.0.0 release.
 
 ## Development
 

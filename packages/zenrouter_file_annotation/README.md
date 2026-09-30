@@ -4,7 +4,7 @@
 
 # ZenRouter File Annotation
 
-Shared annotations and structure for [zenrouter](https://pub.dev/packages/zenrouter) file-based routing.
+Shared annotations and structure for [ZenRouter](https://github.com/definev/zenrouter) file-based routing in Flutter and DartNative.
 
 This package contains the annotations (`@ZenRoute`, `@ZenLayout`, `@ZenCoordinator`) and helper classes used by the `zenrouter_file_generator` to generate type-safe routes.
 
@@ -20,10 +20,10 @@ This package is usually added automatically when using `zenrouter_file_generator
 
 ```yaml
 dependencies:
-  zenrouter_file_annotation: ^3.0.0-beta.1
+  zenrouter_file_annotation: ^3.0.0
 
 dev_dependencies:
-  zenrouter_file_generator: ^3.0.0-beta.1
+  zenrouter_file_generator: ^3.0.0
 ```
 
 ## Usage

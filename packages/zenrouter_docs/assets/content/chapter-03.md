@@ -137,4 +137,4 @@ The result is `/articles/42`. There is no second string template in the screen a
 
 Draw your application using only manifest nodes, layouts, and paths. Then trace one incoming URL from match to commit. If every step has one owner, the model is ready for code.
 
-Next, **Install ZenRouter 3** pins the correct prerelease and explains the handwritten and generated setup choices.
+Next, **Install ZenRouter 3** pins the stable 3.0 dependency and explains the handwritten and generated setup choices.

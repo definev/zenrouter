@@ -1,0 +1,15 @@
+.dart_tool/
+pubspec.lock
+pubspec_overrides.yaml
+build/
+example/.dart_tool/
+example/pubspec.lock
+example/pubspec_overrides.yaml
+example/lib/dartnative_plugin_registrant.dart
+example/build/
+example/ios/
+example/android/
+example/.metadata
+example/.vscode/
+example/assets/
+example/tool/generate_app_assets.dart

@@ -51,6 +51,14 @@ jobs:
         working-directory: packages/zenrouter_file_generator
         continue-on-error: false
 
+      - name: Run tests (zenrouter_devtools)
+        run: flutter test --no-pub
+        working-directory: packages/zenrouter_devtools
+
+      - name: Run tests (documentation)
+        run: flutter test --no-pub
+        working-directory: packages/zenrouter_docs
+
       - name: Prefix coverage paths for the monorepo
         run: |
           for pair in \

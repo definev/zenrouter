@@ -45,11 +45,11 @@ It also does not force every local flow through the application coordinator. An 
 
 ## Release status
 
-This edition targets `zenrouter` **3.0.0-beta.1**. Because it is a prerelease, a plain `flutter pub add zenrouter` may still select the stable 2.x line. Pin the beta while following the examples:
+This edition targets the stable `zenrouter` **3.0.0** release. Use the 3.0 dependency while following the examples:
 
 ```yaml
 dependencies:
-  zenrouter: ^3.0.0-beta.1
+  zenrouter: ^3.0.0
 ```
 
 The recommended 3.0 path uses `RouteManifest` and `RouteBinding`. Handwritten `parseRouteFromUri` remains available for compatibility and small graphs, but this guide introduces the manifest first so forward matching and reverse URLs cannot drift.

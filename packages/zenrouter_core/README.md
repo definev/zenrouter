@@ -14,7 +14,7 @@ Flutter apps should depend on `zenrouter`, which re-exports this package.
 
 ```yaml
 dependencies:
-  zenrouter_core: ^3.0.0-beta.1
+  zenrouter_core: ^3.0.0
 ```
 
 ## RouteTarget

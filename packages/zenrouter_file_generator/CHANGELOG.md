@@ -1,3 +1,73 @@
+## 3.0.0
+
+Stable file-based routing generator for Flutter and DartNative. The changes
+below cover the 3.0 beta APIs and native generation introduced before stable.
+
+### Breaking changes
+
+- Generated coordinators expose `RouteManifest<String>` topology and mix in
+  `RouteModuleBinding`; URI dispatch uses `RouteBinding` and
+  `RouteBinding.deferred` instead of a generated `parseRouteFromUri` switch.
+- Reverse routing moves from `{route}Location()` methods to the typed
+  `coordinator.location.{route}` namespace, including parameterized helpers
+  such as `location.profileId(...)`.
+- Fixed indexed/branched children are encoded on sealed
+  `RouteManifestLayoutKind.indexed([...])` / `.branched([...])` values; stack
+  layouts use `.stack()`. Regenerate checked-in output to adopt this topology.
+- Generated APIs require the 3.0.0 core and annotation packages. Regenerate
+  route parts and the aggregate coordinator together when upgrading.
+
+### Added
+
+- Generate static `Coordinator.manifest` topology, validated runtime bindings,
+  and absolute reverse-routing locations from the same route tree.
+- Generate `BranchedStackPath` fields, branched manifests, and typed layout base
+  classes from `@ZenLayout(type: LayoutType.branched, branches: ...)`.
+- Forward all destination operations through `NavContext`: `push`,
+  `pushSilently`, `navigate`, `replace`, `pushReplacement`, `pushOrMoveToTop`,
+  and `recover`. `pop` and `tryPop` remain coordinator operations.
+- Add `platform: dartnative` to both `zen_route` and `zen_coordinator` builder
+  options. The default remains `platform: flutter`; unsupported values fail
+  configuration with an `ArgumentError`.
+- Generate native route bases, coordinators, route bindings, location helpers,
+  navigation extensions, and stack/indexed/branched logical layouts using
+  `zenrouter_dartnative: ^0.1.0` and DartNative widgets.
+- Native file routing supports dynamic parameters, catch-all parameters, route
+  groups, and a root initial route. The example includes the
+  `main_file_router.dart` entry point.
+
+### Changed
+
+- Remove the runtime Flutter SDK dependency and Flutter environment constraint
+  so native apps can consume the generator without depending on Flutter.
+- Keep `RouteManifest<String>` explicit in generated code; handwritten
+  coordinators can still use enum or domain IDs.
+- Generated not-found routes implement `RouteNotFound` and preserve the
+  requested URI for typed 404 resolution.
+
+### Fixed
+
+- Reject duplicate and equally-specific ambiguous route patterns during
+  generation instead of deferring ambiguity to navigation time.
+- Generate absolute dynamic route URIs with independently encoded path
+  segments, preserving reserved characters and catch-all parameter structure.
+
+### DartNative limitations
+
+- Native generation rejects deferred imports, generated `@ZenRoute` query
+  helpers, and Flutter transition mixins with generation errors.
+- Configure native transitions through the route's `presentation`; handle URI
+  queries in the route when needed.
+- The adapter's restoration and physical native stack limits still apply;
+  generated branched layouts do not create independent native Navigator hosts.
+
+### Requirements
+
+- Dart 3.11 or newer; `zenrouter_core: ^3.0.0` and
+  `zenrouter_file_annotation: ^3.0.0`.
+- Native apps resolve the framework with `dn pub get` and run build tools with
+  the Dart executable from the same DartNative SDK.
+
 ## 3.0.0-beta.1
 
 Prerelease for early testers. Requires `zenrouter_core` and

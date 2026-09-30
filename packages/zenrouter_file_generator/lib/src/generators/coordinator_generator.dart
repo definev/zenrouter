@@ -18,6 +18,8 @@ typedef FileImportPath = (String path, bool isDeferred);
 /// - Type-safe navigation extensions
 /// - Type-safe `coordinator.location.{route}` reverse routing
 class CoordinatorGenerator implements Builder {
+  final bool native;
+
   /// Global deferred import configuration.
   /// When true, all routes will use deferred imports unless explicitly disabled.
   final bool globalDeferredImport;
@@ -27,6 +29,7 @@ class CoordinatorGenerator implements Builder {
   final String outputFile;
 
   const CoordinatorGenerator({
+    this.native = false,
     this.globalDeferredImport = false,
     this.outputFile = 'routes.zen.dart',
   });
@@ -152,6 +155,13 @@ class CoordinatorGenerator implements Builder {
     // Build the route tree
     var tree = _buildRouteTree(routes, layouts);
 
+    if (native && tree.routes.any((route) => route.hasDeferredImport)) {
+      throw StateError(
+        'DartNative generation does not support deferred imports yet. '
+        'Disable deferredImport in routes and build.yaml.',
+      );
+    }
+
     // Validate and enforce IndexedStack routes to be non-deferred.
     // This must happen BEFORE we build allFilePaths
     tree = RouteTreeInfo(
@@ -159,6 +169,27 @@ class CoordinatorGenerator implements Builder {
       layouts: tree.layouts,
     );
     _validateRouteManifest(tree, coordinatorName);
+
+    if (native) {
+      if (tree.routes.any((route) => route.hasQueries || route.hasTransition)) {
+        throw StateError(
+          'DartNative generation does not support @ZenRoute queries or transition yet.',
+        );
+      }
+      if (tree.routes
+              .where(
+                (route) =>
+                    route.pathSegments.isEmpty &&
+                    route.parentLayoutType == null,
+              )
+              .length !=
+          1) {
+        throw StateError(
+          'DartNative generation requires exactly one root route at lib/routes/index.dart '
+          'without a parent layout.',
+        );
+      }
+    }
 
     // Now build allFilePaths with correct deferred import flags
     final allFilePaths = <FileImportPath>[];
@@ -653,6 +684,16 @@ class CoordinatorGenerator implements Builder {
     String routeBaseName,
     String? routeBasePath,
   ) {
+    if (native) {
+      return _generateNativeCoordinatorCode(
+        tree,
+        customNotFoundRoutePath,
+        allFilePaths,
+        coordinatorName,
+        routeBaseName,
+        routeBasePath,
+      );
+    }
     final buffer = StringBuffer();
 
     // Header
@@ -971,6 +1012,164 @@ class CoordinatorGenerator implements Builder {
     );
     buffer.writeln('}');
 
+    return buffer.toString();
+  }
+
+  String _generateNativeCoordinatorCode(
+    RouteTreeInfo tree,
+    String? customNotFoundRoutePath,
+    List<FileImportPath> allFilePaths,
+    String coordinatorName,
+    String routeBaseName,
+    String? routeBasePath,
+  ) {
+    final buffer = StringBuffer()
+      ..writeln('// GENERATED CODE - DO NOT MODIFY BY HAND')
+      ..writeln('// ignore_for_file: type=lint')
+      ..writeln()
+      ..writeln("import 'package:dartnative/dartnative.dart';")
+      ..writeln(
+        "import 'package:zenrouter_dartnative/zenrouter_dartnative.dart';",
+      );
+    if (routeBasePath != null) buffer.writeln("import '$routeBasePath';");
+
+    final imports = <String>{for (final item in allFilePaths) item.$1};
+    if (customNotFoundRoutePath != null) {
+      imports.add(customNotFoundRoutePath.replaceFirst('lib/routes/', ''));
+    }
+    for (final path in imports.toList()..sort()) {
+      buffer.writeln("import '$path';");
+    }
+    buffer.writeln();
+    buffer.writeln(
+      "export 'package:zenrouter_dartnative/zenrouter_dartnative.dart';",
+    );
+    for (final path in imports.toList()..sort()) {
+      buffer.writeln("export '$path';");
+    }
+    if (routeBasePath != null) buffer.writeln("export '$routeBasePath';");
+    buffer.writeln();
+
+    if (routeBasePath == null) {
+      buffer.writeln(
+        'abstract class $routeBaseName extends RouteTarget with RouteUnique {}',
+      );
+      buffer.writeln();
+    }
+
+    final rootRoute = tree.routes.singleWhere(
+      (route) => route.pathSegments.isEmpty && route.parentLayoutType == null,
+    );
+    buffer.writeln(
+      'class $coordinatorName extends Coordinator<$routeBaseName> '
+      'with RouteModuleBinding<$routeBaseName, String> {',
+    );
+    buffer.writeln(
+      '  $coordinatorName() : super(initialRoute: ${rootRoute.className}());',
+    );
+    buffer.writeln();
+    _writeRouteManifest(buffer, tree, coordinatorName);
+    _writeRouteBindings(buffer, tree, routeBaseName);
+
+    for (final layout in tree.layouts) {
+      final pathFieldName = _getPathFieldName(layout.className);
+      final pathName = layout.className.replaceAll('Layout', '');
+      switch (layout.layoutType) {
+        case LayoutType.stack:
+          buffer.writeln(
+            "  late final $pathFieldName = NavigationPath<$routeBaseName>.createWith(coordinator: this, label: '$pathName');",
+          );
+        case LayoutType.indexed:
+          final routes = layout.indexedRouteTypes
+              .map((route) => '$route()')
+              .join(', ');
+          buffer.writeln(
+            "  late final $pathFieldName = IndexedStackPath<$routeBaseName>.createWith([$routes], coordinator: this, label: '$pathName');",
+          );
+        case LayoutType.branched:
+          final branches = layout.branchLayoutTypes
+              .map((branch) => '$branch()')
+              .join(', ');
+          buffer.writeln(
+            "  late final $pathFieldName = BranchedStackPath<$routeBaseName>.createWith([$branches], coordinator: this, label: '$pathName');",
+          );
+      }
+    }
+    buffer.writeln();
+    buffer.writeln('  @override');
+    buffer.write('  List<StackPath> get paths => [...super.paths');
+    for (final layout in tree.layouts) {
+      buffer.write(', ${_getPathFieldName(layout.className)}');
+    }
+    buffer.writeln('];');
+    buffer.writeln();
+    buffer.writeln('  @override');
+    buffer.writeln('  void init() {');
+    buffer.writeln('    super.init();');
+    for (final layout in tree.layouts) {
+      buffer.writeln('    defineLayoutParent(${layout.className}.new);');
+    }
+    buffer.writeln('  }');
+    buffer.writeln('}');
+    buffer.writeln();
+
+    _writeLocationClass(buffer, tree, coordinatorName);
+    if (customNotFoundRoutePath == null) {
+      buffer.writeln(
+        'class NotFoundRoute extends $routeBaseName with RouteNotFound {',
+      );
+      buffer.writeln(
+        '  NotFoundRoute({required this.uri, this.queries = const {}});',
+      );
+      buffer.writeln('  final Uri uri;');
+      buffer.writeln('  final Map<String, String> queries;');
+      buffer.writeln('  @override');
+      buffer.writeln('  Uri toUri() => uri;');
+      buffer.writeln('  @override');
+      buffer.writeln('  List<Object?> get props => [uri, queries];');
+      buffer.writeln('  @override');
+      buffer.writeln(
+        '  Widget build(covariant $coordinatorName coordinator, BuildContext context) => Text(\'Route not found: \${uri.path}\');',
+      );
+      buffer.writeln('}');
+      buffer.writeln();
+    }
+
+    buffer.writeln('extension ${coordinatorName}Nav on $coordinatorName {');
+    buffer.writeln(
+      '  ${coordinatorName}Location get location => $coordinatorName.location;',
+    );
+    for (final route in tree.routes) {
+      final base = _getBaseMethodName(route.className);
+      final (params, args) = _buildMethodParams(route);
+      _writeNavMethod(
+        buffer,
+        base,
+        'push',
+        route.className,
+        params,
+        args,
+        generic: 'T extends Object',
+        returnType: 'Future<T?>',
+      );
+      _writeNavMethod(
+        buffer,
+        base,
+        'replace',
+        route.className,
+        params,
+        args,
+        returnType: 'Future<void>',
+      );
+      _writeRecoverMethod(buffer, base, route.className, params, args);
+    }
+    buffer.writeln('}');
+    buffer.writeln();
+    buffer.writeln('extension ${coordinatorName}Context on BuildContext {');
+    buffer.writeln(
+      '  $coordinatorName get ${coordinatorName[0].toLowerCase()}${coordinatorName.substring(1)} => CoordinatorScope.of<$routeBaseName>(this) as $coordinatorName;',
+    );
+    buffer.writeln('}');
     return buffer.toString();
   }
 

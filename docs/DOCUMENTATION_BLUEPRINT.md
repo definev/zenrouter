@@ -2,7 +2,7 @@
 
 Status: approved implementation baseline  
 Last audited: 2026-08-23  
-Product target: ZenRouter 3.0.0-beta.1
+Product target: ZenRouter 3.0.0
 
 This document is the planning gate for the documentation overhaul. The site
 must follow this learning model and content contract before additional pages or
@@ -32,8 +32,8 @@ without reading the source or reverse-engineering an example.
 
 ### What is true in 3.0
 
-- `zenrouter` is currently `3.0.0-beta.1`; the default `flutter pub add
-  zenrouter` command may still resolve the stable 2.x line.
+- The documentation targets stable `zenrouter` `3.0.0`; installation
+  examples must use compatible 3.0 dependencies.
 - New URL-aware applications should prefer `RouteManifest` plus
   `RouteBinding`; handwritten `parseRouteFromUri` remains supported.
 - A manifest is adapter-neutral. Flutter screens are created at the binding
@@ -114,7 +114,7 @@ Reader outcome: choose a mode and understand the graph in one sentence.
 
 Reader outcome: run a two-screen, URL-aware Flutter app.
 
-4. **Install ZenRouter 3** — exact beta dependency, supported Flutter targets,
+4. **Install ZenRouter 3** — stable 3.0 dependency, supported Flutter targets,
    generated vs handwritten setup.
 5. **Build your first graph** — typed IDs, manifest patterns, bindings, route
    targets, a root `RouterConfig`, push, and reverse locations.
@@ -216,7 +216,7 @@ a major concept for the first time.
   the job it performs.
 - Prefer “route graph”, “screen”, “URL”, and “stack” over abstract synonyms.
 - State release-sensitive facts explicitly. Code examples for this edition use
-  `3.0.0-beta.1` and should be re-audited at stable 3.0.
+  `3.0.0` and should be re-audited when its public API changes.
 - Explain one new invariant per example. Ellipses are allowed only where the
   omitted code is irrelevant and already introduced.
 - Use notes for boundaries, not for essential steps. A reader who ignores the
@@ -260,7 +260,7 @@ does not depend on Material components or `ThemeData`.
 - Subtle graph-paper texture rather than the reference site's assets.
 - Route diagrams built from labeled nodes and connecting strokes, not copied
   illustrations.
-- A visible “3.0 beta” edition marker and links to GitHub / pub.dev.
+- A visible “3.0” edition marker and links to GitHub / pub.dev.
 
 ### Responsive behavior
 
