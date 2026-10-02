@@ -174,6 +174,7 @@ class _RootPath<T extends RouteUri> extends StackPath<T>
   T commitResolvedRoute(T target) {
     validateFresh(target);
     _used.add(target);
+    // ignore: invalid_use_of_internal_member
     return super.commitResolvedRoute(target);
   }
 
@@ -190,6 +191,7 @@ class _RootPath<T extends RouteUri> extends StackPath<T>
         );
       }
     }
+    // ignore: invalid_use_of_internal_member
     return super.commitResolvedReplacement(target, result: result);
   }
 
@@ -205,6 +207,7 @@ class _RootPath<T extends RouteUri> extends StackPath<T>
     if (index < 0) {
       commitResolvedRoute(target);
     } else {
+      // ignore: invalid_use_of_internal_member
       super.commitResolvedMoveToTop(target);
     }
   }

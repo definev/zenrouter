@@ -1,6 +1,6 @@
 name: zenrouter_dartnative_devtools
 description: Native in-app navigation inspector and URI actions for zenrouter_dartnative.
-version: 0.1.0
+version: 0.1.1
 
 repository: https://github.com/definev/zenrouter
 homepage: https://github.com/definev/zenrouter/tree/main/packages/zenrouter_dartnative_devtools
@@ -17,7 +17,7 @@ environment:
 
 dependencies:
   dartnative: ^1.0.0
-  zenrouter_dartnative: ^0.1.0
+  zenrouter_dartnative: ^0.1.1
 
 dev_dependencies:
   test: ^1.25.0

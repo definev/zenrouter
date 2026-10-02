@@ -16,7 +16,7 @@ extension RouteLayoutBinding<T extends RouteUnique> on StackPath<T> {
   }
 }
 
-/// Platform-clean counterpart to Flutter's `RouteLayout` mixin.
+/// Route layout mixin for DartNative screens.
 ///
 /// A layout owns route topology through [resolvePath], while its ordinary
 /// [RouteUnique.build] implementation chooses the DartNative widget renderer.

@@ -1,3 +1,8 @@
+## 0.1.1
+
+- Update dependency constraint on `zenrouter_dartnative` to `^0.1.1`.
+- Update installation instructions and documentation for the 0.1.1 release.
+
 ## 0.1.0
 
 Initial native in-app navigation inspector for `zenrouter_dartnative` 0.1.0.
@@ -48,8 +53,7 @@ Initial native in-app navigation inspector for `zenrouter_dartnative` 0.1.0.
 
 - Dart 3.9 or newer; DartNative SDK/framework 1.0.0;
   `zenrouter_dartnative: ^0.1.0`.
-- This package has no Flutter or `vyuh_node_flow` dependency. Topology graphs,
-  observed flow recording, replay, and screen previews are outside the 0.1.0
+- Topology graphs, observed flow recording, replay, and screen previews are outside the 0.1.0
   feature set.
 - Decorate every route through `CoordinatorView.presentationBuilder`, keep one
   controller for the app lifetime, and dispose it during application shutdown.

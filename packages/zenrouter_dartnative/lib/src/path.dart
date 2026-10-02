@@ -10,6 +10,7 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
   NavigationPath._({List<T>? routes, super.debugLabel, super.coordinator})
     : super(List<T>.of(routes ?? const [])) {
     for (final route in stack) {
+      // ignore: invalid_use_of_protected_member
       route.bindStackPath(this);
     }
   }
@@ -65,8 +66,8 @@ class NavigationPath<T extends RouteTarget> extends StackPath<T>
 
 /// A fixed, platform-neutral route path for indexed navigation.
 ///
-/// This is intentionally implemented in `zenrouter_dartnative` rather than
-/// importing ZenRouter's Flutter path. It owns navigation state only; a native
+/// This is implemented in `zenrouter_dartnative` as a platform-clean path.
+/// It owns navigation state only; a native
 /// widget such as `IndexedStackPathBuilder` renders that state separately.
 class IndexedStackPath<T extends RouteTarget> extends StackPath<T>
     with StackNavigatable<T>, _PathListeners {
@@ -74,6 +75,7 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T>
     : super(_validateRoutes(routes)) {
     for (final route in routes) {
       route.completeOnResult(null, null);
+      // ignore: invalid_use_of_protected_member
       route.bindStackPath(this);
     }
   }
@@ -223,7 +225,7 @@ class IndexedStackPath<T extends RouteTarget> extends StackPath<T>
 /// Fixed layout branches whose child paths keep independent logical state.
 ///
 /// This class does not claim that DartNative can render a native Navigator per
-/// branch. It models the router topology without importing Flutter, leaving the
+/// branch. It models the router topology, leaving the
 /// physical nested-navigation adapter as a separate capability.
 class BranchedStackPath<T extends RouteTarget> extends IndexedStackPath<T> {
   BranchedStackPath._(List<T> branches, {super.debugLabel, super.coordinator})

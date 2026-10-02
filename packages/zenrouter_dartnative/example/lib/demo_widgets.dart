@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:dartnative/dartnative.dart';
 import 'package:zenrouter_dartnative/zenrouter_dartnative.dart';
@@ -23,7 +24,7 @@ Widget action(
   child: Button(
     title: label,
     variant: secondary ? ButtonVariant.tinted : ButtonVariant.filled,
-    color: secondary ? muted : coffee,
+    color: secondary ? cardColor : coffee,
     onPressed: () async {
       try {
         await callback();
@@ -149,9 +150,20 @@ class FeatureTabs extends StatelessWidget {
       extendBody: isIOS26,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: layout.activeIndex,
-        iconColor: coffee,
-        selectedIconColor: coffee,
-        indicatorColor: ink,
+        iconColor: Platform.isAndroid ? ink : null,
+        selectedIconColor: Platform.isAndroid ? paper : coffee,
+        indicatorColor: coffee,
+        backgroundColor: Platform.isAndroid ? cardColor : null,
+        labelFontStyle: Platform.isAndroid
+            ? TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: ink)
+            : null,
+        selectedLabelFontStyle: Platform.isAndroid
+            ? TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: coffee,
+              )
+            : null,
         onTap: (index) => unawaited(layout.selectIndex(index)),
         items: const [
           BottomNavigationBarItem(

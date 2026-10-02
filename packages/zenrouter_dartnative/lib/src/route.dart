@@ -188,11 +188,13 @@ final class ExperimentalDialogPresentation implements Presentation {
     this.backgroundColor,
     this.cornerRadius = 15,
     this.dimOpacity = 0.4,
+    this.ios,
   });
 
   final Color? backgroundColor;
   final double cornerRadius;
   final double dimOpacity;
+  final DialogIOSConfig? ios;
 
   @override
   bool get canMountAsRoot => false;
@@ -207,6 +209,7 @@ final class ExperimentalDialogPresentation implements Presentation {
           backgroundColor: backgroundColor,
           cornerRadius: cornerRadius,
           dimOpacity: dimOpacity,
+          ios: ios,
         ),
       );
 }

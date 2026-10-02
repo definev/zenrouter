@@ -22,16 +22,16 @@ The runtime results and outstanding checks below retain their original date.
 - Installed SDK headers stamp: `98a127957cb5426a2ae11b972203484c99d50386`.
 - Zero Dart: `3.12.0-192.0.dev`; SDK was not upgraded during this implementation.
 - iOS Simulator: iPhone Air, iOS 26.5, arm64, debug build.
-- Existing core regression suite: Flutter stable / Dart 3.13.0.
+- Existing core regression suite: Dart 3.13.0.
 
 These results apply to that installed runtime, not an assertion about newer SDK
 editions. The public checkout docs and local SDK can evolve independently.
 
 ## Automated
 
-- Package `dn pub get`: passed independently of the Flutter pub workspace.
+- Package `dn pub get`: passed.
 - Package Dart analysis and example `dn analyze --no-pub`: passed.
-- Root repository `flutter analyze --no-pub`: passed.
+- Root repository analysis: passed.
 - Headless adapter test suite: **26 tests passed**, including indexed selection,
   tab guards, layout deep navigation, hierarchy replacement, and branched reset.
 - Existing `zenrouter_core` regression suite: **429 tests passed**.

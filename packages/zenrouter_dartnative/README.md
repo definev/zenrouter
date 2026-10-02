@@ -1,11 +1,22 @@
 # ZenRouter DartNative
 
+<div align="center">
+
+<img alt="ZenRouter Logo" src="https://raw.githubusercontent.com/definev/zenrouter/main/assets/zenrouter_light_solid.png">
+
+**Native navigation and route presentations for DartNative.**
+
+[![pub package](https://img.shields.io/pub/v/zenrouter_dartnative.svg)](https://pub.dev/packages/zenrouter_dartnative)
+[![Test](https://github.com/definev/zenrouter/actions/workflows/test.yml/badge.svg)](https://github.com/definev/zenrouter/actions/workflows/test.yml)
+[![codecov](https://codecov.io/gh/definev/zenrouter/graph/badge.svg?flag=zenrouter_dartnative)](https://app.codecov.io/gh/definev/zenrouter?flag=zenrouter_dartnative)
+
+</div>
+
+---
+
 A native presentation stack driven by `zenrouter_core`, plus platform-clean
-indexed and branched paths for persistent layouts. This package uses DartNative
-widgets and native presentation primitives, not Flutter's Router,
-Navigator.pages, path classes, or layout builders.
-It is intentionally outside the repository's Flutter pub workspace. No changes
-to the core routing engine or existing Flutter adapter are required.
+indexed and branched paths for persistent layouts. Built natively with DartNative
+widgets and native presentation primitives.
 
 ## Installation
 
@@ -14,10 +25,10 @@ Add `zenrouter_dartnative` to your DartNative app's `pubspec.yaml`:
 ```yaml
 dependencies:
   dartnative: ^1.0.0
-  zenrouter_dartnative: ^0.1.0
+  zenrouter_dartnative: ^0.1.1
 ```
 
-Run **`dn pub get`**, not `flutter pub get`. DartNative's command resolves its framework and platform bindings from the installed SDK.
+Run **`dn pub get`**. DartNative's command resolves its framework and platform bindings from the installed SDK.
 
 ```dart
 import 'package:dartnative/dartnative.dart';
@@ -31,8 +42,75 @@ class HomeRoute extends AppRoute {
 
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Home')),
-    body: const Text('Hello from native navigation'),
+    appBar: AppBar(title: const Text('Green Coffee Shelf')),
+    body: Center(
+      child: Button(
+        title: 'Open Lot Yirgacheffe',
+        onPressed: () => coordinator.push(LotRoute(id: 'yirga')),
+      ),
+    ),
+  );
+}
+
+class LotRoute extends AppRoute {
+  LotRoute({required this.id});
+  final String id;
+
+  @override
+  List<Object?> get props => [id];
+
+  @override
+  Uri toUri() => Uri(pathSegments: ['lots', id]);
+
+  @override
+  Widget build(AppCoordinator coordinator, BuildContext context) => Scaffold(
+    appBar: AppBar(title: Text('Lot $id')),
+    body: Center(
+      child: Button(
+        title: 'Start Cupping',
+        onPressed: () => coordinator.push(CuppingRoute(lotId: id)),
+      ),
+    ),
+  );
+}
+
+class CuppingRoute extends AppRoute {
+  CuppingRoute({required this.lotId, this.score});
+  final String lotId;
+  final int? score;
+
+  @override
+  List<Object?> get props => [lotId, score];
+
+  @override
+  Uri toUri() => Uri(
+    pathSegments: ['lots', lotId, 'cupping'],
+    queryParameters: score != null ? {'score': '$score'} : null,
+  );
+
+  @override
+  Widget build(AppCoordinator coordinator, BuildContext context) => Scaffold(
+    appBar: AppBar(title: Text('Cupping $lotId')),
+    body: Center(
+      child: Button(
+        title: 'Save & Return Score',
+        onPressed: () => coordinator.pop('Score: 92'),
+      ),
+    ),
+  );
+}
+
+class NotFoundRoute extends AppRoute with RouteNotFound {
+  NotFoundRoute(this.uri);
+  final Uri uri;
+
+  @override
+  Uri toUri() => uri;
+
+  @override
+  Widget build(AppCoordinator coordinator, BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Not Found')),
+    body: Center(child: Text('Unknown URI: $uri')),
   );
 }
 
@@ -40,7 +118,19 @@ class AppCoordinator extends Coordinator<AppRoute> {
   AppCoordinator() : super(initialRoute: HomeRoute());
 
   @override
-  AppRoute? parseRouteFromUri(Uri uri) => uri.path == '/' ? HomeRoute() : null;
+  Future<AppRoute?> parseRouteFromUri(Uri uri) async =>
+      switch (uri.pathSegments) {
+        [] || ['lots'] => HomeRoute(),
+        ['lots', final id] => LotRoute(id: id),
+        ['lots', final id, 'cupping'] => CuppingRoute(
+          lotId: id,
+          score: int.tryParse(uri.queryParameters['score'] ?? ''),
+        ),
+        _ => NotFoundRoute(uri),
+      };
+
+  @override
+  AppRoute notFoundRoute(Uri uri) => NotFoundRoute(uri);
 }
 
 // After DartNativePluginRegistrant.registerAll():
@@ -54,7 +144,15 @@ void mountApp() {
 ```
 
 Routes use the core `RouteTarget` with the adapter's `RouteUnique` mixin.
-Their `build(coordinator, context)` method receives the coordinator directly.
+Their `build(coordinator, context)` method receives the coordinator directly,
+and parameterized routes override `props` to ensure predictable value equality.
+
+`parseRouteFromUri` uses Dart pattern matching on `uri.pathSegments` to resolve destinations:
+- `[] || ['lots']`: Matches the root or `/lots`.
+- `['lots', final id]`: Extracts dynamic path variables (`/lots/yirga` → `id: 'yirga'`).
+- `['lots', final id, 'cupping']`: Matches nested subpaths with extracted variables.
+- `uri.queryParameters`: Reads query parameters (e.g. `?score=92`).
+- `_`: Fallback for unmatched URIs, returning a `RouteNotFound` destination that preserves the original URI.
 
 Inside a child widget, use `CoordinatorScope.of<AppRoute>(context)` to obtain its
 coordinator. The scope is installed in **every** native screen, since pushed
@@ -80,13 +178,33 @@ modules and nested tab layouts.
 - App/plugin-defined presentations implement one open interface; routing and
   synchronization code do not switch on presentation type.
 - `NavigationPath`, `IndexedStackPath`, and `BranchedStackPath`
-  provide layout topology without importing the Flutter package.
+  provide native layout topology.
 - `RouteLayout` and `IndexedStackPathBuilder` keep the coordinator as the
   source of truth while the application chooses its DartNative shell widgets.
 - `CoordinatorModular` composes feature coordinators as route modules. Modules
   share the parent's root presentation stack and navigation transactions.
 
+| Method | Behavior |
+|---|---|
+| `push<R>` | Push presentation onto the native stack and await removal result |
+| `pushSilently` | Push presentation without waiting for result (completes on commit) |
+| `pushReplacement` | Pop top presentation then push new route in one logical commit |
+| `pop(result)` | Dismiss top presentation with a typed result |
+| `navigate` | Pop back to an existing route, or push if absent |
+| `replace` | Drain pushed presentations and swap root content |
+| `recoverUri` | Parse URI and synchronize coordinator state |
+
+## Presentations
+
 Choose presentation per route:
+
+| Presentation | Surface | Description |
+|---|---|---|
+| `ScreenPresentation` | Full screen | Native `slideFromRight` transition (default) |
+| `ExperimentalModalSheetPresentation` | Bottom sheet | Detent-based native modal sheet (iOS & Android) |
+| `ExperimentalContentSheetPresentation` | Bottom sheet | Content-sized modal bottom sheet |
+| `ExperimentalDialogPresentation` | Centered dialog | Native modal dialog with corner radius, dimming, and iOS config |
+| `ExperimentalIosOverlayPresentation` | Keyboard overlay | iOS native keyboard-attached overlay |
 
 ```dart
 class EditSheetRoute extends AppRoute {
@@ -102,6 +220,22 @@ class EditSheetRoute extends AppRoute {
   @override
   Widget build(AppCoordinator coordinator, BuildContext context) =>
       const EditPanel();
+}
+
+class SampleOrderDialogRoute extends AppRoute {
+  @override
+  Presentation get presentation => const ExperimentalDialogPresentation(
+    cornerRadius: 20,
+    dimOpacity: 0.35,
+    ios: DialogIOSConfig(),
+  );
+
+  @override
+  Uri toUri() => Uri(path: '/dialog/sample');
+
+  @override
+  Widget build(AppCoordinator coordinator, BuildContext context) =>
+      const SampleOrderDialog();
 }
 ```
 
@@ -133,6 +267,12 @@ native presentation. Do not await a pop-result future inside
 
 Bottom navigation is an indexed layout, not a presentation. The path owns the
 selected tab; the widget only renders a snapshot and sends selection intents:
+
+| Path | Role |
+|---|---|
+| `NavigationPath` | Nested route stack |
+| `IndexedStackPath` | Persistent tabs sharing the root stack |
+| `BranchedStackPath` | Tabs retaining independent child stack states |
 
 ```dart
 late final tabs = IndexedStackPath<AppRoute>.createWith(
@@ -217,7 +357,7 @@ core-compatible listener conversion in ZenRouter.
 - The built-in screen defaults to DartNative's standard native
   `slideFromRight` transition. Other DartNative transitions can be configured,
   but the public SDK inspected does not expose transition completion. Mount
-  acknowledgement is not animation completion, so version 0.1.0 does not claim
+  acknowledgement is not animation completion, so version 0.1.1 does not claim
   exact animation sequencing or predictive gesture parity.
 - Root replacement drains pushed screens and swaps root content. Top replacement
   is pop-then-push, not an atomic native replacement. Core publishes one logical
@@ -256,9 +396,8 @@ core-compatible listener conversion in ZenRouter.
 ## Implementation
 
 `Coordinator` supplies a headless root presentation path, native layout
-registration, indexed selection, and core navigation mixins. Platform-neutral
-path implementations are duplicated locally on purpose so this package never
-depends on Flutter.
+registration, indexed selection, and core navigation mixins with self-contained,
+platform-neutral path implementations.
 `NavigationSession` (internal) snapshots paths at coordinator commits,
 matches entries by identity, serializes presentation operations, coalesces
 bursts, and suppresses late/duplicate native dismissal events. It is tested

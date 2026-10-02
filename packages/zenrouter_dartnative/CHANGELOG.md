@@ -1,3 +1,26 @@
+## 0.1.1
+
+Maintenance release with native dialog presentation enhancements, updated documentation, and an overhauled showcase example.
+
+### Presentation adapters
+
+- Add optional `ios` configuration (`DialogIOSConfig?`) to `ExperimentalDialogPresentation`, forwarding native iOS dialog properties directly to DartNative's `Dialog`.
+
+### Maintenance and tooling
+
+- Suppress internal and protected member analyzer warnings in native coordinator and path lifecycle hooks.
+- Clarify package documentation and update installation instructions for published releases.
+- Exclude build and distribution artifacts (`dist/`) in `.gitignore` and `.pubignore`.
+
+### Example app (Cupping Studio)
+
+- Completely overhaul the example into an interactive coffee tasting studio demonstrating real-world navigation patterns.
+- Implement persistent indexed tab layouts with shelf and logbook views.
+- Add dynamic parameterized lot routes (`/lot/:id`) returning cupping score results back to the shelf.
+- Support both modal dialog routes via `ExperimentalDialogPresentation` and native `showAlert` confirmation on guarded Back navigation.
+- Add native modal bottom sheets for brew guides and a dedicated `BaristaCoordinator` route module.
+- Adapt UI styling for both Android Material 3 and iOS Cupertino native chrome, ensuring reliable touch handling for cards and action buttons.
+
 ## 0.1.0
 
 Initial DartNative navigation and layout adapter for `zenrouter_core` 3.0.0.
@@ -93,7 +116,7 @@ Initial DartNative navigation and layout adapter for `zenrouter_core` 3.0.0.
 ### Requirements and verification
 
 - Dart 3.9 or newer; DartNative SDK/framework 1.0.0;
-  `zenrouter_core: ^3.0.0`. This package does not depend on Flutter.
+  `zenrouter_core: ^3.0.0`.
 - Resolve SDK packages with `dn pub get`. Local development overrides are
   excluded from release archives; public publication still requires a supported
   framework dependency/registry arrangement.

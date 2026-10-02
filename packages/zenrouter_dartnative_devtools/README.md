@@ -1,8 +1,19 @@
 # ZenRouter DartNative DevTools
 
-Native in-app navigation inspector for `zenrouter_dartnative`. The 0.1.0
-package is separate from the Flutter `zenrouter_devtools` package and has no
-Flutter or `vyuh_node_flow` dependency.
+<div align="center">
+
+<img alt="ZenRouter Logo" src="https://raw.githubusercontent.com/definev/zenrouter/main/assets/zenrouter_light_solid.png">
+
+**Native in-app navigation inspector and URI actions for DartNative.**
+
+[![pub package](https://img.shields.io/pub/v/zenrouter_dartnative_devtools.svg)](https://pub.dev/packages/zenrouter_dartnative_devtools)
+
+</div>
+
+---
+
+Native in-app navigation inspector for `zenrouter_dartnative`, designed
+specifically for DartNative runtime environments.
 
 ## Features
 
@@ -19,8 +30,8 @@ Flutter or `vyuh_node_flow` dependency.
 - Use the native sheet surface and iOS 26 Liquid Glass controls, with grouped
   system-style light and dark colors for the content and older iOS versions.
 
-Graph, observed flow, replay, and screen previews are not part of this initial
-package.
+Graph, observed flow, replay, and screen previews belong to graph-canvas
+tooling and are not part of this native package.
 
 ## Installation
 
@@ -29,20 +40,19 @@ Add `zenrouter_dartnative_devtools` to your DartNative app's `pubspec.yaml`:
 ```yaml
 dependencies:
   dartnative: ^1.0.0
-  zenrouter_dartnative: ^0.1.0
-  zenrouter_dartnative_devtools: ^0.1.0
+  zenrouter_dartnative: ^0.1.1
+  zenrouter_dartnative_devtools: ^0.1.1
 ```
 
 Run **`dn pub get`** to install.
 
+## Usage
+
+### 1. Presentation builder
+
 Decorate every presentation through `CoordinatorView.presentationBuilder` and
-place `NativeDevToolsLauncher` in each screen's `Scaffold.floatingActionButton`
-(or AppBar actions). This preserves the Scaffold's native layout and safe area.
-Keep one controller for the app's lifetime so the selected tab survives pushes.
-The launcher reads the screen brightness when available. If the screen forces
-`Scaffold(brightness: ...)`, pass the same value to
-`NativeDevToolsLauncher(brightness: ...)` so the separately hosted sheet and its
-native material follow that appearance even when the system theme differs.
+keep one `NativeDevToolsController` for the app's lifetime so the inspector's
+selected tab survives pushes.
 
 ```dart
 final coordinator = AppCoordinator();
@@ -56,13 +66,23 @@ runApp(CoordinatorView<AppRoute>(
     return NativeDevTools<AppRoute>(
       coordinator: coordinator,
       controller: devTools,
-      debugRoutes: [Uri.parse('/'), Uri.parse('/item/42')],
+      debugRoutes: [
+        Uri.parse('/'),
+        Uri.parse('/shelf'),
+        Uri.parse('/lot/yirga'),
+      ],
       child: child,
     );
   },
 ));
+```
 
-// In each screen's native Scaffold:
+### 2. Scaffold launcher
+
+Place `NativeDevToolsLauncher` in each screen's `Scaffold.floatingActionButton`
+(or AppBar actions). This preserves the Scaffold's native layout and safe area:
+
+```dart
 Scaffold(
   appBar: AppBar(title: const Text('Home')),
   floatingActionButton: const NativeDevToolsLauncher(),
@@ -70,22 +90,31 @@ Scaffold(
 );
 ```
 
-Dispose the controller when the app shuts down. The launcher opens a native
-adaptive modal sheet on iOS and a modal bottom sheet on Android. The Android
-sheet starts at half height and can be dragged to full height. It includes a
-drag handle and an in-content close button, with the URI field
-and its actions at the top and compact text tabs below. The iOS URI field stays
-at the bottom. Both the URI field and quick routes have three direct icon
-buttons: right arrow for Navigate, stacked plus for Push, and cycling arrows
-for Replace. Actions run while the sheet stays open, including `Pop`, so you can
-perform several operations in sequence. `Push` uses `pushSilently` so DevTools
-waits for a navigation commit rather than a future route result. `Replace`
-clears the navigation tree. Quick route URIs are resolved through the same
-coordinator route parser as the URI input.
+The launcher reads the screen brightness when available. If the screen forces
+`Scaffold(brightness: ...)`, pass the same value to
+`NativeDevToolsLauncher(brightness: ...)` so the separately hosted sheet and its
+native material follow that appearance even when the system theme differs. The
+launcher is hidden automatically in release builds.
 
-DevTools owns its native sheet separately from Navigator's sheet stack on both
-platforms. The inspector's Pop action removes the app route while the DevTools
-sheet remains open; its close button dismisses only the inspector.
+### 3. Inspector controls and actions
 
-The launcher is mounted in each native Scaffold, so it remains available after
-a push, including on screens above the root. It hides itself in release builds.
+Both the URI input field and quick routes provide three direct actions:
+
+| Action | Icon | Behavior |
+|---|---|---|
+| **Navigate** | Right arrow | Pops back to an existing route, or pushes if absent |
+| **Push** | Stacked plus | Calls `pushSilently` to commit without waiting for result |
+| **Replace** | Cycling arrows | Resets the navigation tree to the selected destination |
+| **Pop** | Pop button | Removes the active route while DevTools remains open |
+
+Actions execute while the inspector sheet stays open, allowing multiple
+navigation operations to be tested in sequence. DevTools owns its native sheet
+separately from Navigator's sheet stack on both platforms; closing the inspector
+never affects app navigation state.
+
+## Platform behavior
+
+| Platform | Sheet surface | Input and keyboard layout |
+|---|---|---|
+| **iOS** | Native adaptive modal sheet with Liquid Glass controls | Bottom-docked input bar following the on-screen keyboard |
+| **Android** | Half-height modal bottom sheet draggable to full height | Top-anchored URI bar and actions avoiding keyboard overlap |

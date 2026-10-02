@@ -1,6 +1,6 @@
 name: zenrouter_dartnative
 description: Native navigation, route presentations, and persistent layouts for ZenRouter on DartNative.
-version: 0.1.0
+version: 0.1.1
 
 repository: https://github.com/definev/zenrouter
 homepage: https://github.com/definev/zenrouter/tree/main/packages/zenrouter_dartnative

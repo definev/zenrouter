@@ -321,7 +321,7 @@ class _LotScreenState extends State<LotScreen> {
               secondary: true,
             ),
             const SizedBox(height: 6),
-            action('Request Sample Roast (Dialog Route)', () async {
+            action('Request Sample Roast', () async {
               final result = await coordinator.push<String>(
                 SampleOrderDialogRoute(lotId: widget.id),
               );
@@ -348,8 +348,7 @@ class SampleOrderDialogRoute extends AppRoute {
   List<Object?> get props => [lotId];
 
   @override
-  Presentation get presentation =>
-      const ExperimentalDialogPresentation(cornerRadius: 20, dimOpacity: 0.35);
+  Presentation get presentation => ExperimentalDialogPresentation();
 
   @override
   Uri toUri() => Uri(path: '/dialog/sample', queryParameters: {'lot': lotId});
@@ -377,73 +376,60 @@ class _SampleOrderDialogState extends State<SampleOrderDialog> {
     final coordinator = CoordinatorScope.of<AppRoute>(context);
     final weight = _weights[_weightIndex];
 
-    return Center(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 24),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
+    return Padding(
+      padding: EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  const Icon(CupertinoIcons.cube_box_fill, color: roastAmber),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'Request Sample Roast',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: ink,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
+              const Icon(CupertinoIcons.cube_box_fill, color: roastAmber),
+              const SizedBox(width: 8),
               Text(
-                '${widget.lot.name} (${widget.lot.origin} · ${widget.lot.process})',
-                style: const TextStyle(
-                  color: coffee,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
+                'Request Sample Roast',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: ink,
                 ),
-              ),
-              const SizedBox(height: 14),
-              const Text(
-                'Select sample package size for roastery test:',
-                style: TextStyle(color: muted, fontSize: 13),
-              ),
-              const SizedBox(height: 8),
-              SegmentedControl(
-                segments: _weights,
-                selectedIndex: _weightIndex,
-                onValueChanged: (idx) => setState(() => _weightIndex = idx),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: Button(
-                      title: 'Cancel',
-                      automaticTint: true,
-                      color: muted,
-                      onPressed: () => coordinator.pop(),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: action(
-                      'Order',
-                      () => coordinator.pop('$weight sample ordered'),
-                    ),
-                  ),
-                ],
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 8),
+          Text(
+            '${widget.lot.name} (${widget.lot.origin} · ${widget.lot.process})',
+            style: const TextStyle(
+              color: coffee,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 8),
+          SegmentedControl(
+            segments: _weights,
+            selectedIndex: _weightIndex,
+            onValueChanged: (index) => setState(() => _weightIndex = index),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: action(
+                  'Cancel',
+                  () => coordinator.pop(),
+                  secondary: true,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: action(
+                  'Order',
+                  () => coordinator.pop('$weight sample ordered'),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
